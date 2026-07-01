@@ -1,6 +1,7 @@
 import type { CountdownParts, EventStatus, WorldChoirEvent } from '../types';
 
-export const CURRENT_EVENT: WorldChoirEvent = {
+/** Event schedule only — participation counts always come from the database. */
+export const FALLBACK_EVENT: WorldChoirEvent = {
   id: 'world-choir-2027',
   title: 'World Choir 2027',
   songTitle: 'Imagine',
@@ -10,14 +11,13 @@ export const CURRENT_EVENT: WorldChoirEvent = {
   endsAtUTC: '2027-07-01T16:08:00.000Z',
   hashtag: '#WorldChoir2027',
   status: 'upcoming',
-  totalPledges: 12482193,
-  countriesCount: 146,
-  citiesCount: 18430,
+  totalPledges: 0,
+  countriesCount: 0,
+  citiesCount: 0,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
-export const LIVE_DURATION_MS = 8 * 60 * 1000;
 export const PROMISE_WINDOW_MS = 48 * 60 * 60 * 1000;
 
 export function getCountdownParts(target: Date, now = new Date()): CountdownParts {

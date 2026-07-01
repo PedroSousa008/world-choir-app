@@ -1,45 +1,78 @@
-import { useState } from 'react';
-import { ensureUser, getPromises, getPledges, updateUser } from '../services/storage';
+import { useEffect, useState } from 'react';
+import { EmptyState, LoadingBlock } from '../components/Shared';
+import { useData } from '../context/DataContext';
+import type { WorldChoirEvent } from '../types';
+import { fetchEventById, upsertUser } from '../services/database';
 import './ProfileScreen.css';
 
-const PAST_EVENTS = [
-  {
-    id: 'world-choir-2026',
-    title: 'World Choir 2026',
-    songTitle: 'Imagine',
-    artist: 'John Lennon',
-    theme: 'Peace',
-    city: 'Braga',
-    country: 'Portugal',
-    promise: 'I promise to choose hope.',
-    participated: true,
-  },
-];
+interface HistoryEntry {
+  event: WorldChoirEvent;
+  city: string;
+  country: string;
+  promise?: string;
+  status: string;
+}
 
 export function ProfileScreen() {
-  const user = ensureUser();
-  const pledges = getPledges();
-  const promises = getPromises();
+  const { loading, user, userPledges, userPromises, setUser, refresh } = useData();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user.displayName);
   const [city, setCity] = useState(user.city);
   const [country, setCountry] = useState(user.country);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
-  const eventsParticipated = pledges.length + PAST_EVENTS.filter((e) => e.participated).length;
+  useEffect(() => {
+    async function loadHistory() {
+      setHistoryLoading(true);
+      const entries: HistoryEntry[] = [];
 
-  function handleSave() {
-    updateUser({
+      for (const pledge of userPledges) {
+        const event = await fetchEventById(pledge.eventId);
+        if (!event) continue;
+        const promise = userPromises.find((p) => p.eventId === pledge.eventId);
+        entries.push({
+          event,
+          city: pledge.city,
+          country: pledge.country,
+          promise: promise?.text,
+          status: promise ? 'Participated' : 'Pledged — awaiting event',
+        });
+      }
+
+      setHistory(entries);
+      setHistoryLoading(false);
+    }
+
+    if (!loading) loadHistory();
+  }, [loading, userPledges, userPromises]);
+
+  async function handleSave() {
+    const updated = {
+      ...user,
       displayName: name.trim() || user.displayName,
       city: city.trim(),
       country: country.trim(),
-    });
+      updatedAt: new Date().toISOString(),
+    };
+    await upsertUser(updated);
+    setUser(updated);
     setEditing(false);
+    await refresh();
+  }
+
+  if (loading) {
+    return (
+      <div className="screen profile-screen">
+        <LoadingBlock label="Loading profile..." />
+      </div>
+    );
   }
 
   return (
     <div className="screen profile-screen fade-in">
       <header className="profile-screen__header">
-        <div className="profile-avatar">{user.displayName[0]}</div>
+        <div className="profile-avatar">{user.displayName[0]?.toUpperCase() ?? '?'}</div>
         {editing ? (
           <div className="profile-edit">
             <input className="profile-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
@@ -49,7 +82,7 @@ export function ProfileScreen() {
           </div>
         ) : (
           <>
-            <h1 className="title-serif profile-screen__name">{user.displayName}</h1>
+            <h1 className="heading">{user.displayName}</h1>
             <p className="profile-screen__location">
               {user.city && user.country ? `${user.city}, ${user.country}` : 'Set your location'}
             </p>
@@ -58,56 +91,49 @@ export function ProfileScreen() {
         )}
       </header>
 
-      <div className="profile-stat glass-card">
-        <div className="stat-value">{eventsParticipated}</div>
+      <div className="profile-stat card">
+        <div className="stat-value">{userPledges.length}</div>
         <div className="stat-label">World Choir events participated</div>
       </div>
 
       <section className="profile-section">
         <h2 className="profile-section__title">World Choir History</h2>
-        <div className="history-list">
-          {PAST_EVENTS.map((event) => (
-            <div key={event.id} className="history-card glass-card">
-              <h3>{event.title}</h3>
-              <p className="history-card__song">{event.songTitle} — {event.artist}</p>
-              <p className="history-card__theme">Theme: {event.theme}</p>
-              <p className="history-card__location">{event.city}, {event.country}</p>
-              {event.promise && (
-                <p className="history-card__promise">"{event.promise}"</p>
-              )}
-              <span className="history-card__status">Participated</span>
-            </div>
-          ))}
-
-          {pledges.map((pledge) => {
-            const promise = promises.find((p) => p.eventId === pledge.eventId);
-            return (
-              <div key={pledge.id} className="history-card glass-card">
-                <h3>World Choir 2027</h3>
-                <p className="history-card__song">Imagine — John Lennon</p>
-                <p className="history-card__theme">Theme: Peace</p>
-                <p className="history-card__location">{pledge.city}, {pledge.country}</p>
-                {promise && <p className="history-card__promise">"{promise.text}"</p>}
-                <span className="history-card__status">
-                  {promise ? 'Participated' : 'Pledged — awaiting event'}
-                </span>
+        {historyLoading ? (
+          <LoadingBlock label="Loading history..." />
+        ) : history.length === 0 ? (
+          <EmptyState
+            title="No event history yet."
+            subtitle="When you pledge and participate, your World Choir journey will appear here."
+          />
+        ) : (
+          <div className="history-list">
+            {history.map((entry) => (
+              <div key={entry.event.id} className="history-card card">
+                <h3>{entry.event.title}</h3>
+                <p className="history-card__song">{entry.event.songTitle} — {entry.event.artist}</p>
+                <p className="history-card__theme">Theme: {entry.event.theme}</p>
+                <p className="history-card__location">{entry.city}, {entry.country}</p>
+                {entry.promise && <p className="history-card__promise">"{entry.promise}"</p>}
+                <span className="history-card__status">{entry.status}</span>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
-      {promises.length > 0 && (
-        <section className="profile-section">
-          <h2 className="profile-section__title">Your Promises</h2>
-          {promises.map((p) => (
-            <div key={p.id} className="promise-card glass-card">
-              <p className="promise-card__text">"{p.text}"</p>
-              <p className="promise-card__meta">{p.city}, {p.country}</p>
+      <section className="profile-section">
+        <h2 className="profile-section__title">Your Promises</h2>
+        {userPromises.length === 0 ? (
+          <EmptyState title="Your promise will appear here after the event." />
+        ) : (
+          userPromises.map((p) => (
+            <div key={p.id} className="promise-item card">
+              <p className="promise-item__text">"{p.text}"</p>
+              <p className="promise-item__meta">{p.city}, {p.country}</p>
             </div>
-          ))}
-        </section>
-      )}
+          ))
+        )}
+      </section>
     </div>
   );
 }

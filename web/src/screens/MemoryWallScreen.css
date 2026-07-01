@@ -1,112 +1,86 @@
 .memory-screen__header {
-  margin-bottom: 28px;
-}
-
-.memory-screen__title {
-  font-size: 32px;
-  margin: 4px 0 8px;
+  margin-bottom: 20px;
 }
 
 .memory-section {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .memory-section__title {
-  font-family: var(--font-serif);
-  font-size: 20px;
-  color: var(--glow-warm);
-  margin-bottom: 14px;
-}
-
-.memory-stats {
-  padding: 20px 12px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
 }
 
 .memory-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .memory-grid--list {
   grid-template-columns: 1fr;
 }
 
-.memory-card {
-  overflow: hidden;
-}
-
 .memory-card__visual {
-  height: 100px;
-  background: linear-gradient(135deg, rgba(74, 144, 217, 0.15), rgba(212, 168, 83, 0.1));
+  height: 80px;
+  background: var(--bg-soft);
   display: flex;
   align-items: flex-end;
-  padding: 10px;
+  padding: 8px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .memory-card--compact .memory-card__visual {
-  height: 60px;
+  height: 50px;
 }
 
 .memory-card__type {
   font-size: 10px;
-  letter-spacing: 0.14em;
+  font-weight: 600;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
 .memory-card__caption {
-  padding: 12px;
+  padding: 10px 12px 4px;
   font-size: 13px;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .memory-card__location {
-  padding: 0 12px 12px;
+  padding: 0 12px 10px;
   font-size: 11px;
-  color: var(--glow-cyan);
+  color: var(--primary);
 }
 
 .promise-wall {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
-.promise-card {
-  padding: 20px;
+.promise-item {
+  padding: 16px;
 }
 
-.promise-card__text {
-  font-family: var(--font-serif);
-  font-size: 18px;
+.promise-item__text {
+  font-size: 15px;
   font-style: italic;
-  color: var(--glow-warm);
+  color: var(--text);
   line-height: 1.5;
 }
 
-.promise-card__meta {
-  margin-top: 10px;
+.promise-item__meta {
+  margin-top: 8px;
   font-size: 12px;
   color: var(--text-muted);
-  letter-spacing: 0.06em;
 }
 
 .map-replay {
-  padding: 28px 24px;
-  text-align: center;
-}
-
-.map-replay__text {
-  font-family: var(--font-serif);
-  font-size: 18px;
+  padding: 20px;
+  font-size: 14px;
   color: var(--text-secondary);
-  line-height: 1.6;
-}
-
-.map-replay__hint {
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--text-muted);
+  line-height: 1.55;
 }

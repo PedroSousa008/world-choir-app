@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { GlobeBackground } from '../components/GlobeBackground';
+import { useData } from '../context/DataContext';
 import { useEventClock } from '../hooks/useEventClock';
-import { savePromiseEntry, updateUser } from '../services/storage';
+import { createPromise, isDatabaseConfigured, upsertUser } from '../services/database';
 import './PromiseScreen.css';
 
 interface Props {
@@ -16,42 +16,61 @@ const PLACEHOLDERS = [
 ];
 
 export function PromiseScreen({ onComplete }: Props) {
-  const { event, user, pledge } = useEventClock();
+  const { user, pledge, refresh } = useData();
+  const { event } = useEventClock();
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
   const placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!text.trim() || submitting) return;
-    setSubmitting(true);
 
-    const updated = updateUser({
+    if (!isDatabaseConfigured) {
+      setError('Unable to save your promise right now. Please try again later.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+
+    const updated = {
+      ...user,
       city: pledge?.city || user.city,
       country: pledge?.country || user.country,
-    });
+      updatedAt: new Date().toISOString(),
+    };
+    await upsertUser(updated);
 
-    savePromiseEntry({
-      id: `promise_${Date.now()}`,
-      userId: updated.id,
+    const saved = await createPromise({
+      id: `promise_${crypto.randomUUID()}`,
+      userId: user.id,
       eventId: event.id,
       displayName: updated.displayName,
-      city: pledge?.city || updated.city || 'Unknown',
-      country: pledge?.country || updated.country || 'Unknown',
+      city: pledge?.city || updated.city || '',
+      country: pledge?.country || updated.country || '',
       latitude: pledge?.latitude || updated.latitude,
       longitude: pledge?.longitude || updated.longitude,
       text: text.trim(),
       createdAt: new Date().toISOString(),
     });
 
+    setSubmitting(false);
+
+    if (!saved) {
+      setError('Could not save your promise. Please try again.');
+      return;
+    }
+
+    await refresh();
     onComplete();
   }
 
   return (
     <div className="promise-screen">
-      <GlobeBackground intensity={0.8} />
       <div className="promise-screen__content fade-in">
         <p className="eyebrow">After the song</p>
-        <h1 className="title-serif promise-screen__title">Make Your Promise to the World</h1>
+        <h1 className="heading">Make Your Promise to the World</h1>
         <p className="subtitle promise-screen__prompt">
           What do you promise to carry forward from this moment?
         </p>
@@ -67,12 +86,14 @@ export function PromiseScreen({ onComplete }: Props) {
 
         <p className="promise-screen__count">{text.length}/280</p>
 
+        {error && <p className="promise-screen__error">{error}</p>}
+
         <button
           className="btn-primary"
           onClick={handleSubmit}
           disabled={!text.trim() || submitting}
         >
-          Submit My Promise
+          {submitting ? 'Submitting...' : 'Submit My Promise'}
         </button>
       </div>
     </div>

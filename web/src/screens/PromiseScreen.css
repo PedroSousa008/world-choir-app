@@ -5,59 +5,47 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-deep);
+  background: var(--bg);
   padding: 24px;
   padding-bottom: calc(24px + var(--safe-bottom));
 }
 
 .promise-screen__content {
-  position: relative;
-  z-index: 1;
   width: 100%;
   max-width: 420px;
   text-align: center;
 }
 
-.promise-screen__title {
-  font-size: clamp(28px, 7vw, 40px);
-  margin: 12px 0 16px;
-  color: var(--glow-warm);
-}
-
 .promise-screen__prompt {
-  margin-bottom: 28px;
-  max-width: 320px;
-  margin-left: auto;
-  margin-right: auto;
+  margin-bottom: 20px;
 }
 
 .promise-screen__input {
   width: 100%;
-  padding: 20px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
-  font-size: 16px;
-  line-height: 1.6;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.55;
   resize: none;
-  font-family: var(--font-serif);
-  font-style: italic;
-}
-
-.promise-screen__input::placeholder {
-  color: var(--text-muted);
 }
 
 .promise-screen__input:focus {
   outline: none;
-  border-color: rgba(245, 230, 200, 0.25);
-  box-shadow: 0 0 40px rgba(212, 168, 83, 0.08);
+  border-color: var(--primary);
 }
 
 .promise-screen__count {
   font-size: 12px;
   color: var(--text-muted);
-  margin: 8px 0 24px;
+  margin: 6px 0 16px;
   text-align: right;
+}
+
+.promise-screen__error {
+  font-size: 13px;
+  color: #d64545;
+  margin-bottom: 12px;
 }

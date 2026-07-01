@@ -1,22 +1,19 @@
 import { useEffect, useState } from 'react';
-import { CURRENT_EVENT, getCountdownParts, getEventStatus } from '../constants/event';
+import { getCountdownParts, getEventStatus } from '../constants/event';
 import type { EventStatus, UserPhase } from '../types';
-import { getPromiseForEvent, getPledgeForEvent, ensureUser } from '../services/storage';
+import { useData } from '../context/DataContext';
 
 export function useEventClock() {
   const [now, setNow] = useState(() => new Date());
+  const { event, user, pledge, promise } = useData();
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const event = CURRENT_EVENT;
   const status = getEventStatus(event, now);
   const countdown = getCountdownParts(new Date(event.startsAtUTC), now);
-  const user = ensureUser();
-  const pledge = getPledgeForEvent(event.id, user.id);
-  const promise = getPromiseForEvent(event.id, user.id);
 
   let userPhase: UserPhase = 'pre_event';
   if (status === 'live') userPhase = 'live';

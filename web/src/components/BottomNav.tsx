@@ -2,10 +2,10 @@ import type { TabId } from '../types';
 import './BottomNav.css';
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: 'home', label: 'Home', icon: '◯' },
+  { id: 'home', label: 'Home', icon: '⌂' },
   { id: 'map', label: 'Map', icon: '◎' },
-  { id: 'memory', label: 'Memory', icon: '◇' },
-  { id: 'profile', label: 'Profile', icon: '○' },
+  { id: 'memory', label: 'Memory', icon: '▣' },
+  { id: 'profile', label: 'Profile', icon: '☺' },
 ];
 
 interface Props {

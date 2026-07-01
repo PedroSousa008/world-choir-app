@@ -1,22 +1,27 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
-import { getCityGlows, getFriends, GATHERING_PLACES, getGatheringInterests, toggleGatheringInterest } from '../services/storage';
-import { useEventClock } from '../hooks/useEventClock';
+import { EmptyState, LoadingBlock } from '../components/Shared';
+import { useData } from '../context/DataContext';
+import { toggleGatheringInterest } from '../services/database';
 import './MapScreen.css';
 
 export function MapScreen() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<L.Map | null>(null);
-  const { status } = useEventClock();
-  const interests = getGatheringInterests();
-  const isLive = status === 'live' || status === 'final_hour';
-  const pulseIntensity = isLive ? 1.5 : 1;
+  const {
+    loading,
+    event,
+    cityGlows,
+    gatheringPlaces,
+    gatheringInterests,
+    friends,
+    user,
+    refresh,
+  } = useData();
+  const [refreshingInterest, setRefreshingInterest] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!mapRef.current || mapInstance.current) return;
-
-    const cityData = getCityGlows();
-    const friendData = getFriends();
+    if (!mapRef.current || mapInstance.current || loading) return;
 
     const map = L.map(mapRef.current, {
       center: [20, 0],
@@ -27,50 +32,50 @@ export function MapScreen() {
       attributionControl: false,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       subdomains: 'abcd',
     }).addTo(map);
 
-    const maxPledges = Math.max(...cityData.map((c) => c.pledges), 1);
+    if (cityGlows.length > 0) {
+      const maxPledges = Math.max(...cityGlows.map((c) => c.pledges), 1);
 
-    cityData.forEach((city) => {
-      const intensity = city.pledges / maxPledges;
-      const radius = 8000 + intensity * 120000;
-      const color = `rgba(110, 200, 232, ${0.15 + intensity * 0.35})`;
+      cityGlows.forEach((city) => {
+        const intensity = city.pledges / maxPledges;
+        const radius = 6000 + intensity * 80000;
 
-      L.circle([city.latitude, city.longitude], {
-        radius,
-        color: 'rgba(110, 200, 232, 0.4)',
-        fillColor: color,
-        fillOpacity: 0.5 + intensity * 0.3,
-        weight: 1,
-        className: isLive ? 'map-pulse' : '',
-      }).addTo(map);
+        L.circle([city.latitude, city.longitude], {
+          radius,
+          color: 'rgba(59, 125, 216, 0.35)',
+          fillColor: `rgba(58, 175, 155, ${0.12 + intensity * 0.25})`,
+          fillOpacity: 0.6,
+          weight: 1,
+        }).addTo(map);
 
-      L.circleMarker([city.latitude, city.longitude], {
-        radius: 3 + intensity * 6,
-        color: 'rgba(245, 230, 200, 0.8)',
-        fillColor: 'rgba(245, 230, 200, 0.9)',
-        fillOpacity: 0.9,
-        weight: 1,
-      })
-        .bindPopup(
-          `<div class="map-popup"><strong>${city.city}</strong><br/>${city.country}<br/><span>${city.pledges.toLocaleString()} voices</span></div>`
-        )
-        .addTo(map);
-    });
+        L.circleMarker([city.latitude, city.longitude], {
+          radius: 4 + intensity * 4,
+          color: '#3b7dd8',
+          fillColor: '#3aaf9b',
+          fillOpacity: 0.85,
+          weight: 1,
+        })
+          .bindPopup(
+            `<strong>${city.city}</strong><br/>${city.country}<br/>${city.pledges} ${city.pledges === 1 ? 'voice' : 'voices'}`
+          )
+          .addTo(map);
+      });
+    }
 
-    friendData.filter((f) => f.hasPledged).forEach((friend) => {
-      const match = cityData.find((c) => c.city === friend.city);
+    friends.filter((f) => f.hasPledged).forEach((friend) => {
+      const match = cityGlows.find((c) => c.city === friend.city && c.country === friend.country);
       if (!match) return;
-      L.marker([match.latitude + 0.3, match.longitude + 0.3], {
-        icon: L.divIcon({
-          className: 'friend-marker',
-          html: `<div class="friend-marker__dot"></div>`,
-          iconSize: [12, 12],
-        }),
+      L.circleMarker([match.latitude + 0.2, match.longitude + 0.2], {
+        radius: 5,
+        color: '#f0b429',
+        fillColor: '#f0b429',
+        fillOpacity: 1,
+        weight: 2,
       })
-        .bindPopup(`<div class="map-popup"><strong>${friend.displayName}</strong><br/>${friend.city}, ${friend.country}</div>`)
+        .bindPopup(`<strong>${friend.displayName}</strong><br/>${friend.city}, ${friend.country}`)
         .addTo(map);
     });
 
@@ -80,66 +85,89 @@ export function MapScreen() {
       map.remove();
       mapInstance.current = null;
     };
-  }, [isLive]);
+  }, [loading, cityGlows, friends]);
 
-  const userPlaces = GATHERING_PLACES.slice(0, 4);
+  async function handleGatheringToggle(placeId: string) {
+    setRefreshingInterest(placeId);
+    await toggleGatheringInterest(user.id, placeId);
+    await refresh();
+    setRefreshingInterest(null);
+  }
+
+  if (loading) {
+    return (
+      <div className="screen map-screen">
+        <LoadingBlock label="Loading map..." />
+      </div>
+    );
+  }
 
   return (
     <div className="screen map-screen fade-in">
       <header className="map-screen__header">
         <p className="eyebrow">Global Map</p>
-        <h1 className="title-serif map-screen__title">The Earth Breathes</h1>
+        <h1 className="heading">The Earth Breathes</h1>
         <p className="subtitle">
-          Every pledge adds a point of light. {isLive ? 'The world is glowing.' : 'Cities grow brighter as voices join.'}
+          Every real pledge adds a point of light. Cities grow brighter as voices join.
         </p>
       </header>
 
-      <div
-        className="map-screen__map glass-card"
-        ref={mapRef}
-        style={{ animationDuration: `${8 / pulseIntensity}s` }}
-      />
+      <div className="map-screen__map card" ref={mapRef} />
 
-      <section className="map-screen__section">
-        <h2 className="map-screen__section-title">Gathering Places</h2>
-        <div className="gathering-list">
-          {userPlaces.map((place) => {
-            const interested = interests.includes(place.id);
-            return (
-              <div key={place.id} className="gathering-card glass-card">
-                <div>
-                  <h3>{place.name}</h3>
-                  <p>{place.city}, {place.country}</p>
-                  <p className="gathering-card__count">{place.interestedCount.toLocaleString()} interested</p>
+      {cityGlows.length === 0 && (
+        <EmptyState
+          title="The map is still quiet."
+          subtitle="When people pledge, their cities will begin to light up. Be the first voice in your city."
+        />
+      )}
+
+      {gatheringPlaces.length > 0 && (
+        <section className="map-screen__section">
+          <h2 className="map-screen__section-title">Gathering Places</h2>
+          <div className="gathering-list">
+            {gatheringPlaces.map((place) => {
+              const interested = gatheringInterests.includes(place.id);
+              return (
+                <div key={place.id} className="gathering-card card">
+                  <div>
+                    <h3>{place.name}</h3>
+                    <p>{place.city}, {place.country}</p>
+                    <p className="gathering-card__count">
+                      {place.interestedCount} {place.interestedCount === 1 ? 'person' : 'people'} interested
+                    </p>
+                  </div>
+                  <button
+                    className={`btn-secondary ${interested ? 'btn-secondary--active' : ''}`}
+                    disabled={refreshingInterest === place.id}
+                    onClick={() => handleGatheringToggle(place.id)}
+                  >
+                    {interested ? "I'll be there ✓" : "I'll be there"}
+                  </button>
                 </div>
-                <button
-                  className={`btn-secondary ${interested ? 'btn-secondary--active' : ''}`}
-                  onClick={() => toggleGatheringInterest(place.id)}
-                >
-                  {interested ? "I'll be there ✓" : "I'll be there"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="map-screen__section">
         <h2 className="map-screen__section-title">Friends on the Map</h2>
-        <div className="friends-list">
-          {getFriends().map((f) => (
-            <div key={f.id} className="friend-card glass-card">
-              <div className="friend-card__avatar">{f.displayName[0]}</div>
-              <div>
-                <h3>{f.displayName}</h3>
-                <p>{f.city}, {f.country}</p>
-                <p className="friend-card__status">
-                  {f.hasPledged ? 'Will sing' : 'Not yet pledged'}
-                </p>
+        {friends.length === 0 ? (
+          <EmptyState title="No friends added yet." subtitle="When you add friends, their planned locations will appear here." />
+        ) : (
+          <div className="friends-list">
+            {friends.map((f) => (
+              <div key={f.id} className="friend-card card">
+                <div className="friend-card__avatar">{f.displayName[0]}</div>
+                <div>
+                  <h3>{f.displayName}</h3>
+                  <p>{f.city}, {f.country}</p>
+                  <p className="friend-card__status">{f.hasPledged ? 'Will sing' : 'Not yet pledged'}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
