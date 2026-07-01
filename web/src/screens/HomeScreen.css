@@ -6,13 +6,20 @@
   overflow-y: auto;
   background: #030810;
   color: #fff;
+  opacity: 1;
 }
 
-.home-immersive--loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100dvh;
+.home-immersive--ready {
+  animation: homeReveal 0.5s ease forwards;
+}
+
+.home-immersive--syncing .home-immersive__stats-layer {
+  opacity: 0.7;
+}
+
+@keyframes homeReveal {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
 }
 
 /* Animated deep-space background */
@@ -103,6 +110,7 @@
   margin-top: 38vh;
   padding: 0 8px;
   animation: homeFloatIn 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 1;
 }
 
 .home-immersive__meta {
@@ -111,13 +119,13 @@
   font-size: 13px;
   color: rgba(255, 255, 255, 0.45);
   line-height: 1.6;
-  animation: homeFloatIn 1s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: homeFloatIn 1s 0.1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .home-immersive__song {
   text-align: center;
   margin-top: 28px;
-  animation: homeFloatIn 1s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: homeFloatIn 1s 0.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .home-immersive__song-title {
@@ -149,7 +157,7 @@
 
 .home-immersive__stats-layer {
   margin-top: 28px;
-  animation: homeFloatIn 1s 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: homeFloatIn 1s 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .home-immersive__actions {
@@ -158,7 +166,7 @@
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  animation: homeFloatIn 1s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: homeFloatIn 1s 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .home-immersive__secondary {
@@ -380,12 +388,24 @@
 
 @keyframes homeFloatIn {
   from {
-    opacity: 0;
     transform: translateY(16px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-immersive--ready,
+  .home-immersive__countdown-layer,
+  .home-immersive__meta,
+  .home-immersive__song,
+  .home-immersive__stats-layer,
+  .home-immersive__actions,
+  .home-immersive__joined-text {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 

@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { FloatingCountdown } from '../components/home/FloatingCountdown';
 import { FloatingStats } from '../components/home/FloatingStats';
-import { LoadingBlock } from '../components/Shared';
 import { formatEventDateUTC, formatLocalTime } from '../constants/event';
 import { useData } from '../context/DataContext';
 import { useEventClock } from '../hooks/useEventClock';
@@ -147,14 +146,6 @@ export function HomeScreen({ refreshKey }: Props) {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="home-immersive home-immersive--loading">
-        <LoadingBlock label="Opening the window to Earth..." />
-      </div>
-    );
-  }
-
   const countdownLabel =
     status === 'final_hour'
       ? 'The world is almost ready'
@@ -166,7 +157,7 @@ export function HomeScreen({ refreshKey }: Props) {
     stats.totalPledges === 0 ? 'Be the first voice to join World Choir.' : undefined;
 
   return (
-    <div className="home-immersive fade-in" key={refreshKey}>
+    <div className={`home-immersive home-immersive--ready${loading ? ' home-immersive--syncing' : ''}`} key={refreshKey}>
       <div className="home-immersive__bg" />
       <div className="home-immersive__stars" />
 

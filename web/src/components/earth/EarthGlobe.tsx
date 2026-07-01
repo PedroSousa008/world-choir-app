@@ -5,9 +5,9 @@ import * as THREE from 'three';
 import type { PledgeLight } from '../../types';
 import './EarthGlobe.css';
 
-const EARTH_TEXTURE = 'https://unpkg.com/three-globe@2.31.1/example/img/earth-night.jpg';
-const BUMP_TEXTURE = 'https://unpkg.com/three-globe@2.31.1/example/img/earth-topology.png';
-const CLOUDS_TEXTURE = 'https://unpkg.com/three-globe@2.31.1/example/img/earth-clouds.png';
+const EARTH_TEXTURE = '/textures/earth-night.jpg';
+const BUMP_TEXTURE = '/textures/earth-topology.png';
+const CLOUDS_TEXTURE = '/textures/earth-clouds.png';
 
 const ROTATION_PERIOD_SEC = 600;
 
@@ -168,11 +168,6 @@ export function EarthGlobe({ lights, pulsePhase, newLightId, className }: Props)
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         style={{ background: 'transparent' }}
-        fallback={
-          <div className="earth-globe-wrap__css-fallback">
-            <div className="earth-globe-wrap__css-sphere" />
-          </div>
-        }
       >
         <Suspense fallback={<EarthFallbackSphere />}>
           <EarthScene lights={lights} pulsePhase={pulsePhase} newLightId={newLightId} />

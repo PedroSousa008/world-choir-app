@@ -79,57 +79,61 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const userId = getLocalUserId();
+    try {
+      const userId = getLocalUserId();
 
-    const fetchedEvent = await fetchCurrentEvent();
-    const activeEvent = fetchedEvent ?? FALLBACK_EVENT;
-    setEvent(activeEvent);
+      const fetchedEvent = await fetchCurrentEvent();
+      const activeEvent = fetchedEvent ?? FALLBACK_EVENT;
+      setEvent(activeEvent);
 
-    const storedUser = await fetchUser(userId);
+      const storedUser = await fetchUser(userId);
 
-    const [
-      participationStats,
-      glows,
-      lights,
-      userPledge,
-      userPromise,
-      allMemories,
-      places,
-      interests,
-      friendList,
-      pledges,
-      promises,
-    ] = await Promise.all([
-      fetchParticipationStats(activeEvent.id),
-      fetchCityGlows(activeEvent.id),
-      fetchPledgeLights(activeEvent.id),
-      fetchUserPledge(activeEvent.id, userId),
-      fetchUserPromise(activeEvent.id, userId),
-      fetchMemories(),
-      fetchGatheringPlaces(activeEvent.id),
-      fetchUserGatheringInterests(userId),
-      fetchFriends(userId),
-      fetchUserPledges(userId),
-      fetchUserPromises(userId),
-    ]);
+      const [
+        participationStats,
+        glows,
+        lights,
+        userPledge,
+        userPromise,
+        allMemories,
+        places,
+        interests,
+        friendList,
+        pledges,
+        promises,
+      ] = await Promise.all([
+        fetchParticipationStats(activeEvent.id),
+        fetchCityGlows(activeEvent.id),
+        fetchPledgeLights(activeEvent.id),
+        fetchUserPledge(activeEvent.id, userId),
+        fetchUserPromise(activeEvent.id, userId),
+        fetchMemories(),
+        fetchGatheringPlaces(activeEvent.id),
+        fetchUserGatheringInterests(userId),
+        fetchFriends(userId),
+        fetchUserPledges(userId),
+        fetchUserPromises(userId),
+      ]);
 
-    setStats(participationStats);
-    setCityGlows(glows);
-    setPledgeLights(lights);
-    setPledge(userPledge);
-    setPromise(userPromise);
-    setMemories(allMemories);
-    setGatheringPlaces(places);
-    setGatheringInterests(interests);
-    setFriends(friendList);
-    setUserPledges(pledges);
-    setUserPromises(promises);
+      setStats(participationStats);
+      setCityGlows(glows);
+      setPledgeLights(lights);
+      setPledge(userPledge);
+      setPromise(userPromise);
+      setMemories(allMemories);
+      setGatheringPlaces(places);
+      setGatheringInterests(interests);
+      setFriends(friendList);
+      setUserPledges(pledges);
+      setUserPromises(promises);
 
-    if (storedUser) {
-      setUserState(storedUser);
+      if (storedUser) {
+        setUserState(storedUser);
+      }
+    } catch (err) {
+      console.error('World Choir data load failed:', err);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, []);
 
   useEffect(() => {
