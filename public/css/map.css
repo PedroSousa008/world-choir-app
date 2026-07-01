@@ -3,6 +3,11 @@
 body.map-page {
   overflow: hidden;
   background: #020204;
+  height: 100dvh;
+  height: 100vh; /* fallback */
+  width: 100%;
+  position: fixed;
+  inset: 0;
 }
 
 .map-page__stars {
@@ -25,7 +30,8 @@ body.map-page {
 
 .map-shell {
   position: relative;
-  height: calc(100vh - var(--nav-height));
+  height: calc(100dvh - var(--nav-height) - env(safe-area-inset-bottom, 0px));
+  height: calc(100vh - var(--nav-height) - env(safe-area-inset-bottom, 0px)); /* fallback */
   z-index: 1;
 }
 
@@ -442,16 +448,86 @@ body.map-page {
 }
 
 @media (max-width: 480px) {
+  .map-header {
+    top: 8px;
+    left: 10px;
+    right: 10px;
+    padding: 10px 12px;
+  }
+
+  .map-header__title {
+    font-size: 0.88rem;
+  }
+
+  .map-header__subtitle {
+    font-size: 0.68rem;
+    margin-bottom: 4px;
+  }
+
+  .map-header__countdown {
+    font-size: 0.64rem;
+  }
+
+  /* Fixed above nav — always visible on mobile, no scroll needed */
   .map-stats {
-    bottom: 12px;
-    right: 8px;
+    position: fixed;
+    left: 58px;
+    right: 10px;
+    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 10px);
+    justify-content: center;
     gap: 6px;
+    z-index: 500;
   }
+
   .map-stat {
-    min-width: 62px;
-    padding: 10px 8px;
+    flex: 1;
+    min-width: 0;
+    padding: 9px 6px;
+    border-radius: 10px;
   }
+
   .map-stat__num {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
+  }
+
+  .map-stat__lbl {
+    font-size: 0.48rem;
+    margin-top: 3px;
+    letter-spacing: 0.1em;
+  }
+
+  .map-info-btn {
+    position: fixed;
+    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 10px);
+    left: 10px;
+    top: auto;
+    right: auto;
+    width: 40px;
+    height: 40px;
+    font-size: 0.9rem;
+    z-index: 501;
+  }
+
+  .map-info-sheet {
+    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 62px);
+    top: auto;
+    left: 10px;
+    right: 10px;
+    max-width: none;
+  }
+
+  .map-empty {
+    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 72px);
+    max-width: calc(100% - 32px);
+    padding: 16px 18px;
+  }
+
+  .city-card {
+    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 72px);
+    max-width: calc(100% - 32px);
+  }
+
+  .leaflet-control-zoom {
+    margin-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 58px) !important;
   }
 }
