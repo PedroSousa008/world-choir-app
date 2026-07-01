@@ -97,7 +97,7 @@ const WorldChoirHome = (() => {
     const e = WorldChoirConfig.ACTIVE_EVENT;
 
     return `
-      <p class="home-brand">WORLD CHOIR</p>
+      <img class="home-logo" src="images/world-choir-logo.png" alt="World Choir App" width="220" height="220">
       <h1 class="home-headline">The world sings together in</h1>
 
       <div class="countdown-hero">

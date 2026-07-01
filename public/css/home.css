@@ -23,6 +23,14 @@
   pointer-events: none;
 }
 
+.home-logo {
+  display: block;
+  width: min(200px, 52vw);
+  height: auto;
+  margin: 0 auto 20px;
+  object-fit: contain;
+}
+
 .home-brand {
   font-size: 0.68rem;
   font-weight: 600;
@@ -259,6 +267,11 @@
 }
 
 @media (max-width: 480px) {
+  .home-logo {
+    width: min(168px, 46vw);
+    margin-bottom: 16px;
+  }
+
   .home-headline {
     font-size: 1.35rem;
     margin-bottom: 20px;
