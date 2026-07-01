@@ -117,6 +117,12 @@ export interface CityGlow {
   pledges: number;
 }
 
+export interface PledgeLight {
+  id: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface EventParticipation {
   eventId: string;
   songTitle: string;

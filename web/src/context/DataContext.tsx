@@ -6,6 +6,7 @@ import type {
   Memory,
   Pledge,
   PromiseEntry,
+  PledgeLight,
   User,
   WorldChoirEvent,
 } from '../types';
@@ -16,6 +17,7 @@ import {
   fetchGatheringPlaces,
   fetchMemories,
   fetchParticipationStats,
+  fetchPledgeLights,
   fetchUser,
   fetchUserGatheringInterests,
   fetchUserPledge,
@@ -37,6 +39,7 @@ interface DataContextValue {
   pledge: Pledge | null;
   promise: PromiseEntry | null;
   cityGlows: CityGlow[];
+  pledgeLights: PledgeLight[];
   memories: Memory[];
   gatheringPlaces: GatheringPlace[];
   gatheringInterests: string[];
@@ -66,6 +69,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [pledge, setPledge] = useState<Pledge | null>(null);
   const [promise, setPromise] = useState<PromiseEntry | null>(null);
   const [cityGlows, setCityGlows] = useState<CityGlow[]>([]);
+  const [pledgeLights, setPledgeLights] = useState<PledgeLight[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [gatheringPlaces, setGatheringPlaces] = useState<GatheringPlace[]>([]);
   const [gatheringInterests, setGatheringInterests] = useState<string[]>([]);
@@ -86,6 +90,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const [
       participationStats,
       glows,
+      lights,
       userPledge,
       userPromise,
       allMemories,
@@ -97,6 +102,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     ] = await Promise.all([
       fetchParticipationStats(activeEvent.id),
       fetchCityGlows(activeEvent.id),
+      fetchPledgeLights(activeEvent.id),
       fetchUserPledge(activeEvent.id, userId),
       fetchUserPromise(activeEvent.id, userId),
       fetchMemories(),
@@ -109,6 +115,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     setStats(participationStats);
     setCityGlows(glows);
+    setPledgeLights(lights);
     setPledge(userPledge);
     setPromise(userPromise);
     setMemories(allMemories);
@@ -142,6 +149,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         pledge,
         promise,
         cityGlows,
+        pledgeLights,
         memories,
         gatheringPlaces,
         gatheringInterests,

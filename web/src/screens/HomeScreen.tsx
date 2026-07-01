@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { CountdownDisplay } from '../components/CountdownDisplay';
-import { EmptyState, LoadingBlock, StatsRow } from '../components/Shared';
+import { useEffect, useState } from 'react';
+import { EarthGlobe } from '../components/earth/EarthGlobe';
+import { FloatingCountdown } from '../components/home/FloatingCountdown';
+import { FloatingStats } from '../components/home/FloatingStats';
+import { LoadingBlock } from '../components/Shared';
 import { formatEventDateUTC, formatLocalTime } from '../constants/event';
 import { useData } from '../context/DataContext';
 import { useEventClock } from '../hooks/useEventClock';
@@ -22,7 +24,7 @@ interface Props {
 }
 
 export function HomeScreen({ refreshKey }: Props) {
-  const { loading, stats, refresh, setUser, dbConfigured } = useData();
+  const { loading, stats, pledgeLights, refresh, setUser } = useData();
   const clock = useEventClock();
   const { event, status, countdown, user, pledge, hasPledged, userPhase } = clock;
 
@@ -32,10 +34,30 @@ export function HomeScreen({ refreshKey }: Props) {
   const [cityInput, setCityInput] = useState(user.city);
   const [countryInput, setCountryInput] = useState(user.country);
   const [error, setError] = useState('');
+  const [pledgeSuccess, setPledgeSuccess] = useState(false);
+  const [pulseKey, setPulseKey] = useState(0);
+  const [pulseT, setPulseT] = useState(0);
+  const [newLightId, setNewLightId] = useState<string | null>(null);
+  const [buttonPressed, setButtonPressed] = useState(false);
+
+  useEffect(() => {
+    if (pulseKey === 0) return;
+    const start = performance.now();
+    let frame: number;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / 1200);
+      setPulseT(1 - t);
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [pulseKey]);
 
   async function submitPledge(reason?: PledgeReason) {
     setError('');
     setPledging(true);
+    setButtonPressed(true);
+    setTimeout(() => setButtonPressed(false), 400);
 
     const city = user.city || cityInput.trim();
     const country = user.country || countryInput.trim();
@@ -53,7 +75,7 @@ export function HomeScreen({ refreshKey }: Props) {
     }
 
     const coords = await geocodeCity(city, country);
-    const updated: typeof user = {
+    const updated = {
       ...user,
       city,
       country,
@@ -65,8 +87,9 @@ export function HomeScreen({ refreshKey }: Props) {
     await upsertUser(updated);
     setUser(updated);
 
+    const pledgeId = `pledge_${crypto.randomUUID()}`;
     const saved = await createPledge({
-      id: `pledge_${crypto.randomUUID()}`,
+      id: pledgeId,
       userId: user.id,
       eventId: event.id,
       displayName: updated.displayName,
@@ -87,7 +110,12 @@ export function HomeScreen({ refreshKey }: Props) {
       return;
     }
 
+    setNewLightId(pledgeId);
+    setPulseT(1);
+    setPulseKey((k) => k + 1);
+    setPledgeSuccess(true);
     await refresh();
+    setTimeout(() => setPledgeSuccess(false), 5000);
   }
 
   function saveLocationAndPledge() {
@@ -109,145 +137,143 @@ export function HomeScreen({ refreshKey }: Props) {
     const start = new Date(event.startsAtUTC);
     const end = new Date(event.endsAtUTC);
     const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('World Choir — ' + event.songTitle)}&dates=${fmt(start)}/${fmt(end)}&details=${encodeURIComponent('One song. One world. One moment.')}`;
-    window.open(url, '_blank');
+    window.open(
+      `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('World Choir — ' + event.songTitle)}&dates=${fmt(start)}/${fmt(end)}&details=${encodeURIComponent('One song. One world. One moment.')}`,
+      '_blank'
+    );
   }
 
   if (loading) {
     return (
-      <div className="screen home-screen">
-        <LoadingBlock label="Loading World Choir..." />
+      <div className="home-immersive home-immersive--loading">
+        <LoadingBlock label="Opening the window to Earth..." />
       </div>
     );
   }
 
-  if (userPhase === 'promise_open') return null;
+  const countdownLabel =
+    status === 'final_hour'
+      ? 'The world is almost ready'
+      : status === 'live'
+        ? 'The moment has arrived'
+        : 'The world sings together in';
 
-  if (userPhase === 'waiting_next') {
-    return (
-      <div className="screen home-screen fade-in" key={refreshKey}>
-        <EmptyState
-          title="Waiting for Next Countdown"
-          subtitle="The next World Choir Event has not been announced yet."
-        />
-      </div>
-    );
-  }
-
-  if (status === 'live') {
-    return (
-      <div className="screen home-screen home-screen--live fade-in" key={refreshKey}>
-        <p className="eyebrow">Live now</p>
-        <h1 className="heading-lg">The moment has arrived.</h1>
-        <h2 className="home-screen__go-sing">Go sing.</h2>
-        <p className="subtitle">{event.songTitle} — {event.artist}</p>
-        <p className="home-screen__hashtag">{event.hashtag}</p>
-        <div className="card home-screen__live-card">
-          <p>Put your phone down. The world is singing with you.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === 'final_hour') {
-    return (
-      <div className="screen home-screen fade-in" key={refreshKey}>
-        <p className="eyebrow">World Choir</p>
-        <h1 className="heading">The World is Almost Ready</h1>
-        <CountdownDisplay countdown={countdown} large showDays={false} />
-        <p className="subtitle home-screen__center">
-          Soon, people around the world will sing together.
-        </p>
-        <StatsRow
-          voices={stats.totalPledges}
-          countries={stats.countriesCount}
-          cities={stats.citiesCount}
-          emptySubtext={stats.totalPledges === 0 ? 'Be the first voice to join the next World Choir.' : undefined}
-        />
-        <p className="home-screen__song-line">{event.songTitle} — {event.artist}</p>
-        <p className="home-screen__hashtag">{event.hashtag}</p>
-      </div>
-    );
-  }
+  const emptyHint =
+    stats.totalPledges === 0 ? 'Be the first voice to join World Choir.' : undefined;
 
   return (
-    <div className="screen home-screen fade-in" key={refreshKey}>
-      <header className="home-screen__header">
-        <p className="eyebrow">World Choir</p>
-        <h1 className="heading">The world sings together in</h1>
-      </header>
+    <div className="home-immersive fade-in" key={refreshKey}>
+      <div className="home-immersive__bg" />
+      <div className="home-immersive__stars" />
 
-      <CountdownDisplay countdown={countdown} large />
-
-      <div className="home-screen__event-meta">
-        <p>{formatEventDateUTC(event.startsAtUTC)}</p>
-        <p className="home-screen__local">Your local time: {formatLocalTime(event.startsAtUTC)}</p>
+      <div className="home-immersive__earth-layer">
+        <EarthGlobe
+          className="home-immersive__earth"
+          lights={pledgeLights}
+          pulsePhase={pulseT}
+          newLightId={newLightId}
+        />
       </div>
 
-      <div className="card home-screen__song-block">
-        <p className="home-screen__song-title">{event.songTitle} — {event.artist}</p>
-        <p className="home-screen__theme">
-          This year's World Choir is dedicated to <strong>{event.theme}</strong>
-        </p>
-      </div>
+      <div className="home-immersive__scroll">
+        <header className="home-immersive__brand">
+          <span className="home-immersive__logo">World Choir</span>
+        </header>
 
-      <StatsRow
-        voices={stats.totalPledges}
-        countries={stats.countriesCount}
-        cities={stats.citiesCount}
-        emptySubtext={stats.totalPledges === 0 ? 'Be the first voice to join the next World Choir.' : undefined}
-      />
-
-      {!dbConfigured && (
-        <p className="home-screen__db-notice">Database connection pending. Counts will update when connected.</p>
-      )}
-
-      <div className="home-screen__actions">
-        {hasPledged ? (
-          <div className="home-screen__pledged">
-            <button className="btn-primary" disabled>You're part of the choir</button>
-            {pledge && (
-              <p className="home-screen__pledge-location">
-                Your voice has joined {pledge.city}, {pledge.country}.
-              </p>
-            )}
+        {userPhase === 'waiting_next' ? (
+          <div className="home-immersive__state-message">
+            <h1>Waiting for Next Countdown</h1>
+            <p>The next World Choir Event has not been announced yet.</p>
+          </div>
+        ) : status === 'live' ? (
+          <div className="home-immersive__state-message home-immersive__state-message--live">
+            <h1>Go sing.</h1>
+            <p>{event.songTitle} — {event.artist}</p>
+            <p className="home-immersive__live-whisper">Put your phone down. The world is singing with you.</p>
           </div>
         ) : (
-          <button className="btn-primary" onClick={() => setShowReason(true)} disabled={pledging}>
-            {pledging ? 'Joining...' : "I'll Sing"}
-          </button>
+          <>
+            <div className="home-immersive__countdown-layer">
+              <FloatingCountdown countdown={countdown} label={countdownLabel} />
+            </div>
+
+            <div className="home-immersive__meta">
+              <p>{formatEventDateUTC(event.startsAtUTC)}</p>
+              <p>Your local time · {formatLocalTime(event.startsAtUTC)}</p>
+            </div>
+
+            <div className="home-immersive__song">
+              <p className="home-immersive__song-title">♪ {event.songTitle}</p>
+              <p className="home-immersive__song-artist">{event.artist}</p>
+              <p className="home-immersive__theme">
+                <span>This year's theme</span>
+                {event.theme}
+              </p>
+            </div>
+
+            <div className="home-immersive__stats-layer">
+              <FloatingStats stats={stats} emptyHint={emptyHint} />
+            </div>
+
+            {userPhase !== 'promise_open' && (
+              <div className="home-immersive__actions">
+                {hasPledged || pledgeSuccess ? (
+                  <div className="home-immersive__joined">
+                    <button className="home-pledge-btn home-pledge-btn--joined" disabled>
+                      You're part of the choir
+                    </button>
+                    <p className="home-immersive__joined-text">
+                      {pledgeSuccess
+                        ? 'Your voice has joined the world.'
+                        : pledge
+                          ? `Your voice has joined ${pledge.city}, ${pledge.country}.`
+                          : 'Your voice has joined the world.'}
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    className={`home-pledge-btn ${buttonPressed ? 'home-pledge-btn--pressed' : ''}`}
+                    onClick={() => setShowReason(true)}
+                    disabled={pledging}
+                  >
+                    {pledging ? 'Joining...' : "I'll Sing"}
+                  </button>
+                )}
+
+                {error && <p className="home-immersive__error">{error}</p>}
+
+                <div className="home-immersive__secondary">
+                  <button type="button" onClick={handleCalendar}>Add to Calendar</button>
+                  <button type="button" onClick={handleShare}>Share</button>
+                </div>
+              </div>
+            )}
+          </>
         )}
-
-        {error && <p className="home-screen__error">{error}</p>}
-
-        <div className="home-screen__secondary">
-          <button className="btn-secondary" onClick={handleCalendar}>Add to Calendar</button>
-          <button className="btn-secondary" onClick={handleShare}>Share</button>
-        </div>
       </div>
 
       {showReason && (
-        <div className="modal-overlay" onClick={() => setShowReason(false)}>
-          <div className="modal card" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal__title">Why are you singing?</h3>
-            <p className="subtitle modal__sub">Optional — you can skip this.</p>
-            <div className="reason-grid">
+        <div className="home-modal-overlay" onClick={() => setShowReason(false)}>
+          <div className="home-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Why are you singing?</h3>
+            <p>Optional — you can skip.</p>
+            <div className="home-modal__reasons">
               {REASONS.map((r) => (
-                <button key={r} className="reason-chip" onClick={() => submitPledge(r)}>{r}</button>
+                <button key={r} onClick={() => submitPledge(r)}>{r}</button>
               ))}
             </div>
-            <button className="btn-secondary modal__skip" onClick={() => submitPledge()}>Skip</button>
+            <button className="home-modal__skip" onClick={() => submitPledge()}>Skip</button>
           </div>
         </div>
       )}
 
       {locationModal && (
-        <div className="modal-overlay">
-          <div className="modal card" onClick={(e) => e.stopPropagation()}>
-            <h3 className="modal__title">Where will you sing from?</h3>
-            <input className="modal-input" placeholder="City" value={cityInput} onChange={(e) => setCityInput(e.target.value)} />
-            <input className="modal-input" placeholder="Country" value={countryInput} onChange={(e) => setCountryInput(e.target.value)} />
-            <button className="btn-primary" onClick={saveLocationAndPledge}>Join the choir</button>
+        <div className="home-modal-overlay">
+          <div className="home-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Where will you sing from?</h3>
+            <input placeholder="City" value={cityInput} onChange={(e) => setCityInput(e.target.value)} />
+            <input placeholder="Country" value={countryInput} onChange={(e) => setCountryInput(e.target.value)} />
+            <button className="home-pledge-btn" onClick={saveLocationAndPledge}>Join the choir</button>
           </div>
         </div>
       )}

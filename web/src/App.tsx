@@ -32,14 +32,14 @@ function AppContent() {
   }
 
   return (
-    <div className="app-shell">
-      <main className="app-content">
+    <div className={`app-shell ${tab === 'home' ? 'app-shell--home' : ''}`}>
+      <main className={`app-content ${tab === 'home' ? 'app-content--home' : ''}`}>
         {tab === 'home' && <HomeScreen refreshKey={refreshKey} />}
         {tab === 'map' && <MapScreen />}
         {tab === 'memory' && <MemoryWallScreen />}
         {tab === 'profile' && <ProfileScreen />}
       </main>
-      <BottomNav active={tab} onChange={setTab} />
+      <BottomNav active={tab} onChange={setTab} variant={tab === 'home' ? 'dark' : 'light'} />
     </div>
   );
 }

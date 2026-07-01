@@ -5,6 +5,7 @@ import type {
   Memory,
   Pledge,
   PromiseEntry,
+  PledgeLight,
   User,
   WorldChoirEvent,
 } from '../types';
@@ -188,6 +189,25 @@ export async function fetchCityGlows(eventId: string): Promise<CityGlow[]> {
   }
 
   return Array.from(map.values());
+}
+
+export async function fetchPledgeLights(eventId: string): Promise<PledgeLight[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('pledges')
+    .select('id, latitude, longitude')
+    .eq('event_id', eventId)
+    .not('latitude', 'is', null)
+    .not('longitude', 'is', null);
+
+  if (error || !data) return [];
+
+  return data.map((row) => ({
+    id: row.id as string,
+    latitude: row.latitude as number,
+    longitude: row.longitude as number,
+  }));
 }
 
 export async function fetchUserPledge(eventId: string, userId: string): Promise<Pledge | null> {

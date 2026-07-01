@@ -11,11 +11,15 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
 interface Props {
   active: TabId;
   onChange: (tab: TabId) => void;
+  variant?: 'dark' | 'light';
 }
 
-export function BottomNav({ active, onChange }: Props) {
+export function BottomNav({ active, onChange, variant = 'light' }: Props) {
   return (
-    <nav className="bottom-nav" aria-label="Main navigation">
+    <nav
+      className={`bottom-nav ${variant === 'dark' ? '' : 'bottom-nav--light'}`}
+      aria-label="Main navigation"
+    >
       {TABS.map((tab) => (
         <button
           key={tab.id}

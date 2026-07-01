@@ -76,6 +76,15 @@ input, textarea {
   padding-bottom: calc(var(--nav-height) + var(--safe-bottom) + 12px);
 }
 
+.app-content--home {
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.app-shell--home {
+  background: #030810;
+}
+
 .screen {
   min-height: 100%;
   padding: 20px 16px 28px;
