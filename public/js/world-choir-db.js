@@ -31,7 +31,29 @@ const WorldChoirDB = (() => {
     return 'wc_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 9);
   }
 
+  /** Remove demo gathering markers/lights left in localStorage from early builds. */
+  function purgeLegacyDemoData() {
+    const legacyGatheringIds = new Set(['gp1', 'gp2', 'gp3', 'gp4', 'gp5']);
+    const legacyLocations = new Set([
+      'Avenida dos Aliados',
+      'Hyde Park',
+      'Central Park',
+      'Praça da República',
+      'Shibuya Crossing',
+    ]);
+
+    const places = read(KEYS.gatheringPlaces);
+    const cleanedPlaces = places.filter(
+      (g) => !legacyGatheringIds.has(g.id) && !legacyLocations.has(g.location_name)
+    );
+    if (cleanedPlaces.length !== places.length) {
+      write(KEYS.gatheringPlaces, cleanedPlaces);
+    }
+  }
+
   function seed() {
+    purgeLegacyDemoData();
+
     const eventId = WorldChoirConfig.ACTIVE_EVENT.id;
     let events = read(KEYS.events);
     if (!events.some((e) => e.id === eventId)) {
