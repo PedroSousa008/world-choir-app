@@ -1,0 +1,35 @@
+---
+description: User never uses terminal; agent auto-pushes to GitHub and Vercel after every change
+alwaysApply: true
+---
+
+# No Terminal — Auto Deploy Everything
+
+The user **never uses the terminal**. Never ask them to run commands, install tools, or fix deploy issues manually.
+
+## After every code change
+
+When you finish a task that modifies project files, **automatically** sync to GitHub and Vercel before ending your response:
+
+1. Run `bash scripts/sync-deploy.sh "commit message"` from the project root.
+2. If the script fails, diagnose and fix it yourself (secrets, auth, build errors). Do not hand steps to the user.
+3. Confirm both destinations in your reply:
+   - GitHub: https://github.com/PedroSousa008/world-choir-app
+   - Vercel: https://world-choir-app.vercel.app
+
+## Never do this
+
+- Do not say "run this in your terminal" or "you can push when ready"
+- Do not leave uncommitted work at the end of a task unless the user explicitly asked not to deploy
+- Do not commit secrets (`.env*`, API keys, tokens)
+
+## Project references
+
+- GitHub remote: `origin` → `https://github.com/PedroSousa008/world-choir-app.git`
+- Branch: `main`
+- Vercel project: `world-choir-app` (GitHub-connected; push triggers deploy)
+- Node/Vercel CLI (if needed): `.tools/node-v22.22.0-darwin-arm64/bin`
+
+## Commit messages
+
+Write clear, concise messages focused on **why** the change was made.
