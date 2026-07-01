@@ -1,0 +1,56 @@
+.lyric-player-demo {
+  position: relative;
+}
+
+.demo-controls {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 1rem;
+  border-radius: 10px;
+  color: white;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.demo-controls h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+  font-weight: 300;
+}
+
+.control-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.control-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.control-options input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #4a90e2;
+}
+
+@media (max-width: 768px) {
+  .demo-controls {
+    position: static;
+    margin: 1rem;
+    text-align: center;
+  }
+  
+  .control-options {
+    flex-direction: row;
+    justify-content: center;
+    gap: 1rem;
+  }
+} 

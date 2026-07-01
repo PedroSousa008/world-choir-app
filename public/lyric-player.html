@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imagine - Lyric Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        .lyric-player {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 2rem;
+        }
+
+        .lyric-player-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .song-title {
+            margin-bottom: 3rem;
+            opacity: 0.9;
+        }
+
+        .song-title h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            margin: 0;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .song-title p {
+            font-size: 1.2rem;
+            margin: 0.5rem 0 0 0;
+            opacity: 0.8;
+            font-style: italic;
+        }
+
+        .current-lyric-container {
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .current-lyric {
+            font-size: 2.5rem;
+            font-weight: 400;
+            line-height: 1.4;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            max-width: 600px;
+            word-wrap: break-word;
+        }
+
+        .current-lyric.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .next-lyric {
+            font-size: 1.2rem;
+            opacity: 0.4;
+            margin-top: 1rem;
+            font-style: italic;
+            transition: opacity 0.3s ease;
+        }
+
+        .lyric-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .play-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .play-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+
+        .play-button.playing {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.6);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+
+        .progress-container {
+            width: 300px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #fff, #e0e0e0);
+            border-radius: 2px;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .lyrics-history {
+            margin-top: 3rem;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .history-line {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            opacity: 0.3;
+        }
+
+        .history-line.past {
+            opacity: 0.6;
+            color: #b0b0b0;
+        }
+
+        .history-line.current {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .history-line.future {
+            opacity: 0.2;
+            color: #808080;
+        }
+
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1rem;
+            border-radius: 10px;
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-options label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .control-options input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #4a90e2;
+        }
+
+        @media (max-width: 768px) {
+            .lyric-player { padding: 1rem; }
+            .song-title h1 { font-size: 2rem; }
+            .current-lyric { font-size: 1.8rem; }
+            .progress-container { width: 250px; }
+            .lyrics-history { max-height: 200px; }
+            .demo-controls {
+                position: static;
+                margin: 1rem;
+                text-align: center;
+            }
+            .control-options {
+                flex-direction: row;
+                justify-content: center;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .song-title h1 { font-size: 1.5rem; }
+            .current-lyric { font-size: 1.4rem; }
+            .progress-container { width: 200px; }
+            .play-button {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-controls">
+        <h2>LyricPlayer Demo</h2>
+        <div class="control-options">
+            <label>
+                <input type="checkbox" id="autoPlay" checked>
+                Auto-play
+            </label>
+            <label>
+                <input type="checkbox" id="showHistory">
+                Show lyrics history
+            </label>
+        </div>
+    </div>
+
+    <div class="lyric-player">
+        <div class="lyric-player-content">
+            <div class="song-title">
+                <h1>Imagine</h1>
+                <p>by John Lennon</p>
+            </div>
+            
+            <div class="current-lyric-container">
+                <div class="current-lyric" id="currentLyric"></div>
+                <div class="next-lyric" id="nextLyric"></div>
+            </div>
+            
+            <div class="lyric-controls">
+                <button class="play-button" id="playButton">▶️</button>
+                <div class="progress-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+            
+            <div class="lyrics-history" id="lyricsHistory" style="display: none;"></div>
+        </div>
+    </div>
+
+    <audio id="audio" preload="auto">
+        <source src="./Imagine.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        class LyricPlayer {
+            constructor() {
+                this.audio = document.getElementById('audio');
+                this.currentLyric = document.getElementById('currentLyric');
+                this.nextLyric = document.getElementById('nextLyric');
+                this.playButton = document.getElementById('playButton');
+                this.progressBar = document.getElementById('progressBar');
+                this.lyricsHistory = document.getElementById('lyricsHistory');
+                this.autoPlayCheckbox = document.getElementById('autoPlay');
+                this.showHistoryCheckbox = document.getElementById('showHistory');
+                
+                this.isPlaying = false;
+                this.currentLyricIndex = -1;
+                this.showCurrentLine = false;
+                
+                this.lyrics = [
+                    { time: 0, text: "Imagine there's no heaven" },
+                    { time: 5, text: "It's easy if you try" },
+                    { time: 10, text: "No hell below us" },
+                    { time: 14, text: "Above us only sky" },
+                    { time: 19, text: "Imagine all the people" },
+                    { time: 23, text: "Living for today... ah" },
+                    { time: 30, text: "Imagine there's no countries" },
+                    { time: 35, text: "It isn't hard to do" },
+                    { time: 39, text: "Nothing to kill or die for" },
+                    { time: 44, text: "And no religion too" },
+                    { time: 49, text: "Imagine all the people" },
+                    { time: 53, text: "Living life in peace... you..." },
+                    { time: 60, text: "You may say I'm a dreamer" },
+                    { time: 65, text: "But I'm not the only one" },
+                    { time: 69, text: "I hope someday you'll join us" },
+                    { time: 74, text: "And the world will be as one" }
+                ];
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.renderLyricsHistory();
+                this.updateHistoryVisibility();
+                
+                if (this.autoPlayCheckbox.checked) {
+                    this.audio.play().catch(e => console.log('Auto-play blocked:', e));
+                }
+            }
+            
+            setupEventListeners() {
+                this.playButton.addEventListener('click', () => this.togglePlay());
+                this.audio.addEventListener('timeupdate', () => this.handleTimeUpdate());
+                this.audio.addEventListener('ended', () => this.handleSongEnd());
+                this.autoPlayCheckbox.addEventListener('change', () => this.updateAutoPlay());
+                this.showHistoryCheckbox.addEventListener('change', () => this.updateHistoryVisibility());
+            }
+            
+            togglePlay() {
+                if (this.isPlaying) {
+                    this.audio.pause();
+                } else {
+                    this.audio.play();
+                }
+            }
+            
+            handleTimeUpdate() {
+                const time = this.audio.currentTime;
+                
+                // Update progress bar
+                const progress = (time / this.audio.duration) * 100;
+                this.progressBar.style.width = `${progress}%`;
+                
+                // Find current lyric
+                let newIndex = -1;
+                for (let i = 0; i < this.lyrics.length; i++) {
+                    if (time >= this.lyrics[i].time) {
+                        newIndex = i;
+                    } else {
+                        break;
+                    }
+                }
+                
+                if (newIndex !== this.currentLyricIndex) {
+                    this.currentLyricIndex = newIndex;
+                    this.updateCurrentLyric();
+                    this.updateLyricsHistory();
+                }
+            }
+            
+            updateCurrentLyric() {
+                if (this.currentLyricIndex >= 0) {
+                    const lyric = this.lyrics[this.currentLyricIndex];
+                    this.currentLyric.textContent = lyric.text;
+                    
+                    // Fade in animation
+                    this.currentLyric.classList.remove('show');
+                    setTimeout(() => {
+                        this.currentLyric.classList.add('show');
+                    }, 50);
+                    
+                    // Show next lyric preview
+                    if (this.currentLyricIndex < this.lyrics.length - 1) {
+                        this.nextLyric.textContent = this.lyrics[this.currentLyricIndex + 1].text;
+                    } else {
+                        this.nextLyric.textContent = '';
+                    }
+                }
+            }
+            
+            updateLyricsHistory() {
+                const historyLines = this.lyricsHistory.querySelectorAll('.history-line');
+                historyLines.forEach((line, index) => {
+                    line.classList.remove('current', 'past', 'future');
+                    if (index === this.currentLyricIndex) {
+                        line.classList.add('current');
+                    } else if (index < this.currentLyricIndex) {
+                        line.classList.add('past');
+                    } else {
+                        line.classList.add('future');
+                    }
+                });
+            }
+            
+            renderLyricsHistory() {
+                this.lyricsHistory.innerHTML = '';
+                this.lyrics.forEach(lyric => {
+                    const line = document.createElement('div');
+                    line.className = 'history-line future';
+                    line.textContent = lyric.text;
+                    this.lyricsHistory.appendChild(line);
+                });
+            }
+            
+            updateHistoryVisibility() {
+                this.lyricsHistory.style.display = this.showHistoryCheckbox.checked ? 'block' : 'none';
+            }
+            
+            updateAutoPlay() {
+                // Auto-play setting is handled on next play
+            }
+            
+            handleSongEnd() {
+                this.isPlaying = false;
+                this.playButton.textContent = '▶️';
+                this.playButton.classList.remove('playing');
+                this.currentLyricIndex = -1;
+                this.currentLyric.textContent = '';
+                this.nextLyric.textContent = '';
+                this.updateLyricsHistory();
+            }
+            
+            // Audio event handlers
+            handlePlay() {
+                this.isPlaying = true;
+                this.playButton.textContent = '⏸️';
+                this.playButton.classList.add('playing');
+            }
+            
+            handlePause() {
+                this.isPlaying = false;
+                this.playButton.textContent = '▶️';
+                this.playButton.classList.remove('playing');
+            }
+        }
+        
+        // Initialize the lyric player when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const player = new LyricPlayer();
+            
+            // Add audio event listeners
+            const audio = document.getElementById('audio');
+            audio.addEventListener('play', () => player.handlePlay());
+            audio.addEventListener('pause', () => player.handlePause());
+        });
+    </script>
+</body>
+</html> 

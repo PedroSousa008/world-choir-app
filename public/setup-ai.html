@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant Setup - World Choir</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: white;
+        }
+        
+        .setup-container {
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid rgba(78, 205, 196, 0.2);
+            box-shadow: 0 8px 32px rgba(78, 205, 196, 0.1);
+            text-align: center;
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #4ECDC4 0%, #4A90E2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .status {
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            font-size: 1rem;
+        }
+        
+        .success {
+            background: rgba(78, 205, 196, 0.2);
+            border: 1px solid rgba(78, 205, 196, 0.5);
+            color: #4ECDC4;
+        }
+        
+        .error {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid rgba(255, 107, 107, 0.5);
+            color: #FF6B6B;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #4ECDC4 0%, #4A90E2 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            margin-top: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .button:hover {
+            transform: scale(1.05);
+        }
+        
+        .info {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <h1>AI Assistant Setup</h1>
+        <div id="status" class="status" style="display: none;"></div>
+        <div class="info">
+            <p>This page will automatically configure your OpenAI API key for the AI Choir Assistant.</p>
+            <p style="margin-top: 10px;">Once configured, you can start chatting with the AI Assistant in the app!</p>
+        </div>
+        <a href="profile.html" class="button" id="goToApp" style="display: none;">Go to App</a>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const goToAppButton = document.getElementById('goToApp');
+        const params = new URLSearchParams(window.location.search);
+        const apiKeyFromUrl = params.get('key');
+        const existingKey = localStorage.getItem('openai_api_key');
+
+        if (existingKey && existingKey.startsWith('sk-')) {
+            statusDiv.className = 'status success';
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = 'Your OpenAI API key is already configured.';
+            goToAppButton.style.display = 'inline-block';
+        } else if (apiKeyFromUrl && apiKeyFromUrl.startsWith('sk-')) {
+            try {
+                localStorage.setItem('openai_api_key', apiKeyFromUrl);
+                const savedKey = localStorage.getItem('openai_api_key');
+
+                if (savedKey === apiKeyFromUrl) {
+                    statusDiv.className = 'status success';
+                    statusDiv.style.display = 'block';
+                    statusDiv.textContent = 'Success! Your OpenAI API key has been configured. The AI Choir Assistant is now fully enabled!';
+                    goToAppButton.style.display = 'inline-block';
+                } else {
+                    throw new Error('Key was not saved correctly');
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.style.display = 'block';
+                statusDiv.textContent = 'Error: Could not save API key. Please set it manually in the app settings.';
+                console.error('Error setting API key:', error);
+            }
+        } else {
+            statusDiv.className = 'status';
+            statusDiv.style.display = 'block';
+            statusDiv.textContent = 'Add your OpenAI API key in Profile settings, or open this page with ?key=YOUR_KEY (for local setup only).';
+        }
+    </script>
+</body>
+</html>
+

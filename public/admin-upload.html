@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Documents - World Choir Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: white;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid rgba(78, 205, 196, 0.2);
+            box-shadow: 0 8px 32px rgba(78, 205, 196, 0.1);
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #4ECDC4 0%, #4A90E2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+        
+        .upload-section {
+            margin-bottom: 30px;
+        }
+        
+        .upload-area {
+            border: 2px dashed rgba(78, 205, 196, 0.3);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: rgba(78, 205, 196, 0.5);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .upload-area.dragover {
+            border-color: #4ECDC4;
+            background: rgba(78, 205, 196, 0.1);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        .upload-text {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .upload-hint {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .button {
+            display: inline-block;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #4ECDC4 0%, #4A90E2 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .button:hover {
+            transform: scale(1.05);
+        }
+        
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            display: none;
+        }
+        
+        .status.success {
+            background: rgba(78, 205, 196, 0.2);
+            border: 1px solid rgba(78, 205, 196, 0.5);
+            color: #4ECDC4;
+            display: block;
+        }
+        
+        .status.error {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid rgba(255, 107, 107, 0.5);
+            color: #FF6B6B;
+            display: block;
+        }
+        
+        .status.info {
+            background: rgba(78, 205, 196, 0.1);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            color: rgba(255, 255, 255, 0.9);
+            display: block;
+        }
+        
+        .uploaded-docs {
+            margin-top: 40px;
+        }
+        
+        .doc-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(78, 205, 196, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .doc-info {
+            flex: 1;
+        }
+        
+        .doc-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .doc-date {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .doc-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-view {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ECDC4;
+            border: 1px solid rgba(78, 205, 196, 0.3);
+        }
+        
+        .btn-delete {
+            background: rgba(255, 107, 107, 0.2);
+            color: #FF6B6B;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+        
+        .btn-small:hover {
+            transform: scale(1.05);
+        }
+        
+        .preview-area {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(78, 205, 196, 0.2);
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .preview-area.show {
+            display: block;
+        }
+        
+        .preview-text {
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 Document Upload</h1>
+        <p class="subtitle">Upload Word documents, text files, or paste content to add to the AI Assistant knowledge base</p>
+        
+        <div class="upload-section">
+            <div class="upload-area" id="upload-area">
+                <div class="upload-icon">📤</div>
+                <div class="upload-text">Click to upload or drag and drop</div>
+                <div class="upload-hint">Supports: .doc, .docx, .txt, .pdf, .md</div>
+                <input type="file" id="file-input" accept=".doc,.docx,.txt,.pdf,.md" multiple>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <div style="color: rgba(255, 255, 255, 0.7); margin-bottom: 15px;">OR</div>
+                <textarea 
+                    id="text-input" 
+                    placeholder="Paste your document content here..."
+                    style="width: 100%; min-height: 200px; padding: 15px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(78, 205, 196, 0.3); border-radius: 12px; color: white; font-family: 'Inter', sans-serif; font-size: 0.95rem; resize: vertical;"
+                ></textarea>
+                <button class="button" onclick="uploadTextContent()">Upload Text Content</button>
+            </div>
+        </div>
+        
+        <div class="status" id="status"></div>
+        
+        <div class="preview-area" id="preview-area">
+            <h3 style="margin-bottom: 15px; color: #4ECDC4;">Preview:</h3>
+            <div class="preview-text" id="preview-text"></div>
+        </div>
+        
+        <div class="uploaded-docs">
+            <h2 style="font-family: 'Playfair Display', serif; font-size: 1.8rem; margin-bottom: 20px; color: #4ECDC4;">Uploaded Documents</h2>
+            <div id="documents-list">
+                <!-- Documents will be listed here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load mammoth.js for .docx files (we'll use a CDN)
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js';
+        document.head.appendChild(script);
+
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const statusDiv = document.getElementById('status');
+        const previewArea = document.getElementById('preview-area');
+        const previewText = document.getElementById('preview-text');
+
+        // Click to upload
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        async function handleFiles(files) {
+            for (let file of files) {
+                await processFile(file);
+            }
+        }
+
+        async function processFile(file) {
+            showStatus('info', `Processing ${file.name}...`);
+            
+            const reader = new FileReader();
+            
+            reader.onload = async function(e) {
+                try {
+                    let text = '';
+                    const fileName = file.name;
+                    const fileExtension = fileName.split('.').pop().toLowerCase();
+                    
+                    if (fileExtension === 'txt' || fileExtension === 'md') {
+                        text = e.target.result;
+                    } else if (fileExtension === 'docx') {
+                        // Use mammoth.js for .docx files
+                        if (typeof mammoth !== 'undefined') {
+                            const result = await mammoth.extractRawText({ arrayBuffer: e.target.result });
+                            text = result.value;
+                        } else {
+                            throw new Error('Mammoth.js not loaded. Please refresh the page.');
+                        }
+                    } else if (fileExtension === 'doc') {
+                        text = 'Note: .doc files require conversion. Please convert to .docx or .txt first.';
+                    } else if (fileExtension === 'pdf') {
+                        text = 'Note: PDF files require special parsing. Please convert to .txt or paste the content manually.';
+                    } else {
+                        text = e.target.result;
+                    }
+                    
+                    // Save to knowledge base
+                    saveToKnowledgeBase(fileName, text);
+                    
+                    // Show preview
+                    previewText.textContent = text.substring(0, 1000) + (text.length > 1000 ? '...' : '');
+                    previewArea.classList.add('show');
+                    
+                    showStatus('success', `✅ ${fileName} uploaded and added to knowledge base!`);
+                    loadDocumentsList();
+                    
+                } catch (error) {
+                    console.error('Error processing file:', error);
+                    showStatus('error', `❌ Error processing ${file.name}: ${error.message}`);
+                }
+            };
+            
+            if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileExtension === 'docx') {
+                reader.readAsArrayBuffer(file);
+            } else {
+                reader.readAsText(file);
+            }
+        }
+
+        function uploadTextContent() {
+            const text = document.getElementById('text-input').value.trim();
+            if (!text) {
+                showStatus('error', 'Please enter some text content.');
+                return;
+            }
+            
+            const fileName = `Manual_Entry_${new Date().toISOString().split('T')[0]}.txt`;
+            saveToKnowledgeBase(fileName, text);
+            
+            previewText.textContent = text.substring(0, 1000) + (text.length > 1000 ? '...' : '');
+            previewArea.classList.add('show');
+            
+            showStatus('success', '✅ Text content uploaded and added to knowledge base!');
+            document.getElementById('text-input').value = '';
+            loadDocumentsList();
+        }
+
+        function saveToKnowledgeBase(fileName, content) {
+            // Get existing documents
+            let documents = JSON.parse(localStorage.getItem('worldChoirDocuments') || '[]');
+            
+            // Add new document
+            const document = {
+                id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                name: fileName,
+                content: content,
+                uploadedAt: Date.now(),
+                size: content.length
+            };
+            
+            documents.push(document);
+            localStorage.setItem('worldChoirDocuments', JSON.stringify(documents));
+            
+            // Also append to knowledge base content
+            let knowledgeBaseContent = localStorage.getItem('worldChoirKnowledgeBaseContent') || '';
+            knowledgeBaseContent += '\n\n--- Document: ' + fileName + ' ---\n' + content;
+            localStorage.setItem('worldChoirKnowledgeBaseContent', knowledgeBaseContent);
+        }
+
+        function loadDocumentsList() {
+            const documents = JSON.parse(localStorage.getItem('worldChoirDocuments') || '[]');
+            const listDiv = document.getElementById('documents-list');
+            
+            if (documents.length === 0) {
+                listDiv.innerHTML = '<p style="color: rgba(255, 255, 255, 0.6); text-align: center; padding: 20px;">No documents uploaded yet.</p>';
+                return;
+            }
+            
+            listDiv.innerHTML = documents.map(doc => {
+                const date = new Date(doc.uploadedAt).toLocaleString();
+                const sizeKB = (doc.size / 1024).toFixed(2);
+                return `
+                    <div class="doc-item">
+                        <div class="doc-info">
+                            <div class="doc-name">${doc.name}</div>
+                            <div class="doc-date">Uploaded: ${date} • ${sizeKB} KB</div>
+                        </div>
+                        <div class="doc-actions">
+                            <button class="btn-small btn-view" onclick="viewDocument('${doc.id}')">View</button>
+                            <button class="btn-small btn-delete" onclick="deleteDocument('${doc.id}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function viewDocument(id) {
+            const documents = JSON.parse(localStorage.getItem('worldChoirDocuments') || '[]');
+            const doc = documents.find(d => d.id === id);
+            
+            if (doc) {
+                previewText.textContent = doc.content;
+                previewArea.classList.add('show');
+                previewArea.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function deleteDocument(id) {
+            if (!confirm('Are you sure you want to delete this document?')) {
+                return;
+            }
+            
+            let documents = JSON.parse(localStorage.getItem('worldChoirDocuments') || '[]');
+            const doc = documents.find(d => d.id === id);
+            
+            if (doc) {
+                // Remove from documents list
+                documents = documents.filter(d => d.id !== id);
+                localStorage.setItem('worldChoirDocuments', JSON.stringify(documents));
+                
+                // Remove from knowledge base content
+                let knowledgeBaseContent = localStorage.getItem('worldChoirKnowledgeBaseContent') || '';
+                const docSection = '\n\n--- Document: ' + doc.name + ' ---\n' + doc.content;
+                knowledgeBaseContent = knowledgeBaseContent.replace(docSection, '');
+                localStorage.setItem('worldChoirKnowledgeBaseContent', knowledgeBaseContent);
+                
+                showStatus('success', 'Document deleted successfully.');
+                loadDocumentsList();
+            }
+        }
+
+        function showStatus(type, message) {
+            statusDiv.className = 'status ' + type;
+            statusDiv.textContent = message;
+            setTimeout(() => {
+                if (type !== 'info') {
+                    statusDiv.style.display = 'none';
+                }
+            }, 5000);
+        }
+
+        // Load documents on page load
+        loadDocumentsList();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,266 @@
+{
+  "appName": "World Choir App",
+  "version": "1.0.0",
+  "description": "A global movement to unite the world through music",
+  
+  "event": {
+    "name": "Global Moment of Unity",
+    "date": "June 15, 2026",
+    "time": "16:00 UTC",
+    "duration": "10-20 seconds of shared song",
+    "song": {
+      "title": "Imagine",
+      "artist": "John Lennon",
+      "reason": "This song represents unity and hope for a better world. The lyrics 'Imagine all the people living life in peace' perfectly align with the app's mission to create global unity through music."
+    },
+    "description": "Join millions around the world in a synchronized moment of song and unity. At the countdown to zero, people everywhere will step outside and sing together for 10-20 seconds, creating a powerful wave of unity that transcends borders, languages, and cultures."
+  },
+  
+  "purpose": {
+    "slogan": "Unite the World Through Song",
+    "mission": "To create the first-ever real-time global singing event, coordinated entirely through a single countdown moment — no rehearsal, no instructions, just human connection.",
+    "vision": "A global ritual in the making that speaks to a universal longing for connection, for shared emotion, for a break from solitude.",
+    "concept": "A beautifully simple mobile app with a global countdown. At zero, people everywhere sing the same song for 10–20 seconds — outdoors, together, filmed by themselves or those around them. The goal is Unity. Emotion. Presence. A once-in-a-lifetime shared experience, born in the real world, powered by digital simplicity."
+  },
+  
+  "features": {
+    "homePage": {
+      "description": "The main page where users can participate in the global event",
+      "functionality": [
+        "Displays countdown timer to the event",
+        "Shows 'Participate' button for new users",
+        "After clicking Participate, users must:",
+        "  - Create an account (name, email, password) or sign in",
+        "  - Set their location (city and country)",
+        "  - Can allow location tracking or enter manually",
+        "Once participating, shows countdown with local event time",
+        "When countdown reaches zero, live lyrics system activates",
+        "Displays 'Be a Part of the Moment to Unify the World' message"
+      ]
+    },
+    
+    "mapPage": {
+      "description": "Interactive world map showing global participation",
+      "functionality": [
+        "Shows real-time participation data from around the world",
+        "Heat map visualization:",
+        "  - Red: High participation (10,000+ participants)",
+        "  - Yellow: Medium participation (1,000-10,000 participants)",
+        "  - Green: Low participation (1-1,000 participants)",
+        "Displays countdown timer (days when 3+ days remain, hours:minutes:seconds when less than 3 days)",
+        "Shows local event time based on user's location",
+        "Updates automatically when participation data changes"
+      ]
+    },
+    
+    "profilePage": {
+      "description": "User's personal profile and settings",
+      "sections": {
+        "participationStatus": "Shows 'Pledged to Participate' when user has joined",
+        "eventDetails": {
+          "addToCalendar": "Adds event to Google Calendar",
+          "setReminders": "Sets automatic reminders",
+          "eventInformation": "Detailed information about the app's purpose and vision",
+          "choiceOfSong": "Explains why 'Imagine' was chosen as the song"
+        },
+        "practiceCountdown": {
+          "description": "Practice session with synchronized lyrics",
+          "features": [
+            "10-second countdown before lyrics appear",
+            "Plays 'Imagine.mp3' audio",
+            "Lyrics highlight in bold and blue as they're sung",
+            "Timing synchronized with the song",
+            "Practice tips displayed"
+          ]
+        },
+        "friends": {
+          "description": "Manage friends and connections",
+          "features": [
+            "All new users start with 1 friend: AI Choir Assistant",
+            "Recommended friends based on location proximity",
+            "Search bar to find friends",
+            "Add friends by:",
+            "  - Scanning QR codes",
+            "  - From recommended friends",
+            "  - From group members",
+            "  - Starting new conversations"
+          ]
+        },
+        "editProfile": {
+          "fields": [
+            "Profile photo (optional)",
+            "Name",
+            "City",
+            "Country",
+            "Specific Location (optional) - exact point where user will be during the event"
+          ],
+          "note": "When location is changed, it updates everywhere: Profile, Home, and Map pages"
+        },
+        "settings": {
+          "notifications": "Toggle notification settings",
+          "privacySettings": "Privacy information",
+          "aiAssistantSettings": "Configure OpenAI API key for full AI capabilities"
+        }
+      }
+    },
+    
+    "qrCode": {
+      "description": "Share profile and add friends via QR codes",
+      "features": [
+        "Each user has a unique, permanent QR code (format: WC-XXXXX)",
+        "My QR Code: Display your QR code to share",
+        "Scan QR Code: Scan others' QR codes to view their profile and add as friend",
+        "Works with both front and back cameras",
+        "Automatically redirects to scanned user's profile"
+      ]
+    },
+    
+    "messages": {
+      "groups": {
+        "cityGroups": {
+          "description": "Automatic groups created for each city",
+          "nameFormat": "[City]'s World Choir Movement",
+          "features": [
+            "Automatically added when user sets location",
+            "Automatically removed/added when location changes",
+            "Poll system with city attractions (scaled by city size)",
+            "Users vote on where to gather in their city",
+            "Selected poll option automatically becomes user's 'Specific Location'",
+            "No messaging allowed - only poll voting",
+            "View all members and add them as friends"
+          ]
+        },
+        "customGroups": {
+          "description": "User-created groups with selected friends",
+          "features": [
+            "Create new groups with multiple friends",
+            "Send messages to group",
+            "View all members",
+            "Add members as friends"
+          ]
+        }
+      },
+      "individualChats": {
+        "description": "One-on-one conversations with friends",
+        "features": [
+          "Start conversations with any friend",
+          "AI Choir Assistant chat (first friend for all users)",
+          "Private conversations stored locally",
+          "Search for friends to start conversations"
+        ]
+      }
+    },
+    
+    "aiChoirAssistant": {
+      "description": "AI-powered assistant to help users",
+      "features": [
+        "Automatically added as first friend for all new users",
+        "Answers questions about:",
+        "  - The event details and timing",
+        "  - How to use app features",
+        "  - Purpose and vision of World Choir",
+        "  - How to participate",
+        "  - App functionality",
+        "Requires OpenAI API key for full capabilities (configured in Settings)",
+        "Conversations are private and stored locally",
+        "Uses GPT-3.5-turbo model for intelligent responses"
+      ]
+    }
+  },
+  
+  "participationFlow": {
+    "step1": "Click 'Participate' button on Home page",
+    "step2": "Create account (name, email, password) or sign in",
+    "step3": "Set location:",
+    "  - Option A: Allow location tracking (automatically detects city/country)",
+    "  - Option B: Enter city and country manually",
+    "step4": "Location is validated (city must exist in selected country)",
+    "step5": "User is added to global participation data",
+    "step6": "User is added to their city's group chat",
+    "step7": "Countdown timer appears with local event time",
+    "step8": "User can now use all app features"
+  },
+  
+  "locationFeatures": {
+    "timezoneConversion": "Event time (16:00 UTC) automatically converts to user's local time based on their city",
+    "validation": "City-country combinations are validated using OpenStreetMap API",
+    "allCountries": "All countries in the world are available in dropdowns",
+    "specificLocation": "Optional field for exact gathering point (e.g., 'Central Park, near Bethesda Fountain')",
+    "automaticUpdates": "When location changes, it updates: Profile page, Home page local time, Map participation data, City group membership"
+  },
+  
+  "technicalDetails": {
+    "dataStorage": "All data stored locally in browser (localStorage)",
+    "authentication": "Email and password-based, stored in localStorage",
+    "privacy": "No data shared externally except OpenAI API calls (if configured)",
+    "qrCodes": "Generated using external APIs, unique per user",
+    "maps": "Uses Leaflet.js with OpenStreetMap tiles",
+    "lyricsSync": "Manual timing for phrase-by-phrase highlighting"
+  },
+  
+  "importantNotes": {
+    "eventTime": "Always 16:00 UTC on June 15, 2026 - converts to local time automatically",
+    "songChoice": "'Imagine' by John Lennon - chosen for its message of unity and peace",
+    "participation": "No audio recording - this is about participation and unity, not content creation",
+    "location": "Only city is shown on global map, not exact coordinates",
+    "friends": "New users start with only AI Choir Assistant, can add more later",
+    "cityGroups": "Automatic, one per city, with poll for gathering locations",
+    "aiAssistant": "Requires OpenAI API key in Settings for full capabilities"
+  },
+  
+  "faq": {
+    "aboutEvent": {
+      "whatIsTheWorldChoirEvent": "It is a countdown that brings the world together - not online, but out into the streets, into balconies, parks, windows, and plazas - to sing. A moment shared, a memory made, a chorus echoed across borders.",
+      "whyAreWeSingingImagine": "We chose Imagine by John Lennon because it carries the message the world needs most - hope, unity, and the belief that even strangers can share the same heartbeat for a moment.",
+      "whatIsThePurposeOfThisProject": "The purpose of the App is to create an Event, that could potentially bring Unity, Emotion and Presence. A once-in-a-lifetime shared experience, born in the real world, powered by digital simplicity.",
+      "isThisEventRealOrJustSymbolic": "It is a real event, and we hope to continue providing this Events and Experiences for many years.",
+      "howLongDoesTheEventLast": "For a few minutes, and the whole world will pause, and became a choir. A reminder that there are no borders in music. A reminder that peace can start with something as small as your voice."
+    },
+    "participation": {
+      "doIHaveToBeAGoodSingerToJoin": "Anyone can join, it's a moment to be shared with loved ones as well as strangers.",
+      "howDoIJoinTheEvent": "After opening the app click on Will Participate Button, and then either create an account, or log in into an already existing account",
+      "canIJoinIfImLate": "Yes, anyone can join, it doesn't matter when. It will be an Event to hopefully be repeated many times.",
+      "canIJoinFromHome": "Absolutely, anyone can join from all over the world.",
+      "canIJoinEvenIfImAlone": "Of course you can, and you will be a part of one of the biggest World Piece Movements ever",
+      "doINeedHeadphones": "No, but you can use them if you prefer",
+      "canISingWithFriendsNextToMe": "Absolutely, and we encourage you to do that."
+    },
+    "countdown": {
+      "howDoesTheCountdownWork": "It works just like a regular countdown, and when it hits zero, people around the world sing the same song - outdoors, together, filmed by themselves or those around them.",
+      "whyIsMyCountdownDifferentFromMyFriends": "It surely depends on the city they are from, since there is a difference on the Time Zones.",
+      "willTheAppNotifyMeBeforeTheEvent": "You have an option to add notifications, and you will be notified about almost every new, and you will also get more notifications the closer you are to the event",
+      "canITestTheCountdown": "Yes, absolutely, you have a Practice Countdown Button, so that whenever you want you can practice the song with the correct lyrics.",
+      "isTheTimeShownInUTCOrLocalTime": "Yes, absolutely, we made sure to do that for you."
+    },
+    "song": {
+      "whatSongAreWeSinging": "We chose Imagine by John Lennon because it carries the message the world needs most - hope, unity, and the belief that even strangers can share the same heartbeat for a moment.",
+      "whereCanISeeTheLyrics": "You are able to see the lyrics on the Practice Countdown.",
+      "willTheMusicPlayAutomatically": "It will play automatically, so all you need to do is to follow the lyrics, and enjoy the moment",
+      "doesTheAppPlayTheKaraoke": "It doesn't quite work like Karaoke since you will be hearing John Lennon singing, but you will have a very similar experience.",
+      "canIChooseAnotherSong": "For the First Event, this is the only available song.",
+      "canISingOtherSongs": "In terms of the goal of our app, everyone should be singing the same song to create a worldwide moment. Nonetheless, if you feel that another song is more meaningful to you, you absolutely can choose it! Just remember that you will probably be the only one singing that specific song. Our advice is to wait until we, as an app, create a new event featuring the song you want."
+    },
+    "friends": {
+      "howDoIAddFriends": "You have some different options to do that, from adding people that are in your City's Group Chat, or the easiest way to scan the QR Code in the Profile Page. You will also be able to find more people on recommended friends"
+    },
+    "privacy": {
+      "canPeopleSeeMyPhoneNumber": "All the private information will be kept to ourselves.",
+      "isMyVoiceRecorded": "No it is not recorded, but you can record it if you want.",
+      "doesTheAppListenToMe": "No it doesn't.",
+      "isTheEventAnonymous": "No, it will be a worldwide Event.",
+      "willOtherPeopleHearMeSinging": "The only way people will hear you sing is if you go sing in public. If you are asking while Practicing, no one will ever hear you.",
+      "whoCanSeeMyLocation": "Anyone can see the exact city you are from, but no one can know your specific location.",
+      "doYouShareMyData": "We recommend you to only share the data we ask for, nothing else.",
+      "doesTheAppRecordMyVoiceDuringTheEvent": "No, for now on this version of the app, we still do not have the ability to do that.",
+      "canIReplayMySinging": "No, for now on this version of the app, we still do not have the ability to do that.",
+      "doYouStoreMyAudio": "No, for now on this version of the app, we still do not have the ability to do that.",
+      "doYouUseMyMicrophoneBeforeTheEvent": "No, for now on this version of the app, we still do not have the ability to do that."
+    },
+    "future": {
+      "willThereBeOtherSongsInTheFuture": "Yes there will be, on other Global Events, but for now we haven't chosen the future song.",
+      "willThereBeMoreEvents": "Yes it will become an Annual Event, not exactly always on the same day, but every year from now on.",
+      "howOftenDoesThisHappen": "At least it will happen once a year."
+    }
+  }
+}
+

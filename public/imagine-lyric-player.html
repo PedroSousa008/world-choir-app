@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imagine - Lyric Player</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .song-title {
+            font-size: 3rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            letter-spacing: 2px;
+        }
+
+        .song-artist {
+            font-size: 1.2rem;
+            opacity: 0.7;
+            margin-bottom: 3rem;
+            font-style: italic;
+        }
+
+        .lyrics-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .lyric-line {
+            font-size: 1.5rem;
+            line-height: 1.6;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+            border-radius: 5px;
+        }
+
+        .lyric-line.active {
+            opacity: 1;
+            font-weight: bold;
+            color: #4ECDC4;
+            background: rgba(78, 205, 196, 0.15);
+            transform: scale(1.05);
+            border-left: 4px solid #4ECDC4;
+        }
+
+        .lyric-line.singing {
+            opacity: 1;
+            font-weight: bold;
+            color: #4ECDC4;
+            background: rgba(78, 205, 196, 0.2);
+            transform: scale(1.05);
+            border-left: 4px solid #4ECDC4;
+        }
+
+        .lyric-line.singing .word-sung {
+            color: #4ECDC4;
+            font-weight: 900;
+            text-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+        }
+
+        .countdown-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            font-size: 4rem;
+            font-weight: bold;
+            color: #4ECDC4;
+        }
+
+        .countdown-overlay.hidden {
+            display: none;
+        }
+
+        .countdown-number {
+            font-size: 8rem;
+            animation: pulse 1s infinite;
+        }
+
+        .countdown-text {
+            font-size: 2rem;
+            margin-top: 2rem;
+            opacity: 0.8;
+        }
+
+        .speech-status {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            z-index: 1000;
+        }
+
+        .speech-status.listening {
+            border: 2px solid #4ECDC4;
+            color: #4ECDC4;
+        }
+
+        .speech-status.recognized {
+            border: 2px solid #FFD700;
+            color: #FFD700;
+        }
+
+        .controls {
+            margin-top: 2rem;
+        }
+
+        .play-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .play-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .play-button.playing {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.6);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.3); }
+            50% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+        }
+
+        .timer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 0.8rem 1.2rem;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .song-title { font-size: 2rem; }
+            .lyric-line { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="timer" id="timer">Time: 0.0s</div>
+
+    <div class="countdown-overlay" id="countdownOverlay">
+        <div class="countdown-number" id="countdownNumber">10</div>
+        <div class="countdown-text">Get ready to sing...</div>
+    </div>
+
+
+    <div class="container">
+        <div class="song-title">Imagine</div>
+        <div class="song-artist">by John Lennon</div>
+        
+        <div class="lyrics-container" id="lyricsContainer">
+            <div class="lyric-line" data-start="4" data-end="8">Imagine there's no heaven</div>
+            <div class="lyric-line" data-start="9" data-end="14">It's easy if you try</div>
+            <div class="lyric-line" data-start="15" data-end="19">No hell below us</div>
+            <div class="lyric-line" data-start="20" data-end="24">Above us only sky</div>
+            <div class="lyric-line" data-start="25" data-end="30">Imagine all the people</div>
+            <div class="lyric-line" data-start="31" data-end="35">Livin' for today</div>
+            <div class="lyric-line" data-start="38" data-end="42">Imagine there's no countries</div>
+            <div class="lyric-line" data-start="43" data-end="48">It isn't hard to do</div>
+            <div class="lyric-line" data-start="49" data-end="53">Nothing to kill or die for</div>
+            <div class="lyric-line" data-start="54" data-end="59">And no religion too</div>
+            <div class="lyric-line" data-start="60" data-end="65">Imagine all the people</div>
+            <div class="lyric-line" data-start="66" data-end="71">Livin' life in peace</div>
+            <div class="lyric-line" data-start="73" data-end="78">You may say I'm a dreamer</div>
+            <div class="lyric-line" data-start="79" data-end="83">But I'm not the only one</div>
+            <div class="lyric-line" data-start="84" data-end="89">I hope someday you'll join us</div>
+            <div class="lyric-line" data-start="90" data-end="96">And the world will live as one</div>
+            <div class="lyric-line" data-start="97" data-end="102">Imagine no possessions</div>
+            <div class="lyric-line" data-start="103" data-end="107">I wonder if you can</div>
+            <div class="lyric-line" data-start="108" data-end="113">No need for greed or hunger</div>
+            <div class="lyric-line" data-start="114" data-end="119">A brotherhood of man</div>
+            <div class="lyric-line" data-start="120" data-end="125">Imagine all the people</div>
+            <div class="lyric-line" data-start="126" data-end="131">Sharing all the world</div>
+            <div class="lyric-line" data-start="133" data-end="138">You may say I'm a dreamer</div>
+            <div class="lyric-line" data-start="139" data-end="144">But I'm not the only one</div>
+            <div class="lyric-line" data-start="145" data-end="150">I hope someday you'll join us</div>
+            <div class="lyric-line" data-start="151" data-end="156">And the world will live as one</div>
+        </div>
+        
+        <div class="controls">
+            <button class="play-button" id="playButton">▶️</button>
+        </div>
+    </div>
+
+    <audio id="audio" preload="auto">
+        <source src="./Imagine.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        class LyricPlayer {
+            constructor() {
+                this.audio = document.getElementById('audio');
+                this.playButton = document.getElementById('playButton');
+                this.timer = document.getElementById('timer');
+                this.lyricLines = document.querySelectorAll('.lyric-line');
+                this.countdownOverlay = document.getElementById('countdownOverlay');
+                this.countdownNumber = document.getElementById('countdownNumber');
+                
+                this.isPlaying = false;
+                this.currentActiveLine = null;
+                this.lyricsData = [];
+                
+                this.prepareLyricsData();
+                this.init();
+            }
+            
+            prepareLyricsData() {
+                this.lyricLines.forEach((line) => {
+                    const text = line.textContent.trim();
+                    
+                    this.lyricsData.push({
+                        element: line,
+                        text: text,
+                        originalText: text,
+                        start: parseFloat(line.dataset.start),
+                        end: parseFloat(line.dataset.end)
+                    });
+                });
+            }
+            
+            init() {
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                this.playButton.addEventListener('click', () => this.togglePlay());
+                this.audio.addEventListener('timeupdate', () => this.handleTimeUpdate());
+                this.audio.addEventListener('play', () => this.handlePlay());
+                this.audio.addEventListener('pause', () => this.handlePause());
+                this.audio.addEventListener('ended', () => this.handleEnd());
+            }
+            
+            startCountdown() {
+                let countdown = 10;
+                this.countdownOverlay.classList.remove('hidden');
+                this.countdownNumber.textContent = countdown;
+                
+                const countdownInterval = setInterval(() => {
+                    countdown--;
+                    this.countdownNumber.textContent = countdown;
+                    
+                    if (countdown <= 0) {
+                        clearInterval(countdownInterval);
+                        this.countdownOverlay.classList.add('hidden');
+                    }
+                }, 1000);
+            }
+            
+            
+            handleTimeUpdate() {
+                const currentTime = this.audio.currentTime;
+                this.timer.textContent = `Time: ${currentTime.toFixed(1)}s`;
+                
+                // Find which lyric line should be active
+                let activeLine = null;
+                let activeLineData = null;
+                
+                for (let lineData of this.lyricsData) {
+                    if (currentTime >= lineData.start && currentTime <= lineData.end) {
+                        activeLine = lineData.element;
+                        activeLineData = lineData;
+                        break;
+                    }
+                }
+                
+                // Update active line
+                if (activeLine !== this.currentActiveLine) {
+                    // Reset previous line
+                    if (this.currentActiveLine) {
+                        this.currentActiveLine.classList.remove('active', 'singing');
+                        const prevLineData = this.lyricsData.find(ld => ld.element === this.currentActiveLine);
+                        if (prevLineData) {
+                            this.currentActiveLine.innerHTML = prevLineData.originalText;
+                        }
+                    }
+                    
+                    // Add active class to new line
+                    if (activeLine) {
+                        activeLine.classList.add('active');
+                    }
+                    
+                    this.currentActiveLine = activeLine;
+                }
+                
+                // The active line will automatically be styled with bold and blue color via CSS
+            }
+            
+            togglePlay() {
+                if (this.isPlaying) {
+                    this.audio.pause();
+                } else {
+                    // Start countdown before playing
+                    this.startCountdown();
+                    // Wait for countdown to finish before playing audio
+                    setTimeout(() => {
+                        this.audio.play();
+                    }, 10000);
+                }
+            }
+            
+            handlePlay() {
+                this.isPlaying = true;
+                this.playButton.textContent = '⏸️';
+                this.playButton.classList.add('playing');
+            }
+            
+            handlePause() {
+                this.isPlaying = false;
+                this.playButton.textContent = '▶️';
+                this.playButton.classList.remove('playing');
+            }
+            
+            handleEnd() {
+                this.isPlaying = false;
+                this.playButton.textContent = '▶️';
+                this.playButton.classList.remove('playing');
+                
+                // Remove active class from current line
+                if (this.currentActiveLine) {
+                    this.currentActiveLine.classList.remove('active');
+                    this.currentActiveLine = null;
+                }
+                
+                // Reset all lyrics
+                this.lyricsData.forEach(lineData => {
+                    lineData.element.classList.remove('singing', 'active');
+                    lineData.element.innerHTML = lineData.originalText;
+                });
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new LyricPlayer();
+        });
+    </script>
+</body>
+</html> 
