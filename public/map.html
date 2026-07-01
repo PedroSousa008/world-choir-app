@@ -131,8 +131,11 @@
       markers = []; heatLayers = [];
 
       const data = loadParticipationData();
-      const state = WorldChoirConfig.getAppState(new Date(), WorldChoirDB.hasSubmittedPromise());
-      const isLive = state === WorldChoirConfig.AppState.LIVE;
+      const state = WorldChoirConfig.getEventState(new Date(), {
+        userParticipated: WorldChoirDB.hasPledged(),
+        userSubmittedPromise: WorldChoirDB.hasSubmittedPromise(),
+      });
+      const isLive = state === WorldChoirConfig.EventState.LIVE;
       const pulseOpacity = isLive ? 0.55 : 0.35;
 
       data.forEach((loc) => {
@@ -162,18 +165,22 @@
       });
 
       const countries = new Set(data.map((d) => d.country)).size;
-      document.getElementById('stat-voices').textContent = formatNumber(WorldChoirConfig.getGlobalStats().voices);
-      document.getElementById('stat-cities').textContent = formatNumber(data.length);
-      document.getElementById('stat-countries').textContent = countries;
+      const stats = WorldChoirConfig.getMovementStats();
+      document.getElementById('stat-voices').textContent = stats.hasData ? formatNumber(stats.voices) : '—';
+      document.getElementById('stat-cities').textContent = stats.hasData ? formatNumber(data.length) : '—';
+      document.getElementById('stat-countries').textContent = stats.hasData ? countries : '—';
     }
 
     function updateCountdown() {
       const t = WorldChoirConfig.getTimeRemaining();
-      const state = WorldChoirConfig.getAppState(new Date(), WorldChoirDB.hasSubmittedPromise());
+      const state = WorldChoirConfig.getEventState(new Date(), {
+        userParticipated: WorldChoirDB.hasPledged(),
+        userSubmittedPromise: WorldChoirDB.hasSubmittedPromise(),
+      });
       const el = document.getElementById('map-countdown');
-      if (state === WorldChoirConfig.AppState.LIVE) el.textContent = 'The world is singing now';
+      if (state === WorldChoirConfig.EventState.LIVE) el.textContent = 'The world is singing now';
       else if (t.totalMs <= 0) el.textContent = 'Event in progress';
-      else el.textContent = `Singing in ${WorldChoirConfig.formatCountdown(t)}`;
+      else el.textContent = `Singing in ${WorldChoirConfig.formatCountdownLong(t)}`;
     }
 
     document.getElementById('nav-root').appendChild(renderWorldChoirNav('map'));

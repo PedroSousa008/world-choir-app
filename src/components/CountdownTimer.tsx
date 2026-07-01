@@ -17,7 +17,7 @@ interface CountdownTimerProps {
 
 export const CountdownTimer: React.FC<CountdownTimerProps> = ({ onStateChange }) => {
   const [timeRemaining, setTimeRemaining] = useState(getTimeRemaining());
-  const [eventState, setEventState] = useState(getEventState());
+  const [eventState, setEventState] = useState(getEventState(false, false));
   const pulseAnim = new Animated.Value(1);
   const eventDate = EVENT_CONFIG.EVENT_DATE;
 
@@ -46,7 +46,7 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ onStateChange })
   useEffect(() => {
     const timer = setInterval(() => {
       const newTimeRemaining = getTimeRemaining();
-      const newEventState = getEventState();
+      const newEventState = getEventState(false, false);
       
       setTimeRemaining(newTimeRemaining);
       setEventState(newEventState);

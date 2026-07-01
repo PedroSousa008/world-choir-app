@@ -30,22 +30,21 @@
   <script src="js/world-choir-nav.js"></script>
   <script>
     function isEventEnded() {
-      const now = new Date();
-      return now >= WorldChoirConfig.getSongEndDate();
+      return new Date() >= WorldChoirConfig.getEventEnd();
     }
 
     function render() {
       const el = document.getElementById('memory-content');
       const ended = isEventEnded();
       const promises = WorldChoirDB.getAllPromises();
-      const stats = WorldChoirConfig.getGlobalStats();
+      const stats = WorldChoirConfig.getMovementStats();
 
       if (!ended) {
         el.innerHTML = `
           <div class="glass-card text-center">
             <p class="state-copy" style="margin:0 auto">
               The Memory Wall opens after the world sings together.<br><br>
-              <span style="color:var(--accent-aurora)">${WorldChoirConfig.formatCountdown(WorldChoirConfig.getTimeRemaining())}</span> until the moment.
+              <span style="color:var(--accent-aurora)">${WorldChoirConfig.formatCountdownLong(WorldChoirConfig.getTimeRemaining())}</span> until the moment.
             </p>
             <div class="actions-row" style="margin-top:24px">
               <a href="index.html" class="btn btn-secondary">Back to Countdown</a>
@@ -59,15 +58,15 @@
 
       el.innerHTML = `
         <div class="stats-grid" style="margin-top:0">
-          <div class="stat-card"><div class="number">${formatNumber(stats.voices)}</div><div class="label">Voices</div></div>
-          <div class="stat-card"><div class="number">${stats.countries}</div><div class="label">Countries</div></div>
-          <div class="stat-card"><div class="number">"${WorldChoirConfig.CURRENT_EVENT.songName}"</div><div class="label">Song</div></div>
+          <div class="stat-card"><div class="number">${stats.hasData ? formatNumber(stats.voices) : '—'}</div><div class="label">Voices</div></div>
+          <div class="stat-card"><div class="number">${stats.hasData ? stats.countries : '—'}</div><div class="label">Countries</div></div>
+          <div class="stat-card"><div class="number">"${WorldChoirConfig.ACTIVE_EVENT.songName}"</div><div class="label">Song</div></div>
         </div>
 
         <div class="glass-card" style="margin:24px 0">
-          <p class="stat-label" style="margin-bottom:12px">Event Statistics — ${WorldChoirConfig.CURRENT_EVENT.title}</p>
+          <p class="stat-label" style="margin-bottom:12px">Event Statistics — ${WorldChoirConfig.ACTIVE_EVENT.title}</p>
           <div class="glass-card-row"><span class="stat-label">Date</span><span class="stat-value">${WorldChoirConfig.formatEventDate()}</span></div>
-          <div class="glass-card-row"><span class="stat-label">Hashtag</span><span class="stat-value">${WorldChoirConfig.CURRENT_EVENT.officialHashtag}</span></div>
+          <div class="glass-card-row"><span class="stat-label">Hashtag</span><span class="stat-value">${WorldChoirConfig.ACTIVE_EVENT.hashtag}</span></div>
           <div class="glass-card-row"><span class="stat-label">Promises shared</span><span class="stat-value">${promises.length || 'Growing'}</span></div>
         </div>
 

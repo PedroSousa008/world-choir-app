@@ -1,38 +1,58 @@
 /**
- * World Choir — Event configuration & app state machine
+ * World Choir — Event configuration & state machine
  */
 const WorldChoirConfig = (() => {
-  const SONG_DURATION_MS = 3 * 60 * 1000; // 3 minutes live window
-  const FINAL_HOUR_MS = 60 * 60 * 1000;
-
-  const CURRENT_EVENT = {
-    id: 'wc-2026',
-    title: 'World Choir 2026',
+  const ACTIVE_EVENT = {
+    id: 'world-choir-2027',
+    title: 'World Choir 2027',
     songName: 'Imagine',
     artistName: 'John Lennon',
-    eventDateUtc: '2026-06-15T16:00:00.000Z',
-    officialHashtag: '#WorldChoir2026',
+    eventDateUTC: '2027-07-01T16:00:00.000Z',
+    songDurationSeconds: 183,
+    hashtag: '#WorldChoir2027',
     theme: 'Hope & Unity',
   };
 
-  const AppState = {
+  // Backward-compatible alias used across the app
+  const CURRENT_EVENT = {
+    id: ACTIVE_EVENT.id,
+    title: ACTIVE_EVENT.title,
+    songName: ACTIVE_EVENT.songName,
+    artistName: ACTIVE_EVENT.artistName,
+    eventDateUtc: ACTIVE_EVENT.eventDateUTC,
+    officialHashtag: ACTIVE_EVENT.hashtag,
+    theme: ACTIVE_EVENT.theme,
+  };
+
+  const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
     LIVE: 'live',
     POST_EVENT_PROMISE: 'post_event_promise',
-    WAITING_NEXT: 'waiting_next',
+    COMPLETED: 'completed',
   };
 
-  function getEventDate() {
-    return new Date(CURRENT_EVENT.eventDateUtc);
+  // Legacy alias
+  const AppState = EventState;
+
+  function getEventStart() {
+    return new Date(ACTIVE_EVENT.eventDateUTC);
   }
 
-  function getSongEndDate() {
-    return new Date(getEventDate().getTime() + SONG_DURATION_MS);
+  function getEventEnd() {
+    return new Date(getEventStart().getTime() + ACTIVE_EVENT.songDurationSeconds * 1000);
+  }
+
+  function getFinalHourStart() {
+    return new Date(getEventStart().getTime() - 60 * 60 * 1000);
+  }
+
+  function getSongDurationMs() {
+    return ACTIVE_EVENT.songDurationSeconds * 1000;
   }
 
   function getTimeRemaining(now = new Date()) {
-    const diff = getEventDate().getTime() - now.getTime();
+    const diff = getEventStart().getTime() - now.getTime();
     if (diff <= 0) {
       return { days: 0, hours: 0, minutes: 0, seconds: 0, totalMs: 0 };
     }
@@ -45,30 +65,48 @@ const WorldChoirConfig = (() => {
     };
   }
 
-  function formatCountdown(t) {
-    if (t.days > 0) {
-      return `${t.days}d ${String(t.hours).padStart(2, '0')}h ${String(t.minutes).padStart(2, '0')}m ${String(t.seconds).padStart(2, '0')}s`;
-    }
-    return `${String(t.hours).padStart(2, '0')}:${String(t.minutes).padStart(2, '0')}:${String(t.seconds).padStart(2, '0')}`;
+  /** e.g. 364d 08h 22m 41s */
+  function formatCountdownLong(t) {
+    return `${t.days}d ${String(t.hours).padStart(2, '0')}h ${String(t.minutes).padStart(2, '0')}m ${String(t.seconds).padStart(2, '0')}s`;
   }
 
-  function getAppState(now = new Date(), userHasSubmittedPromise = false) {
-    const eventStart = getEventDate();
-    const songEnd = getSongEndDate();
-    const msUntilEvent = eventStart.getTime() - now.getTime();
+  /** e.g. 00h 59m 42s */
+  function formatCountdownFinalHour(t) {
+    const totalHours = t.days * 24 + t.hours;
+    return `${String(totalHours).padStart(2, '0')}h ${String(t.minutes).padStart(2, '0')}m ${String(t.seconds).padStart(2, '0')}s`;
+  }
 
-    if (now >= songEnd) {
-      if (userHasSubmittedPromise) return AppState.WAITING_NEXT;
-      return AppState.POST_EVENT_PROMISE;
+  function formatCountdown(t) {
+    if (t.days > 0) return formatCountdownLong(t);
+    return formatCountdownFinalHour(t);
+  }
+
+  /**
+   * Core state machine — promise ONLY after event end + user participated + no promise yet.
+   */
+  function getEventState(now = new Date(), options = {}) {
+    const userParticipated = options.userParticipated === true;
+    const userSubmittedPromise = options.userSubmittedPromise === true;
+
+    const eventStart = getEventStart();
+    const eventEnd = getEventEnd();
+    const finalHourStart = getFinalHourStart();
+
+    if (now < finalHourStart) return EventState.UPCOMING;
+    if (now >= finalHourStart && now < eventStart) return EventState.FINAL_HOUR;
+    if (now >= eventStart && now < eventEnd) return EventState.LIVE;
+    if (now >= eventEnd && userParticipated && !userSubmittedPromise) {
+      return EventState.POST_EVENT_PROMISE;
     }
-    if (now >= eventStart) return AppState.LIVE;
-    if (msUntilEvent <= FINAL_HOUR_MS) return AppState.FINAL_HOUR;
-    return AppState.UPCOMING;
+    return EventState.COMPLETED;
+  }
+
+  function getAppState(now, options) {
+    return getEventState(now, options);
   }
 
   function formatEventDate() {
-    const d = getEventDate();
-    return d.toLocaleDateString('en-US', {
+    return getEventStart().toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
@@ -81,8 +119,7 @@ const WorldChoirConfig = (() => {
   }
 
   function getLocalEventTime() {
-    const d = getEventDate();
-    return d.toLocaleString(undefined, {
+    return getEventStart().toLocaleString(undefined, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -92,29 +129,53 @@ const WorldChoirConfig = (() => {
     });
   }
 
-  // Simulated global stats (would come from backend)
+  /** Real movement stats from pledges only — never fake production numbers */
+  function getMovementStats() {
+    const pledges = typeof WorldChoirDB !== 'undefined'
+      ? WorldChoirDB.getPledgesForEvent(ACTIVE_EVENT.id)
+      : [];
+
+    const voices = pledges.length;
+    const countries = new Set(pledges.map((p) => p.country).filter(Boolean)).size;
+    const cities = new Set(pledges.map((p) => `${p.city}|${p.country}`).filter((k) => !k.startsWith('|'))).size;
+
+    return {
+      voices,
+      countries,
+      cities,
+      hasData: voices > 0,
+      // DEV: demo placeholders — never shown as real production counts in UI
+      demo: { voices: 0, countries: 0, cities: 0 },
+    };
+  }
+
+  // Legacy — redirects to real stats
   function getGlobalStats() {
-    const base = 12482193;
-    const pledges = WorldChoirDB ? WorldChoirDB.getPledgesForEvent(CURRENT_EVENT.id) : [];
-    const extra = pledges.length;
-    const voices = base + extra * 127;
-    const countries = 146 + Math.min(extra, 12);
-    const cities = 18430 + extra * 3;
-    return { voices, countries, cities };
+    return getMovementStats();
   }
 
   return {
+    ACTIVE_EVENT,
     CURRENT_EVENT,
+    EventState,
     AppState,
-    SONG_DURATION_MS,
-    getEventDate,
-    getSongEndDate,
+    getEventDate: getEventStart,
+    getEventStart,
+    getEventEnd,
+    getSongEndDate: getEventEnd,
+    getFinalHourStart,
+    SONG_DURATION_MS: getSongDurationMs(),
+    getSongDurationMs,
     getTimeRemaining,
     formatCountdown,
+    formatCountdownLong,
+    formatCountdownFinalHour,
+    getEventState,
     getAppState,
     formatEventDate,
     formatEventTime,
     getLocalEventTime,
+    getMovementStats,
     getGlobalStats,
   };
 })();

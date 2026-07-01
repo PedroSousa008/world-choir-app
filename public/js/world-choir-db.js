@@ -32,30 +32,33 @@ const WorldChoirDB = (() => {
   }
 
   function seed() {
-    const events = read(KEYS.events);
-    if (events.length === 0) {
-      write(KEYS.events, [{
-        id: WorldChoirConfig.CURRENT_EVENT.id,
-        title: WorldChoirConfig.CURRENT_EVENT.title,
-        song_name: WorldChoirConfig.CURRENT_EVENT.songName,
-        artist_name: WorldChoirConfig.CURRENT_EVENT.artistName,
-        event_date_utc: WorldChoirConfig.CURRENT_EVENT.eventDateUtc,
+    const eventId = WorldChoirConfig.ACTIVE_EVENT.id;
+    let events = read(KEYS.events);
+    if (!events.some((e) => e.id === eventId)) {
+      events.push({
+        id: eventId,
+        title: WorldChoirConfig.ACTIVE_EVENT.title,
+        song_name: WorldChoirConfig.ACTIVE_EVENT.songName,
+        artist_name: WorldChoirConfig.ACTIVE_EVENT.artistName,
+        event_date_utc: WorldChoirConfig.ACTIVE_EVENT.eventDateUTC,
         status: 'upcoming',
-        official_hashtag: WorldChoirConfig.CURRENT_EVENT.officialHashtag,
-        theme: WorldChoirConfig.CURRENT_EVENT.theme,
+        official_hashtag: WorldChoirConfig.ACTIVE_EVENT.hashtag,
+        theme: WorldChoirConfig.ACTIVE_EVENT.theme,
         created_at: new Date().toISOString(),
-      }]);
+      });
+      write(KEYS.events, events);
     }
 
-    const places = read(KEYS.gatheringPlaces);
-    if (places.length === 0) {
-      write(KEYS.gatheringPlaces, [
-        { id: 'gp1', event_id: 'wc-2026', city: 'Porto', country: 'Portugal', location_name: 'Avenida dos Aliados', address: 'Avenida dos Aliados, Porto', latitude: 41.1496, longitude: -8.6109, is_verified: true, expected_attendance: 5000, created_at: new Date().toISOString() },
-        { id: 'gp2', event_id: 'wc-2026', city: 'London', country: 'United Kingdom', location_name: 'Hyde Park', address: 'Hyde Park, London', latitude: 51.5073, longitude: -0.1657, is_verified: true, expected_attendance: 12000, created_at: new Date().toISOString() },
-        { id: 'gp3', event_id: 'wc-2026', city: 'New York', country: 'United States', location_name: 'Central Park', address: 'Central Park, New York', latitude: 40.7829, longitude: -73.9654, is_verified: true, expected_attendance: 15000, created_at: new Date().toISOString() },
-        { id: 'gp4', event_id: 'wc-2026', city: 'Braga', country: 'Portugal', location_name: 'Praça da República', address: 'Praça da República, Braga', latitude: 41.5454, longitude: -8.4265, is_verified: true, expected_attendance: 2000, created_at: new Date().toISOString() },
-        { id: 'gp5', event_id: 'wc-2026', city: 'Tokyo', country: 'Japan', location_name: 'Shibuya Crossing', address: 'Shibuya, Tokyo', latitude: 35.6595, longitude: 139.7004, is_verified: true, expected_attendance: 8000, created_at: new Date().toISOString() },
+    let places = read(KEYS.gatheringPlaces);
+    if (!places.some((g) => g.event_id === eventId)) {
+      places = places.concat([
+        { id: 'gp1', event_id: eventId, city: 'Porto', country: 'Portugal', location_name: 'Avenida dos Aliados', address: 'Avenida dos Aliados, Porto', latitude: 41.1496, longitude: -8.6109, is_verified: true, expected_attendance: 5000, created_at: new Date().toISOString() },
+        { id: 'gp2', event_id: eventId, city: 'London', country: 'United Kingdom', location_name: 'Hyde Park', address: 'Hyde Park, London', latitude: 51.5073, longitude: -0.1657, is_verified: true, expected_attendance: 12000, created_at: new Date().toISOString() },
+        { id: 'gp3', event_id: eventId, city: 'New York', country: 'United States', location_name: 'Central Park', address: 'Central Park, New York', latitude: 40.7829, longitude: -73.9654, is_verified: true, expected_attendance: 15000, created_at: new Date().toISOString() },
+        { id: 'gp4', event_id: eventId, city: 'Braga', country: 'Portugal', location_name: 'Praça da República', address: 'Praça da República, Braga', latitude: 41.5454, longitude: -8.4265, is_verified: true, expected_attendance: 2000, created_at: new Date().toISOString() },
+        { id: 'gp5', event_id: eventId, city: 'Tokyo', country: 'Japan', location_name: 'Shibuya Crossing', address: 'Shibuya, Tokyo', latitude: 35.6595, longitude: 139.7004, is_verified: true, expected_attendance: 8000, created_at: new Date().toISOString() },
       ]);
+      write(KEYS.gatheringPlaces, places);
     }
   }
 
