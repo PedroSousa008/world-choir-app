@@ -6,7 +6,7 @@ const WorldChoirMap = (() => {
   let lightsLayer = null;
   let pulsePhase = 0;
   let animFrame = null;
-  let lastCityData = [];
+  let lastLights = [];
   let highlightCityKey = null;
   let pulseCityKey = null;
 
@@ -14,30 +14,31 @@ const WorldChoirMap = (() => {
     return Math.max(min, Math.min(max, v));
   }
 
-  function lightProps(count) {
-    return {
-      core: clamp(4 + Math.sqrt(count) * 2, 5, 12),
-      glow: clamp(12 + Math.sqrt(count) * 6, 16, 80),
-      opacity: clamp(0.45 + Math.log10(count + 1) * 0.18, 0.55, 1),
-    };
+  function lightProps() {
+    return { core: 5, glow: 18, opacity: 0.85 };
   }
 
   function cityKey(c) {
     return `${c.city}|${c.country}`;
   }
 
-  /* ─── Canvas light overlay ─── */
+  function voiceCountForCity(city, country) {
+    return WorldChoirDB.getPledgesForEvent().filter(
+      (p) => p.city === city && p.country === country
+    ).length;
+  }
+
+  /* ─── Canvas light overlay (layer-point coords so lights stay on geography while panning) ─── */
   const LightsOverlay = L.Layer.extend({
     onAdd(m) {
       this._map = m;
       this._canvas = L.DomUtil.create('canvas', 'map-lights-canvas');
       this._canvas.style.position = 'absolute';
-      this._canvas.style.top = '0';
-      this._canvas.style.left = '0';
       this._canvas.style.pointerEvents = 'none';
       this._canvas.style.zIndex = '450';
       m.getPanes().overlayPane.appendChild(this._canvas);
-      m.on('moveend zoomend resize', this._reset, this);
+      m.on('move', this._reposition, this);
+      m.on('zoomend resize', this._reset, this);
       this._reset();
       this._animate();
     },
@@ -45,12 +46,20 @@ const WorldChoirMap = (() => {
     onRemove(m) {
       cancelAnimationFrame(this._animId);
       L.DomUtil.remove(this._canvas);
-      m.off('moveend zoomend resize', this._reset, this);
+      m.off('move', this._reposition, this);
+      m.off('zoomend resize', this._reset, this);
+    },
+
+    _reposition() {
+      if (!this._map || !this._canvas) return;
+      L.DomUtil.setPosition(this._canvas, this._map.containerPointToLayerPoint([0, 0]));
+      this._draw();
     },
 
     _reset() {
       const size = this._map.getSize();
       const dpr = window.devicePixelRatio || 1;
+      L.DomUtil.setPosition(this._canvas, this._map.containerPointToLayerPoint([0, 0]));
       this._canvas.width = size.x * dpr;
       this._canvas.height = size.y * dpr;
       this._canvas.style.width = size.x + 'px';
@@ -74,12 +83,12 @@ const WorldChoirMap = (() => {
 
       const breath = 0.5 + 0.5 * Math.sin(pulsePhase);
 
-      lastCityData.forEach((city) => {
-        const pt = this._map.latLngToContainerPoint([city.latitude, city.longitude]);
+      lastLights.forEach((light) => {
+        const pt = this._map.latLngToLayerPoint([light.latitude, light.longitude]);
         if (pt.x < -100 || pt.y < -100 || pt.x > size.x + 100 || pt.y > size.y + 100) return;
 
-        const props = lightProps(city.count);
-        const key = cityKey(city);
+        const props = lightProps();
+        const key = cityKey(light);
         const isPulse = key === pulseCityKey;
         const extra = isPulse ? 0.3 + 0.3 * Math.sin(pulsePhase * 3) : 0;
         const glowR = props.glow * (1 + extra + breath * 0.08);
@@ -105,7 +114,7 @@ const WorldChoirMap = (() => {
 
       const gatherings = WorldChoirDB.getGatheringPlaces();
       gatherings.forEach((g) => {
-        const pt = this._map.latLngToContainerPoint([g.latitude, g.longitude]);
+        const pt = this._map.latLngToLayerPoint([g.latitude, g.longitude]);
         const r = 6 + breath * 1.5;
         const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, r * 3);
         grad.addColorStop(0, 'rgba(201, 169, 98, 0.9)');
@@ -132,7 +141,7 @@ const WorldChoirMap = (() => {
       zoomControl: true,
       attributionControl: false,
       worldCopyJump: false,
-      maxBounds: [[-60, -180], [85, 180]],
+      maxBounds: [[-85, -180], [85, 180]],
       maxBoundsViscosity: 1.0,
     });
 
@@ -150,16 +159,16 @@ const WorldChoirMap = (() => {
   }
 
   function onMapClick(e) {
-    const clickPt = map.latLngToContainerPoint(e.latlng);
+    const clickPt = map.latLngToLayerPoint(e.latlng);
     let nearest = null;
     let minDist = 30;
 
-    lastCityData.forEach((city) => {
-      const pt = map.latLngToContainerPoint([city.latitude, city.longitude]);
+    lastLights.forEach((light) => {
+      const pt = map.latLngToLayerPoint([light.latitude, light.longitude]);
       const d = Math.hypot(pt.x - clickPt.x, pt.y - clickPt.y);
       if (d < minDist) {
         minDist = d;
-        nearest = city;
+        nearest = light;
       }
     });
 
@@ -167,17 +176,18 @@ const WorldChoirMap = (() => {
     else hideCityCard();
   }
 
-  function showCityCard(city) {
+  function showCityCard(light) {
     const card = document.getElementById('city-card');
-    const hasGathering = WorldChoirDB.hasGatheringNear(city.city, city.country);
-    document.getElementById('city-card-place').textContent = `${city.city}, ${city.country}`;
+    const count = voiceCountForCity(light.city, light.country);
+    const hasGathering = WorldChoirDB.hasGatheringNear(light.city, light.country);
+    document.getElementById('city-card-place').textContent = `${light.city}, ${light.country}`;
     document.getElementById('city-card-voices').textContent =
-      `${formatNumber(city.count)} voice${city.count !== 1 ? 's' : ''}`;
+      `${formatNumber(count)} voice${count !== 1 ? 's' : ''}`;
     const gatheringEl = document.getElementById('city-card-gathering');
     gatheringEl.textContent = hasGathering ? 'Official gathering nearby' : '';
     gatheringEl.style.display = hasGathering ? 'block' : 'none';
     card.classList.add('visible');
-    highlightCityKey = cityKey(city);
+    highlightCityKey = cityKey(light);
     setTimeout(() => card.classList.remove('visible'), 4000);
   }
 
@@ -186,7 +196,7 @@ const WorldChoirMap = (() => {
   }
 
   function refreshMapData() {
-    lastCityData = WorldChoirDB.getAggregatedCities();
+    lastLights = WorldChoirDB.getUserLights();
     updateStats();
     updateEmptyState();
     updateInfoSheet();

@@ -282,6 +282,48 @@ const WorldChoirDB = (() => {
     return Object.values(map);
   }
 
+  /** One map light per user — strictly 1:1 with pledges (deduped by user_id). */
+  function getUserLights(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const pledges = getPledgesForEvent(eventId).filter(
+      (p) => p.latitude != null && p.longitude != null && p.city && p.country
+    );
+    const seenUsers = new Set();
+    const unique = pledges.filter((p) => {
+      if (seenUsers.has(p.user_id)) return false;
+      seenUsers.add(p.user_id);
+      return true;
+    });
+
+    const perCity = {};
+    unique.forEach((p) => {
+      const key = `${p.city}|${p.country}`;
+      perCity[key] = (perCity[key] || 0) + 1;
+    });
+    const cityIndex = {};
+
+    return unique.map((p) => {
+      const key = `${p.city}|${p.country}`;
+      const idx = cityIndex[key] || 0;
+      cityIndex[key] = idx + 1;
+      const offset = spreadLightOffset(idx, perCity[key]);
+      return {
+        id: p.id,
+        userId: p.user_id,
+        city: p.city,
+        country: p.country,
+        latitude: p.latitude + offset.lat,
+        longitude: p.longitude + offset.lng,
+      };
+    });
+  }
+
+  function spreadLightOffset(index, totalInCity) {
+    if (totalInCity <= 1) return { lat: 0, lng: 0 };
+    const angle = index * 2.399963;
+    const r = 0.06 * Math.sqrt(index + 1);
+    return { lat: r * Math.cos(angle), lng: r * Math.sin(angle) };
+  }
+
   function hasGatheringNear(city, country, maxKm = 50) {
     const gatherings = getGatheringPlaces();
     const cities = getAggregatedCities();
@@ -350,6 +392,7 @@ const WorldChoirDB = (() => {
     getGatheringPlaces,
     getMapStats,
     getAggregatedCities,
+    getUserLights,
     hasGatheringNear,
     getParticipationHistory,
     getCityParticipation,
