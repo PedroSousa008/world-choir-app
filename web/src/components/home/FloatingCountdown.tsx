@@ -4,50 +4,37 @@ import './FloatingCountdown.css';
 
 interface Props {
   countdown: CountdownParts;
-  label?: string;
 }
 
-export function FloatingCountdown({ countdown, label = 'The world sings together in' }: Props) {
+export function FloatingCountdown({ countdown }: Props) {
   const { days, hours, minutes, seconds } = countdown;
   const showDays = days > 0;
 
   return (
     <div className="floating-countdown">
-      <p className="floating-countdown__label">{label}</p>
-
-      {showDays ? (
+      {showDays && (
         <>
           <div className="floating-countdown__days">{days}</div>
           <div className="floating-countdown__days-label">DAYS</div>
-          <div className="floating-countdown__time">
-            <span>{pad(hours)}</span>
-            <span className="floating-countdown__sep">:</span>
-            <span>{pad(minutes)}</span>
-            <span className="floating-countdown__sep">:</span>
-            <span>{pad(seconds)}</span>
-          </div>
-          <div className="floating-countdown__units">
-            <span>Hours</span>
-            <span>Minutes</span>
-            <span>Seconds</span>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="floating-countdown__time floating-countdown__time--large">
-            <span>{pad(hours)}</span>
-            <span className="floating-countdown__sep">:</span>
-            <span>{pad(minutes)}</span>
-            <span className="floating-countdown__sep">:</span>
-            <span>{pad(seconds)}</span>
-          </div>
-          <div className="floating-countdown__units">
-            <span>Hours</span>
-            <span>Minutes</span>
-            <span>Seconds</span>
-          </div>
         </>
       )}
+
+      <div className={`floating-countdown__time ${!showDays ? 'floating-countdown__time--solo' : ''}`}>
+        <span className="floating-countdown__segment">
+          <span className="floating-countdown__digit">{pad(hours)}</span>
+          <span className="floating-countdown__unit">Hours</span>
+        </span>
+        <span className="floating-countdown__sep" aria-hidden>:</span>
+        <span className="floating-countdown__segment">
+          <span className="floating-countdown__digit">{pad(minutes)}</span>
+          <span className="floating-countdown__unit">Minutes</span>
+        </span>
+        <span className="floating-countdown__sep" aria-hidden>:</span>
+        <span className="floating-countdown__segment">
+          <span className="floating-countdown__digit">{pad(seconds)}</span>
+          <span className="floating-countdown__unit">Seconds</span>
+        </span>
+      </div>
     </div>
   );
 }

@@ -2,14 +2,17 @@ import { Suspense, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import type { PledgeLight } from '../../types';
+import type { CityGlow } from '../../types';
 import './EarthGlobe.css';
 
-const EARTH_TEXTURE = '/textures/earth-night.jpg';
-const BUMP_TEXTURE = '/textures/earth-topology.png';
+const DAY_TEXTURE = '/textures/earth-day.jpg';
+const LIGHTS_TEXTURE = '/textures/earth-lights.png';
+const NORMAL_TEXTURE = '/textures/earth-normal.jpg';
 const CLOUDS_TEXTURE = '/textures/earth-clouds.png';
 
-const ROTATION_PERIOD_SEC = 600;
+const ROTATION_PERIOD_SEC = 480;
+const EARTH_RADIUS = 1.55;
+const EARTH_CENTER_Y = -0.72;
 
 function latLngToPosition(lat: number, lng: number, radius: number): THREE.Vector3 {
   const phi = (90 - lat) * (Math.PI / 180);
@@ -21,132 +24,139 @@ function latLngToPosition(lat: number, lng: number, radius: number): THREE.Vecto
   );
 }
 
-function hashOffset(id: string): { lat: number; lng: number } {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 1000;
-  return { lat: ((h % 17) - 8) * 0.015, lng: (((h * 7) % 17) - 8) * 0.015 };
-}
-
 interface SceneProps {
-  lights: PledgeLight[];
+  cityGlows: CityGlow[];
   pulsePhase: number;
-  newLightId: string | null;
+  newGlowKey: string | null;
 }
 
-function EarthScene({ lights, pulsePhase, newLightId }: SceneProps) {
-  const groupRef = useRef<THREE.Group>(null);
-  const atmosphereRef = useRef<THREE.Mesh>(null);
+function EarthScene({ cityGlows, pulsePhase, newGlowKey }: SceneProps) {
+  const earthRef = useRef<THREE.Group>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
+  const atmosphereRef = useRef<THREE.Mesh>(null);
   const breatheRef = useRef(0);
 
-  const [earthMap, bumpMap, cloudsMap] = useTexture([EARTH_TEXTURE, BUMP_TEXTURE, CLOUDS_TEXTURE]);
+  const [dayMap, lightsMap, normalMap, cloudsMap] = useTexture([
+    DAY_TEXTURE,
+    LIGHTS_TEXTURE,
+    NORMAL_TEXTURE,
+    CLOUDS_TEXTURE,
+  ]);
 
-  const lightPositions = useMemo(() => {
-    return lights.map((light) => {
-      const offset = hashOffset(light.id);
-      return latLngToPosition(
-        light.latitude + offset.lat,
-        light.longitude + offset.lng,
-        1.012
-      );
+  const pledgeSprites = useMemo(() => {
+    return cityGlows.map((glow) => {
+      const key = `${glow.city}|${glow.country}`;
+      const intensity = Math.min(1, 0.3 + glow.pledges * 0.1);
+      const pos = latLngToPosition(glow.latitude, glow.longitude, EARTH_RADIUS + 0.018);
+      return { key, pos, intensity, isNew: key === newGlowKey };
     });
-  }, [lights]);
+  }, [cityGlows, newGlowKey]);
 
   useFrame((_, delta) => {
     breatheRef.current += delta;
 
-    if (groupRef.current) {
-      groupRef.current.rotation.y += (Math.PI * 2 * delta) / ROTATION_PERIOD_SEC;
+    if (earthRef.current) {
+      earthRef.current.rotation.y += (Math.PI * 2 * delta) / ROTATION_PERIOD_SEC;
+      const breathe = 1 + Math.sin(breatheRef.current * 0.55) * 0.006;
+      const pulse = pulsePhase > 0 ? 1 + Math.sin(pulsePhase * Math.PI) * 0.018 : 0;
+      earthRef.current.scale.setScalar(breathe + pulse);
     }
 
     if (cloudsRef.current) {
-      cloudsRef.current.rotation.y += delta * 0.015;
+      cloudsRef.current.rotation.y += delta * 0.012;
     }
 
     if (atmosphereRef.current) {
-      const breathe = 1 + Math.sin(breatheRef.current * 0.8) * 0.012;
-      const pulse = pulsePhase > 0 ? 1 + Math.sin(pulsePhase * Math.PI) * 0.04 : 0;
-      atmosphereRef.current.scale.setScalar(1.06 * breathe + pulse);
+      const breathe = 1 + Math.sin(breatheRef.current * 0.55) * 0.01;
+      const pulse = pulsePhase > 0 ? 1 + Math.sin(pulsePhase * Math.PI) * 0.03 : 0;
+      atmosphereRef.current.scale.setScalar((EARTH_RADIUS + 0.08) * (breathe + pulse));
     }
   });
 
   return (
-    <group ref={groupRef}>
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[4, 2, 4]} intensity={0.9} color="#a8c8ff" />
-      <directionalLight position={[-3, -1, -2]} intensity={0.15} color="#1a3050" />
+    <group position={[0, EARTH_CENTER_Y, 0]}>
+      <group ref={earthRef}>
+        <mesh>
+          <sphereGeometry args={[EARTH_RADIUS, 96, 96]} />
+          <meshStandardMaterial
+            map={dayMap}
+            normalMap={normalMap}
+            emissiveMap={lightsMap}
+            emissive={new THREE.Color('#ffcc88')}
+            emissiveIntensity={0.85}
+            roughness={0.82}
+            metalness={0.04}
+          />
+        </mesh>
 
-      <mesh>
-        <sphereGeometry args={[1, 64, 64]} />
-        <meshStandardMaterial
-          map={earthMap}
-          bumpMap={bumpMap}
-          bumpScale={0.04}
-          roughness={0.85}
-          metalness={0.05}
-        />
-      </mesh>
+        <mesh ref={cloudsRef}>
+          <sphereGeometry args={[EARTH_RADIUS + 0.012, 72, 72]} />
+          <meshStandardMaterial
+            map={cloudsMap}
+            transparent
+            opacity={0.22}
+            depthWrite={false}
+          />
+        </mesh>
 
-      <mesh ref={cloudsRef}>
-        <sphereGeometry args={[1.008, 48, 48]} />
-        <meshStandardMaterial map={cloudsMap} transparent opacity={0.18} depthWrite={false} />
-      </mesh>
+        {pledgeSprites.map(({ key, pos, intensity, isNew }) => (
+          <mesh key={key} position={pos}>
+            <sphereGeometry args={[isNew ? 0.022 : 0.012 + intensity * 0.008, 10, 10]} />
+            <meshBasicMaterial
+              color={isNew ? '#fff8d8' : '#8ecfff'}
+              transparent
+              opacity={isNew ? 1 : 0.55 + intensity * 0.4}
+            />
+          </mesh>
+        ))}
+      </group>
 
       <mesh ref={atmosphereRef}>
-        <sphereGeometry args={[1, 48, 48]} />
+        <sphereGeometry args={[1, 64, 64]} />
         <meshBasicMaterial
-          color="#4a90d9"
+          color="#5ba8e8"
           transparent
-          opacity={0.08}
+          opacity={0.11}
           side={THREE.BackSide}
           depthWrite={false}
         />
       </mesh>
 
-      {lightPositions.map((pos, i) => {
-        const light = lights[i];
-        const isNew = light.id === newLightId;
-        return (
-          <mesh key={light.id} position={pos}>
-            <sphereGeometry args={[isNew ? 0.014 : 0.009, 8, 8]} />
-            <meshBasicMaterial
-              color={isNew ? '#fff8e0' : '#7ec8f0'}
-              transparent
-              opacity={isNew ? 1 : 0.92}
-            />
-          </mesh>
-        );
-      })}
+      <directionalLight position={[5, 3, 4]} intensity={1.4} color="#c8dcff" />
+      <directionalLight position={[-4, -1, -3]} intensity={0.08} color="#1a2840" />
+      <ambientLight intensity={0.12} color="#1a3050" />
     </group>
   );
 }
 
 function EarthFallbackSphere() {
   const groupRef = useRef<THREE.Group>(null);
-  const atmosphereRef = useRef<THREE.Mesh>(null);
   const breatheRef = useRef(0);
 
   useFrame((_, delta) => {
     breatheRef.current += delta;
     if (groupRef.current) {
       groupRef.current.rotation.y += (Math.PI * 2 * delta) / ROTATION_PERIOD_SEC;
-    }
-    if (atmosphereRef.current) {
-      const breathe = 1 + Math.sin(breatheRef.current * 0.8) * 0.012;
-      atmosphereRef.current.scale.setScalar(1.06 * breathe);
+      const breathe = 1 + Math.sin(breatheRef.current * 0.55) * 0.006;
+      groupRef.current.scale.setScalar(breathe);
     }
   });
 
   return (
-    <group ref={groupRef}>
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[4, 2, 4]} intensity={0.8} color="#a8c8ff" />
+    <group ref={groupRef} position={[0, EARTH_CENTER_Y, 0]}>
+      <ambientLight intensity={0.25} />
+      <directionalLight position={[5, 3, 4]} intensity={1} color="#a8c8ff" />
       <mesh>
-        <sphereGeometry args={[1, 48, 48]} />
-        <meshStandardMaterial color="#1a3a5c" emissive="#0a2040" emissiveIntensity={0.4} roughness={0.9} />
+        <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
+        <meshStandardMaterial
+          color="#1e4a6e"
+          emissive="#0a1830"
+          emissiveIntensity={0.5}
+          roughness={0.9}
+        />
       </mesh>
-      <mesh ref={atmosphereRef}>
-        <sphereGeometry args={[1, 32, 32]} />
+      <mesh>
+        <sphereGeometry args={[EARTH_RADIUS + 0.06, 48, 48]} />
         <meshBasicMaterial color="#4a90d9" transparent opacity={0.1} side={THREE.BackSide} />
       </mesh>
     </group>
@@ -154,23 +164,27 @@ function EarthFallbackSphere() {
 }
 
 interface Props {
-  lights: PledgeLight[];
+  cityGlows: CityGlow[];
   pulsePhase: number;
-  newLightId: string | null;
+  newGlowKey: string | null;
   className?: string;
 }
 
-export function EarthGlobe({ lights, pulsePhase, newLightId, className }: Props) {
+export function EarthGlobe({ cityGlows, pulsePhase, newGlowKey, className }: Props) {
   return (
-    <div className={`earth-globe-wrap ${className ?? ''}`} aria-hidden>
+    <div className={`earth-globe-wrap earth-globe-wrap--hemisphere ${className ?? ''}`} aria-hidden>
       <Canvas
-        camera={{ position: [0, 0.15, 2.6], fov: 42 }}
-        dpr={[1, 1.5]}
+        camera={{ position: [0, 0.42, 2.05], fov: 48, near: 0.1, far: 100 }}
+        dpr={[1, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         style={{ background: 'transparent' }}
       >
         <Suspense fallback={<EarthFallbackSphere />}>
-          <EarthScene lights={lights} pulsePhase={pulsePhase} newLightId={newLightId} />
+          <EarthScene
+            cityGlows={cityGlows}
+            pulsePhase={pulsePhase}
+            newGlowKey={newGlowKey}
+          />
         </Suspense>
       </Canvas>
     </div>

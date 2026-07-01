@@ -1,0 +1,57 @@
+.floating-stats {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.floating-stats__col {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.floating-stats__divider {
+  position: absolute;
+  left: 0;
+  top: 8%;
+  bottom: 8%;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.14) 30%,
+    rgba(255, 255, 255, 0.14) 70%,
+    transparent 100%
+  );
+}
+
+.floating-stats__value {
+  font-size: clamp(20px, 5.5vw, 26px);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.floating-stats__label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.36);
+}
+
+.home-icon--stat {
+  width: 18px;
+  height: 18px;
+}

@@ -2,7 +2,14 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { FloatingCountdown } from '../components/home/FloatingCountdown';
 import { FloatingStats } from '../components/home/FloatingStats';
-import { formatEventDateUTC, formatLocalTime } from '../constants/event';
+import {
+  BellIcon,
+  CalendarIcon,
+  RemindIcon,
+  RingLogo,
+  ShareIcon,
+} from '../components/home/HomeIcons';
+import { SpaceField } from '../components/home/SpaceField';
 import { useData } from '../context/DataContext';
 import { useEventClock } from '../hooks/useEventClock';
 import type { PledgeReason } from '../types';
@@ -12,6 +19,7 @@ import {
   isDatabaseConfigured,
   upsertUser,
 } from '../services/database';
+import { formatEventDateUTC } from '../constants/event';
 import './HomeScreen.css';
 
 const EarthGlobe = lazy(() =>
@@ -27,7 +35,7 @@ interface Props {
 }
 
 export function HomeScreen({ refreshKey }: Props) {
-  const { loading, stats, pledgeLights, refresh, setUser } = useData();
+  const { loading, stats, cityGlows, refresh, setUser } = useData();
   const clock = useEventClock();
   const { event, status, countdown, user, pledge, hasPledged, userPhase } = clock;
 
@@ -40,15 +48,15 @@ export function HomeScreen({ refreshKey }: Props) {
   const [pledgeSuccess, setPledgeSuccess] = useState(false);
   const [pulseKey, setPulseKey] = useState(0);
   const [pulseT, setPulseT] = useState(0);
-  const [newLightId, setNewLightId] = useState<string | null>(null);
-  const [buttonPressed, setButtonPressed] = useState(false);
+  const [newGlowKey, setNewGlowKey] = useState<string | null>(null);
+  const [buttonFading, setButtonFading] = useState(false);
 
   useEffect(() => {
     if (pulseKey === 0) return;
     const start = performance.now();
     let frame: number;
     const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / 1200);
+      const t = Math.min(1, (now - start) / 1400);
       setPulseT(1 - t);
       if (t < 1) frame = requestAnimationFrame(tick);
     };
@@ -59,8 +67,6 @@ export function HomeScreen({ refreshKey }: Props) {
   async function submitPledge(reason?: PledgeReason) {
     setError('');
     setPledging(true);
-    setButtonPressed(true);
-    setTimeout(() => setButtonPressed(false), 400);
 
     const city = user.city || cityInput.trim();
     const country = user.country || countryInput.trim();
@@ -76,6 +82,8 @@ export function HomeScreen({ refreshKey }: Props) {
       setPledging(false);
       return;
     }
+
+    setButtonFading(true);
 
     const coords = await geocodeCity(city, country);
     const updated = {
@@ -109,16 +117,22 @@ export function HomeScreen({ refreshKey }: Props) {
     setLocationModal(false);
 
     if (!saved) {
+      setButtonFading(false);
       setError('Could not save your pledge. Please try again.');
       return;
     }
 
-    setNewLightId(pledgeId);
+    const glowKey = `${city}|${country}`;
+    setNewGlowKey(glowKey);
     setPulseT(1);
     setPulseKey((k) => k + 1);
     setPledgeSuccess(true);
     await refresh();
-    setTimeout(() => setPledgeSuccess(false), 5000);
+    setTimeout(() => {
+      setPledgeSuccess(false);
+      setButtonFading(false);
+      setNewGlowKey(null);
+    }, 6000);
   }
 
   function saveLocationAndPledge() {
@@ -146,118 +160,139 @@ export function HomeScreen({ refreshKey }: Props) {
     );
   }
 
-  const countdownLabel =
-    status === 'final_hour'
-      ? 'The world is almost ready'
-      : status === 'live'
-        ? 'The moment has arrived'
-        : 'The world sings together in';
+  async function handleRemind() {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        new Notification('World Choir', {
+          body: `We'll remind you before the world sings on ${formatEventDateUTC(event.startsAtUTC)}.`,
+          icon: '/textures/earth-day.jpg',
+        });
+        return;
+      }
+    }
+    handleCalendar();
+  }
 
-  const emptyHint =
-    stats.totalPledges === 0 ? 'Be the first voice to join World Choir.' : undefined;
+  const showJoined = hasPledged || pledgeSuccess;
+  const isLive = status === 'live';
+  const isWaiting = userPhase === 'waiting_next';
 
   return (
-    <div className={`home-immersive home-immersive--ready${loading ? ' home-immersive--syncing' : ''}`} key={refreshKey}>
-      <div className="home-immersive__bg" />
-      <div className="home-immersive__stars" />
+    <div
+      className={`home-cinematic home-cinematic--ready${loading ? ' home-cinematic--syncing' : ''}`}
+      key={refreshKey}
+    >
+      <SpaceField />
 
-      <div className="home-immersive__earth-layer">
+      <div className="home-cinematic__earth">
         <ErrorBoundary
           fallback={
-            <div className="earth-globe-wrap__css-fallback home-immersive__earth-fallback">
+            <div className="earth-globe-wrap__css-fallback home-cinematic__earth-fallback">
               <div className="earth-globe-wrap__css-sphere" />
             </div>
           }
         >
           <Suspense
             fallback={
-              <div className="earth-globe-wrap__css-fallback home-immersive__earth-fallback">
+              <div className="earth-globe-wrap__css-fallback home-cinematic__earth-fallback">
                 <div className="earth-globe-wrap__css-sphere" />
               </div>
             }
           >
             <EarthGlobe
-              className="home-immersive__earth"
-              lights={pledgeLights}
+              cityGlows={cityGlows}
               pulsePhase={pulseT}
-              newLightId={newLightId}
+              newGlowKey={newGlowKey}
             />
           </Suspense>
         </ErrorBoundary>
       </div>
 
-      <div className="home-immersive__scroll">
-        <header className="home-immersive__brand">
-          <span className="home-immersive__logo">World Choir</span>
+      <div className="home-cinematic__content">
+        <header className="home-cinematic__header">
+          <button type="button" className="home-cinematic__bell" onClick={handleRemind} aria-label="Remind me">
+            <BellIcon />
+          </button>
+
+          <div className="home-cinematic__brand">
+            <RingLogo />
+            <h1 className="home-cinematic__title">World Choir</h1>
+            <p className="home-cinematic__tagline">The world sings together in</p>
+          </div>
         </header>
 
-        {userPhase === 'waiting_next' ? (
-          <div className="home-immersive__state-message">
-            <h1>Waiting for Next Countdown</h1>
-            <p>The next World Choir Event has not been announced yet.</p>
+        {isWaiting ? (
+          <div className="home-cinematic__state">
+            <h2>Waiting for the next moment</h2>
+            <p>The next World Choir event has not been announced yet.</p>
           </div>
-        ) : status === 'live' ? (
-          <div className="home-immersive__state-message home-immersive__state-message--live">
-            <h1>Go sing.</h1>
+        ) : isLive ? (
+          <div className="home-cinematic__state home-cinematic__state--live">
+            <h2>Go sing.</h2>
             <p>{event.songTitle} — {event.artist}</p>
-            <p className="home-immersive__live-whisper">Put your phone down. The world is singing with you.</p>
+            <p className="home-cinematic__whisper">Put your phone down. The world is singing with you.</p>
           </div>
         ) : (
           <>
-            <div className="home-immersive__countdown-layer">
-              <FloatingCountdown countdown={countdown} label={countdownLabel} />
-            </div>
+            <section className="home-cinematic__countdown" aria-live="polite">
+              <FloatingCountdown countdown={countdown} />
+            </section>
 
-            <div className="home-immersive__meta">
-              <p>{formatEventDateUTC(event.startsAtUTC)}</p>
-              <p>Your local time · {formatLocalTime(event.startsAtUTC)}</p>
-            </div>
-
-            <div className="home-immersive__song">
-              <p className="home-immersive__song-title">♪ {event.songTitle}</p>
-              <p className="home-immersive__song-artist">{event.artist}</p>
-              <p className="home-immersive__theme">
-                <span>This year's theme</span>
-                {event.theme}
+            <section className="home-cinematic__song">
+              <p className="home-cinematic__song-line">
+                <span aria-hidden>♪</span> {event.songTitle} — {event.artist}
               </p>
-            </div>
+              <p className="home-cinematic__dedication">
+                This year&apos;s World Choir is dedicated to{' '}
+                <em>{event.theme}</em>.
+              </p>
+            </section>
 
-            <div className="home-immersive__stats-layer">
-              <FloatingStats stats={stats} emptyHint={emptyHint} />
-            </div>
+            <section className="home-cinematic__stats">
+              <FloatingStats stats={stats} />
+            </section>
 
             {userPhase !== 'promise_open' && (
-              <div className="home-immersive__actions">
-                {hasPledged || pledgeSuccess ? (
-                  <div className="home-immersive__joined">
-                    <button className="home-pledge-btn home-pledge-btn--joined" disabled>
-                      You're part of the choir
-                    </button>
-                    <p className="home-immersive__joined-text">
-                      {pledgeSuccess
-                        ? 'Your voice has joined the world.'
-                        : pledge
-                          ? `Your voice has joined ${pledge.city}, ${pledge.country}.`
-                          : 'Your voice has joined the world.'}
+              <section className="home-cinematic__actions">
+                {showJoined ? (
+                  <div className="home-cinematic__joined">
+                    {pledgeSuccess && (
+                      <button className="home-cinematic__pledge home-cinematic__pledge--fading" disabled aria-hidden>
+                        I&apos;ll Sing
+                      </button>
+                    )}
+                    <p className="home-cinematic__joined-glow" aria-live="polite">
+                      Your voice has joined the world.
                     </p>
                   </div>
                 ) : (
                   <button
-                    className={`home-pledge-btn ${buttonPressed ? 'home-pledge-btn--pressed' : ''}`}
+                    className={`home-cinematic__pledge${buttonFading ? ' home-cinematic__pledge--fading' : ''}`}
                     onClick={() => setShowReason(true)}
-                    disabled={pledging}
+                    disabled={pledging || buttonFading}
                   >
                     {pledging ? 'Joining...' : "I'll Sing"}
                   </button>
                 )}
 
-                {error && <p className="home-immersive__error">{error}</p>}
+                {error && <p className="home-cinematic__error">{error}</p>}
 
-                <div className="home-immersive__secondary">
-                  <button type="button" onClick={handleCalendar}>Add to Calendar</button>
-                  <button type="button" onClick={handleShare}>Share</button>
+                <div className="home-cinematic__secondary">
+                  <button type="button" className="home-cinematic__action" onClick={handleRemind}>
+                    <span className="home-cinematic__action-icon"><RemindIcon /></span>
+                    <span>Remind me</span>
+                  </button>
+                  <button type="button" className="home-cinematic__action" onClick={handleCalendar}>
+                    <span className="home-cinematic__action-icon"><CalendarIcon /></span>
+                    <span>Add to Calendar</span>
+                  </button>
+                  <button type="button" className="home-cinematic__action" onClick={handleShare}>
+                    <span className="home-cinematic__action-icon"><ShareIcon /></span>
+                    <span>Share</span>
+                  </button>
                 </div>
-              </div>
+              </section>
             )}
           </>
         )}
@@ -284,7 +319,7 @@ export function HomeScreen({ refreshKey }: Props) {
             <h3>Where will you sing from?</h3>
             <input placeholder="City" value={cityInput} onChange={(e) => setCityInput(e.target.value)} />
             <input placeholder="Country" value={countryInput} onChange={(e) => setCountryInput(e.target.value)} />
-            <button className="home-pledge-btn" onClick={saveLocationAndPledge}>Join the choir</button>
+            <button className="home-cinematic__pledge" onClick={saveLocationAndPledge}>Join the choir</button>
           </div>
         </div>
       )}
