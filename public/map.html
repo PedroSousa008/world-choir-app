@@ -10,72 +10,85 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="css/world-choir-theme.css">
-  <style>
-    body { overflow: hidden; }
-    .map-wrap { position: relative; height: calc(100vh - var(--nav-height)); }
-    .map-header {
-      position: absolute; top: 16px; left: 16px; right: 16px; z-index: 500;
-      background: var(--bg-card); border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg); padding: 20px; backdrop-filter: blur(24px);
-      text-align: center; pointer-events: none;
-    }
-    .map-header h1 { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
-    .map-header p { font-size: 0.8rem; color: var(--text-muted); }
-    .map-header .pulse-dot {
-      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-      background: var(--accent-aurora); margin-right: 6px;
-      box-shadow: 0 0 10px var(--accent-aurora);
-      animation: livePulse 2s ease-in-out infinite;
-    }
-    .map-legend {
-      position: absolute; bottom: 100px; left: 16px; z-index: 500;
-      background: var(--bg-card); border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md); padding: 14px 16px; font-size: 0.75rem;
-      color: var(--text-muted); backdrop-filter: blur(20px);
-    }
-    .map-legend span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
-    .map-stats {
-      position: absolute; bottom: 100px; right: 16px; z-index: 500;
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .map-stat {
-      background: var(--bg-card); border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm); padding: 10px 14px; text-align: center;
-      backdrop-filter: blur(20px); min-width: 90px;
-    }
-    .map-stat .n { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
-    .map-stat .l { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
-    .leaflet-container { background: var(--bg-void) !important; }
-    .leaflet-tile-pane { filter: brightness(0.65) contrast(1.1) saturate(0.8); }
-    .leaflet-control-zoom a {
-      background: var(--bg-card) !important; color: var(--text-primary) !important;
-      border: 1px solid var(--border-subtle) !important;
-    }
-    .leaflet-popup-content-wrapper {
-      background: var(--bg-secondary) !important; color: var(--text-primary) !important;
-      border: 1px solid var(--border-subtle); border-radius: var(--radius-sm) !important;
-    }
-    .leaflet-popup-tip { background: var(--bg-secondary) !important; }
-    .gathering-pin { border: 2px solid var(--accent-gold) !important; }
-  </style>
+  <link rel="stylesheet" href="css/map.css">
 </head>
 <body>
-  <div class="ambient-bg breathing" id="ambient-bg"></div>
+  <div class="map-page__stars"></div>
+  <div class="map-page__vignette"></div>
 
-  <div class="map-wrap">
+  <div class="map-shell">
     <div class="map-header">
-      <h1><span class="pulse-dot"></span>The Earth Breathes</h1>
-      <p id="map-countdown">Loading...</p>
+      <p class="map-header__title">The Earth Breathes</p>
+      <p class="map-header__subtitle">Every light is a real voice preparing to sing.</p>
+      <p class="map-header__countdown" id="map-countdown">—</p>
     </div>
+
     <div id="world-map"></div>
-    <div class="map-legend">
-      <div><span style="background:#3d7cff"></span> Growing</div>
-      <div style="margin-top:6px"><span style="background:#c9a962"></span> Official gathering</div>
-    </div>
+
     <div class="map-stats">
-      <div class="map-stat"><div class="n" id="stat-voices">—</div><div class="l">Voices</div></div>
-      <div class="map-stat"><div class="n" id="stat-cities">—</div><div class="l">Cities</div></div>
-      <div class="map-stat"><div class="n" id="stat-countries">—</div><div class="l">Countries</div></div>
+      <div class="map-stat">
+        <span class="map-stat__num" id="stat-voices">0</span>
+        <span class="map-stat__lbl">Voices</span>
+      </div>
+      <div class="map-stat">
+        <span class="map-stat__num" id="stat-cities">0</span>
+        <span class="map-stat__lbl">Cities</span>
+      </div>
+      <div class="map-stat">
+        <span class="map-stat__num" id="stat-countries">0</span>
+        <span class="map-stat__lbl">Countries</span>
+      </div>
+    </div>
+
+    <button class="map-info-btn" id="map-info-btn" type="button" aria-label="Map legend">i</button>
+
+    <div class="map-info-sheet" id="map-info-sheet">
+      <div class="map-info-sheet__row">
+        <span class="map-info-sheet__dot map-info-sheet__dot--blue"></span>
+        <span>Blue lights — real people who pledged to sing.</span>
+      </div>
+      <div class="map-info-sheet__row" id="info-gold-row" style="display:none">
+        <span class="map-info-sheet__dot map-info-sheet__dot--gold"></span>
+        <span>Gold markers — official gathering places.</span>
+      </div>
+    </div>
+
+    <div class="map-empty" id="map-empty">
+      <p class="map-empty__title">No voices yet</p>
+      <p class="map-empty__copy">Be the first to light up the world.</p>
+      <button class="map-empty__btn" id="map-empty-btn" type="button">I'll Sing</button>
+    </div>
+
+    <div class="city-card" id="city-card">
+      <p class="city-card__place" id="city-card-place">—</p>
+      <p class="city-card__voices" id="city-card-voices">—</p>
+      <p class="city-card__gathering" id="city-card-gathering"></p>
+    </div>
+  </div>
+
+  <div class="voice-joined" id="voice-joined">
+    <p class="voice-joined__text">Your voice is now part of the world.</p>
+  </div>
+
+  <!-- Shared participation modal -->
+  <div class="overlay" id="participation-overlay">
+    <div class="modal" role="dialog" aria-labelledby="participation-title">
+      <h2 class="modal-title" id="participation-title">Where will you sing from?</h2>
+      <p class="modal-copy">Choose the city and country where you plan to join World Choir. You can change this later in your profile.</p>
+      <div class="form-group">
+        <label class="form-label" for="pledge-country">Country</label>
+        <select class="form-input form-select" id="pledge-country">
+          <option value="">Select country</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pledge-city">City</label>
+        <input class="form-input" id="pledge-city" type="text" placeholder="Your city" autocomplete="address-level2">
+      </div>
+      <div class="actions-row">
+        <button class="btn btn-primary" id="participation-confirm" type="button">Confirm Participation</button>
+        <button class="btn btn-secondary" id="participation-cancel" type="button">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -85,112 +98,8 @@
   <script src="js/world-choir-config.js"></script>
   <script src="js/world-choir-db.js"></script>
   <script src="js/world-choir-nav.js"></script>
-  <script>
-    const SEED_CITIES = [
-      { city: 'New York', country: 'United States', lat: 40.7128, lng: -74.006, count: 8420 },
-      { city: 'London', country: 'United Kingdom', lat: 51.5074, lng: -0.1278, count: 7100 },
-      { city: 'Tokyo', country: 'Japan', lat: 35.6762, lng: 139.6503, count: 6800 },
-      { city: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522, count: 5200 },
-      { city: 'Sydney', country: 'Australia', lat: -33.8688, lng: 151.2093, count: 4100 },
-      { city: 'São Paulo', country: 'Brazil', lat: -23.5505, lng: -46.6333, count: 3900 },
-      { city: 'Lisbon', country: 'Portugal', lat: 38.7223, lng: -9.1393, count: 2800 },
-      { city: 'Porto', country: 'Portugal', lat: 41.1496, lng: -8.6109, count: 1900 },
-      { city: 'Braga', country: 'Portugal', lat: 41.5454, lng: -8.4265, count: 1200 },
-      { city: 'Berlin', country: 'Germany', lat: 52.52, lng: 13.405, count: 3600 },
-    ];
-
-    let map, markers = [], heatLayers = [];
-
-    function loadParticipationData() {
-      const pledges = WorldChoirDB.getPledgesForEvent();
-      const fromPledges = pledges.filter((p) => p.latitude && p.longitude).map((p) => ({
-        city: p.city, country: p.country, lat: p.latitude, lng: p.longitude, count: 1,
-      }));
-
-      const cityMap = {};
-      SEED_CITIES.forEach((c) => { cityMap[`${c.city}|${c.country}`] = { ...c }; });
-      fromPledges.forEach((p) => {
-        const key = `${p.city}|${p.country}`;
-        if (cityMap[key]) cityMap[key].count += 1;
-        else cityMap[key] = { ...p, count: 1 };
-      });
-      return Object.values(cityMap);
-    }
-
-    function initMap() {
-      map = L.map('world-map', { zoomControl: true, attributionControl: false })
-        .setView([20, 0], 2);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 18,
-      }).addTo(map);
-    }
-
-    function updateMap() {
-      markers.forEach((m) => map.removeLayer(m));
-      heatLayers.forEach((l) => map.removeLayer(l));
-      markers = []; heatLayers = [];
-
-      const data = loadParticipationData();
-      const state = WorldChoirConfig.getEventState(new Date(), {
-        userParticipated: WorldChoirDB.hasPledged(),
-        userSubmittedPromise: WorldChoirDB.hasSubmittedPromise(),
-      });
-      const isLive = state === WorldChoirConfig.EventState.LIVE;
-      const pulseOpacity = isLive ? 0.55 : 0.35;
-
-      data.forEach((loc) => {
-        const radius = Math.max(40000, Math.min(400000, loc.count * 800));
-        const color = loc.count > 5000 ? '#6b5ce7' : loc.count > 2000 ? '#3d7cff' : '#4ec5e8';
-        const circle = L.circle([loc.lat, loc.lng], {
-          radius, fillColor: color, fillOpacity: pulseOpacity,
-          color, weight: 1, opacity: 0.7,
-        }).addTo(map);
-        heatLayers.push(circle);
-
-        const marker = L.circleMarker([loc.lat, loc.lng], {
-          radius: Math.max(6, Math.min(18, loc.count / 400)),
-          fillColor: color, fillOpacity: 0.95, color: '#fff', weight: 1,
-        }).addTo(map);
-        marker.bindPopup(`<strong>${loc.city}, ${loc.country}</strong><br>${formatNumber(loc.count)} voices`);
-        markers.push(marker);
-      });
-
-      WorldChoirDB.getGatheringPlaces().forEach((gp) => {
-        const pin = L.circleMarker([gp.latitude, gp.longitude], {
-          radius: 10, fillColor: '#c9a962', fillOpacity: 1,
-          color: '#c9a962', weight: 2, className: 'gathering-pin',
-        }).addTo(map);
-        pin.bindPopup(`<strong>${gp.location_name}</strong><br>${gp.city}, ${gp.country}<br><em>Official gathering</em>`);
-        markers.push(pin);
-      });
-
-      const countries = new Set(data.map((d) => d.country)).size;
-      const stats = WorldChoirConfig.getMovementStats();
-      document.getElementById('stat-voices').textContent = stats.hasData ? formatNumber(stats.voices) : '—';
-      document.getElementById('stat-cities').textContent = stats.hasData ? formatNumber(data.length) : '—';
-      document.getElementById('stat-countries').textContent = stats.hasData ? countries : '—';
-    }
-
-    function updateCountdown() {
-      const t = WorldChoirConfig.getTimeRemaining();
-      const state = WorldChoirConfig.getEventState(new Date(), {
-        userParticipated: WorldChoirDB.hasPledged(),
-        userSubmittedPromise: WorldChoirDB.hasSubmittedPromise(),
-      });
-      const el = document.getElementById('map-countdown');
-      if (state === WorldChoirConfig.EventState.LIVE) el.textContent = 'The world is singing now';
-      else if (t.totalMs <= 0) el.textContent = 'Event in progress';
-      else el.textContent = `Singing in ${WorldChoirConfig.formatCountdownLong(t)}`;
-    }
-
-    document.getElementById('nav-root').appendChild(renderWorldChoirNav('map'));
-    initMap();
-    updateMap();
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
-    setInterval(updateMap, 5000);
-    window.addEventListener('wc-pledge-added', updateMap);
-    window.addEventListener('wc-pledge-updated', updateMap);
-  </script>
+  <script src="js/world-choir-participation.js"></script>
+  <script src="js/world-choir-map.js"></script>
+  <script>WorldChoirMap.init();</script>
 </body>
 </html>

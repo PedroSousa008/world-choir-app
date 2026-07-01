@@ -49,17 +49,7 @@ const WorldChoirDB = (() => {
       write(KEYS.events, events);
     }
 
-    let places = read(KEYS.gatheringPlaces);
-    if (!places.some((g) => g.event_id === eventId)) {
-      places = places.concat([
-        { id: 'gp1', event_id: eventId, city: 'Porto', country: 'Portugal', location_name: 'Avenida dos Aliados', address: 'Avenida dos Aliados, Porto', latitude: 41.1496, longitude: -8.6109, is_verified: true, expected_attendance: 5000, created_at: new Date().toISOString() },
-        { id: 'gp2', event_id: eventId, city: 'London', country: 'United Kingdom', location_name: 'Hyde Park', address: 'Hyde Park, London', latitude: 51.5073, longitude: -0.1657, is_verified: true, expected_attendance: 12000, created_at: new Date().toISOString() },
-        { id: 'gp3', event_id: eventId, city: 'New York', country: 'United States', location_name: 'Central Park', address: 'Central Park, New York', latitude: 40.7829, longitude: -73.9654, is_verified: true, expected_attendance: 15000, created_at: new Date().toISOString() },
-        { id: 'gp4', event_id: eventId, city: 'Braga', country: 'Portugal', location_name: 'Praça da República', address: 'Praça da República, Braga', latitude: 41.5454, longitude: -8.4265, is_verified: true, expected_attendance: 2000, created_at: new Date().toISOString() },
-        { id: 'gp5', event_id: eventId, city: 'Tokyo', country: 'Japan', location_name: 'Shibuya Crossing', address: 'Shibuya, Tokyo', latitude: 35.6595, longitude: 139.7004, is_verified: true, expected_attendance: 8000, created_at: new Date().toISOString() },
-      ]);
-      write(KEYS.gatheringPlaces, places);
-    }
+    // Gathering places are added via admin only — no fake seed data
   }
 
   function getOrCreateUser() {
@@ -254,7 +244,64 @@ const WorldChoirDB = (() => {
   }
 
   function getGatheringPlaces(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    return read(KEYS.gatheringPlaces).filter((g) => g.event_id === eventId);
+    return read(KEYS.gatheringPlaces).filter(
+      (g) => g.event_id === eventId && g.is_verified === true
+    );
+  }
+
+  function getMapStats(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const pledges = getPledgesForEvent(eventId);
+    const withLocation = pledges.filter((p) => p.city && p.country);
+    const cities = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
+    const countries = new Set(withLocation.map((p) => p.country));
+    return {
+      voices: pledges.length,
+      cities: cities.size,
+      countries: countries.size,
+    };
+  }
+
+  function getAggregatedCities(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const pledges = getPledgesForEvent(eventId).filter(
+      (p) => p.latitude != null && p.longitude != null && p.city && p.country
+    );
+    const map = {};
+    pledges.forEach((p) => {
+      const key = `${p.city}|${p.country}`;
+      if (!map[key]) {
+        map[key] = {
+          city: p.city,
+          country: p.country,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          count: 0,
+        };
+      }
+      map[key].count += 1;
+    });
+    return Object.values(map);
+  }
+
+  function hasGatheringNear(city, country, maxKm = 50) {
+    const gatherings = getGatheringPlaces();
+    const cities = getAggregatedCities();
+    const target = cities.find((c) => c.city === city && c.country === country);
+    if (!target) return false;
+    return gatherings.some((g) => {
+      if (g.city === city && g.country === country) return true;
+      const d = haversineKm(target.latitude, target.longitude, g.latitude, g.longitude);
+      return d <= maxKm;
+    });
+  }
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
   function getParticipationHistory() {
@@ -301,6 +348,9 @@ const WorldChoirDB = (() => {
     getPromiseForCurrentUser,
     getAllPromises,
     getGatheringPlaces,
+    getMapStats,
+    getAggregatedCities,
+    hasGatheringNear,
     getParticipationHistory,
     getCityParticipation,
   };

@@ -2,18 +2,6 @@
  * World Choir — Simplified Home (countdown + participation only)
  */
 const WorldChoirHome = (() => {
-  const COUNTRIES = [
-    'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Belgium',
-    'Brazil', 'Canada', 'Chile', 'China', 'Colombia', 'Croatia', 'Czech Republic',
-    'Denmark', 'Egypt', 'Finland', 'France', 'Germany', 'Greece', 'Hungary',
-    'India', 'Indonesia', 'Ireland', 'Israel', 'Italy', 'Japan', 'Kenya',
-    'Mexico', 'Morocco', 'Netherlands', 'New Zealand', 'Nigeria', 'Norway',
-    'Philippines', 'Poland', 'Portugal', 'Romania', 'Russia', 'Saudi Arabia',
-    'Singapore', 'South Africa', 'South Korea', 'Spain', 'Sweden', 'Switzerland',
-    'Thailand', 'Turkey', 'Ukraine', 'United Arab Emirates', 'United Kingdom',
-    'United States', 'Vietnam',
-  ];
-
   let countdownTimer = null;
   let reminderChecker = null;
 
@@ -157,61 +145,10 @@ const WorldChoirHome = (() => {
   }
 
   function bindActions() {
-    document.getElementById('pledge-btn')?.addEventListener('click', openParticipationModal);
+    document.getElementById('pledge-btn')?.addEventListener('click', () => WorldChoirParticipation.open());
     document.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
     document.getElementById('remind-btn')?.addEventListener('click', openRemindModal);
     document.getElementById('share-btn')?.addEventListener('click', shareCountdown);
-  }
-
-  /* ─── Participation modal ─── */
-  function openParticipationModal() {
-    const user = WorldChoirDB.getCurrentUser();
-    const pledge = WorldChoirDB.getPledgeForCurrentUser();
-    const countryEl = document.getElementById('pledge-country');
-    const cityEl = document.getElementById('pledge-city');
-
-    if (countryEl.options.length <= 1) {
-      COUNTRIES.forEach((c) => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        countryEl.appendChild(opt);
-      });
-    }
-
-    countryEl.value = pledge?.country || user.country || '';
-    cityEl.value = pledge?.city || user.city || '';
-    document.getElementById('participation-overlay').classList.add('active');
-  }
-
-  function closeParticipationModal() {
-    document.getElementById('participation-overlay').classList.remove('active');
-  }
-
-  async function confirmParticipation() {
-    const country = document.getElementById('pledge-country').value.trim();
-    const city = document.getElementById('pledge-city').value.trim();
-
-    if (!country || !city) {
-      alert('Please select a country and enter your city.');
-      return;
-    }
-
-    const btn = document.getElementById('participation-confirm');
-    btn.disabled = true;
-    btn.textContent = 'Confirming…';
-
-    try {
-      await WorldChoirDB.createPledgeWithGeocode({ city, country });
-      closeParticipationModal();
-      render();
-    } catch (err) {
-      console.error(err);
-      alert('Could not save participation. Please try again.');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Confirm Participation';
-    }
   }
 
   /* ─── Reminders ─── */
@@ -314,10 +251,15 @@ const WorldChoirHome = (() => {
     initBackground();
     document.getElementById('nav-root').appendChild(renderWorldChoirNav('home'));
 
-    document.getElementById('participation-confirm').addEventListener('click', confirmParticipation);
-    document.getElementById('participation-cancel').addEventListener('click', closeParticipationModal);
-    document.getElementById('participation-overlay').addEventListener('click', (e) => {
-      if (e.target.id === 'participation-overlay') closeParticipationModal();
+    WorldChoirParticipation.init({
+      onSuccess: async (pledge) => {
+        if (pledge?.latitude && pledge?.longitude) {
+          WorldChoirParticipation.triggerVoiceJoinedAnimation(pledge);
+          window.location.href = 'map.html';
+        } else {
+          render();
+        }
+      },
     });
 
     document.getElementById('remind-save').addEventListener('click', saveReminders);
