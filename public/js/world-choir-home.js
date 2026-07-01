@@ -107,7 +107,6 @@ const WorldChoirHome = (() => {
           ${countdownUnit(t.minutes, 'Minutes')}
           ${countdownUnit(t.seconds, 'Seconds')}
         </div>
-        <p class="countdown-hero__compact">${esc(WorldChoirConfig.formatCountdownLong(t))}</p>
       </div>
 
       <p class="home-meta">${esc(WorldChoirConfig.formatEventDate())} · 16:00 UTC</p>
