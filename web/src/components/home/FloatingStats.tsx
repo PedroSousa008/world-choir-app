@@ -7,7 +7,7 @@ interface Props {
 }
 
 const ITEMS = [
-  { key: 'voices', label: 'Voices', icon: VoicesIcon },
+  { key: 'voices', label: 'Voices Committed', icon: VoicesIcon },
   { key: 'countries', label: 'Countries', icon: GlobeIcon },
   { key: 'cities', label: 'Cities', icon: PinIcon },
 ] as const;

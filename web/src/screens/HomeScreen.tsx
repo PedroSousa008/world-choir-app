@@ -185,31 +185,31 @@ export function HomeScreen({ refreshKey }: Props) {
     >
       <SpaceField />
 
-      <div className="home-cinematic__earth">
-        <ErrorBoundary
-          fallback={
-            <div className="earth-globe-wrap__css-fallback home-cinematic__earth-fallback">
-              <div className="earth-globe-wrap__css-sphere" />
-            </div>
-          }
-        >
-          <Suspense
+      <div className="home-cinematic__hero">
+        <div className="home-cinematic__earth">
+          <ErrorBoundary
             fallback={
               <div className="earth-globe-wrap__css-fallback home-cinematic__earth-fallback">
                 <div className="earth-globe-wrap__css-sphere" />
               </div>
             }
           >
-            <EarthGlobe
-              cityGlows={cityGlows}
-              pulsePhase={pulseT}
-              newGlowKey={newGlowKey}
-            />
-          </Suspense>
-        </ErrorBoundary>
-      </div>
+            <Suspense
+              fallback={
+                <div className="earth-globe-wrap__css-fallback home-cinematic__earth-fallback">
+                  <div className="earth-globe-wrap__css-sphere" />
+                </div>
+              }
+            >
+              <EarthGlobe
+                cityGlows={cityGlows}
+                pulsePhase={pulseT}
+                newGlowKey={newGlowKey}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
 
-      <div className="home-cinematic__content">
         <header className="home-cinematic__header">
           <button type="button" className="home-cinematic__bell" onClick={handleRemind} aria-label="Remind me">
             <BellIcon />
@@ -222,6 +222,14 @@ export function HomeScreen({ refreshKey }: Props) {
           </div>
         </header>
 
+        {!isWaiting && !isLive && (
+          <section className="home-cinematic__countdown" aria-live="polite">
+            <FloatingCountdown countdown={countdown} />
+          </section>
+        )}
+      </div>
+
+      <div className="home-cinematic__body">
         {isWaiting ? (
           <div className="home-cinematic__state">
             <h2>Waiting for the next moment</h2>
@@ -235,13 +243,10 @@ export function HomeScreen({ refreshKey }: Props) {
           </div>
         ) : (
           <>
-            <section className="home-cinematic__countdown" aria-live="polite">
-              <FloatingCountdown countdown={countdown} />
-            </section>
-
             <section className="home-cinematic__song">
               <p className="home-cinematic__song-line">
-                <span aria-hidden>♪</span> {event.songTitle} — {event.artist}
+                <span className="home-cinematic__note" aria-hidden>♪</span>
+                {event.songTitle} — {event.artist}
               </p>
               <p className="home-cinematic__dedication">
                 This year&apos;s World Choir is dedicated to{' '}

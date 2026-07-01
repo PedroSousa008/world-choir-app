@@ -24,12 +24,12 @@ export function FloatingCountdown({ countdown }: Props) {
           <span className="floating-countdown__digit">{pad(hours)}</span>
           <span className="floating-countdown__unit">Hours</span>
         </span>
-        <span className="floating-countdown__sep" aria-hidden>:</span>
+        <span className="floating-countdown__sep" aria-hidden> : </span>
         <span className="floating-countdown__segment">
           <span className="floating-countdown__digit">{pad(minutes)}</span>
           <span className="floating-countdown__unit">Minutes</span>
         </span>
-        <span className="floating-countdown__sep" aria-hidden>:</span>
+        <span className="floating-countdown__sep" aria-hidden> : </span>
         <span className="floating-countdown__segment">
           <span className="floating-countdown__digit">{pad(seconds)}</span>
           <span className="floating-countdown__unit">Seconds</span>
