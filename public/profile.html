@@ -105,13 +105,21 @@
       `;
     }
 
-    document.getElementById('save-profile').addEventListener('click', () => {
-      WorldChoirDB.updateUser({
-        display_name: document.getElementById('edit-name').value.trim(),
-        city: document.getElementById('edit-city').value.trim(),
-        country: document.getElementById('edit-country').value.trim(),
-      });
-      render();
+    document.getElementById('save-profile').addEventListener('click', async () => {
+      const btn = document.getElementById('save-profile');
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        await WorldChoirDB.updateParticipationLocation({
+          display_name: document.getElementById('edit-name').value.trim(),
+          city: document.getElementById('edit-city').value.trim(),
+          country: document.getElementById('edit-country').value.trim(),
+        });
+        render();
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save';
+      }
     });
 
     document.getElementById('nav-root').appendChild(renderWorldChoirNav('profile'));

@@ -16,44 +16,58 @@
   <canvas id="earth-canvas" aria-hidden="true"></canvas>
   <div class="ambient-bg" id="ambient-bg"></div>
 
-  <main class="home-page" id="home-page">
+  <main class="home-page home-page--centered" id="home-page">
     <div id="home-content" class="fade-in"></div>
   </main>
 
-  <!-- Pledge modal only — Promise is NEVER a modal -->
-  <div class="overlay" id="pledge-overlay">
-    <div class="modal" role="dialog" aria-labelledby="pledge-title">
-      <h2 class="modal-title" id="pledge-title">Make Your Voice Part of the World</h2>
-      <p class="modal-copy">On July 1, 2027, millions of people will sing the same song at the exact same time. Add your voice to the map.</p>
+  <!-- Participation location modal — no GPS -->
+  <div class="overlay" id="participation-overlay">
+    <div class="modal" role="dialog" aria-labelledby="participation-title">
+      <h2 class="modal-title" id="participation-title">Where will you sing from?</h2>
+      <p class="modal-copy">Choose the city and country where you plan to join World Choir. You can change this later in your profile.</p>
 
       <div class="form-group">
-        <label class="form-label" for="pledge-name">Your name</label>
-        <input class="form-input" id="pledge-name" type="text" placeholder="How should we call you?" autocomplete="name">
+        <label class="form-label" for="pledge-country">Country</label>
+        <select class="form-input form-select" id="pledge-country">
+          <option value="">Select country</option>
+        </select>
       </div>
       <div class="form-group">
         <label class="form-label" for="pledge-city">City</label>
         <input class="form-input" id="pledge-city" type="text" placeholder="Your city" autocomplete="address-level2">
       </div>
-      <div class="form-group">
-        <label class="form-label" for="pledge-country">Country</label>
-        <input class="form-input" id="pledge-country" type="text" placeholder="Your country" autocomplete="country-name">
-      </div>
 
-      <p class="form-label">Why are you singing? <span style="text-transform:none;letter-spacing:0;color:var(--text-muted)">(optional)</span></p>
-      <div class="reason-grid">
-        <button type="button" class="reason-chip" data-reason="Hope">Hope</button>
-        <button type="button" class="reason-chip" data-reason="Peace">Peace</button>
-        <button type="button" class="reason-chip" data-reason="Love">Love</button>
-        <button type="button" class="reason-chip" data-reason="Family">Family</button>
-        <button type="button" class="reason-chip" data-reason="Music">Music</button>
-        <button type="button" class="reason-chip" data-reason="Humanity">Humanity</button>
-        <button type="button" class="reason-chip" data-reason="Mental Health">Mental Health</button>
-        <button type="button" class="reason-chip" data-reason="Other">Other</button>
+      <div class="actions-row">
+        <button class="btn btn-primary" id="participation-confirm" type="button">Confirm Participation</button>
+        <button class="btn btn-secondary" id="participation-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reminder modal -->
+  <div class="overlay" id="remind-overlay">
+    <div class="modal" role="dialog" aria-labelledby="remind-title">
+      <h2 class="modal-title" id="remind-title">Remind Me</h2>
+      <p class="modal-copy">We'll notify you before the world sings together.</p>
+
+      <div class="remind-options">
+        <label class="remind-option">
+          <input type="checkbox" id="remind-1d" checked>
+          <span>1 day before</span>
+        </label>
+        <label class="remind-option">
+          <input type="checkbox" id="remind-1h" checked>
+          <span>1 hour before</span>
+        </label>
+        <label class="remind-option">
+          <input type="checkbox" id="remind-10m" checked>
+          <span>10 minutes before</span>
+        </label>
       </div>
 
       <div class="actions-row">
-        <button class="btn btn-primary" id="pledge-submit" type="button">I'll Sing</button>
-        <button class="btn btn-secondary" id="pledge-cancel" type="button">Cancel</button>
+        <button class="btn btn-primary" id="remind-save" type="button">Save Reminders</button>
+        <button class="btn btn-secondary" id="remind-cancel" type="button">Cancel</button>
       </div>
     </div>
   </div>

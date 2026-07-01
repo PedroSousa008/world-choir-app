@@ -106,30 +106,96 @@ const WorldChoirDB = (() => {
 
   function createPledge({ displayName, city, country, latitude, longitude, reason }) {
     const user = getOrCreateUser();
-    updateUser({ display_name: displayName, city, country, latitude, longitude });
+    const name = displayName || user.display_name;
+    updateUser({ display_name: name, city, country, latitude, longitude });
 
     const pledges = read(KEYS.pledges);
-    const existing = pledges.find(
+    const existingIdx = pledges.findIndex(
       (p) => p.user_id === user.id && p.event_id === WorldChoirConfig.CURRENT_EVENT.id
     );
-    if (existing) return existing;
 
     const pledge = {
-      id: generateId(),
+      id: existingIdx >= 0 ? pledges[existingIdx].id : generateId(),
       user_id: user.id,
       event_id: WorldChoirConfig.CURRENT_EVENT.id,
-      display_name: displayName,
+      display_name: name,
       city,
       country,
-      latitude: latitude || null,
-      longitude: longitude || null,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
       reason_for_singing: reason || null,
-      pledged_at: new Date().toISOString(),
+      pledged_at: existingIdx >= 0 ? pledges[existingIdx].pledged_at : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
-    pledges.push(pledge);
+
+    if (existingIdx >= 0) {
+      pledges[existingIdx] = pledge;
+    } else {
+      pledges.push(pledge);
+    }
+
     write(KEYS.pledges, pledges);
     window.dispatchEvent(new CustomEvent('wc-pledge-added', { detail: pledge }));
+    window.dispatchEvent(new CustomEvent('wc-pledge-updated', { detail: pledge }));
     return pledge;
+  }
+
+  async function geocodeCityCountry(city, country) {
+    const q = encodeURIComponent(`${city}, ${country}`);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!res.ok) throw new Error('Geocoding failed');
+    const data = await res.json();
+    if (!data.length) throw new Error('City not found');
+    return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+  }
+
+  async function createPledgeWithGeocode({ city, country, displayName }) {
+    let coords = { latitude: null, longitude: null };
+    try {
+      coords = await geocodeCityCountry(city, country);
+    } catch (e) {
+      console.warn('Geocoding unavailable, saving city without coordinates', e);
+    }
+    return createPledge({
+      displayName,
+      city,
+      country,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+    });
+  }
+
+  async function updateParticipationLocation({ city, country, displayName }) {
+    const user = getCurrentUser();
+    let coords = { latitude: null, longitude: null };
+    try {
+      coords = await geocodeCityCountry(city, country);
+    } catch (e) {
+      console.warn('Geocoding failed on profile update', e);
+    }
+
+    updateUser({
+      display_name: displayName ?? user.display_name,
+      city,
+      country,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+    });
+
+    if (hasPledged()) {
+      createPledge({
+        displayName: displayName ?? user.display_name,
+        city,
+        country,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      });
+    }
+
+    return coords;
   }
 
   function getPledgeForCurrentUser(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
@@ -224,6 +290,9 @@ const WorldChoirDB = (() => {
     updateUser,
     getCurrentUser,
     createPledge,
+    createPledgeWithGeocode,
+    updateParticipationLocation,
+    geocodeCityCountry,
     getPledgeForCurrentUser,
     hasPledged,
     getPledgesForEvent,
