@@ -43,10 +43,18 @@
 
 html, body, #root {
   height: 100%;
+  min-height: 100%;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+#root {
   overflow: hidden;
 }
 
@@ -83,6 +91,29 @@ input, textarea {
 
 .app-shell--home {
   background: #030810;
+}
+
+.app-boot {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #030810;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.app-boot__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 .screen {

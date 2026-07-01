@@ -1,14 +1,14 @@
-import { useMemo, useRef } from 'react';
+import { Suspense, useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import type { PledgeLight } from '../types';
+import type { PledgeLight } from '../../types';
+import './EarthGlobe.css';
 
 const EARTH_TEXTURE = 'https://unpkg.com/three-globe@2.31.1/example/img/earth-night.jpg';
 const BUMP_TEXTURE = 'https://unpkg.com/three-globe@2.31.1/example/img/earth-topology.png';
 const CLOUDS_TEXTURE = 'https://unpkg.com/three-globe@2.31.1/example/img/earth-clouds.png';
 
-/** Full rotation in ~10 minutes */
 const ROTATION_PERIOD_SEC = 600;
 
 function latLngToPosition(lat: number, lng: number, radius: number): THREE.Vector3 {
@@ -52,7 +52,7 @@ function EarthScene({ lights, pulsePhase, newLightId }: SceneProps) {
     });
   }, [lights]);
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     breatheRef.current += delta;
 
     if (groupRef.current) {
@@ -66,8 +66,7 @@ function EarthScene({ lights, pulsePhase, newLightId }: SceneProps) {
     if (atmosphereRef.current) {
       const breathe = 1 + Math.sin(breatheRef.current * 0.8) * 0.012;
       const pulse = pulsePhase > 0 ? 1 + Math.sin(pulsePhase * Math.PI) * 0.04 : 0;
-      const scale = 1.06 * breathe + pulse;
-      atmosphereRef.current.scale.setScalar(scale);
+      atmosphereRef.current.scale.setScalar(1.06 * breathe + pulse);
     }
   });
 
@@ -90,12 +89,7 @@ function EarthScene({ lights, pulsePhase, newLightId }: SceneProps) {
 
       <mesh ref={cloudsRef}>
         <sphereGeometry args={[1.008, 48, 48]} />
-        <meshStandardMaterial
-          map={cloudsMap}
-          transparent
-          opacity={0.18}
-          depthWrite={false}
-        />
+        <meshStandardMaterial map={cloudsMap} transparent opacity={0.18} depthWrite={false} />
       </mesh>
 
       <mesh ref={atmosphereRef}>
@@ -127,6 +121,38 @@ function EarthScene({ lights, pulsePhase, newLightId }: SceneProps) {
   );
 }
 
+function EarthFallbackSphere() {
+  const groupRef = useRef<THREE.Group>(null);
+  const atmosphereRef = useRef<THREE.Mesh>(null);
+  const breatheRef = useRef(0);
+
+  useFrame((_, delta) => {
+    breatheRef.current += delta;
+    if (groupRef.current) {
+      groupRef.current.rotation.y += (Math.PI * 2 * delta) / ROTATION_PERIOD_SEC;
+    }
+    if (atmosphereRef.current) {
+      const breathe = 1 + Math.sin(breatheRef.current * 0.8) * 0.012;
+      atmosphereRef.current.scale.setScalar(1.06 * breathe);
+    }
+  });
+
+  return (
+    <group ref={groupRef}>
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[4, 2, 4]} intensity={0.8} color="#a8c8ff" />
+      <mesh>
+        <sphereGeometry args={[1, 48, 48]} />
+        <meshStandardMaterial color="#1a3a5c" emissive="#0a2040" emissiveIntensity={0.4} roughness={0.9} />
+      </mesh>
+      <mesh ref={atmosphereRef}>
+        <sphereGeometry args={[1, 32, 32]} />
+        <meshBasicMaterial color="#4a90d9" transparent opacity={0.1} side={THREE.BackSide} />
+      </mesh>
+    </group>
+  );
+}
+
 interface Props {
   lights: PledgeLight[];
   pulsePhase: number;
@@ -136,14 +162,21 @@ interface Props {
 
 export function EarthGlobe({ lights, pulsePhase, newLightId, className }: Props) {
   return (
-    <div className={className} aria-hidden>
+    <div className={`earth-globe-wrap ${className ?? ''}`} aria-hidden>
       <Canvas
         camera={{ position: [0, 0.15, 2.6], fov: 42 }}
-        dpr={[1, 1.75]}
+        dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         style={{ background: 'transparent' }}
+        fallback={
+          <div className="earth-globe-wrap__css-fallback">
+            <div className="earth-globe-wrap__css-sphere" />
+          </div>
+        }
       >
-        <EarthScene lights={lights} pulsePhase={pulsePhase} newLightId={newLightId} />
+        <Suspense fallback={<EarthFallbackSphere />}>
+          <EarthScene lights={lights} pulsePhase={pulsePhase} newLightId={newLightId} />
+        </Suspense>
       </Canvas>
     </div>
   );

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { EarthGlobe } from '../components/earth/EarthGlobe';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { FloatingCountdown } from '../components/home/FloatingCountdown';
 import { FloatingStats } from '../components/home/FloatingStats';
 import { LoadingBlock } from '../components/Shared';
@@ -14,6 +14,10 @@ import {
   upsertUser,
 } from '../services/database';
 import './HomeScreen.css';
+
+const EarthGlobe = lazy(() =>
+  import('../components/earth/EarthGlobe').then((m) => ({ default: m.EarthGlobe }))
+);
 
 const REASONS: PledgeReason[] = [
   'Peace', 'Hope', 'Love', 'Family', 'Humanity', 'Mental Health', 'Music', 'Other',
@@ -167,12 +171,28 @@ export function HomeScreen({ refreshKey }: Props) {
       <div className="home-immersive__stars" />
 
       <div className="home-immersive__earth-layer">
-        <EarthGlobe
-          className="home-immersive__earth"
-          lights={pledgeLights}
-          pulsePhase={pulseT}
-          newLightId={newLightId}
-        />
+        <ErrorBoundary
+          fallback={
+            <div className="earth-globe-wrap__css-fallback home-immersive__earth-fallback">
+              <div className="earth-globe-wrap__css-sphere" />
+            </div>
+          }
+        >
+          <Suspense
+            fallback={
+              <div className="earth-globe-wrap__css-fallback home-immersive__earth-fallback">
+                <div className="earth-globe-wrap__css-sphere" />
+              </div>
+            }
+          >
+            <EarthGlobe
+              className="home-immersive__earth"
+              lights={pledgeLights}
+              pulsePhase={pulseT}
+              newLightId={newLightId}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </div>
 
       <div className="home-immersive__scroll">
