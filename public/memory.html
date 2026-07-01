@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#020204">
+  <title>World Choir — Memory Wall</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/world-choir-theme.css">
+</head>
+<body>
+  <div class="ambient-bg"></div>
+  <div class="particles" id="particles"></div>
+
+  <main class="page">
+    <div class="section-header">
+      <h2>The World Sang</h2>
+      <p>A living memory of millions of voices, one song, one moment.</p>
+    </div>
+
+    <div id="memory-content"></div>
+  </main>
+
+  <div id="nav-root"></div>
+
+  <script src="js/world-choir-config.js"></script>
+  <script src="js/world-choir-db.js"></script>
+  <script src="js/world-choir-nav.js"></script>
+  <script>
+    function isEventEnded() {
+      const now = new Date();
+      return now >= WorldChoirConfig.getSongEndDate();
+    }
+
+    function render() {
+      const el = document.getElementById('memory-content');
+      const ended = isEventEnded();
+      const promises = WorldChoirDB.getAllPromises();
+      const stats = WorldChoirConfig.getGlobalStats();
+
+      if (!ended) {
+        el.innerHTML = `
+          <div class="glass-card text-center">
+            <p class="state-copy" style="margin:0 auto">
+              The Memory Wall opens after the world sings together.<br><br>
+              <span style="color:var(--accent-aurora)">${WorldChoirConfig.formatCountdown(WorldChoirConfig.getTimeRemaining())}</span> until the moment.
+            </p>
+            <div class="actions-row" style="margin-top:24px">
+              <a href="index.html" class="btn btn-secondary">Back to Countdown</a>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const featured = promises.length > 0 ? promises : getSamplePromises();
+
+      el.innerHTML = `
+        <div class="stats-grid" style="margin-top:0">
+          <div class="stat-card"><div class="number">${formatNumber(stats.voices)}</div><div class="label">Voices</div></div>
+          <div class="stat-card"><div class="number">${stats.countries}</div><div class="label">Countries</div></div>
+          <div class="stat-card"><div class="number">"${WorldChoirConfig.CURRENT_EVENT.songName}"</div><div class="label">Song</div></div>
+        </div>
+
+        <div class="glass-card" style="margin:24px 0">
+          <p class="stat-label" style="margin-bottom:12px">Event Statistics — ${WorldChoirConfig.CURRENT_EVENT.title}</p>
+          <div class="glass-card-row"><span class="stat-label">Date</span><span class="stat-value">${WorldChoirConfig.formatEventDate()}</span></div>
+          <div class="glass-card-row"><span class="stat-label">Hashtag</span><span class="stat-value">${WorldChoirConfig.CURRENT_EVENT.officialHashtag}</span></div>
+          <div class="glass-card-row"><span class="stat-label">Promises shared</span><span class="stat-value">${promises.length || 'Growing'}</span></div>
+        </div>
+
+        <h3 style="font-size:0.8rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;text-align:center">Promises to the World</h3>
+
+        <div class="memory-grid">
+          ${featured.map((p) => `
+            <div class="memory-item">
+              <p class="memory-promise">"${p.promise_text}"</p>
+              <p class="memory-meta">${p.display_name || 'Anonymous'} · ${p.city || 'Unknown'}, ${p.country || ''}</p>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="actions-row" style="margin-top:32px">
+          <a href="map.html" class="btn btn-secondary">Replay the Global Map</a>
+        </div>
+      `;
+    }
+
+    function getSamplePromises() {
+      return [
+        { promise_text: 'I promise to spread more kindness.', display_name: 'Maria', city: 'Lisbon', country: 'Portugal' },
+        { promise_text: 'I will spend more time with my family.', display_name: 'James', city: 'London', country: 'United Kingdom' },
+        { promise_text: 'I choose hope over fear.', display_name: 'Yuki', city: 'Tokyo', country: 'Japan' },
+        { promise_text: 'I will help make my community better.', display_name: 'Ana', city: 'Porto', country: 'Portugal' },
+      ];
+    }
+
+    initParticles(document.getElementById('particles'));
+    document.getElementById('nav-root').appendChild(renderWorldChoirNav('memory'));
+    render();
+  </script>
+</body>
+</html>

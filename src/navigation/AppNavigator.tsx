@@ -15,15 +15,15 @@ export const AppNavigator: React.FC = () => {
       <Tab.Navigator
         screenOptions={{
           tabBarStyle: {
-            backgroundColor: '#000000',
-            borderTopColor: 'rgba(255, 255, 255, 0.1)',
+            backgroundColor: '#05060a',
+            borderTopColor: 'rgba(255, 255, 255, 0.06)',
             borderTopWidth: 1,
             paddingBottom: 10,
             paddingTop: 10,
             height: 80,
           },
-          tabBarActiveTintColor: '#FF6B6B',
-          tabBarInactiveTintColor: '#CCCCCC',
+          tabBarActiveTintColor: '#4ec5e8',
+          tabBarInactiveTintColor: '#6b6f7d',
           tabBarLabelStyle: {
             fontSize: 12,
             fontWeight: '500',

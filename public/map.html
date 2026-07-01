@@ -1,852 +1,188 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>World Choir - Global Map</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a0a;
-            color: #ffffff;
-            min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
-        }
-
-        /* Animated background gradient */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(ellipse at top, rgba(74, 144, 226, 0.08) 0%, transparent 50%),
-                        radial-gradient(ellipse at bottom, rgba(123, 104, 238, 0.06) 0%, transparent 50%),
-                        radial-gradient(ellipse at center, rgba(78, 205, 196, 0.04) 0%, transparent 60%);
-            animation: gradientShift 20s ease infinite;
-            z-index: -1;
-        }
-
-        @keyframes gradientShift {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        .map-container {
-            position: relative;
-            width: 100%;
-            height: calc(100vh - 80px);
-            margin-bottom: 80px;
-            overflow: hidden;
-        }
-
-        #world-map {
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            overflow: hidden;
-        }
-
-        /* Custom Leaflet styles */
-        .leaflet-container {
-            background: #1a1a1a !important;
-            overflow: hidden !important;
-        }
-
-        .leaflet-tile-pane {
-            filter: brightness(1.1) contrast(1.05);
-        }
-
-        .leaflet-control-zoom {
-            border: none !important;
-            background: rgba(26, 26, 26, 0.9) !important;
-            backdrop-filter: blur(10px);
-            border-radius: 12px !important;
-            overflow: hidden;
-        }
-
-        .leaflet-control-zoom a {
-            background: rgba(26, 26, 26, 0.9) !important;
-            color: #ffffff !important;
-            border: none !important;
-            border-radius: 0 !important;
-        }
-
-        .leaflet-control-zoom a:hover {
-            background: rgba(46, 46, 46, 0.9) !important;
-        }
-
-        .leaflet-popup-content-wrapper {
-            background: rgba(26, 26, 26, 0.95) !important;
-            backdrop-filter: blur(10px);
-            border-radius: 12px !important;
-            color: #ffffff !important;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .leaflet-popup-tip {
-            background: rgba(26, 26, 26, 0.95) !important;
-        }
-
-        .continent {
-            transition: fill 0.3s ease;
-        }
-
-        .heat-zone {
-            pointer-events: none;
-            animation: pulse 3s infinite;
-            mix-blend-mode: screen;
-        }
-
-        .heat-zone.low {
-            fill: url(#heat-low);
-        }
-
-        .heat-zone.medium {
-            fill: url(#heat-medium);
-        }
-
-        .heat-zone.high {
-            fill: url(#heat-high);
-        }
-
-        .heat-point {
-            pointer-events: none;
-            animation: pulse 2s infinite;
-            filter: drop-shadow(0 0 8px currentColor);
-        }
-
-        .heat-point.low {
-            fill: #4ECDC4;
-            stroke: #4ECDC4;
-            stroke-width: 2;
-            opacity: 0.9;
-        }
-
-        .heat-point.medium {
-            fill: #FFD700;
-            stroke: #FFD700;
-            stroke-width: 2;
-            opacity: 0.9;
-        }
-
-        .heat-point.high {
-            fill: #FF6B6B;
-            stroke: #FF6B6B;
-            stroke-width: 2;
-            opacity: 0.9;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                transform: scale(1);
-                opacity: 0.6;
-            }
-            50% {
-                transform: scale(1.2);
-                opacity: 0.8;
-            }
-        }
-
-        .map-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        .header-overlay {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            background: rgba(10, 10, 10, 0.85);
-            backdrop-filter: blur(20px) saturate(180%);
-            border-radius: 20px;
-            padding: 25px;
-            pointer-events: auto;
-            border: 1px solid rgba(74, 144, 226, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            animation: fadeInUp 0.8s ease-out;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .title {
-            font-family: 'Playfair Display', serif;
-            font-size: 2rem;
-            font-weight: 300;
-            letter-spacing: 3px;
-            margin-bottom: 8px;
-            background: linear-gradient(135deg, #ffffff 0%, #4A90E2 50%, #7B68EE 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .subtitle {
-            font-size: 0.95rem;
-            color: #b8b8b8;
-            letter-spacing: 2px;
-            font-weight: 300;
-        }
-
-        .live-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background: #4ECDC4;
-            border-radius: 50%;
-            margin-right: 10px;
-            animation: pulse 1.5s infinite;
-            box-shadow: 0 0 10px rgba(78, 205, 196, 0.6);
-        }
-
-        .legend {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(10, 10, 10, 0.85);
-            backdrop-filter: blur(20px) saturate(180%);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(74, 144, 226, 0.2);
-            pointer-events: auto;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        }
-
-        .legend-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.1rem;
-            font-weight: 400;
-            margin-bottom: 15px;
-            text-align: center;
-            letter-spacing: 2px;
-            color: #ffffff;
-        }
-
-        .legend-items {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            font-size: 0.85rem;
-            color: #b8b8b8;
-        }
-
-        .legend-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            margin-right: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .stats {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            pointer-events: auto;
-        }
-
-        .stat-card {
-            background: rgba(10, 10, 10, 0.85);
-            backdrop-filter: blur(20px) saturate(180%);
-            border-radius: 15px;
-            padding: 18px;
-            text-align: center;
-            border: 1px solid rgba(74, 144, 226, 0.2);
-            min-width: 100px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(74, 144, 226, 0.4);
-            box-shadow: 0 12px 40px rgba(74, 144, 226, 0.2);
-        }
-
-        .stat-number {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.8rem;
-            font-weight: 300;
-            background: linear-gradient(135deg, #4A90E2 0%, #7B68EE 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: #b8b8b8;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            font-weight: 300;
-        }
-
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(10, 10, 10, 0.85);
-            backdrop-filter: blur(20px) saturate(180%);
-            border-top: 1px solid rgba(74, 144, 226, 0.2);
-            display: flex;
-            justify-content: space-around;
-            padding: 15px 0;
-            z-index: 1000;
-            box-shadow: 0 -5px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 10px 20px;
-            color: #666666;
-            text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 12px;
-            position: relative;
-        }
-
-        .nav-item::after {
-            content: '';
-            position: absolute;
-            bottom: 5px;
-            left: 50%;
-            transform: translateX(-50%) scaleX(0);
-            width: 30px;
-            height: 2px;
-            background: linear-gradient(90deg, #4A90E2, #7B68EE);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .nav-item.active {
-            color: #4A90E2;
-        }
-
-        .nav-item.active::after {
-            transform: translateX(-50%) scaleX(1);
-        }
-
-        .nav-item:hover {
-            color: #4A90E2;
-            transform: translateY(-2px);
-        }
-
-        .nav-item:hover::after {
-            transform: translateX(-50%) scaleX(1);
-        }
-
-        .nav-icon {
-            width: 24px;
-            height: 24px;
-            margin-bottom: 6px;
-            transition: transform 0.3s ease;
-            fill: currentColor;
-        }
-
-        .nav-item:hover .nav-icon {
-            transform: scale(1.1);
-        }
-
-        .nav-label {
-            font-size: 0.75rem;
-            font-weight: 500;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .new-participant-notification {
-            position: absolute;
-            top: 100px;
-            right: 20px;
-            background: linear-gradient(135deg, rgba(78, 205, 196, 0.9) 0%, rgba(74, 144, 226, 0.9) 100%);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            opacity: 0;
-            transform: translateX(100%);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            pointer-events: auto;
-            box-shadow: 0 8px 32px rgba(78, 205, 196, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .new-participant-notification.show {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        @media (max-width: 768px) {
-            .header-overlay {
-                top: 10px;
-                left: 10px;
-                right: 10px;
-                padding: 20px;
-            }
-
-            .title {
-                font-size: 1.5rem;
-            }
-
-            .legend {
-                bottom: 80px;
-                left: 10px;
-                padding: 15px;
-            }
-
-            .stats {
-                bottom: 80px;
-                right: 10px;
-                gap: 10px;
-            }
-
-            .stat-card {
-                padding: 12px;
-                min-width: 80px;
-            }
-
-            .stat-number {
-                font-size: 1.4rem;
-            }
-
-            .stat-label {
-                font-size: 0.65rem;
-            }
-
-            .new-participant-notification {
-                top: 80px;
-                right: 10px;
-                font-size: 0.75rem;
-                padding: 12px 16px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#020204">
+  <title>World Choir — The Earth Breathes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/world-choir-theme.css">
+  <style>
+    body { overflow: hidden; }
+    .map-wrap { position: relative; height: calc(100vh - var(--nav-height)); }
+    .map-header {
+      position: absolute; top: 16px; left: 16px; right: 16px; z-index: 500;
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg); padding: 20px; backdrop-filter: blur(24px);
+      text-align: center; pointer-events: none;
+    }
+    .map-header h1 { font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
+    .map-header p { font-size: 0.8rem; color: var(--text-muted); }
+    .map-header .pulse-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent-aurora); margin-right: 6px;
+      box-shadow: 0 0 10px var(--accent-aurora);
+      animation: livePulse 2s ease-in-out infinite;
+    }
+    .map-legend {
+      position: absolute; bottom: 100px; left: 16px; z-index: 500;
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md); padding: 14px 16px; font-size: 0.75rem;
+      color: var(--text-muted); backdrop-filter: blur(20px);
+    }
+    .map-legend span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+    .map-stats {
+      position: absolute; bottom: 100px; right: 16px; z-index: 500;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .map-stat {
+      background: var(--bg-card); border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm); padding: 10px 14px; text-align: center;
+      backdrop-filter: blur(20px); min-width: 90px;
+    }
+    .map-stat .n { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+    .map-stat .l { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+    .leaflet-container { background: var(--bg-void) !important; }
+    .leaflet-tile-pane { filter: brightness(0.65) contrast(1.1) saturate(0.8); }
+    .leaflet-control-zoom a {
+      background: var(--bg-card) !important; color: var(--text-primary) !important;
+      border: 1px solid var(--border-subtle) !important;
+    }
+    .leaflet-popup-content-wrapper {
+      background: var(--bg-secondary) !important; color: var(--text-primary) !important;
+      border: 1px solid var(--border-subtle); border-radius: var(--radius-sm) !important;
+    }
+    .leaflet-popup-tip { background: var(--bg-secondary) !important; }
+    .gathering-pin { border: 2px solid var(--accent-gold) !important; }
+  </style>
 </head>
 <body>
-    <div class="map-container">
-        <div id="world-map"></div>
-        
-        <div class="map-overlay">
-            <div class="legend">
-                <div class="legend-title">Participation Levels</div>
-                <div class="legend-items">
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background: #4ECDC4;"></div>
-                        <span>Low (1 - 1,000)</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background: #FFD700;"></div>
-                        <span>Medium (1,000 - 10,000)</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-dot" style="background: #FF6B6B;"></div>
-                        <span>High (10,000+)</span>
-                    </div>
-                </div>
-            </div>
+  <div class="ambient-bg breathing" id="ambient-bg"></div>
 
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-number" id="total-participants">0</div>
-                    <div class="stat-label">Participants</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="active-cities">0</div>
-                    <div class="stat-label">Cities</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="countries">0</div>
-                    <div class="stat-label">Countries</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="time-until">00:00:00</div>
-                    <div class="stat-label">Time Left</div>
-                </div>
-            </div>
-
-            <div class="new-participant-notification" id="new-participant-notification">
-                New participant joined!
-            </div>
-        </div>
+  <div class="map-wrap">
+    <div class="map-header">
+      <h1><span class="pulse-dot"></span>The Earth Breathes</h1>
+      <p id="map-countdown">Loading...</p>
     </div>
-
-    <div class="bottom-nav">
-        <a href="index.html" class="nav-item">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            <div class="nav-label">Home</div>
-        </a>
-        <a href="map.html" class="nav-item active">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="10" r="3"></circle>
-                <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z"></path>
-            </svg>
-            <div class="nav-label">Map</div>
-        </a>
-        <a href="profile.html" class="nav-item">
-            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <div class="nav-label">Profile</div>
-        </a>
+    <div id="world-map"></div>
+    <div class="map-legend">
+      <div><span style="background:#3d7cff"></span> Growing</div>
+      <div style="margin-top:6px"><span style="background:#c9a962"></span> Official gathering</div>
     </div>
+    <div class="map-stats">
+      <div class="map-stat"><div class="n" id="stat-voices">—</div><div class="l">Voices</div></div>
+      <div class="map-stat"><div class="n" id="stat-cities">—</div><div class="l">Cities</div></div>
+      <div class="map-stat"><div class="n" id="stat-countries">—</div><div class="l">Countries</div></div>
+    </div>
+  </div>
 
-    <script>
-        // Load participation data
-        function loadParticipationData() {
-            const savedData = localStorage.getItem('worldChoirParticipationData');
-            if (savedData) {
-                try {
-                    return JSON.parse(savedData);
-                } catch (e) {
-                    console.error('Error loading participation data:', e);
-                }
-            }
-            // Return default data if none exists
-            return [
-                { city: 'New York', country: 'USA', lat: 40.7128, lng: -74.0060, count: 450 },
-                { city: 'London', country: 'UK', lat: 51.5074, lng: -0.1278, count: 380 },
-                { city: 'Tokyo', country: 'Japan', lat: 35.6762, lng: 139.6503, count: 320 },
-                { city: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522, count: 280 },
-                { city: 'Sydney', country: 'Australia', lat: -33.8688, lng: 151.2093, count: 220 },
-                { city: 'São Paulo', country: 'Brazil', lat: -23.5505, lng: -46.6333, count: 180 },
-                { city: 'Mumbai', country: 'India', lat: 19.0760, lng: 72.8777, count: 160 },
-                { city: 'Cairo', country: 'Egypt', lat: 30.0444, lng: 31.2357, count: 140 },
-                { city: 'Lagos', country: 'Nigeria', lat: 6.5244, lng: 3.3792, count: 120 },
-                { city: 'Moscow', country: 'Russia', lat: 55.7558, lng: 37.6176, count: 110 },
-                { city: 'Berlin', country: 'Germany', lat: 52.5200, lng: 13.4050, count: 200 },
-                { city: 'Madrid', country: 'Spain', lat: 40.4168, lng: -3.7038, count: 170 },
-                { city: 'Rome', country: 'Italy', lat: 41.9028, lng: 12.4964, count: 150 },
-                { city: 'Lisbon', country: 'Portugal', lat: 38.7223, lng: -9.1393, count: 130 }
-            ];
-        }
+  <div id="nav-root"></div>
 
-        // Get participation level
-        function getParticipationLevel(count) {
-            if (count >= 10000) return 'high';
-            if (count >= 1000) return 'medium';
-            return 'low';
-        }
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/world-choir-config.js"></script>
+  <script src="js/world-choir-db.js"></script>
+  <script src="js/world-choir-nav.js"></script>
+  <script>
+    const SEED_CITIES = [
+      { city: 'New York', country: 'United States', lat: 40.7128, lng: -74.006, count: 8420 },
+      { city: 'London', country: 'United Kingdom', lat: 51.5074, lng: -0.1278, count: 7100 },
+      { city: 'Tokyo', country: 'Japan', lat: 35.6762, lng: 139.6503, count: 6800 },
+      { city: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522, count: 5200 },
+      { city: 'Sydney', country: 'Australia', lat: -33.8688, lng: 151.2093, count: 4100 },
+      { city: 'São Paulo', country: 'Brazil', lat: -23.5505, lng: -46.6333, count: 3900 },
+      { city: 'Lisbon', country: 'Portugal', lat: 38.7223, lng: -9.1393, count: 2800 },
+      { city: 'Porto', country: 'Portugal', lat: 41.1496, lng: -8.6109, count: 1900 },
+      { city: 'Braga', country: 'Portugal', lat: 41.5454, lng: -8.4265, count: 1200 },
+      { city: 'Berlin', country: 'Germany', lat: 52.52, lng: 13.405, count: 3600 },
+    ];
 
-        // Initialize Leaflet map
-        let map;
-        let markers = [];
-        let heatLayers = [];
+    let map, markers = [], heatLayers = [];
 
-        function initMap() {
-            // Define world boundaries - full world map bounds
-            const worldBounds = [[-85, -180], [85, 180]];
-            
-            // Create map centered on world with hard boundaries
-            map = L.map('world-map', {
-                center: [20, 0],
-                zoom: 2,
-                minZoom: 2,
-                maxZoom: 10,
-                zoomControl: true,
-                maxBounds: worldBounds,
-                maxBoundsViscosity: 1.0,
-                worldCopyJump: false
-            });
+    function loadParticipationData() {
+      const pledges = WorldChoirDB.getPledgesForEvent();
+      const fromPledges = pledges.filter((p) => p.latitude && p.longitude).map((p) => ({
+        city: p.city, country: p.country, lat: p.latitude, lng: p.longitude, count: 1,
+      }));
 
-            // Add bright, visible tile layer with noWrap to prevent tile wrapping
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                maxZoom: 19,
-                noWrap: true,
-                bounds: worldBounds
-            }).addTo(map);
-        }
+      const cityMap = {};
+      SEED_CITIES.forEach((c) => { cityMap[`${c.city}|${c.country}`] = { ...c }; });
+      fromPledges.forEach((p) => {
+        const key = `${p.city}|${p.country}`;
+        if (cityMap[key]) cityMap[key].count += 1;
+        else cityMap[key] = { ...p, count: 1 };
+      });
+      return Object.values(cityMap);
+    }
 
-        // Update map with participation data
-        function updateMap() {
-            if (!map) {
-                initMap();
-            }
+    function initMap() {
+      map = L.map('world-map', { zoomControl: true, attributionControl: false })
+        .setView([20, 0], 2);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 18,
+      }).addTo(map);
+    }
 
-            const participationData = loadParticipationData();
-            
-            // Clear existing markers and heat layers
-            markers.forEach(marker => map.removeLayer(marker));
-            heatLayers.forEach(layer => map.removeLayer(layer));
-            markers = [];
-            heatLayers = [];
-            
-            // Group participation by location (aggregate nearby points)
-            const locationGroups = {};
-            participationData.forEach(item => {
-                if (!item.lat || !item.lng) return;
-                
-                // Round coordinates to group nearby locations
-                const latKey = Math.round(item.lat * 2) / 2;
-                const lngKey = Math.round(item.lng * 2) / 2;
-                const key = `${latKey},${lngKey}`;
-                
-                if (!locationGroups[key]) {
-                    locationGroups[key] = {
-                        lat: item.lat,
-                        lng: item.lng,
-                        count: 0,
-                        cities: []
-                    };
-                }
-                locationGroups[key].count += item.count;
-                locationGroups[key].cities.push(item);
-            });
-            
-            // Create markers and heat circles
-            Object.values(locationGroups).forEach(location => {
-                const level = getParticipationLevel(location.count);
-                
-                // Calculate radius based on count (in meters)
-                const radius = Math.max(50000, Math.min(500000, location.count * 2000));
-                
-                // Create heat circle
-                const color = level === 'high' ? '#FF6B6B' : level === 'medium' ? '#FFD700' : '#4ECDC4';
-                const heatCircle = L.circle([location.lat, location.lng], {
-                    radius: radius,
-                    fillColor: color,
-                    fillOpacity: 0.4,
-                    color: color,
-                    weight: 2,
-                    opacity: 0.6
-                }).addTo(map);
-                heatLayers.push(heatCircle);
-                
-                // Create marker
-                const markerSize = Math.max(8, Math.min(25, location.count / 15));
-                const marker = L.circleMarker([location.lat, location.lng], {
-                    radius: markerSize,
-                    fillColor: color,
-                    fillOpacity: 0.9,
-                    color: color,
-                    weight: 2,
-                    opacity: 1
-                }).addTo(map);
-                
-                // Add popup
-                const cityNames = location.cities.map(c => c.city).join(', ');
-                marker.bindPopup(`
-                    <div style="text-align: center;">
-                        <strong>${location.cities[0].city}, ${location.cities[0].country}</strong><br>
-                        <span style="color: ${color};">${location.count} participants</span>
-                    </div>
-                `);
-                
-                markers.push(marker);
-            });
-            
-            // Update stats
-            updateStats(participationData);
-        }
-                
-                // Update stats
-        function updateStats(participationData) {
-            const totalParticipants = participationData.reduce((sum, city) => sum + city.count, 0);
-            const activeCities = participationData.length;
-            const countries = new Set(participationData.map(city => city.country)).size;
-            
-            document.getElementById('total-participants').textContent = totalParticipants.toLocaleString();
-            document.getElementById('active-cities').textContent = activeCities;
-            document.getElementById('countries').textContent = countries;
-        }
+    function updateMap() {
+      markers.forEach((m) => map.removeLayer(m));
+      heatLayers.forEach((l) => map.removeLayer(l));
+      markers = []; heatLayers = [];
 
-        // Function to get timezone from city (same as other pages)
-        function getTimezoneFromCity(city, country, lat, lng) {
-            const cityTimezoneMap = {
-                'new york': 'America/New_York',
-                'los angeles': 'America/Los_Angeles',
-                'chicago': 'America/Chicago',
-                'houston': 'America/Chicago',
-                'miami': 'America/New_York',
-                'san francisco': 'America/Los_Angeles',
-                'seattle': 'America/Los_Angeles',
-                'boston': 'America/New_York',
-                'philadelphia': 'America/New_York',
-                'phoenix': 'America/Phoenix',
-                'denver': 'America/Denver',
-                'dallas': 'America/Chicago',
-                'atlanta': 'America/New_York',
-                'detroit': 'America/New_York',
-                'lisbon': 'Europe/Lisbon',
-                'porto': 'Europe/Lisbon',
-                'braga': 'Europe/Lisbon',
-                'coimbra': 'Europe/Lisbon',
-                'aveiro': 'Europe/Lisbon',
-                'faro': 'Europe/Lisbon',
-                'évora': 'Europe/Lisbon',
-                'london': 'Europe/London',
-                'manchester': 'Europe/London',
-                'birmingham': 'Europe/London',
-                'edinburgh': 'Europe/London',
-                'madrid': 'Europe/Madrid',
-                'barcelona': 'Europe/Madrid',
-                'valencia': 'Europe/Madrid',
-                'paris': 'Europe/Paris',
-                'lyon': 'Europe/Paris',
-                'marseille': 'Europe/Paris',
-                'berlin': 'Europe/Berlin',
-                'munich': 'Europe/Berlin',
-                'hamburg': 'Europe/Berlin',
-                'rome': 'Europe/Rome',
-                'milan': 'Europe/Rome',
-                'naples': 'Europe/Rome',
-                'sydney': 'Australia/Sydney',
-                'melbourne': 'Australia/Melbourne',
-                'brisbane': 'Australia/Brisbane',
-                'perth': 'Australia/Perth',
-                'adelaide': 'Australia/Adelaide',
-                'tokyo': 'Asia/Tokyo',
-                'beijing': 'Asia/Shanghai',
-                'shanghai': 'Asia/Shanghai',
-                'mumbai': 'Asia/Kolkata',
-                'delhi': 'Asia/Kolkata',
-                'singapore': 'Asia/Singapore',
-                'hong kong': 'Asia/Hong_Kong',
-                'seoul': 'Asia/Seoul',
-                'bangkok': 'Asia/Bangkok',
-                'são paulo': 'America/Sao_Paulo',
-                'rio de janeiro': 'America/Sao_Paulo',
-                'brasília': 'America/Sao_Paulo',
-                'cairo': 'Africa/Cairo',
-                'lagos': 'Africa/Lagos',
-                'moscow': 'Europe/Moscow',
-                'amsterdam': 'Europe/Amsterdam',
-                'vienna': 'Europe/Vienna',
-                'stockholm': 'Europe/Stockholm',
-                'zurich': 'Europe/Zurich',
-                'dublin': 'Europe/Dublin',
-                'oslo': 'Europe/Oslo',
-                'copenhagen': 'Europe/Copenhagen',
-                'warsaw': 'Europe/Warsaw',
-                'athens': 'Europe/Athens',
-                'istanbul': 'Europe/Istanbul',
-                'dubai': 'Asia/Dubai',
-                'tel aviv': 'Asia/Jerusalem',
-                'johannesburg': 'Africa/Johannesburg',
-                'nairobi': 'Africa/Nairobi',
-                'buenos aires': 'America/Argentina/Buenos_Aires',
-                'santiago': 'America/Santiago',
-                'lima': 'America/Lima',
-                'bogotá': 'America/Bogota',
-                'mexico city': 'America/Mexico_City',
-                'toronto': 'America/Toronto',
-                'vancouver': 'America/Vancouver',
-                'montreal': 'America/Toronto',
-                'auckland': 'Pacific/Auckland',
-                'wellington': 'Pacific/Auckland'
-            };
-            
-            const cityKey = city.toLowerCase().trim();
-            if (cityTimezoneMap[cityKey]) {
-                return Promise.resolve(cityTimezoneMap[cityKey]);
-            }
-            
-            return fetch(`https://timeapi.io/api/TimeZone/coordinate?latitude=${lat}&longitude=${lng}`)
-                .then(response => {
-                    if (!response.ok) throw new Error('API failed');
-                    return response.json();
-                })
-                .then(data => data.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone)
-                .catch(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
-        }
+      const data = loadParticipationData();
+      const state = WorldChoirConfig.getAppState(new Date(), WorldChoirDB.hasSubmittedPromise());
+      const isLive = state === WorldChoirConfig.AppState.LIVE;
+      const pulseOpacity = isLive ? 0.55 : 0.35;
 
-        // Update countdown - show days, only show hours when < 3 days
-        function updateCountdown() {
-            const eventDate = new Date('2026-06-15T16:00:00.000Z'); // Updated to 16:00 UTC
-            const now = new Date();
-            const diff = eventDate.getTime() - now.getTime();
-            
-            if (diff > 0) {
-                const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const totalHours = Math.floor(diff / (1000 * 60 * 60));
-                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                
-                if (totalDays >= 3) {
-                    // Show days
-                    document.getElementById('time-until').textContent = `${totalDays} days`;
-                } else {
-                    // Show hours:minutes:seconds when less than 3 days
-                document.getElementById('time-until').textContent = 
-                        `${totalHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                }
-            } else {
-                document.getElementById('time-until').textContent = 'LIVE!';
-            }
-        }
+      data.forEach((loc) => {
+        const radius = Math.max(40000, Math.min(400000, loc.count * 800));
+        const color = loc.count > 5000 ? '#6b5ce7' : loc.count > 2000 ? '#3d7cff' : '#4ec5e8';
+        const circle = L.circle([loc.lat, loc.lng], {
+          radius, fillColor: color, fillOpacity: pulseOpacity,
+          color, weight: 1, opacity: 0.7,
+        }).addTo(map);
+        heatLayers.push(circle);
 
-        // Listen for storage changes to update map in real-time
-        window.addEventListener('storage', function(e) {
-            if (e.key === 'worldChoirParticipationData') {
-                updateMap();
-            }
-        });
+        const marker = L.circleMarker([loc.lat, loc.lng], {
+          radius: Math.max(6, Math.min(18, loc.count / 400)),
+          fillColor: color, fillOpacity: 0.95, color: '#fff', weight: 1,
+        }).addTo(map);
+        marker.bindPopup(`<strong>${loc.city}, ${loc.country}</strong><br>${formatNumber(loc.count)} voices`);
+        markers.push(marker);
+      });
 
-        // Initialize map first, then update
-        initMap();
-        updateMap();
-        updateCountdown();
-        setInterval(updateCountdown, 1000);
-        
-        // Listen for location updates from other pages
-        window.addEventListener('locationUpdated', function(event) {
-            // Location was updated, countdown will update automatically on next interval
-            // But we can force an immediate update
-            updateCountdown();
-        });
-        
-        // Listen for participation data updates (when user changes location in profile)
-        window.addEventListener('participationDataUpdated', function(event) {
-            // Participation data was updated, refresh the map
-            updateMap();
-        });
+      WorldChoirDB.getGatheringPlaces().forEach((gp) => {
+        const pin = L.circleMarker([gp.latitude, gp.longitude], {
+          radius: 10, fillColor: '#c9a962', fillOpacity: 1,
+          color: '#c9a962', weight: 2, className: 'gathering-pin',
+        }).addTo(map);
+        pin.bindPopup(`<strong>${gp.location_name}</strong><br>${gp.city}, ${gp.country}<br><em>Official gathering</em>`);
+        markers.push(pin);
+      });
 
-        // Update map every 5 seconds to catch local changes
-        setInterval(updateMap, 5000);
-    </script>
+      const countries = new Set(data.map((d) => d.country)).size;
+      document.getElementById('stat-voices').textContent = formatNumber(WorldChoirConfig.getGlobalStats().voices);
+      document.getElementById('stat-cities').textContent = formatNumber(data.length);
+      document.getElementById('stat-countries').textContent = countries;
+    }
+
+    function updateCountdown() {
+      const t = WorldChoirConfig.getTimeRemaining();
+      const state = WorldChoirConfig.getAppState(new Date(), WorldChoirDB.hasSubmittedPromise());
+      const el = document.getElementById('map-countdown');
+      if (state === WorldChoirConfig.AppState.LIVE) el.textContent = 'The world is singing now';
+      else if (t.totalMs <= 0) el.textContent = 'Event in progress';
+      else el.textContent = `Singing in ${WorldChoirConfig.formatCountdown(t)}`;
+    }
+
+    document.getElementById('nav-root').appendChild(renderWorldChoirNav('map'));
+    initMap();
+    updateMap();
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+    setInterval(updateMap, 5000);
+    window.addEventListener('wc-pledge-added', updateMap);
+  </script>
 </body>
-</html> 
+</html>

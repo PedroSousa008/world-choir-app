@@ -1,63 +1,86 @@
 // Global singing event configuration
 export const EVENT_CONFIG = {
-  // The global singing event date and time (UTC)
-  // June 15, 2026 at 15:00 Portuguese time = 14:00 UTC (Portugal is UTC+1 in summer)
-  EVENT_DATE: new Date('2026-06-15T14:00:00.000Z'),
-  
-  // Event title and description
-  EVENT_TITLE: 'Global Moment of Unity',
-  EVENT_DESCRIPTION: 'Join millions around the world in a synchronized moment of song and unity.',
-  
-  // Notification settings
+  EVENT_DATE: new Date('2026-06-15T16:00:00.000Z'),
+  SONG_DURATION_MS: 3 * 60 * 1000,
+  FINAL_HOUR_MS: 60 * 60 * 1000,
+  EVENT_TITLE: 'World Choir 2026',
+  EVENT_DESCRIPTION: 'Once a year, the entire world sings the same song at the exact same time.',
+  SONG_NAME: 'Imagine',
+  ARTIST_NAME: 'John Lennon',
+  OFFICIAL_HASHTAG: '#WorldChoir2026',
   NOTIFICATION_TIMES: {
-    ONE_HOUR_BEFORE: 60, // minutes
-    FIVE_MINUTES_BEFORE: 5, // minutes
+    ONE_HOUR_BEFORE: 60,
+    FIVE_MINUTES_BEFORE: 5,
   },
-  
-  // Social sharing
-  SHARE_MESSAGE: "I'll be singing with the world on June 15, 2026 at 15:00 🌍🎶. Join me:",
-  SHARE_URL: "https://worldchoir.app", // Replace with actual app store links
-  
-  // Map settings
-  MAP_UPDATE_INTERVAL: 10000, // 10 seconds
-  HEAT_MAP_RADIUS: 50, // km
+  SHARE_MESSAGE: "I'll be singing with the world on June 15, 2026. Join me for World Choir:",
+  SHARE_URL: 'https://world-choir-app.vercel.app',
+  MAP_UPDATE_INTERVAL: 10000,
+  HEAT_MAP_RADIUS: 50,
 };
 
-// Event states
+export const THEME = {
+  bgVoid: '#020204',
+  bgPrimary: '#05060a',
+  bgCard: 'rgba(12, 14, 22, 0.72)',
+  textPrimary: '#f4f4f6',
+  textSecondary: '#a8abb8',
+  textMuted: '#6b6f7d',
+  accentBlue: '#3d7cff',
+  accentViolet: '#6b5ce7',
+  accentAurora: '#4ec5e8',
+  accentGold: '#c9a962',
+  borderSubtle: 'rgba(255, 255, 255, 0.06)',
+};
+
+export enum AppState {
+  UPCOMING = 'upcoming',
+  FINAL_HOUR = 'final_hour',
+  LIVE = 'live',
+  POST_EVENT_PROMISE = 'post_event_promise',
+  WAITING_NEXT = 'waiting_next',
+}
+
 export enum EventState {
   COUNTDOWN = 'countdown',
   LIVE = 'live',
   COMPLETED = 'completed',
 }
 
-// Get current event state
 export const getEventState = (): EventState => {
   const now = new Date();
   const eventTime = EVENT_CONFIG.EVENT_DATE;
-  
-  if (now < eventTime) {
-    return EventState.COUNTDOWN;
-  } else if (now >= eventTime && now < new Date(eventTime.getTime() + 30 * 60 * 1000)) {
-    return EventState.LIVE; // 30 minutes after event start
-  } else {
-    return EventState.COMPLETED;
-  }
+  const songEnd = new Date(eventTime.getTime() + EVENT_CONFIG.SONG_DURATION_MS);
+
+  if (now < eventTime) return EventState.COUNTDOWN;
+  if (now < songEnd) return EventState.LIVE;
+  return EventState.COMPLETED;
 };
 
-// Get time remaining until event
+export const getAppState = (hasSubmittedPromise = false): AppState => {
+  const now = new Date();
+  const eventTime = EVENT_CONFIG.EVENT_DATE;
+  const songEnd = new Date(eventTime.getTime() + EVENT_CONFIG.SONG_DURATION_MS);
+  const msUntil = eventTime.getTime() - now.getTime();
+
+  if (now >= songEnd) {
+    return hasSubmittedPromise ? AppState.WAITING_NEXT : AppState.POST_EVENT_PROMISE;
+  }
+  if (now >= eventTime) return AppState.LIVE;
+  if (msUntil <= EVENT_CONFIG.FINAL_HOUR_MS) return AppState.FINAL_HOUR;
+  return AppState.UPCOMING;
+};
+
 export const getTimeRemaining = (): { days: number; hours: number; minutes: number; seconds: number } => {
   const now = new Date();
   const eventTime = EVENT_CONFIG.EVENT_DATE;
   const diff = eventTime.getTime() - now.getTime();
-  
-  if (diff <= 0) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-  }
-  
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-  
-  return { days, hours, minutes, seconds };
-}; 
+
+  if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+  return {
+    days: Math.floor(diff / 86400000),
+    hours: Math.floor((diff % 86400000) / 3600000),
+    minutes: Math.floor((diff % 3600000) / 60000),
+    seconds: Math.floor((diff % 60000) / 1000),
+  };
+};

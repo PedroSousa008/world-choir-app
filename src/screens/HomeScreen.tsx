@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { CountdownTimer } from '../components/CountdownTimer';
 import { PledgeButton } from '../components/PledgeButton';
-import { EventState } from '../constants/event';
+import { EVENT_CONFIG, THEME, EventState } from '../constants/event';
 import { AppState } from '../types';
 import { getAppState, saveAppState, getUserPledge, saveUserPledge, getUserId } from '../utils/storage';
 import { getUserLocationWithCity } from '../utils/location';
@@ -24,7 +24,7 @@ export const HomeScreen: React.FC = () => {
   });
   const [eventState, setEventState] = useState<EventState>(EventState.COUNTDOWN);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasJoined, setHasJoined] = useState(false);
+  const [hasJoined, setHasJoined] = useState(true);
 
   useEffect(() => {
     loadAppState();
@@ -213,7 +213,7 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: THEME.bgVoid,
   },
   header: {
     paddingHorizontal: 20,
@@ -223,15 +223,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '300',
-    color: '#FFFFFF',
-    letterSpacing: 2,
+    fontWeight: '600',
+    color: THEME.textPrimary,
+    letterSpacing: 1,
   },
   locationText: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: THEME.textSecondary,
     marginTop: 5,
-    letterSpacing: 1,
   },
   content: {
     flex: 1,
