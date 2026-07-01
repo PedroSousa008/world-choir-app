@@ -40,37 +40,17 @@ const WorldChoirHome = (() => {
       }
     }
 
-    let breath = 0;
     function draw() {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      breath += 0.01;
-      const pulse = 0.5 + 0.5 * Math.sin(breath);
       ctx.clearRect(0, 0, w, h);
-
-      const cx = w * 0.5;
-      const cy = h * 0.38;
-      const r = Math.min(w, h) * 0.22;
-
-      const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 2.5);
-      glow.addColorStop(0, `rgba(61, 124, 255, ${0.05 + pulse * 0.03})`);
-      glow.addColorStop(0.5, `rgba(107, 92, 231, ${0.02 + pulse * 0.02})`);
-      glow.addColorStop(1, 'rgba(2, 2, 4, 0)');
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(61, 124, 255, ${0.08 + pulse * 0.06})`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
 
       const t = Date.now() / 1000;
       stars.forEach((s) => {
-        const a = 0.15 + 0.4 * Math.abs(Math.sin(t * 0.5 + s.phase));
+        const a = 0.12 + 0.35 * Math.abs(Math.sin(t * 0.5 + s.phase));
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(200, 210, 255, ${a})`;
+        ctx.fillStyle = `rgba(220, 220, 220, ${a})`;
         ctx.fill();
       });
 
