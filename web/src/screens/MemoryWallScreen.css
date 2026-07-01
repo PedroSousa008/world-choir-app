@@ -1,0 +1,112 @@
+.memory-screen__header {
+  margin-bottom: 28px;
+}
+
+.memory-screen__title {
+  font-size: 32px;
+  margin: 4px 0 8px;
+}
+
+.memory-section {
+  margin-bottom: 32px;
+}
+
+.memory-section__title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  color: var(--glow-warm);
+  margin-bottom: 14px;
+}
+
+.memory-stats {
+  padding: 20px 12px;
+}
+
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.memory-grid--list {
+  grid-template-columns: 1fr;
+}
+
+.memory-card {
+  overflow: hidden;
+}
+
+.memory-card__visual {
+  height: 100px;
+  background: linear-gradient(135deg, rgba(74, 144, 217, 0.15), rgba(212, 168, 83, 0.1));
+  display: flex;
+  align-items: flex-end;
+  padding: 10px;
+}
+
+.memory-card--compact .memory-card__visual {
+  height: 60px;
+}
+
+.memory-card__type {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.memory-card__caption {
+  padding: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.memory-card__location {
+  padding: 0 12px 12px;
+  font-size: 11px;
+  color: var(--glow-cyan);
+}
+
+.promise-wall {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.promise-card {
+  padding: 20px;
+}
+
+.promise-card__text {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-style: italic;
+  color: var(--glow-warm);
+  line-height: 1.5;
+}
+
+.promise-card__meta {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+.map-replay {
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.map-replay__text {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.map-replay__hint {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}

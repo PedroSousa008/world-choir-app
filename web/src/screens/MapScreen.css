@@ -1,0 +1,120 @@
+.map-screen__header {
+  margin-bottom: 20px;
+}
+
+.map-screen__title {
+  font-size: 32px;
+  margin: 4px 0 8px;
+}
+
+.map-screen__map {
+  height: 320px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  margin-bottom: 28px;
+  animation: breathe 8s ease-in-out infinite;
+}
+
+.map-screen__section {
+  margin-bottom: 28px;
+}
+
+.map-screen__section-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  margin-bottom: 14px;
+  color: var(--glow-warm);
+}
+
+.gathering-list,
+.friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gathering-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.gathering-card h3 {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.gathering-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.gathering-card__count {
+  font-size: 12px !important;
+  color: var(--glow-cyan) !important;
+  margin-top: 4px !important;
+}
+
+.btn-secondary--active {
+  border-color: rgba(110, 200, 232, 0.4);
+  color: var(--glow-cyan);
+}
+
+.friend-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.friend-card__avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(110, 200, 232, 0.2), rgba(212, 168, 83, 0.15));
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  color: var(--glow-warm);
+}
+
+.friend-card h3 {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.friend-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.friend-card__status {
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
+  margin-top: 2px !important;
+}
+
+.friend-marker__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-sunrise);
+  box-shadow: 0 0 12px rgba(232, 184, 109, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.map-popup {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.map-pulse {
+  animation: pulse-glow 3s ease-in-out infinite;
+}

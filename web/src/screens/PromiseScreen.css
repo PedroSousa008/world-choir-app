@@ -1,0 +1,63 @@
+.promise-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-deep);
+  padding: 24px;
+  padding-bottom: calc(24px + var(--safe-bottom));
+}
+
+.promise-screen__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+
+.promise-screen__title {
+  font-size: clamp(28px, 7vw, 40px);
+  margin: 12px 0 16px;
+  color: var(--glow-warm);
+}
+
+.promise-screen__prompt {
+  margin-bottom: 28px;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.promise-screen__input {
+  width: 100%;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.6;
+  resize: none;
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+
+.promise-screen__input::placeholder {
+  color: var(--text-muted);
+}
+
+.promise-screen__input:focus {
+  outline: none;
+  border-color: rgba(245, 230, 200, 0.25);
+  box-shadow: 0 0 40px rgba(212, 168, 83, 0.08);
+}
+
+.promise-screen__count {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 8px 0 24px;
+  text-align: right;
+}

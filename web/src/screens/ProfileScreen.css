@@ -1,0 +1,114 @@
+.profile-screen__header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  background: linear-gradient(135deg, rgba(245, 230, 200, 0.15), rgba(110, 200, 232, 0.1));
+  border: 1px solid rgba(245, 230, 200, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 32px;
+  color: var(--glow-warm);
+}
+
+.profile-screen__name {
+  font-size: 32px;
+}
+
+.profile-screen__location {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.profile-screen__edit {
+  margin-top: 16px;
+}
+
+.profile-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.profile-input {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-size: 15px;
+  text-align: center;
+}
+
+.profile-stat {
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.profile-section {
+  margin-bottom: 28px;
+}
+
+.profile-section__title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  color: var(--glow-warm);
+  margin-bottom: 14px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-card {
+  padding: 20px;
+}
+
+.history-card h3 {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  color: var(--glow-warm);
+  margin-bottom: 8px;
+}
+
+.history-card__song {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.history-card__theme,
+.history-card__location {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.history-card__promise {
+  margin-top: 12px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 16px;
+  color: var(--accent-sunrise);
+}
+
+.history-card__status {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--glow-cyan);
+}

@@ -1,0 +1,258 @@
+.home-screen {
+  position: relative;
+  z-index: 1;
+}
+
+.home-screen__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.home-screen__content--centered {
+  min-height: calc(100vh - var(--nav-height) - 80px);
+  justify-content: center;
+  text-align: center;
+  align-items: center;
+}
+
+.home-screen__header {
+  text-align: center;
+  padding-top: 12px;
+}
+
+.home-screen__brand {
+  font-size: clamp(32px, 8vw, 44px);
+  margin-top: 4px;
+  background: linear-gradient(135deg, var(--glow-warm), var(--glow-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.home-screen__lead {
+  text-align: center;
+  font-size: 16px;
+  color: var(--text-secondary);
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+.home-screen__event-meta {
+  text-align: center;
+}
+
+.home-screen__date {
+  font-size: 14px;
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+
+.home-screen__local {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.home-screen__song-block {
+  padding: 20px;
+  text-align: center;
+}
+
+.home-screen__song-title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  color: var(--glow-warm);
+}
+
+.home-screen__theme {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 300;
+}
+
+.home-screen__theme em {
+  font-style: italic;
+  color: var(--accent-sunrise);
+}
+
+.home-screen__stats {
+  padding: 20px 12px;
+}
+
+.home-screen__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.home-screen__secondary {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.home-screen__pledged {
+  text-align: center;
+}
+
+.home-screen__pledge-location {
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--glow-cyan);
+  font-weight: 300;
+}
+
+.home-screen__micro {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.home-screen__final-title {
+  font-size: clamp(28px, 7vw, 40px);
+  text-align: center;
+  color: var(--glow-warm);
+}
+
+.home-screen__final-copy {
+  text-align: center;
+}
+
+.home-screen__song-line {
+  text-align: center;
+  font-family: var(--font-serif);
+  font-size: 20px;
+  color: var(--text-secondary);
+}
+
+.home-screen__hashtag {
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--glow-cyan);
+}
+
+.home-screen__live-title {
+  font-size: clamp(32px, 8vw, 48px);
+  color: var(--glow-warm);
+}
+
+.home-screen__go-sing {
+  font-size: clamp(48px, 14vw, 72px);
+  color: var(--glow-warm);
+  margin: 8px 0 16px;
+  text-shadow: 0 0 60px rgba(245, 230, 200, 0.3);
+}
+
+.home-screen__song {
+  margin-bottom: 8px;
+}
+
+.home-screen--live {
+  background: radial-gradient(ellipse at center, rgba(212, 168, 83, 0.06), transparent 60%);
+}
+
+.home-screen__live-message {
+  margin-top: 32px;
+  padding: 24px;
+  max-width: 320px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.7;
+}
+
+.home-screen__waiting-title {
+  font-size: clamp(28px, 7vw, 40px);
+  margin: 12px 0;
+}
+
+.home-screen__waiting-sub {
+  max-width: 300px;
+}
+
+.home-screen__tagline {
+  margin-top: 32px;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 16, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+  padding-bottom: calc(20px + var(--safe-bottom));
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  padding: 28px 24px;
+  animation: fadeIn 0.4s ease;
+}
+
+.modal__title {
+  font-size: 26px;
+  margin-bottom: 8px;
+}
+
+.modal__sub {
+  margin-bottom: 20px;
+}
+
+.modal__skip {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.reason-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.reason-chip {
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 14px;
+  transition: var(--transition-medium);
+}
+
+.reason-chip:hover {
+  border-color: rgba(245, 230, 200, 0.3);
+  color: var(--glow-warm);
+  background: rgba(245, 230, 200, 0.05);
+}
+
+.modal-input {
+  width: 100%;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.modal-input::placeholder {
+  color: var(--text-muted);
+}
