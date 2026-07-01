@@ -1,136 +1,77 @@
 /**
  * World Choir — Map Tab
+ * City lights are Leaflet markers anchored to geocoded lat/lng from real pledges.
  */
 const WorldChoirMap = (() => {
   let map = null;
-  let lightsLayer = null;
-  let pulsePhase = 0;
-  let animFrame = null;
-  let lastLights = [];
-  let highlightCityKey = null;
+  let cityLightsLayer = null;
+  let gatheringLayer = null;
   let pulseCityKey = null;
 
   function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
   }
 
-  function lightProps() {
-    return { core: 5, glow: 18, opacity: 0.85 };
-  }
-
   function cityKey(c) {
     return `${c.city}|${c.country}`;
   }
 
-  function voiceCountForCity(city, country) {
-    return WorldChoirDB.getPledgesForEvent().filter(
-      (p) => p.city === city && p.country === country
-    ).length;
+  function glowSize(count) {
+    return clamp(Math.round(14 + Math.sqrt(count) * 6), 16, 56);
   }
 
-  /* ─── Canvas light overlay (layer-point coords so lights stay on geography while panning) ─── */
-  const LightsOverlay = L.Layer.extend({
-    onAdd(m) {
-      this._map = m;
-      this._canvas = L.DomUtil.create('canvas', 'map-lights-canvas');
-      this._canvas.style.position = 'absolute';
-      this._canvas.style.pointerEvents = 'none';
-      this._canvas.style.zIndex = '450';
-      m.getPanes().overlayPane.appendChild(this._canvas);
-      m.on('move', this._reposition, this);
-      m.on('zoomend resize', this._reset, this);
-      this._reset();
-      this._animate();
-    },
+  function createCityLightIcon(city) {
+    const size = glowSize(city.count);
+    const pulsing = cityKey(city) === pulseCityKey;
+    return L.divIcon({
+      className: 'city-light-icon',
+      html:
+        `<div class="city-light${pulsing ? ' city-light--pulse' : ''}" style="--glow:${size}px">` +
+        '<span class="city-light__glow"></span><span class="city-light__core"></span></div>',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
+  }
 
-    onRemove(m) {
-      cancelAnimationFrame(this._animId);
-      L.DomUtil.remove(this._canvas);
-      m.off('move', this._reposition, this);
-      m.off('zoomend resize', this._reset, this);
-    },
+  function createGatheringIcon() {
+    return L.divIcon({
+      className: 'gathering-icon',
+      html:
+        '<div class="gathering-marker">' +
+        '<span class="gathering-marker__glow"></span><span class="gathering-marker__core"></span></div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+    });
+  }
 
-    _reposition() {
-      if (!this._map || !this._canvas) return;
-      L.DomUtil.setPosition(this._canvas, this._map.containerPointToLayerPoint([0, 0]));
-      this._draw();
-    },
+  function rebuildMarkers() {
+    cityLightsLayer.clearLayers();
+    gatheringLayer.clearLayers();
 
-    _reset() {
-      const size = this._map.getSize();
-      const dpr = window.devicePixelRatio || 1;
-      L.DomUtil.setPosition(this._canvas, this._map.containerPointToLayerPoint([0, 0]));
-      this._canvas.width = size.x * dpr;
-      this._canvas.height = size.y * dpr;
-      this._canvas.style.width = size.x + 'px';
-      this._canvas.style.height = size.y + 'px';
-      this._ctx = this._canvas.getContext('2d');
-      this._ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      this._draw();
-    },
-
-    _animate() {
-      pulsePhase += 0.025;
-      this._draw();
-      this._animId = requestAnimationFrame(() => this._animate());
-    },
-
-    _draw() {
-      if (!this._ctx || !this._map) return;
-      const ctx = this._ctx;
-      const size = this._map.getSize();
-      ctx.clearRect(0, 0, size.x, size.y);
-
-      const breath = 0.5 + 0.5 * Math.sin(pulsePhase);
-
-      lastLights.forEach((light) => {
-        const pt = this._map.latLngToLayerPoint([light.latitude, light.longitude]);
-        if (pt.x < -100 || pt.y < -100 || pt.x > size.x + 100 || pt.y > size.y + 100) return;
-
-        const props = lightProps();
-        const key = cityKey(light);
-        const isPulse = key === pulseCityKey;
-        const extra = isPulse ? 0.3 + 0.3 * Math.sin(pulsePhase * 3) : 0;
-        const glowR = props.glow * (1 + extra + breath * 0.08);
-        const coreR = props.core * (1 + extra * 0.5);
-        const alpha = props.opacity * (0.85 + breath * 0.15);
-
-        const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, glowR);
-        grad.addColorStop(0, `rgba(200, 230, 255, ${alpha})`);
-        grad.addColorStop(0.15, `rgba(126, 184, 255, ${alpha * 0.7})`);
-        grad.addColorStop(0.45, `rgba(61, 124, 255, ${alpha * 0.25})`);
-        grad.addColorStop(1, 'rgba(61, 124, 255, 0)');
-
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, glowR, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, coreR, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(240, 248, 255, ${Math.min(1, alpha + 0.2)})`;
-        ctx.fill();
+    WorldChoirDB.getAggregatedCities().forEach((city) => {
+      const marker = L.marker([city.latitude, city.longitude], {
+        icon: createCityLightIcon(city),
+        interactive: true,
+        keyboard: false,
       });
-
-      const gatherings = WorldChoirDB.getGatheringPlaces();
-      gatherings.forEach((g) => {
-        const pt = this._map.latLngToLayerPoint([g.latitude, g.longitude]);
-        const r = 6 + breath * 1.5;
-        const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, r * 3);
-        grad.addColorStop(0, 'rgba(201, 169, 98, 0.9)');
-        grad.addColorStop(0.4, 'rgba(201, 169, 98, 0.35)');
-        grad.addColorStop(1, 'rgba(201, 169, 98, 0)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, r * 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, r * 0.6, 0, Math.PI * 2);
-        ctx.fillStyle = '#c9a962';
-        ctx.fill();
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        showCityCard(city);
       });
-    },
-  });
+      cityLightsLayer.addLayer(marker);
+    });
+
+    WorldChoirDB.getGatheringPlaces().forEach((g) => {
+      if (g.latitude == null || g.longitude == null) return;
+      gatheringLayer.addLayer(
+        L.marker([g.latitude, g.longitude], {
+          icon: createGatheringIcon(),
+          interactive: false,
+          keyboard: false,
+        })
+      );
+    });
+  }
 
   function initMap() {
     map = L.map('world-map', {
@@ -152,42 +93,22 @@ const WorldChoirMap = (() => {
       bounds: [[-85, -180], [85, 180]],
     }).addTo(map);
 
-    lightsLayer = new LightsOverlay();
-    lightsLayer.addTo(map);
+    cityLightsLayer = L.layerGroup().addTo(map);
+    gatheringLayer = L.layerGroup().addTo(map);
 
-    map.on('click', onMapClick);
+    map.on('click', hideCityCard);
   }
 
-  function onMapClick(e) {
-    const clickPt = map.latLngToLayerPoint(e.latlng);
-    let nearest = null;
-    let minDist = 30;
-
-    lastLights.forEach((light) => {
-      const pt = map.latLngToLayerPoint([light.latitude, light.longitude]);
-      const d = Math.hypot(pt.x - clickPt.x, pt.y - clickPt.y);
-      if (d < minDist) {
-        minDist = d;
-        nearest = light;
-      }
-    });
-
-    if (nearest) showCityCard(nearest);
-    else hideCityCard();
-  }
-
-  function showCityCard(light) {
+  function showCityCard(city) {
     const card = document.getElementById('city-card');
-    const count = voiceCountForCity(light.city, light.country);
-    const hasGathering = WorldChoirDB.hasGatheringNear(light.city, light.country);
-    document.getElementById('city-card-place').textContent = `${light.city}, ${light.country}`;
+    const hasGathering = WorldChoirDB.hasGatheringNear(city.city, city.country);
+    document.getElementById('city-card-place').textContent = `${city.city}, ${city.country}`;
     document.getElementById('city-card-voices').textContent =
-      `${formatNumber(count)} voice${count !== 1 ? 's' : ''}`;
+      `${formatNumber(city.count)} voice${city.count !== 1 ? 's' : ''}`;
     const gatheringEl = document.getElementById('city-card-gathering');
     gatheringEl.textContent = hasGathering ? 'Official gathering nearby' : '';
     gatheringEl.style.display = hasGathering ? 'block' : 'none';
     card.classList.add('visible');
-    highlightCityKey = cityKey(light);
     setTimeout(() => card.classList.remove('visible'), 4000);
   }
 
@@ -196,11 +117,10 @@ const WorldChoirMap = (() => {
   }
 
   function refreshMapData() {
-    lastLights = WorldChoirDB.getUserLights();
+    rebuildMarkers();
     updateStats();
     updateEmptyState();
     updateInfoSheet();
-    if (lightsLayer) lightsLayer._draw();
   }
 
   function updateStats() {
@@ -257,6 +177,7 @@ const WorldChoirMap = (() => {
 
     await flyTo(20, 0, 2, 1.8);
     pulseCityKey = null;
+    refreshMapData();
     sessionStorage.removeItem('wc_voice_joined');
   }
 
@@ -325,7 +246,12 @@ const WorldChoirMap = (() => {
       const key = `${e.detail?.city}|${e.detail?.country}`;
       pulseCityKey = key;
       refreshMapData();
-      setTimeout(() => { if (pulseCityKey === key) pulseCityKey = null; }, 3000);
+      setTimeout(() => {
+        if (pulseCityKey === key) {
+          pulseCityKey = null;
+          refreshMapData();
+        }
+      }, 3000);
     });
     window.addEventListener('wc-pledge-updated', refreshMapData);
     window.addEventListener('storage', (e) => {

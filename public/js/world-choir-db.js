@@ -249,8 +249,18 @@ const WorldChoirDB = (() => {
     );
   }
 
-  function getMapStats(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+  function getUniquePledgesForEvent(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
     const pledges = getPledgesForEvent(eventId);
+    const seenUsers = new Set();
+    return pledges.filter((p) => {
+      if (seenUsers.has(p.user_id)) return false;
+      seenUsers.add(p.user_id);
+      return true;
+    });
+  }
+
+  function getMapStats(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const pledges = getUniquePledgesForEvent(eventId);
     const withLocation = pledges.filter((p) => p.city && p.country);
     const cities = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
     const countries = new Set(withLocation.map((p) => p.country));
@@ -262,7 +272,7 @@ const WorldChoirDB = (() => {
   }
 
   function getAggregatedCities(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    const pledges = getPledgesForEvent(eventId).filter(
+    const pledges = getUniquePledgesForEvent(eventId).filter(
       (p) => p.latitude != null && p.longitude != null && p.city && p.country
     );
     const map = {};
