@@ -62,6 +62,18 @@ const WorldChoirHome = (() => {
     draw();
   }
 
+  function actionIcon(type) {
+    const icons = {
+      remind:
+        '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>',
+      calendar:
+        '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+      share:
+        '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.7 13.5l6.6 3.9M15.3 6.6L8.7 10.5"/></svg>',
+    };
+    return icons[type] || '';
+  }
+
   function countdownUnit(value, label, id) {
     return `
       <div class="countdown-hero__unit">
@@ -98,9 +110,9 @@ const WorldChoirHome = (() => {
       </button>
 
       <div class="secondary-actions">
-        <button class="btn-glass" type="button" id="remind-btn">Remind Me</button>
-        <button class="btn-glass" type="button" id="calendar-btn">Add to Calendar</button>
-        <button class="btn-glass" type="button" id="share-btn">Share Countdown</button>
+        <button class="btn-icon" type="button" id="remind-btn" aria-label="Remind Me">${actionIcon('remind')}</button>
+        <button class="btn-icon" type="button" id="calendar-btn" aria-label="Add to Calendar">${actionIcon('calendar')}</button>
+        <button class="btn-icon" type="button" id="share-btn" aria-label="Share Countdown">${actionIcon('share')}</button>
       </div>
     `;
   }
