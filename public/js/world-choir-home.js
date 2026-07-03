@@ -62,10 +62,10 @@ const WorldChoirHome = (() => {
     draw();
   }
 
-  function countdownUnit(value, label) {
+  function countdownUnit(value, label, id) {
     return `
       <div class="countdown-hero__unit">
-        <span class="countdown-hero__value">${String(value).padStart(2, '0')}</span>
+        <span class="countdown-hero__value" id="${id}">${String(value).padStart(2, '0')}</span>
         <span class="countdown-hero__label">${label}</span>
       </div>
     `;
@@ -82,10 +82,10 @@ const WorldChoirHome = (() => {
 
       <div class="countdown-hero">
         <div class="countdown-hero__grid">
-          ${countdownUnit(t.days, 'Days')}
-          ${countdownUnit(t.hours, 'Hours')}
-          ${countdownUnit(t.minutes, 'Minutes')}
-          ${countdownUnit(t.seconds, 'Seconds')}
+          ${countdownUnit(t.days, 'Days', 'countdown-days')}
+          ${countdownUnit(t.hours, 'Hours', 'countdown-hours')}
+          ${countdownUnit(t.minutes, 'Minutes', 'countdown-minutes')}
+          ${countdownUnit(t.seconds, 'Seconds', 'countdown-seconds')}
         </div>
       </div>
 
@@ -121,6 +121,25 @@ const WorldChoirHome = (() => {
     const root = document.getElementById('home-content');
     root.innerHTML = isLive() ? renderLiveMinimal() : renderCountdownHome();
     bindActions();
+  }
+
+  function updateCountdown() {
+    if (isLive()) {
+      if (!document.querySelector('.home-brand--live')) render();
+      return;
+    }
+
+    const t = WorldChoirConfig.getTimeRemaining();
+    const daysEl = document.getElementById('countdown-days');
+    if (!daysEl) {
+      render();
+      return;
+    }
+
+    daysEl.textContent = String(t.days).padStart(2, '0');
+    document.getElementById('countdown-hours').textContent = String(t.hours).padStart(2, '0');
+    document.getElementById('countdown-minutes').textContent = String(t.minutes).padStart(2, '0');
+    document.getElementById('countdown-seconds').textContent = String(t.seconds).padStart(2, '0');
   }
 
   function bindActions() {
@@ -248,7 +267,7 @@ const WorldChoirHome = (() => {
     });
 
     render();
-    countdownTimer = setInterval(render, 1000);
+    countdownTimer = setInterval(updateCountdown, 1000);
     checkReminders();
     reminderChecker = setInterval(checkReminders, 30000);
   }
