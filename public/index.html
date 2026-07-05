@@ -9,8 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20270701e">
-  <link rel="stylesheet" href="css/home.css?v=20270703">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20270706b">
+  <link rel="stylesheet" href="css/home.css?v=20270706b">
+  <link rel="stylesheet" href="css/profile.css?v=20270706b">
 </head>
 <body>
   <canvas id="earth-canvas" aria-hidden="true"></canvas>
@@ -72,13 +73,21 @@
     </div>
   </div>
 
+  <!-- Live event — synced music + lyrics → promise → final moment -->
+  <div class="practice-mode" id="live-event-mode" aria-hidden="true">
+    <div id="live-event-content"></div>
+  </div>
+
   <div id="nav-root"></div>
 
   <script src="js/world-choir-config.js"></script>
   <script src="js/world-choir-db.js"></script>
   <script src="js/world-choir-nav.js"></script>
   <script src="js/world-choir-participation.js"></script>
-  <script src="js/world-choir-home.js?v=20270703b"></script>
+  <script src="js/world-choir-practice-config.js"></script>
+  <script src="js/profile/lyrics-display.js"></script>
+  <script src="js/world-choir-live-event.js"></script>
+  <script src="js/world-choir-home.js?v=20270706b"></script>
   <script>WorldChoirHome.init();</script>
 </body>
 </html>

@@ -11,8 +11,12 @@ const WorldChoirHome = (() => {
     return d.innerHTML;
   }
 
-  function isLive() {
-    return WorldChoirConfig.getTimeRemaining().totalMs <= 0;
+  function isPreEvent() {
+    return Date.now() < WorldChoirConfig.getEventStart().getTime();
+  }
+
+  function isPostEvent() {
+    return LiveEventMode.isPostEvent();
   }
 
   /* ─── Subtle cinematic background ─── */
@@ -117,27 +121,46 @@ const WorldChoirHome = (() => {
     `;
   }
 
-  function renderLiveMinimal() {
+  function renderPostEventHome() {
     const pledged = WorldChoirDB.hasPledged();
+    const hasPromise = WorldChoirDB.hasSubmittedPromise();
     const e = WorldChoirConfig.ACTIVE_EVENT;
+
     return `
-      <p class="home-brand home-brand--live"><span class="live-dot"></span> LIVE</p>
-      <h1 class="home-headline">The world is singing now.</h1>
-      <p class="home-copy">Put your phone down. Join the choir.</p>
-      <p class="home-song">${esc(e.songName)} — ${esc(e.artistName)}</p>
-      ${pledged ? '<p class="home-meta home-meta--pledged">You\'re Singing</p>' : ''}
+      <div class="home-post-event">
+        <p class="home-brand">${esc(e.title)}</p>
+        <h1 class="home-post-event__title">Thank you for singing with the world.</h1>
+        <p class="home-post-event__copy">${esc(e.songName)} — ${esc(e.artistName)}</p>
+        ${pledged && hasPromise ? '<p class="home-meta home-meta--pledged">Your promise lives on in your profile.</p>' : ''}
+        ${pledged && !hasPromise ? '<p class="home-copy">Share your promise when you\'re ready.</p>' : ''}
+      </div>
     `;
   }
 
   function render() {
     const root = document.getElementById('home-content');
-    root.innerHTML = isLive() ? renderLiveMinimal() : renderCountdownHome();
-    bindActions();
+    if (LiveEventMode.isActive()) return;
+
+    if (isPostEvent() && LiveEventMode.hasCompletedFlow()) {
+      root.innerHTML = renderPostEventHome();
+    } else if (isPreEvent()) {
+      root.innerHTML = renderCountdownHome();
+      bindActions();
+    } else if (LiveEventMode.isDuringLiveSong()) {
+      root.innerHTML = `
+        <p class="home-brand home-brand--live"><span class="live-dot"></span> LIVE</p>
+        <h1 class="home-headline">The world is singing now.</h1>
+        <p class="home-song">${esc(WorldChoirConfig.ACTIVE_EVENT.songName)} — ${esc(WorldChoirConfig.ACTIVE_EVENT.artistName)}</p>
+      `;
+    } else {
+      root.innerHTML = renderPostEventHome();
+    }
   }
 
   function updateCountdown() {
-    if (isLive()) {
-      if (!document.querySelector('.home-brand--live')) render();
+    if (!isPreEvent()) {
+      LiveEventMode.launch();
+      if (!LiveEventMode.isActive()) render();
       return;
     }
 
@@ -278,7 +301,9 @@ const WorldChoirHome = (() => {
       if (e.target.id === 'remind-overlay') closeRemindModal();
     });
 
+    LiveEventMode.init();
     render();
+    LiveEventMode.launch();
     countdownTimer = setInterval(updateCountdown, 1000);
     checkReminders();
     reminderChecker = setInterval(checkReminders, 30000);
