@@ -4,15 +4,14 @@
 const LyricsDisplay = (() => {
   let rafId = null;
 
+  /** Active line = last entry whose start time has been reached (until the next start time). */
   function getLyricIndex(currentTime, lyrics) {
-    let index = -1;
     for (let i = lyrics.length - 1; i >= 0; i--) {
       if (currentTime >= lyrics[i].time) {
-        index = i;
-        break;
+        return i;
       }
     }
-    return index;
+    return -1;
   }
 
   function renderShell() {
@@ -31,6 +30,7 @@ const LyricsDisplay = (() => {
 
   function mount(container) {
     container.innerHTML = renderShell();
+    update(0);
   }
 
   function update(currentTime) {
@@ -56,8 +56,9 @@ const LyricsDisplay = (() => {
 
   function startSync(audio) {
     stopSync();
+    if (audio) update(audio.currentTime);
     function tick() {
-      if (audio && !audio.paused) update(audio.currentTime);
+      if (audio) update(audio.currentTime);
       rafId = requestAnimationFrame(tick);
     }
     rafId = requestAnimationFrame(tick);
