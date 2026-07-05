@@ -4,127 +4,84 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
+  <meta name="description" content="Your World Choir identity — who you are, where you sing, and how you prepare.">
   <title>World Choir — Profile</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20270701e">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20270706a">
+  <link rel="stylesheet" href="css/profile.css?v=20270706a">
 </head>
 <body>
   <div class="ambient-bg"></div>
 
-  <main class="page">
-    <div class="profile-header">
-      <div class="avatar" id="avatar">?</div>
-      <h1 class="hero-title" id="profile-name" style="font-size:1.5rem">—</h1>
-      <p class="hero-subtitle" id="profile-location" style="margin-bottom:8px">—</p>
-      <p class="tagline" id="profile-events">—</p>
+  <main class="page profile-page">
+    <div class="profile-brand">
+      <p class="brand">World Choir</p>
+      <p class="tagline">Your voice in the global choir</p>
     </div>
 
-    <div id="profile-content"></div>
-
-    <div class="glass-card" style="margin-top:24px">
-      <p class="stat-label" style="margin-bottom:16px">Edit Profile</p>
-      <div class="form-group">
-        <label class="form-label" for="edit-name">Display name</label>
-        <input class="form-input" id="edit-name" type="text">
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="edit-city">City</label>
-        <input class="form-input" id="edit-city" type="text">
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="edit-country">Country</label>
-        <input class="form-input" id="edit-country" type="text">
-      </div>
-      <button class="btn btn-primary" id="save-profile">Save</button>
-    </div>
+    <div id="profile-identity-root"></div>
+    <div id="profile-participation-root"></div>
+    <div id="profile-practice-root"></div>
+    <div id="profile-promise-root"></div>
+    <div id="profile-history-root"></div>
+    <div id="profile-invite-root"></div>
   </main>
+
+  <!-- Change participation location modal — manual city/country, no GPS -->
+  <div class="overlay" id="change-location-overlay">
+    <div class="modal" role="dialog" aria-labelledby="location-modal-title">
+      <h2 class="modal-title" id="location-modal-title">Change Participation Location</h2>
+      <p class="modal-copy" id="location-modal-copy">
+        Update where you will sing from. Your light on the map will move to your new city.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label" for="location-country">Country</label>
+        <select class="form-input form-select" id="location-country">
+          <option value="">Select country</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="location-city">City</label>
+        <input class="form-input" id="location-city" type="text" placeholder="Your city" autocomplete="address-level2">
+      </div>
+
+      <div class="actions-row">
+        <button class="btn btn-primary" id="location-confirm" type="button">Save Location</button>
+        <button class="btn btn-secondary" id="location-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Practice Mode — full screen -->
+  <div class="practice-mode" id="practice-mode" aria-hidden="true">
+    <div id="practice-mode-content"></div>
+    <div id="practice-controls"></div>
+  </div>
 
   <div id="nav-root"></div>
 
   <script src="js/world-choir-config.js"></script>
   <script src="js/world-choir-db.js"></script>
+  <script src="js/world-choir-participation.js"></script>
+  <script src="js/world-choir-practice-config.js"></script>
   <script src="js/world-choir-nav.js"></script>
+  <script src="js/profile/change-location-modal.js"></script>
+  <script src="js/profile/user-identity-card.js"></script>
+  <script src="js/profile/participation-status-card.js"></script>
+  <script src="js/profile/practice-song-button.js"></script>
+  <script src="js/profile/practice-countdown.js"></script>
+  <script src="js/profile/lyrics-display.js"></script>
+  <script src="js/profile/practice-complete-screen.js"></script>
+  <script src="js/profile/practice-mode.js"></script>
+  <script src="js/profile/promise-card.js"></script>
+  <script src="js/profile/world-choir-history.js"></script>
+  <script src="js/profile/invite-button.js"></script>
+  <script src="js/profile/profile-page.js"></script>
   <script>
-    function render() {
-      const user = WorldChoirDB.getCurrentUser();
-      const history = WorldChoirDB.getParticipationHistory();
-      const pledged = WorldChoirDB.hasPledged();
-
-      document.getElementById('avatar').textContent = (user.display_name || '?')[0].toUpperCase();
-      document.getElementById('profile-name').textContent = user.display_name || 'Voice';
-      document.getElementById('profile-location').textContent =
-        user.city && user.country ? `${user.city}, ${user.country}` : 'Location not set';
-      document.getElementById('profile-events').textContent =
-        `${history.length} World Choir event${history.length !== 1 ? 's' : ''} participated`;
-
-      document.getElementById('edit-name').value = user.display_name || '';
-      document.getElementById('edit-city').value = user.city || '';
-      document.getElementById('edit-country').value = user.country || '';
-
-      const el = document.getElementById('profile-content');
-
-      if (history.length === 0 && !pledged) {
-        el.innerHTML = `
-          <div class="glass-card text-center">
-            <p class="state-copy" style="margin:0 auto">You haven't joined a World Choir event yet.</p>
-            <div class="actions-row" style="margin-top:20px">
-              <a href="index.html" class="btn btn-primary">I'll Sing</a>
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      if (pledged && history.length === 0) {
-        const pledge = WorldChoirDB.getPledgeForCurrentUser();
-        el.innerHTML = renderHistoryItem({
-          event: { title: WorldChoirConfig.CURRENT_EVENT.title, song_name: WorldChoirConfig.CURRENT_EVENT.songName },
-          pledge,
-          promise: WorldChoirDB.getPromiseForCurrentUser(),
-        });
-        return;
-      }
-
-      el.innerHTML = history.map(renderHistoryItem).join('');
-    }
-
-    function renderHistoryItem({ event, pledge, promise }) {
-      const title = event?.title || WorldChoirConfig.CURRENT_EVENT.title;
-      const song = event?.song_name || WorldChoirConfig.CURRENT_EVENT.songName;
-      return `
-        <div class="glass-card history-item">
-          <p class="history-year">${title}</p>
-          <div class="glass-card-row"><span class="stat-label">Status</span><span class="stat-value" style="color:var(--accent-aurora)">Participated</span></div>
-          <div class="glass-card-row"><span class="stat-label">Location</span><span class="stat-value">${pledge?.city || '—'}, ${pledge?.country || '—'}</span></div>
-          <div class="glass-card-row"><span class="stat-label">Song</span><span class="stat-value">${song}</span></div>
-          ${pledge?.reason_for_singing ? `<div class="glass-card-row"><span class="stat-label">Singing for</span><span class="stat-value">${pledge.reason_for_singing}</span></div>` : ''}
-          ${promise ? `<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border-subtle)"><p class="stat-label" style="margin-bottom:8px">Promise</p><p style="font-style:italic;color:var(--text-primary);line-height:1.5">"${promise.promise_text}"</p></div>` : ''}
-        </div>
-      `;
-    }
-
-    document.getElementById('save-profile').addEventListener('click', async () => {
-      const btn = document.getElementById('save-profile');
-      btn.disabled = true;
-      btn.textContent = 'Saving…';
-      try {
-        await WorldChoirDB.updateParticipationLocation({
-          display_name: document.getElementById('edit-name').value.trim(),
-          city: document.getElementById('edit-city').value.trim(),
-          country: document.getElementById('edit-country').value.trim(),
-        });
-        render();
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Save';
-      }
-    });
-
-    document.getElementById('nav-root').appendChild(renderWorldChoirNav('profile'));
-    WorldChoirDB.getOrCreateUser();
-    render();
+    ProfilePage.init();
   </script>
 </body>
 </html>

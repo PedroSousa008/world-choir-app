@@ -1,0 +1,466 @@
+/* World Choir — Profile Page */
+
+.profile-page {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-brand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.profile-section {
+  margin-bottom: 20px;
+}
+
+.profile-section:last-child {
+  margin-bottom: 0;
+}
+
+/* Identity card */
+.identity-card {
+  text-align: center;
+  padding: 32px 28px;
+  background: linear-gradient(
+    165deg,
+    rgba(16, 16, 24, 0.92) 0%,
+    rgba(10, 10, 14, 0.88) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 16px 56px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.identity-name {
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.identity-location {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.identity-location--empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.9rem;
+  padding: 12px 24px;
+  max-width: 100%;
+}
+
+.btn-ghost:hover {
+  border-color: var(--border-glow);
+  color: var(--text-primary);
+}
+
+/* Participation status */
+.participation-card {
+  text-align: center;
+  padding: 28px 24px;
+}
+
+.participation-status {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.participation-status strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.participation-card .btn-primary.pledged {
+  pointer-events: none;
+}
+
+/* Practice button */
+.practice-section {
+  margin: 28px 0;
+}
+
+.btn-practice {
+  width: 100%;
+  max-width: none;
+  padding: 22px 32px;
+  font-size: 1.1rem;
+  background: linear-gradient(
+    135deg,
+    rgba(61, 124, 255, 0.95) 0%,
+    rgba(107, 92, 231, 0.95) 50%,
+    rgba(201, 169, 98, 0.85) 100%
+  );
+  box-shadow:
+    0 12px 48px rgba(61, 124, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+}
+
+.btn-practice:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 56px rgba(61, 124, 255, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.btn-practice-sub {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 400;
+  opacity: 0.85;
+  margin-top: 4px;
+}
+
+/* Promise card */
+.promise-card {
+  text-align: center;
+  padding: 32px 28px;
+  border-color: rgba(201, 169, 98, 0.15);
+}
+
+.promise-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin-bottom: 16px;
+}
+
+.promise-text {
+  font-size: 1.2rem;
+  font-style: italic;
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.promise-event {
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* History */
+.history-card {
+  padding: 28px 24px;
+}
+
+.history-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  padding: 8px 0;
+}
+
+.history-entry {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.history-entry:first-child {
+  padding-top: 0;
+}
+
+.history-entry:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.history-entry-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.history-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+  gap: 16px;
+}
+
+.history-detail-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.history-detail-value {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.history-promise {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.history-section-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+/* Invite */
+.invite-section {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.btn-invite {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.95rem;
+  padding: 14px 28px;
+  max-width: none;
+  width: 100%;
+}
+
+.btn-invite:hover {
+  border-color: rgba(78, 197, 232, 0.35);
+  color: var(--accent-aurora);
+}
+
+/* Practice Mode — full screen */
+.practice-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: #000000;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.practice-mode.active {
+  display: flex;
+}
+
+.practice-mode__ambient {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(61, 124, 255, 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 50% 60%, rgba(107, 92, 231, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Countdown */
+.practice-countdown {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.practice-countdown__number {
+  font-size: clamp(6rem, 25vw, 12rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-shadow:
+    0 0 60px rgba(61, 124, 255, 0.5),
+    0 0 120px rgba(107, 92, 231, 0.3);
+  animation: countdownPulse 1s ease-in-out;
+}
+
+@keyframes countdownPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(0.95);
+  }
+}
+
+/* Lyrics */
+.practice-playing {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 80px 32px 120px;
+}
+
+.lyrics-display {
+  text-align: center;
+  max-width: 480px;
+  width: 100%;
+}
+
+.lyrics-display__prev,
+.lyrics-display__next {
+  font-size: 1rem;
+  color: var(--text-muted);
+  opacity: 0.4;
+  line-height: 1.5;
+  min-height: 1.5em;
+  transition: opacity 0.4s ease;
+}
+
+.lyrics-display__current {
+  font-size: clamp(1.35rem, 4vw, 1.75rem);
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin: 24px 0;
+  min-height: 2.8em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 0 40px rgba(78, 197, 232, 0.2);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.lyrics-display__current.is-active {
+  animation: lyricFadeIn 0.5s ease;
+}
+
+@keyframes lyricFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lyrics-display__song {
+  margin-top: 48px;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Practice controls */
+.practice-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 310;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
+}
+
+.practice-controls__btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: var(--transition);
+  backdrop-filter: blur(12px);
+}
+
+.practice-controls__btn:hover {
+  border-color: var(--border-glow);
+  color: var(--text-primary);
+}
+
+/* Practice complete */
+.practice-complete {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 32px;
+  animation: fadeIn 0.6s ease;
+}
+
+.practice-complete__title {
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.practice-complete__copy {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  margin-bottom: 36px;
+  line-height: 1.6;
+}
+
+.practice-complete .actions-row {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+/* Practice error */
+.practice-error {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 32px;
+  max-width: 400px;
+}
+
+.practice-error__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.practice-error__copy {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
