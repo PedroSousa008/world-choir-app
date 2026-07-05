@@ -1,26 +1,22 @@
-/* World Choir — Premium Theme (LIGHT TEST — revert :root to restore dark) */
+/* World Choir — Premium Dark Theme */
 
 :root {
-  --bg-void: #ffffff;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f7;
-  --bg-card: rgba(255, 255, 255, 0.92);
-  --bg-card-hover: rgba(248, 248, 250, 0.98);
-  --bg-surface: rgba(255, 255, 255, 0.88);
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --border-glow: rgba(61, 124, 255, 0.35);
-  --text-primary: #12141a;
-  --text-secondary: #5c6070;
-  --text-muted: #8b909e;
+  --bg-void: #000000;
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-card: rgba(10, 10, 10, 0.85);
+  --bg-card-hover: rgba(16, 16, 16, 0.92);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-glow: rgba(61, 124, 255, 0.22);
+  --text-primary: #f4f4f6;
+  --text-secondary: #a8abb8;
+  --text-muted: #6b6f7d;
   --accent-blue: #3d7cff;
   --accent-violet: #6b5ce7;
-  --accent-aurora: #2a9fd4;
-  --accent-gold: #a8863a;
-  --glow-blue: rgba(61, 124, 255, 0.25);
-  --glow-violet: rgba(107, 92, 231, 0.18);
-  --shadow-soft: rgba(0, 0, 0, 0.06);
-  --shadow-medium: rgba(0, 0, 0, 0.1);
-  --overlay-backdrop: rgba(255, 255, 255, 0.82);
+  --accent-aurora: #4ec5e8;
+  --accent-gold: #c9a962;
+  --glow-blue: rgba(61, 124, 255, 0.35);
+  --glow-violet: rgba(107, 92, 231, 0.25);
   --radius-sm: 12px;
   --radius-md: 18px;
   --radius-lg: 24px;
@@ -39,7 +35,7 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--bg-void);
+  background: #000000;
 }
 
 body {
@@ -57,7 +53,7 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: var(--bg-void);
+  background: #000000;
 }
 
 .ambient-bg.breathing {
@@ -196,7 +192,7 @@ body {
   min-width: 72px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px var(--shadow-medium), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .countdown-unit.final-hour {
@@ -237,7 +233,7 @@ body {
   padding: 24px;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 12px 48px var(--shadow-medium);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.35);
   margin-bottom: 16px;
   text-align: left;
 }
@@ -386,7 +382,7 @@ body {
   left: 0;
   right: 0;
   height: var(--nav-height);
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(0, 0, 0, 0.92);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-top: 1px solid var(--border-subtle);
@@ -439,7 +435,7 @@ body {
 .overlay {
   position: fixed;
   inset: 0;
-  background: var(--overlay-backdrop);
+  background: rgba(2, 2, 4, 0.85);
   backdrop-filter: blur(12px);
   z-index: 200;
   display: none;
@@ -461,7 +457,7 @@ body {
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 24px 80px var(--shadow-medium);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
   animation: modalIn 0.4s ease;
 }
 
@@ -502,7 +498,7 @@ body {
 .form-textarea,
 .form-select {
   width: 100%;
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 14px 16px;
@@ -541,7 +537,7 @@ body {
 }
 
 .reason-chip {
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 12px;
@@ -565,7 +561,7 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: var(--bg-void);
+  background: #000000;
   animation: livePulse 4s ease-in-out infinite;
 }
 

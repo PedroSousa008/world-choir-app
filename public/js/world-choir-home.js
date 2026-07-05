@@ -54,7 +54,7 @@ const WorldChoirHome = (() => {
         const a = 0.12 + 0.35 * Math.abs(Math.sin(t * 0.5 + s.phase));
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(100, 110, 130, ${a})`;
+        ctx.fillStyle = `rgba(220, 220, 220, ${a})`;
         ctx.fill();
       });
 
