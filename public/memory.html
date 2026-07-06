@@ -50,7 +50,14 @@
         </div>
       `).join('');
 
-      const featured = promises.length > 0 ? promises : getSamplePromises();
+      const promisesHtml = promises.length > 0
+        ? promises.map((p) => `
+            <div class="memory-item">
+              <p class="memory-promise">"${escapeHtml(p.promise_text)}"</p>
+              <p class="memory-meta">${escapeHtml(p.voiceName || p.display_name || 'Anonymous')} · ${escapeHtml(p.city || 'Unknown')}, ${escapeHtml(p.country || '')}</p>
+            </div>
+          `).join('')
+        : `<p class="state-copy text-center" style="margin:0 auto">Real promises from participants will appear here as the world shares them.</p>`;
 
       el.innerHTML = `
         ${eventsHtml}
@@ -65,18 +72,13 @@
           <p class="stat-label" style="margin-bottom:12px">Event Statistics — ${WorldChoirConfig.ACTIVE_EVENT.title}</p>
           <div class="glass-card-row"><span class="stat-label">Date</span><span class="stat-value">${WorldChoirConfig.formatEventDate()}</span></div>
           <div class="glass-card-row"><span class="stat-label">Hashtag</span><span class="stat-value">${WorldChoirConfig.ACTIVE_EVENT.hashtag}</span></div>
-          <div class="glass-card-row"><span class="stat-label">Promises shared</span><span class="stat-value">${promises.length || 'Growing'}</span></div>
+          <div class="glass-card-row"><span class="stat-label">Promises shared</span><span class="stat-value">${promises.length}</span></div>
         </div>
 
         <h3 style="font-size:0.8rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;text-align:center">Promises to the World</h3>
 
         <div class="memory-grid">
-          ${featured.map((p) => `
-            <div class="memory-item">
-              <p class="memory-promise">"${p.promise_text}"</p>
-              <p class="memory-meta">${p.voiceName || p.display_name || 'Anonymous'} · ${p.city || 'Unknown'}, ${p.country || ''}</p>
-            </div>
-          `).join('')}
+          ${promisesHtml}
         </div>
 
         <div class="actions-row" style="margin-top:32px">
@@ -85,13 +87,10 @@
       `;
     }
 
-    function getSamplePromises() {
-      return [
-        { promise_text: 'I promise to spread more kindness.', display_name: 'Maria', city: 'Lisbon', country: 'Portugal' },
-        { promise_text: 'I will spend more time with my family.', display_name: 'James', city: 'London', country: 'United Kingdom' },
-        { promise_text: 'I choose hope over fear.', display_name: 'Yuki', city: 'Tokyo', country: 'Japan' },
-        { promise_text: 'I will help make my community better.', display_name: 'Ana', city: 'Porto', country: 'Portugal' },
-      ];
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
     }
 
     initParticles(document.getElementById('particles'));

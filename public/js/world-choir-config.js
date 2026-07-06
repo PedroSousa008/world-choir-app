@@ -3,7 +3,7 @@
  */
 const WorldChoirConfig = (() => {
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
-  const MEMORY_PREVIEW_MODE = true;
+  const MEMORY_PREVIEW_MODE = false;
 
   const ACTIVE_EVENT = {
     id: 'world-choir-2027',
