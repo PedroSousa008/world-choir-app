@@ -1,4 +1,4 @@
-const { head, put, list } = require('@vercel/blob');
+const { put, list, get } = require('@vercel/blob');
 const { randomUUID } = require('crypto');
 
 const ROOT = 'wc-data';
@@ -27,11 +27,20 @@ function assertBlobConfigured() {
   }
 }
 
-async function readJson(pathname) {
-  const meta = await head(pathname);
-  const res = await fetch(meta.url);
-  if (!res.ok) throw new Error(`Failed to read ${pathname}`);
-  return res.json();
+async function streamToText(stream) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+async function readBlobJson(pathname) {
+  const result = await get(pathname, { access: 'private' });
+  if (!result || result.statusCode === 304 || !result.stream) {
+    throw new Error(`Blob not found: ${pathname}`);
+  }
+  return JSON.parse(await streamToText(result.stream));
 }
 
 async function writeJson(pathname, data, { overwrite = true } = {}) {
@@ -65,7 +74,7 @@ function counterPath(eventId) {
 
 async function readCounter(eventId) {
   try {
-    const data = await readJson(counterPath(eventId));
+    const data = await readBlobJson(counterPath(eventId));
     return Number(data.counter) || 0;
   } catch {
     return 0;
@@ -97,7 +106,7 @@ async function ensureUser(deviceId) {
 
   const probePath = `${ROOT}/users-by-device/${encodeURIComponent(trimmed)}.json`;
   try {
-    return await readJson(probePath);
+    return await readBlobJson(probePath);
   } catch {
     const user = {
       id: randomUUID(),
@@ -108,7 +117,7 @@ async function ensureUser(deviceId) {
       await writeJson(probePath, user, { overwrite: false });
       return user;
     } catch {
-      return readJson(probePath);
+      return readBlobJson(probePath);
     }
   }
 }
@@ -118,7 +127,7 @@ async function findUserByDevice(deviceId) {
   const trimmed = String(deviceId).trim();
   if (!trimmed) return null;
   try {
-    return await readJson(`${ROOT}/users-by-device/${encodeURIComponent(trimmed)}.json`);
+    return await readBlobJson(`${ROOT}/users-by-device/${encodeURIComponent(trimmed)}.json`);
   } catch {
     return null;
   }
@@ -126,7 +135,7 @@ async function findUserByDevice(deviceId) {
 
 async function readPledge(eventId, userId) {
   try {
-    return await readJson(pledgePath(eventId, userId));
+    return await readBlobJson(pledgePath(eventId, userId));
   } catch {
     return null;
   }
@@ -199,9 +208,11 @@ async function listPledges(eventId) {
   const { blobs } = await list({ prefix, limit: 1000 });
   const pledges = await Promise.all(
     blobs.map(async (blob) => {
-      const res = await fetch(blob.url);
-      if (!res.ok) return null;
-      return res.json();
+      try {
+        return await readBlobJson(blob.pathname);
+      } catch {
+        return null;
+      }
     })
   );
   return pledges
