@@ -6,6 +6,11 @@
     { "source": "/memory", "destination": "/memory.html" },
     { "source": "/profile", "destination": "/profile.html" }
   ],
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 10
+    }
+  },
   "headers": [
     {
       "source": "/(.*\\.html)",

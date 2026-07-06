@@ -62,7 +62,7 @@ const WorldChoirParticipation = (() => {
       }
     } catch (err) {
       console.error(err);
-      alert('Could not save participation. Please try again.');
+      alert(err.message || 'Could not save participation. Please try again.');
     } finally {
       btn.disabled = false;
       btn.textContent = 'Confirm Participation';

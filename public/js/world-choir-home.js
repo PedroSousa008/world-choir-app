@@ -280,7 +280,15 @@ const WorldChoirHome = (() => {
   }
 
   function init() {
-    WorldChoirDB.getOrCreateUser();
+    WorldChoirDB.ready()
+      .then(startHome)
+      .catch((err) => {
+        console.error('Failed to connect to World Choir database:', err);
+        startHome();
+      });
+  }
+
+  function startHome() {
     initBackground();
     WorldChoirNav.startWatcher('home');
 

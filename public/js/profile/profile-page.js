@@ -46,21 +46,20 @@ const ProfilePage = (() => {
   }
 
   function init() {
-    WorldChoirDB.getOrCreateUser();
-    ChangeLocationModal.init();
-    PracticeMode.init();
-
-    WorldChoirNav.startWatcher('profile');
-
-    render();
-
-    window.addEventListener('wc-pledge-added', refresh);
-    window.addEventListener('wc-pledge-updated', refresh);
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'wc_pledges' || e.key === 'wc_users' || e.key === 'wc_promises') {
-        refresh();
-      }
-    });
+    WorldChoirDB.ready()
+      .then(() => {
+        ChangeLocationModal.init();
+        PracticeMode.init();
+        WorldChoirNav.startWatcher('profile');
+        render();
+        window.addEventListener('wc-pledge-added', refresh);
+        window.addEventListener('wc-pledge-updated', refresh);
+        window.addEventListener('wc-pledges-synced', refresh);
+      })
+      .catch((err) => {
+        console.error('Failed to connect to World Choir database:', err);
+        WorldChoirNav.startWatcher('profile');
+      });
   }
 
   return { init, refresh };

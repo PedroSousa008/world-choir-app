@@ -31,10 +31,6 @@
   <script src="js/world-choir-db.js"></script>
   <script src="js/world-choir-nav.js"></script>
   <script>
-    if (!WorldChoirNav.guardMemoryRoute()) {
-      throw new Error('Redirecting');
-    }
-
     function render() {
       const el = document.getElementById('memory-content');
       const completedEvents = WorldChoirDB.getCompletedEvents();
@@ -94,8 +90,12 @@
     }
 
     initParticles(document.getElementById('particles'));
-    WorldChoirNav.startWatcher('memory');
-    render();
+
+    WorldChoirDB.ready().then(() => {
+      if (!WorldChoirNav.guardMemoryRoute()) return;
+      WorldChoirNav.startWatcher('memory');
+      render();
+    });
   </script>
 </body>
 </html>

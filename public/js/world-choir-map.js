@@ -216,7 +216,13 @@ const WorldChoirMap = (() => {
   }
 
   function init() {
-    WorldChoirDB.getOrCreateUser();
+    WorldChoirDB.ready().then(startMap).catch((err) => {
+      console.error('Failed to connect to World Choir database:', err);
+      startMap();
+    });
+  }
+
+  function startMap() {
     document.body.classList.add('map-page');
     WorldChoirNav.startWatcher('map');
 
@@ -224,6 +230,10 @@ const WorldChoirMap = (() => {
     refreshMapData();
     updateCountdown();
     setInterval(updateCountdown, 1000);
+
+    setInterval(() => {
+      WorldChoirDB.syncAllPledges().then(refreshMapData).catch(() => {});
+    }, 15000);
 
     WorldChoirParticipation.init({
       onSuccess: onParticipationSuccess,
@@ -254,9 +264,7 @@ const WorldChoirMap = (() => {
       }, 3000);
     });
     window.addEventListener('wc-pledge-updated', refreshMapData);
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'wc_pledges') refreshMapData();
-    });
+    window.addEventListener('wc-pledges-synced', refreshMapData);
 
     checkVoiceJoinedFromSession();
   }
