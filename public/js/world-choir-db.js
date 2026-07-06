@@ -14,6 +14,92 @@ const WorldChoirDB = (() => {
     session: 'wc_session',
   };
 
+  function voiceCounterKey(eventId) {
+    return `wc_voice_counter_${eventId}`;
+  }
+
+  function formatVoiceName(voiceNumber) {
+    return `Voice ${voiceNumber}`;
+  }
+
+  /** Keep counter in sync with pledges; assign numbers to legacy records. */
+  function migrateLegacyVoiceNumbers(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    let pledges = read(KEYS.pledges);
+    const eventPledges = pledges
+      .filter((p) => p.event_id === eventId)
+      .sort((a, b) => new Date(a.pledged_at) - new Date(b.pledged_at));
+
+    let nextNumber = 1;
+    const usedNumbers = new Set();
+    let changed = false;
+
+    eventPledges.forEach((p) => {
+      if (typeof p.voiceNumber === 'number' && p.voiceNumber > 0) {
+        usedNumbers.add(p.voiceNumber);
+      }
+    });
+
+    eventPledges.forEach((p) => {
+      if (typeof p.voiceNumber === 'number' && p.voiceNumber > 0 && p.voiceName) {
+        return;
+      }
+
+      while (usedNumbers.has(nextNumber)) {
+        nextNumber += 1;
+      }
+
+      const idx = pledges.findIndex((x) => x.id === p.id);
+      if (idx === -1) return;
+
+      pledges[idx].voiceNumber = nextNumber;
+      pledges[idx].voiceName = formatVoiceName(nextNumber);
+      pledges[idx].display_name = pledges[idx].voiceName;
+      usedNumbers.add(nextNumber);
+      nextNumber += 1;
+      changed = true;
+    });
+
+    if (changed) {
+      write(KEYS.pledges, pledges);
+    }
+
+    const maxAssigned = read(KEYS.pledges)
+      .filter((p) => p.event_id === eventId)
+      .reduce((max, p) => Math.max(max, typeof p.voiceNumber === 'number' ? p.voiceNumber : 0), 0);
+    const counterKey = voiceCounterKey(eventId);
+    const stored = parseInt(localStorage.getItem(counterKey) || '1', 10);
+    localStorage.setItem(counterKey, String(Math.max(stored, maxAssigned + 1)));
+  }
+
+  /** Reserve the next sequential voice number for an event (no duplicates). */
+  function reserveVoiceNumber(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const counterKey = voiceCounterKey(eventId);
+    const pledges = read(KEYS.pledges).filter((p) => p.event_id === eventId);
+    const usedNumbers = new Set(
+      pledges.map((p) => p.voiceNumber).filter((n) => typeof n === 'number' && n > 0)
+    );
+
+    let counter = parseInt(localStorage.getItem(counterKey) || '1', 10);
+    const maxUsed = pledges.reduce(
+      (max, p) => Math.max(max, typeof p.voiceNumber === 'number' ? p.voiceNumber : 0),
+      0
+    );
+    if (counter <= maxUsed) {
+      counter = maxUsed + 1;
+    }
+    while (usedNumbers.has(counter)) {
+      counter += 1;
+    }
+
+    localStorage.setItem(counterKey, String(counter + 1));
+    return counter;
+  }
+
+  function getVoiceNameForUser(userId = getCurrentUser().id, eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const pledge = read(KEYS.pledges).find((p) => p.user_id === userId && p.event_id === eventId);
+    return pledge?.voiceName || pledge?.display_name || null;
+  }
+
   function read(key) {
     try {
       const raw = localStorage.getItem(key);
@@ -72,6 +158,7 @@ const WorldChoirDB = (() => {
     }
 
     // Gathering places are added via admin only — no fake seed data
+    migrateLegacyVoiceNumbers(eventId);
   }
 
   function getOrCreateUser() {
@@ -86,7 +173,7 @@ const WorldChoirDB = (() => {
     userId = generateId();
     const user = {
       id: userId,
-      display_name: 'Voice ' + userId.slice(-4).toUpperCase(),
+      display_name: null,
       email: null,
       city: null,
       country: null,
@@ -116,39 +203,63 @@ const WorldChoirDB = (() => {
     return read(KEYS.users).find((u) => u.id === userId) || getOrCreateUser();
   }
 
-  function createPledge({ displayName, city, country, latitude, longitude, reason }) {
+  function createPledge({ city, country, latitude, longitude, reason }) {
     const user = getOrCreateUser();
-    const name = displayName || user.display_name;
-    updateUser({ display_name: name, city, country, latitude, longitude });
-
+    const eventId = WorldChoirConfig.CURRENT_EVENT.id;
     const pledges = read(KEYS.pledges);
     const existingIdx = pledges.findIndex(
-      (p) => p.user_id === user.id && p.event_id === WorldChoirConfig.CURRENT_EVENT.id
+      (p) => p.user_id === user.id && p.event_id === eventId
     );
+    const isNew = existingIdx < 0;
+
+    let voiceNumber;
+    let voiceName;
+
+    if (isNew) {
+      voiceNumber = reserveVoiceNumber(eventId);
+      voiceName = formatVoiceName(voiceNumber);
+    } else {
+      const existing = pledges[existingIdx];
+      voiceNumber = existing.voiceNumber;
+      voiceName = existing.voiceName || existing.display_name;
+      if (typeof voiceNumber !== 'number' || voiceNumber <= 0) {
+        voiceNumber = reserveVoiceNumber(eventId);
+        voiceName = formatVoiceName(voiceNumber);
+      }
+    }
+
+    updateUser({ display_name: voiceName, city, country, latitude, longitude });
 
     const pledge = {
-      id: existingIdx >= 0 ? pledges[existingIdx].id : generateId(),
+      id: isNew ? generateId() : pledges[existingIdx].id,
       user_id: user.id,
-      event_id: WorldChoirConfig.CURRENT_EVENT.id,
-      display_name: name,
+      event_id: eventId,
+      display_name: voiceName,
+      voiceName,
+      voiceNumber,
       city,
       country,
       latitude: latitude ?? null,
       longitude: longitude ?? null,
-      reason_for_singing: reason || null,
-      pledged_at: existingIdx >= 0 ? pledges[existingIdx].pledged_at : new Date().toISOString(),
+      reason_for_singing: reason || (isNew ? null : pledges[existingIdx].reason_for_singing) || null,
+      pledged_at: isNew ? new Date().toISOString() : pledges[existingIdx].pledged_at,
       updated_at: new Date().toISOString(),
     };
 
-    if (existingIdx >= 0) {
-      pledges[existingIdx] = pledge;
-    } else {
+    if (isNew) {
       pledges.push(pledge);
+    } else {
+      pledges[existingIdx] = pledge;
     }
 
     write(KEYS.pledges, pledges);
-    window.dispatchEvent(new CustomEvent('wc-pledge-added', { detail: pledge }));
-    window.dispatchEvent(new CustomEvent('wc-pledge-updated', { detail: pledge }));
+
+    if (isNew) {
+      window.dispatchEvent(new CustomEvent('wc-pledge-added', { detail: pledge }));
+    } else {
+      window.dispatchEvent(new CustomEvent('wc-pledge-updated', { detail: pledge }));
+    }
+
     return pledge;
   }
 
@@ -164,7 +275,7 @@ const WorldChoirDB = (() => {
     return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
   }
 
-  async function createPledgeWithGeocode({ city, country, displayName }) {
+  async function createPledgeWithGeocode({ city, country }) {
     let coords = { latitude: null, longitude: null };
     try {
       coords = await geocodeCityCountry(city, country);
@@ -172,7 +283,6 @@ const WorldChoirDB = (() => {
       console.warn('Geocoding unavailable, saving city without coordinates', e);
     }
     return createPledge({
-      displayName,
       city,
       country,
       latitude: coords.latitude,
@@ -180,7 +290,7 @@ const WorldChoirDB = (() => {
     });
   }
 
-  async function updateParticipationLocation({ city, country, displayName }) {
+  async function updateParticipationLocation({ city, country }) {
     const user = getCurrentUser();
     let coords = { latitude: null, longitude: null };
     try {
@@ -189,8 +299,9 @@ const WorldChoirDB = (() => {
       console.warn('Geocoding failed on profile update', e);
     }
 
+    const voiceName = getVoiceNameForUser(user.id);
     updateUser({
-      display_name: displayName ?? user.display_name,
+      display_name: voiceName ?? user.display_name,
       city,
       country,
       latitude: coords.latitude,
@@ -199,7 +310,6 @@ const WorldChoirDB = (() => {
 
     if (hasPledged()) {
       createPledge({
-        displayName: displayName ?? user.display_name,
         city,
         country,
         latitude: coords.latitude,
@@ -237,7 +347,9 @@ const WorldChoirDB = (() => {
       id: generateId(),
       user_id: user.id,
       event_id: WorldChoirConfig.CURRENT_EVENT.id,
-      display_name: user.display_name,
+      display_name: pledge?.voiceName || pledge?.display_name || user.display_name,
+      voiceName: pledge?.voiceName || null,
+      voiceNumber: pledge?.voiceNumber ?? null,
       city: city || pledge?.city || user.city,
       country: country || pledge?.country || user.country,
       latitude: latitude || pledge?.latitude || user.latitude,
@@ -427,6 +539,7 @@ const WorldChoirDB = (() => {
     getUserLights,
     hasGatheringNear,
     getParticipationHistory,
+    getVoiceNameForUser,
     getCityParticipation,
   };
 })();

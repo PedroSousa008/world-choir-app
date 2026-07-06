@@ -3,6 +3,8 @@
  */
 const UserIdentityCard = (() => {
   function render(user) {
+    const pledge = WorldChoirDB.getPledgeForCurrentUser();
+    const voiceName = pledge?.voiceName || pledge?.display_name || user.display_name;
     const hasLocation = user.city && user.country;
     const locationHtml = hasLocation
       ? `${escapeHtml(user.city)}, ${escapeHtml(user.country)}`
@@ -10,7 +12,7 @@ const UserIdentityCard = (() => {
 
     return `
       <div class="glass-card identity-card profile-section" id="user-identity-card">
-        <h1 class="identity-name">${escapeHtml(user.display_name || 'Voice')}</h1>
+        ${voiceName ? `<h1 class="identity-name">${escapeHtml(voiceName)}</h1>` : ''}
         <p class="identity-location">${locationHtml}</p>
         <button class="btn btn-ghost" id="change-location-btn" type="button">
           Change Participation Location

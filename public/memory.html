@@ -78,7 +78,7 @@
           ${featured.map((p) => `
             <div class="memory-item">
               <p class="memory-promise">"${p.promise_text}"</p>
-              <p class="memory-meta">${p.display_name || 'Anonymous'} · ${p.city || 'Unknown'}, ${p.country || ''}</p>
+              <p class="memory-meta">${p.voiceName || p.display_name || 'Anonymous'} · ${p.city || 'Unknown'}, ${p.country || ''}</p>
             </div>
           `).join('')}
         </div>
