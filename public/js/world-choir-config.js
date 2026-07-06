@@ -2,6 +2,9 @@
  * World Choir — Event configuration & state machine
  */
 const WorldChoirConfig = (() => {
+  /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
+  const MEMORY_PREVIEW_MODE = true;
+
   const ACTIVE_EVENT = {
     id: 'world-choir-2027',
     title: 'World Choir 2027',
@@ -107,10 +110,15 @@ const WorldChoirConfig = (() => {
 
   /** Memory tab unlocks globally once the active event song has finished. */
   function isMemoryUnlocked(now = new Date()) {
+    if (MEMORY_PREVIEW_MODE) return true;
     if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.hasCompletedEvents()) {
       return true;
     }
     return getGlobalEventState(now) === EventState.COMPLETED;
+  }
+
+  function isMemoryPreviewMode() {
+    return MEMORY_PREVIEW_MODE;
   }
 
   function getGlobalEventStatus(now = new Date()) {
@@ -211,6 +219,7 @@ const WorldChoirConfig = (() => {
     getGlobalEventState,
     getGlobalEventStatus,
     isMemoryUnlocked,
+    isMemoryPreviewMode,
     getAppState,
     formatEventDate,
     formatEventTime,

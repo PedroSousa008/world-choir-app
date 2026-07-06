@@ -168,7 +168,9 @@ const WorldChoirDB = (() => {
     const idx = events.findIndex((e) => e.id === eventId);
     if (idx === -1) return;
 
-    const status = WorldChoirConfig.getGlobalEventStatus();
+    const status = WorldChoirConfig.isMemoryPreviewMode()
+      ? 'completed'
+      : WorldChoirConfig.getGlobalEventStatus();
     if (events[idx].status !== status) {
       events[idx].status = status;
       write(KEYS.events, events);
