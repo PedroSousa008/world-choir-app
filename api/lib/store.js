@@ -52,6 +52,26 @@ async function writeJson(pathname, data, { overwrite = true } = {}) {
   });
 }
 
+const OWNER_AUTH_PATH = `${ROOT}/admin/owner-auth.json`;
+
+async function getOwnerPasswordHash() {
+  try {
+    const data = await readBlobJson(OWNER_AUTH_PATH);
+    if (data?.password_hash) return data.password_hash;
+  } catch {
+    // Fall back to env var (initial bootstrap).
+  }
+  return process.env.OWNER_PASSWORD_HASH || '';
+}
+
+async function saveOwnerPasswordHash(passwordHash) {
+  assertBlobConfigured();
+  await writeJson(OWNER_AUTH_PATH, {
+    password_hash: passwordHash,
+    updated_at: new Date().toISOString(),
+  }, { overwrite: true });
+}
+
 function eventPrefix(eventId) {
   return `${ROOT}/${eventId}`;
 }
@@ -395,4 +415,6 @@ module.exports = {
   listAllPledges,
   listAllPromises,
   buildOwnerDatabaseRows,
+  getOwnerPasswordHash,
+  saveOwnerPasswordHash,
 };

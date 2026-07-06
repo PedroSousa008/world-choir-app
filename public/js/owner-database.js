@@ -117,6 +117,13 @@ const OwnerDatabase = (() => {
       document.getElementById(id)?.addEventListener('change', render);
     });
 
+    document.getElementById('owner-change-password')?.addEventListener('click', openPasswordModal);
+    document.getElementById('owner-password-cancel')?.addEventListener('click', closePasswordModal);
+    document.getElementById('owner-password-submit')?.addEventListener('click', submitPasswordChange);
+    document.getElementById('owner-password-overlay')?.addEventListener('click', (e) => {
+      if (e.target.id === 'owner-password-overlay') closePasswordModal();
+    });
+
     document.getElementById('owner-refresh')?.addEventListener('click', () => {
       loadDatabase().catch((err) => {
         console.error(err);
@@ -132,6 +139,80 @@ const OwnerDatabase = (() => {
     document.getElementById('owner-back')?.addEventListener('click', () => {
       window.location.href = '/profile';
     });
+  }
+
+  function openPasswordModal() {
+    const overlay = document.getElementById('owner-password-overlay');
+    document.getElementById('owner-current-password').value = '';
+    document.getElementById('owner-new-password').value = '';
+    document.getElementById('owner-confirm-password').value = '';
+    setPasswordMessage('');
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.getElementById('owner-current-password')?.focus();
+  }
+
+  function closePasswordModal() {
+    const overlay = document.getElementById('owner-password-overlay');
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  function setPasswordMessage(text, isError = false) {
+    const el = document.getElementById('owner-password-message');
+    if (!el) return;
+    el.textContent = text;
+    el.hidden = !text;
+    el.classList.toggle('owner-password-message--error', isError);
+    el.classList.toggle('owner-password-message--success', !isError && !!text);
+  }
+
+  async function submitPasswordChange() {
+    const currentPassword = document.getElementById('owner-current-password')?.value || '';
+    const newPassword = document.getElementById('owner-new-password')?.value || '';
+    const confirmPassword = document.getElementById('owner-confirm-password')?.value || '';
+    const btn = document.getElementById('owner-password-submit');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordMessage('Please fill in all fields.', true);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage('New passwords do not match.', true);
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Updating…';
+    setPasswordMessage('');
+
+    try {
+      const res = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setPasswordMessage(data.error || 'Could not change password.', true);
+        return;
+      }
+
+      setPasswordMessage('Password updated successfully.');
+      document.getElementById('owner-current-password').value = '';
+      document.getElementById('owner-new-password').value = '';
+      document.getElementById('owner-confirm-password').value = '';
+      setTimeout(closePasswordModal, 1200);
+    } catch (err) {
+      console.error(err);
+      setPasswordMessage('Could not change password. Please try again.', true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Update Password';
+    }
   }
 
   async function init() {

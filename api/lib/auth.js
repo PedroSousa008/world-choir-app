@@ -1,21 +1,23 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const { getOwnerPasswordHash, saveOwnerPasswordHash } = require('./store');
 
 const SESSION_COOKIE = 'wc_owner_session';
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+const MIN_PASSWORD_LENGTH = 8;
 
 function getOwnerConfig() {
   return {
     email: (process.env.OWNER_EMAIL || '').trim().toLowerCase(),
     relationshipDate: normalizeRelationshipDate(process.env.OWNER_RELATIONSHIP_DATE || ''),
-    passwordHash: process.env.OWNER_PASSWORD_HASH || '',
     sessionSecret: process.env.OWNER_SESSION_SECRET || '',
   };
 }
 
 function isOwnerAuthConfigured() {
   const cfg = getOwnerConfig();
-  return !!(cfg.email && cfg.relationshipDate && cfg.passwordHash && cfg.sessionSecret);
+  const hasPassword = !!(process.env.OWNER_PASSWORD_HASH);
+  return !!(cfg.email && cfg.relationshipDate && cfg.sessionSecret && hasPassword);
 }
 
 function normalizeRelationshipDate(input) {
@@ -155,12 +157,44 @@ async function verifyOwnerCredentials({ email, password, relationshipDate }) {
   const emailMatch = safeEqual(normalizedEmail, cfg.email);
   const dateMatch = safeEqual(normalizedDate, cfg.relationshipDate);
 
-  const passwordMatch = await bcrypt.compare(String(password), cfg.passwordHash);
+  const passwordMatch = await bcrypt.compare(String(password), await getOwnerPasswordHash());
 
   if (!emailMatch || !dateMatch || !passwordMatch) {
     return { ok: false, error: 'Invalid owner credentials' };
   }
 
+  return { ok: true };
+}
+
+async function changeOwnerPassword({ currentPassword, newPassword, confirmPassword }) {
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    return { ok: false, error: 'All password fields are required' };
+  }
+
+  if (newPassword !== confirmPassword) {
+    return { ok: false, error: 'New passwords do not match' };
+  }
+
+  if (String(newPassword).length < MIN_PASSWORD_LENGTH) {
+    return { ok: false, error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters` };
+  }
+
+  if (currentPassword === newPassword) {
+    return { ok: false, error: 'New password must be different from your current password' };
+  }
+
+  const currentHash = await getOwnerPasswordHash();
+  if (!currentHash) {
+    return { ok: false, error: 'Owner authentication is not configured' };
+  }
+
+  const currentMatch = await bcrypt.compare(String(currentPassword), currentHash);
+  if (!currentMatch) {
+    return { ok: false, error: 'Current password is incorrect' };
+  }
+
+  const newHash = await bcrypt.hash(String(newPassword), 12);
+  await saveOwnerPasswordHash(newHash);
   return { ok: true };
 }
 
@@ -181,4 +215,5 @@ module.exports = {
   clearOwnerSessionCookie,
   requireOwner,
   verifyOwnerCredentials,
+  changeOwnerPassword,
 };

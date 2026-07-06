@@ -135,6 +135,23 @@
   padding: 32px 16px !important;
 }
 
+.owner-password-modal {
+  max-width: 420px;
+}
+
+.owner-password-message {
+  font-size: 0.9rem;
+  margin: 0 0 16px;
+}
+
+.owner-password-message--error {
+  color: #ff8f8f;
+}
+
+.owner-password-message--success {
+  color: #8fd4a8;
+}
+
 @media (max-width: 720px) {
   .owner-db-stats {
     grid-template-columns: 1fr;

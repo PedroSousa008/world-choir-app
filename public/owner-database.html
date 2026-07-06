@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20270706b">
-  <link rel="stylesheet" href="css/owner-database.css?v=20270706b">
+  <link rel="stylesheet" href="css/owner-database.css?v=20270706c">
 </head>
 <body>
   <div class="ambient-bg"></div>
@@ -24,6 +24,7 @@
       </div>
       <div class="owner-db-header-actions">
         <button class="btn btn-ghost" id="owner-back" type="button">Profile</button>
+        <button class="btn btn-secondary" id="owner-change-password" type="button">Change Password</button>
         <button class="btn btn-secondary" id="owner-refresh" type="button">Refresh</button>
         <button class="btn btn-primary" id="owner-logout" type="button">Sign Out</button>
       </div>
@@ -97,6 +98,33 @@
       </div>
     </section>
   </main>
+
+  <div class="overlay" id="owner-password-overlay" aria-hidden="true">
+    <div class="modal owner-password-modal" role="dialog" aria-labelledby="owner-password-title">
+      <h2 class="modal-title" id="owner-password-title">Change Password</h2>
+      <p class="modal-copy">Enter your current password, then choose a new one.</p>
+
+      <div class="form-group">
+        <label class="form-label" for="owner-current-password">Current password</label>
+        <input class="form-input" id="owner-current-password" type="password" autocomplete="current-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="owner-new-password">New password</label>
+        <input class="form-input" id="owner-new-password" type="password" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="owner-confirm-password">Confirm new password</label>
+        <input class="form-input" id="owner-confirm-password" type="password" autocomplete="new-password">
+      </div>
+
+      <p class="owner-password-message" id="owner-password-message" hidden></p>
+
+      <div class="actions-row">
+        <button class="btn btn-primary" id="owner-password-submit" type="button">Update Password</button>
+        <button class="btn btn-secondary" id="owner-password-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script src="js/owner-database.js"></script>
   <script>OwnerDatabase.init();</script>
