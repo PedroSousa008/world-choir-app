@@ -344,6 +344,20 @@ const WorldChoirDB = (() => {
     };
     promises.push(promise);
     write(KEYS.promises, promises);
+
+    apiFetch('/api/promise', {
+      method: 'POST',
+      body: JSON.stringify({
+        deviceId: getDeviceId(),
+        eventId: WorldChoirConfig.CURRENT_EVENT.id,
+        promiseText,
+        city: promise.city,
+        country: promise.country,
+        voiceNumber: promise.voiceNumber,
+        voiceName: promise.voiceName,
+      }),
+    }).catch((err) => console.warn('Promise sync to server failed:', err));
+
     return promise;
   }
 

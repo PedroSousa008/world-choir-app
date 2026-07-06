@@ -472,3 +472,35 @@
   margin-bottom: 28px;
   line-height: 1.6;
 }
+
+/* Owner access trigger — invisible top-right tap zone */
+.owner-access-trigger {
+  position: fixed;
+  top: env(safe-area-inset-top, 0);
+  right: 0;
+  z-index: 50;
+  width: 56px;
+  height: 56px;
+  margin: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  opacity: 0.015;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.owner-access-trigger:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.08);
+  opacity: 0.06;
+}
+
+.owner-login-modal {
+  max-width: 420px;
+}
+
+.owner-login-error {
+  color: #ff8f8f;
+  font-size: 0.9rem;
+  margin: 0 0 16px;
+}

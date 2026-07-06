@@ -50,6 +50,7 @@ const ProfilePage = (() => {
       .then(() => {
         ChangeLocationModal.init();
         PracticeMode.init();
+        OwnerAccess.init();
         WorldChoirNav.startWatcher('profile');
         render();
         window.addEventListener('wc-pledge-added', refresh);

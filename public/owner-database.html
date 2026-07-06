@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="robots" content="noindex, nofollow">
+  <title>World Choir — Owner Database</title>
+  <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20270706b">
+  <link rel="stylesheet" href="css/owner-database.css?v=20270706b">
+</head>
+<body>
+  <div class="ambient-bg"></div>
+
+  <main class="page owner-db-page">
+    <header class="owner-db-header">
+      <div>
+        <p class="owner-db-eyebrow">Owner only</p>
+        <h1 class="owner-db-title">Database View</h1>
+      </div>
+      <div class="owner-db-header-actions">
+        <button class="btn btn-ghost" id="owner-back" type="button">Profile</button>
+        <button class="btn btn-secondary" id="owner-refresh" type="button">Refresh</button>
+        <button class="btn btn-primary" id="owner-logout" type="button">Sign Out</button>
+      </div>
+    </header>
+
+    <section class="owner-db-stats glass-card">
+      <div class="owner-db-stat">
+        <span class="owner-db-stat-label">Total users</span>
+        <span class="owner-db-stat-value" id="owner-total-users">—</span>
+      </div>
+      <div class="owner-db-stat">
+        <span class="owner-db-stat-label">Total participants</span>
+        <span class="owner-db-stat-value" id="owner-total-participants">—</span>
+      </div>
+      <div class="owner-db-stat">
+        <span class="owner-db-stat-label">Showing</span>
+        <span class="owner-db-stat-value" id="owner-filtered-count">—</span>
+      </div>
+    </section>
+
+    <section class="owner-db-filters glass-card">
+      <div class="owner-db-filter-grid">
+        <div class="form-group">
+          <label class="form-label" for="filter-voice">Voice number</label>
+          <input class="form-input" id="filter-voice" type="number" min="1" placeholder="e.g. 12">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="filter-city">City</label>
+          <input class="form-input" id="filter-city" type="text" placeholder="Search city">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="filter-country">Country</label>
+          <input class="form-input" id="filter-country" type="text" placeholder="Search country">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="filter-event">Event</label>
+          <input class="form-input" id="filter-event" type="text" placeholder="e.g. world-choir-2027">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="filter-promise">Promise</label>
+          <select class="form-input form-select" id="filter-promise">
+            <option value="all">All users</option>
+            <option value="with">With promise</option>
+            <option value="without">Without promise</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="owner-db-table-wrap glass-card">
+      <div class="owner-db-table-scroll">
+        <table class="owner-db-table">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Voice #</th>
+              <th>Voice name</th>
+              <th>City</th>
+              <th>Country</th>
+              <th>Pledge</th>
+              <th>Promise</th>
+              <th>Promise date</th>
+              <th>Event</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="owner-db-tbody">
+            <tr><td colspan="10" class="owner-db-empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/owner-database.js"></script>
+  <script>OwnerDatabase.init();</script>
+</body>
+</html>

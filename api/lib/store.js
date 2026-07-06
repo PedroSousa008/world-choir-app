@@ -220,6 +220,168 @@ async function listPledges(eventId) {
     .sort((a, b) => a.voice_number - b.voice_number);
 }
 
+async function listAllUsers() {
+  assertBlobConfigured();
+  const prefix = `${ROOT}/users-by-device/`;
+  const { blobs } = await list({ prefix, limit: 1000 });
+  const users = await Promise.all(
+    blobs.map(async (blob) => {
+      try {
+        return await readBlobJson(blob.pathname);
+      } catch {
+        return null;
+      }
+    })
+  );
+  return users.filter(Boolean);
+}
+
+async function listAllPledges() {
+  assertBlobConfigured();
+  const { blobs } = await list({ prefix: `${ROOT}/`, limit: 1000 });
+  const pledgeBlobs = blobs.filter(
+    (b) => b.pathname.includes('/pledges/') && b.pathname.endsWith('.json')
+  );
+  const pledges = await Promise.all(
+    pledgeBlobs.map(async (blob) => {
+      try {
+        return await readBlobJson(blob.pathname);
+      } catch {
+        return null;
+      }
+    })
+  );
+  return pledges.filter(Boolean).sort((a, b) => {
+    if (a.event_id !== b.event_id) return a.event_id.localeCompare(b.event_id);
+    return a.voice_number - b.voice_number;
+  });
+}
+
+function promisePath(userId, eventId) {
+  return `${ROOT}/promises/${userId}/${eventId}.json`;
+}
+
+async function savePromise({ userId, eventId, promiseText, city, country, voiceNumber, voiceName }) {
+  assertBlobConfigured();
+  const trimmedEvent = String(eventId).trim();
+  const trimmedUser = String(userId).trim();
+  const now = new Date().toISOString();
+
+  const existing = await readPromise(trimmedUser, trimmedEvent);
+  if (existing) return existing;
+
+  const promise = {
+    id: randomUUID(),
+    user_id: trimmedUser,
+    event_id: trimmedEvent,
+    promise_text: String(promiseText).trim(),
+    city: city || null,
+    country: country || null,
+    voice_number: voiceNumber ?? null,
+    voice_name: voiceName || null,
+    submitted_at: now,
+  };
+
+  await writeJson(promisePath(trimmedUser, trimmedEvent), promise, { overwrite: false });
+  return promise;
+}
+
+async function readPromise(userId, eventId) {
+  try {
+    return await readBlobJson(promisePath(userId, eventId));
+  } catch {
+    return null;
+  }
+}
+
+async function listAllPromises() {
+  assertBlobConfigured();
+  const prefix = `${ROOT}/promises/`;
+  const { blobs } = await list({ prefix, limit: 1000 });
+  const promises = await Promise.all(
+    blobs.map(async (blob) => {
+      try {
+        return await readBlobJson(blob.pathname);
+      } catch {
+        return null;
+      }
+    })
+  );
+  return promises.filter(Boolean);
+}
+
+async function buildOwnerDatabaseRows() {
+  const [users, pledges, promises] = await Promise.all([
+    listAllUsers(),
+    listAllPledges(),
+    listAllPromises(),
+  ]);
+
+  const promiseByUserEvent = new Map();
+  promises.forEach((p) => {
+    promiseByUserEvent.set(`${p.user_id}|${p.event_id}`, p);
+  });
+
+  const pledgeByUserEvent = new Map();
+  pledges.forEach((p) => {
+    pledgeByUserEvent.set(`${p.user_id}|${p.event_id}`, p);
+  });
+
+  const userIdsFromPledges = new Set(pledges.map((p) => p.user_id));
+  const allUserIds = new Set([...users.map((u) => u.id), ...userIdsFromPledges]);
+
+  const userById = new Map(users.map((u) => [u.id, u]));
+  const rows = [];
+
+  pledges.forEach((pledge) => {
+    const user = userById.get(pledge.user_id);
+    const promise = promiseByUserEvent.get(`${pledge.user_id}|${pledge.event_id}`);
+    rows.push({
+      userId: pledge.user_id,
+      voiceNumber: pledge.voice_number,
+      voiceName: pledge.voice_name,
+      city: pledge.city,
+      country: pledge.country,
+      pledgeStatus: 'pledged',
+      promiseText: promise?.promise_text || null,
+      promiseSubmittedAt: promise?.submitted_at || null,
+      eventId: pledge.event_id,
+      createdAt: user?.created_at || pledge.pledged_at,
+    });
+  });
+
+  users.forEach((user) => {
+    if (userIdsFromPledges.has(user.id)) return;
+    rows.push({
+      userId: user.id,
+      voiceNumber: null,
+      voiceName: null,
+      city: null,
+      country: null,
+      pledgeStatus: 'none',
+      promiseText: null,
+      promiseSubmittedAt: null,
+      eventId: null,
+      createdAt: user.created_at,
+    });
+  });
+
+  rows.sort((a, b) => {
+    const aVoice = a.voiceNumber ?? Number.MAX_SAFE_INTEGER;
+    const bVoice = b.voiceNumber ?? Number.MAX_SAFE_INTEGER;
+    if (aVoice !== bVoice) return aVoice - bVoice;
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  });
+
+  return {
+    totals: {
+      users: allUserIds.size,
+      participants: pledges.length,
+    },
+    rows,
+  };
+}
+
 module.exports = {
   mapPledgeRow,
   ensureUser,
@@ -228,4 +390,9 @@ module.exports = {
   listPledges,
   findUserByDevice,
   readPledge,
+  savePromise,
+  listAllUsers,
+  listAllPledges,
+  listAllPromises,
+  buildOwnerDatabaseRows,
 };

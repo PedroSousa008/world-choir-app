@@ -4,7 +4,8 @@
   "rewrites": [
     { "source": "/map", "destination": "/map.html" },
     { "source": "/memory", "destination": "/memory.html" },
-    { "source": "/profile", "destination": "/profile.html" }
+    { "source": "/profile", "destination": "/profile.html" },
+    { "source": "/owner-database", "destination": "/owner-database.html" }
   ],
   "functions": {
     "api/**/*.js": {
