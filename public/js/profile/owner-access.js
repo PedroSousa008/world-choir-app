@@ -94,7 +94,7 @@ const OwnerAccess = (() => {
     showError('');
 
     try {
-      const res = await fetch('/api/admin/login', {
+      const res = await fetch('/api/admin?action=login', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

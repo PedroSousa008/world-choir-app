@@ -28,7 +28,7 @@ const OwnerDatabase = (() => {
   }
 
   async function requireOwnerSession() {
-    const res = await fetch('/api/admin/session', { credentials: 'include', cache: 'no-store' });
+    const res = await fetch('/api/admin?action=session', { credentials: 'include', cache: 'no-store' });
     if (!res.ok) {
       window.location.replace('/profile');
       return false;
@@ -42,7 +42,7 @@ const OwnerDatabase = (() => {
   }
 
   async function loadDatabase() {
-    const res = await fetch('/api/admin/database', { credentials: 'include', cache: 'no-store' });
+    const res = await fetch('/api/admin?action=database', { credentials: 'include', cache: 'no-store' });
     if (res.status === 401) {
       window.location.replace('/profile');
       return;
@@ -132,7 +132,7 @@ const OwnerDatabase = (() => {
     });
 
     document.getElementById('owner-logout')?.addEventListener('click', async () => {
-      await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
+      await fetch('/api/admin?action=logout', { method: 'POST', credentials: 'include' });
       window.location.replace('/profile');
     });
 
@@ -188,7 +188,7 @@ const OwnerDatabase = (() => {
     setPasswordMessage('');
 
     try {
-      const res = await fetch('/api/admin/change-password', {
+      const res = await fetch('/api/admin?action=change-password', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
