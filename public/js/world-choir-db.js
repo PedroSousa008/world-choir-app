@@ -1,5 +1,5 @@
 /**
- * World Choir — Shared database layer (Supabase via API)
+ * World Choir — Shared database layer (Vercel API + Blob storage)
  * Voice numbers are global per event — assigned atomically on the server.
  */
 const WorldChoirDB = (() => {

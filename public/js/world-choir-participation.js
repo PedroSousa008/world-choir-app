@@ -63,7 +63,7 @@ const WorldChoirParticipation = (() => {
     } catch (err) {
       console.error(err);
       const msg = err.message || '';
-      const friendly = msg.includes('SUPABASE') || msg.includes('temporarily unavailable')
+      const friendly = msg.includes('temporarily unavailable')
         ? 'We could not connect your voice right now. Please try again in a moment.'
         : (msg || 'Could not save participation. Please try again.');
       alert(friendly);
