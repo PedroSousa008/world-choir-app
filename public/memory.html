@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20270701e">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20270706c">
 </head>
 <body>
   <div class="ambient-bg"></div>
@@ -31,34 +31,30 @@
   <script src="js/world-choir-db.js"></script>
   <script src="js/world-choir-nav.js"></script>
   <script>
-    function isEventEnded() {
-      return new Date() >= WorldChoirConfig.getEventEnd();
+    if (!WorldChoirNav.guardMemoryRoute()) {
+      throw new Error('Redirecting');
     }
 
     function render() {
       const el = document.getElementById('memory-content');
-      const ended = isEventEnded();
+      const completedEvents = WorldChoirDB.getCompletedEvents();
       const promises = WorldChoirDB.getAllPromises();
       const stats = WorldChoirConfig.getMovementStats();
 
-      if (!ended) {
-        el.innerHTML = `
-          <div class="glass-card text-center">
-            <p class="state-copy" style="margin:0 auto">
-              The Memory Wall opens after the world sings together.<br><br>
-              <span style="color:var(--accent-aurora)">${WorldChoirConfig.formatCountdownLong(WorldChoirConfig.getTimeRemaining())}</span> until the moment.
-            </p>
-            <div class="actions-row" style="margin-top:24px">
-              <a href="index.html" class="btn btn-secondary">Back to Countdown</a>
-            </div>
-          </div>
-        `;
-        return;
-      }
+      const eventsHtml = completedEvents.map((event) => `
+        <div class="glass-card memory-event-card" style="margin-bottom:16px">
+          <p class="history-year">${event.title}</p>
+          <div class="glass-card-row"><span class="stat-label">Song</span><span class="stat-value">${event.song_name}</span></div>
+          <div class="glass-card-row"><span class="stat-label">Date</span><span class="stat-value">${new Date(event.event_date_utc).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</span></div>
+          <div class="glass-card-row"><span class="stat-label">Hashtag</span><span class="stat-value">${event.official_hashtag || ''}</span></div>
+        </div>
+      `).join('');
 
       const featured = promises.length > 0 ? promises : getSamplePromises();
 
       el.innerHTML = `
+        ${eventsHtml}
+
         <div class="stats-grid" style="margin-top:0">
           <div class="stat-card"><div class="number">${stats.hasData ? formatNumber(stats.voices) : '—'}</div><div class="label">Voices</div></div>
           <div class="stat-card"><div class="number">${stats.hasData ? stats.countries : '—'}</div><div class="label">Countries</div></div>
@@ -99,7 +95,7 @@
     }
 
     initParticles(document.getElementById('particles'));
-    document.getElementById('nav-root').appendChild(renderWorldChoirNav('memory'));
+    WorldChoirNav.startWatcher('memory');
     render();
   </script>
 </body>

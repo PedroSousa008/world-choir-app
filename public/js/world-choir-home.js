@@ -282,7 +282,7 @@ const WorldChoirHome = (() => {
   function init() {
     WorldChoirDB.getOrCreateUser();
     initBackground();
-    document.getElementById('nav-root').appendChild(renderWorldChoirNav('home'));
+    WorldChoirNav.startWatcher('home');
 
     WorldChoirParticipation.init({
       onSuccess: async (pledge) => {

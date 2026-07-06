@@ -159,6 +159,32 @@ const WorldChoirDB = (() => {
 
     // Gathering places are added via admin only — no fake seed data
     migrateLegacyVoiceNumbers(eventId);
+    syncActiveEventStatus();
+  }
+
+  function syncActiveEventStatus() {
+    const eventId = WorldChoirConfig.ACTIVE_EVENT.id;
+    const events = read(KEYS.events);
+    const idx = events.findIndex((e) => e.id === eventId);
+    if (idx === -1) return;
+
+    const status = WorldChoirConfig.getGlobalEventStatus();
+    if (events[idx].status !== status) {
+      events[idx].status = status;
+      write(KEYS.events, events);
+    }
+  }
+
+  function hasCompletedEvents() {
+    syncActiveEventStatus();
+    return read(KEYS.events).some((e) => e.status === 'completed');
+  }
+
+  function getCompletedEvents() {
+    syncActiveEventStatus();
+    return read(KEYS.events)
+      .filter((e) => e.status === 'completed')
+      .sort((a, b) => new Date(a.event_date_utc) - new Date(b.event_date_utc));
   }
 
   function getOrCreateUser() {
@@ -540,6 +566,9 @@ const WorldChoirDB = (() => {
     hasGatheringNear,
     getParticipationHistory,
     getVoiceNameForUser,
+    hasCompletedEvents,
+    getCompletedEvents,
+    syncActiveEventStatus,
     getCityParticipation,
   };
 })();

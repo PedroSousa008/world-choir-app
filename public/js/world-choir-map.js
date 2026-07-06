@@ -218,7 +218,7 @@ const WorldChoirMap = (() => {
   function init() {
     WorldChoirDB.getOrCreateUser();
     document.body.classList.add('map-page');
-    document.getElementById('nav-root').appendChild(renderWorldChoirNav('map'));
+    WorldChoirNav.startWatcher('map');
 
     initMap();
     refreshMapData();

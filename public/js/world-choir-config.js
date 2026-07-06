@@ -91,6 +91,33 @@ const WorldChoirConfig = (() => {
   }
 
   /**
+   * Global event state — not user-specific.
+   * POST_EVENT_PROMISE is per-user only; globally after song end = COMPLETED.
+   */
+  function getGlobalEventState(now = new Date()) {
+    const eventStart = getEventStart();
+    const eventEnd = getEventEnd();
+    const finalHourStart = getFinalHourStart();
+
+    if (now < finalHourStart) return EventState.UPCOMING;
+    if (now >= finalHourStart && now < eventStart) return EventState.FINAL_HOUR;
+    if (now >= eventStart && now < eventEnd) return EventState.LIVE;
+    return EventState.COMPLETED;
+  }
+
+  /** Memory tab unlocks globally once the active event song has finished. */
+  function isMemoryUnlocked(now = new Date()) {
+    if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.hasCompletedEvents()) {
+      return true;
+    }
+    return getGlobalEventState(now) === EventState.COMPLETED;
+  }
+
+  function getGlobalEventStatus(now = new Date()) {
+    return getGlobalEventState(now);
+  }
+
+  /**
    * Core state machine — promise ONLY after event end + user participated + no promise yet.
    */
   function getEventState(now = new Date(), options = {}) {
@@ -181,6 +208,9 @@ const WorldChoirConfig = (() => {
     formatCountdownLong,
     formatCountdownFinalHour,
     getEventState,
+    getGlobalEventState,
+    getGlobalEventStatus,
+    isMemoryUnlocked,
     getAppState,
     formatEventDate,
     formatEventTime,

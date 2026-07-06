@@ -50,7 +50,7 @@ const ProfilePage = (() => {
     ChangeLocationModal.init();
     PracticeMode.init();
 
-    document.getElementById('nav-root')?.appendChild(renderWorldChoirNav('profile'));
+    WorldChoirNav.startWatcher('profile');
 
     render();
 
