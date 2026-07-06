@@ -25,9 +25,9 @@
 
 .home-logo {
   display: block;
-  width: min(200px, 52vw);
+  width: min(240px, 56vw);
   height: auto;
-  margin: 0 auto 20px;
+  margin: 0 auto 24px;
   object-fit: contain;
 }
 
@@ -396,8 +396,8 @@
 
 @media (max-width: 480px) {
   .home-logo {
-    width: min(168px, 46vw);
-    margin-bottom: 16px;
+    width: min(200px, 50vw);
+    margin-bottom: 20px;
   }
 
   .home-headline {

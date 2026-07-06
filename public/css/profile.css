@@ -18,6 +18,14 @@
   margin-bottom: 0;
 }
 
+.profile-logo {
+  display: block;
+  width: min(168px, 44vw);
+  height: auto;
+  margin: 0 auto 12px;
+  object-fit: contain;
+}
+
 /* Identity card */
 .identity-card {
   text-align: center;

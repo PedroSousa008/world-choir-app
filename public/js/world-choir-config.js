@@ -24,6 +24,15 @@ const WorldChoirConfig = (() => {
     theme: ACTIVE_EVENT.theme,
   };
 
+  const LOGO = {
+    src: 'images/world-choir-logo.png',
+    version: '20270706',
+    alt: 'World Choir App',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -157,6 +166,7 @@ const WorldChoirConfig = (() => {
   return {
     ACTIVE_EVENT,
     CURRENT_EVENT,
+    LOGO,
     EventState,
     AppState,
     getEventDate: getEventStart,
