@@ -1,4 +1,4 @@
-const { getSupabase, mapPledgeRow } = require('./lib/supabase');
+const { joinWorldChoir, mapPledgeRow } = require('./lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -9,28 +9,22 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const supabase = getSupabase();
     const { deviceId, eventId, city, country, latitude, longitude } = req.body || {};
 
     if (!deviceId || !eventId || !city || !country) {
       return res.status(400).json({ error: 'deviceId, eventId, city, and country are required' });
     }
 
-    const { data, error } = await supabase.rpc('join_world_choir', {
-      p_device_id: String(deviceId).trim(),
-      p_event_id: String(eventId).trim(),
-      p_city: String(city).trim(),
-      p_country: String(country).trim(),
-      p_latitude: latitude ?? null,
-      p_longitude: longitude ?? null,
+    const pledge = await joinWorldChoir({
+      deviceId,
+      eventId,
+      city,
+      country,
+      latitude,
+      longitude,
     });
 
-    if (error) {
-      console.error('join_world_choir error:', error);
-      return res.status(500).json({ error: error.message });
-    }
-
-    return res.status(200).json({ pledge: mapPledgeRow(data) });
+    return res.status(200).json({ pledge: mapPledgeRow(pledge) });
   } catch (err) {
     console.error('api/join error:', err);
     return res.status(503).json({ error: err.message || 'Service unavailable' });

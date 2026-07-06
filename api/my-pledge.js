@@ -1,4 +1,4 @@
-const { getSupabase, mapPledgeRow } = require('./lib/supabase');
+const { findUserByDevice, readPledge, mapPledgeRow } = require('./lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -10,7 +10,6 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const supabase = getSupabase();
     const deviceId = req.query.deviceId;
     const eventId = req.query.eventId || 'world-choir-2027';
 
@@ -18,31 +17,12 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'deviceId required' });
     }
 
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('anonymous_device_id', String(deviceId).trim())
-      .maybeSingle();
-
-    if (userError) {
-      return res.status(500).json({ error: userError.message });
-    }
-
+    const user = await findUserByDevice(deviceId);
     if (!user) {
       return res.status(200).json({ pledge: null });
     }
 
-    const { data: pledge, error: pledgeError } = await supabase
-      .from('pledges')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('event_id', eventId)
-      .maybeSingle();
-
-    if (pledgeError) {
-      return res.status(500).json({ error: pledgeError.message });
-    }
-
+    const pledge = await readPledge(eventId, user.id);
     return res.status(200).json({ pledge: mapPledgeRow(pledge) });
   } catch (err) {
     console.error('api/my-pledge error:', err);

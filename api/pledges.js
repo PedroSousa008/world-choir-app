@@ -1,4 +1,4 @@
-const { getSupabase, mapPledgeRow } = require('./lib/supabase');
+const { listPledges, mapPledgeRow } = require('./lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -10,22 +10,11 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const supabase = getSupabase();
     const eventId = req.query.eventId || 'world-choir-2027';
-
-    const { data, error } = await supabase
-      .from('pledges')
-      .select('*')
-      .eq('event_id', eventId)
-      .order('voice_number', { ascending: true });
-
-    if (error) {
-      console.error('pledges fetch error:', error);
-      return res.status(500).json({ error: error.message });
-    }
+    const pledges = await listPledges(eventId);
 
     return res.status(200).json({
-      pledges: (data || []).map(mapPledgeRow),
+      pledges: pledges.map(mapPledgeRow),
     });
   } catch (err) {
     console.error('api/pledges error:', err);

@@ -62,7 +62,11 @@ const WorldChoirParticipation = (() => {
       }
     } catch (err) {
       console.error(err);
-      alert(err.message || 'Could not save participation. Please try again.');
+      const msg = err.message || '';
+      const friendly = msg.includes('SUPABASE') || msg.includes('temporarily unavailable')
+        ? 'We could not connect your voice right now. Please try again in a moment.'
+        : (msg || 'Could not save participation. Please try again.');
+      alert(friendly);
     } finally {
       btn.disabled = false;
       btn.textContent = 'Confirm Participation';
