@@ -9,6 +9,7 @@ const ProfilePage = (() => {
     promise: 'profile-promise-root',
     history: 'profile-history-root',
     invite: 'profile-invite-root',
+    dailyActs: 'profile-daily-acts-root',
   };
 
   function render() {
@@ -39,6 +40,7 @@ const ProfilePage = (() => {
     PromiseCard.mount(document.getElementById(SECTIONS.promise));
     WorldChoirHistory.mount(document.getElementById(SECTIONS.history));
     InviteButton.mount(document.getElementById(SECTIONS.invite));
+    DailyActsButton.mount(document.getElementById(SECTIONS.dailyActs));
   }
 
   function refresh() {
@@ -50,6 +52,7 @@ const ProfilePage = (() => {
       .then(() => {
         ChangeLocationModal.init();
         PracticeMode.init();
+        DailyActsPeace.init();
         OwnerAccess.init();
         WorldChoirNav.startWatcher('profile');
         render();

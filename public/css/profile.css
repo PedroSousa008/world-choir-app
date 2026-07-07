@@ -294,6 +294,156 @@
   color: var(--accent-aurora);
 }
 
+/* Daily Acts of Peace */
+.daily-acts-section {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.btn-daily-acts {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.95rem;
+  padding: 14px 28px;
+  max-width: none;
+  width: 100%;
+}
+
+.btn-daily-acts:hover {
+  border-color: rgba(78, 197, 232, 0.35);
+  color: var(--accent-aurora);
+}
+
+.daily-peace-overlay .daily-peace-screen {
+  width: min(100%, 420px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  margin: auto;
+  padding: 8px;
+}
+
+.daily-peace-screen__inner {
+  text-align: center;
+  padding: 8px 4px 4px;
+}
+
+.daily-peace-title {
+  font-size: clamp(1.35rem, 4.5vw, 1.65rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.daily-peace-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 28px;
+  line-height: 1.5;
+}
+
+.daily-peace-card {
+  padding: 32px 24px;
+  margin-bottom: 28px;
+  background: linear-gradient(
+    165deg,
+    rgba(16, 20, 32, 0.92) 0%,
+    rgba(10, 12, 20, 0.88) 100%
+  );
+  border: 1px solid rgba(78, 197, 232, 0.14);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.daily-peace-act {
+  margin: 0;
+  font-size: clamp(1.15rem, 3.8vw, 1.35rem);
+  line-height: 1.65;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.daily-peace-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 auto 28px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-secondary);
+}
+
+.daily-peace-check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.daily-peace-check__box {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(78, 197, 232, 0.35);
+  background: rgba(255, 255, 255, 0.03);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.daily-peace-check__box::after {
+  content: '';
+  width: 6px;
+  height: 10px;
+  border-right: 2px solid transparent;
+  border-bottom: 2px solid transparent;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.daily-peace-check input:checked + .daily-peace-check__box,
+.daily-peace-check--done .daily-peace-check__box {
+  background: rgba(78, 197, 232, 0.12);
+  border-color: var(--accent-aurora);
+}
+
+.daily-peace-check input:checked + .daily-peace-check__box::after,
+.daily-peace-check--done .daily-peace-check__box::after {
+  border-color: var(--accent-aurora);
+}
+
+.daily-peace-check__label {
+  font-size: 0.95rem;
+}
+
+.daily-peace-check--done {
+  color: var(--accent-aurora);
+  cursor: default;
+}
+
+.daily-peace-back {
+  width: 100%;
+  max-width: none;
+}
+
+.daily-peace-loading,
+.daily-peace-error {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 24px 0;
+}
+
+.daily-peace-loading {
+  animation: dailyPeacePulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dailyPeacePulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.85; }
+}
+
 /* Practice Mode — full screen */
 .practice-mode {
   position: fixed;

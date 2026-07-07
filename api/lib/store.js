@@ -417,4 +417,7 @@ module.exports = {
   buildOwnerDatabaseRows,
   getOwnerPasswordHash,
   saveOwnerPasswordHash,
+  readBlobJson,
+  writeJson,
+  assertBlobConfigured,
 };

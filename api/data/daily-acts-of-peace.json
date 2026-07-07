@@ -1,0 +1,2105 @@
+{
+  "version": 1,
+  "acts": [
+    {
+      "id": "peace-001",
+      "text": "Call your grandparents.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-002",
+      "text": "Text a friend you have not spoken to in a while.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-003",
+      "text": "Tell someone close to you that you appreciate them.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-004",
+      "text": "Write a short note to a family member.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-005",
+      "text": "Send a voice message to someone you miss.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-006",
+      "text": "Ask a neighbor how they are doing.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-007",
+      "text": "Compliment a colleague sincerely.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-008",
+      "text": "Thank a teacher or mentor who shaped you.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-009",
+      "text": "Reach out to someone who might feel lonely.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-010",
+      "text": "Share a warm memory with a sibling.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-011",
+      "text": "Tell your partner or housemate one thing you admire about them.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-012",
+      "text": "Send a postcard or letter to someone far away.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-013",
+      "text": "Invite someone for a walk or coffee.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-014",
+      "text": "Reply thoughtfully to a message you have been putting off.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-015",
+      "text": "Introduce yourself to someone new in your community.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-016",
+      "text": "Check in on a friend going through a hard time.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-017",
+      "text": "Tell a parent or guardian you are grateful for them.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-018",
+      "text": "Share an encouraging word with someone at work or school.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-019",
+      "text": "Reconnect with an old friend with a simple hello.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-020",
+      "text": "Offer to help a family member with a small task.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-021",
+      "text": "Listen without interrupting when someone speaks to you.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-022",
+      "text": "Hold the door and offer a genuine smile.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-023",
+      "text": "Write down three people you are grateful for and tell one of them.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-024",
+      "text": "Send a thank-you message to someone who helped you recently.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-025",
+      "text": "Ask someone about their day and listen fully.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-026",
+      "text": "Share a meal with someone without looking at your phone.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-027",
+      "text": "Tell a child or young person that they matter.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-028",
+      "text": "Forgive someone silently and let go of one small grudge.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-029",
+      "text": "Celebrate someone else’s success without comparison.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-030",
+      "text": "Offer your seat to someone who needs it.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-031",
+      "text": "Leave a kind comment on something someone created.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-032",
+      "text": "Call a relative just to hear their voice.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-033",
+      "text": "Share a book, song, or article that moved you.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-034",
+      "text": "Write a gratitude text to a friend before bed.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-035",
+      "text": "Sit with someone who seems quiet and simply keep them company.",
+      "category": "connection",
+      "active": true
+    },
+    {
+      "id": "peace-036",
+      "text": "Smile at a stranger.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-037",
+      "text": "Let someone go ahead of you in line.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-038",
+      "text": "Pay a sincere compliment to someone you pass today.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-039",
+      "text": "Hold the elevator for someone rushing to catch it.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-040",
+      "text": "Offer directions to someone who looks lost.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-041",
+      "text": "Return a shopping cart for someone in the parking lot.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-042",
+      "text": "Pick up something someone dropped and hand it back.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-043",
+      "text": "Say thank you to a cashier or service worker by name.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-044",
+      "text": "Leave a generous tip if you can.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-045",
+      "text": "Give up your place in a queue for someone in a hurry.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-046",
+      "text": "Help someone carry groceries or bags.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-047",
+      "text": "Offer your umbrella to someone caught in the rain.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-048",
+      "text": "Wave thank you when another driver lets you merge.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-049",
+      "text": "Compliment a parent on something they are doing well.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-050",
+      "text": "Tell a barista or server their work makes a difference.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-051",
+      "text": "Leave a sticky note with encouragement in a public place.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-052",
+      "text": "Donate something you no longer need.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-053",
+      "text": "Buy an extra coffee for the person behind you.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-054",
+      "text": "Offer encouragement to someone learning something new.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-055",
+      "text": "Be patient with someone who is moving slowly.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-056",
+      "text": "Speak gently when you feel frustrated.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-057",
+      "text": "Defend someone kindly if you hear unfair gossip.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-058",
+      "text": "Share your snack with someone who forgot theirs.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-059",
+      "text": "Offer your phone charger to someone whose battery is low.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-060",
+      "text": "Thank the cleaning staff in a building you visit.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-061",
+      "text": "Acknowledge a street musician or artist with appreciation.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-062",
+      "text": "Help a tourist take a photo.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-063",
+      "text": "Give sincere praise to someone often overlooked.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-064",
+      "text": "Offer a tissue to someone who is upset.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-065",
+      "text": "Let a merging car into traffic with a friendly gesture.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-066",
+      "text": "Compliment someone’s effort, not just their appearance.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-067",
+      "text": "Say something kind to yourself in the mirror.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-068",
+      "text": "Leave a positive review for a small business you love.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-069",
+      "text": "Offer to take a photo for a group of strangers.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-070",
+      "text": "Treat everyone you meet today as if they are having a hard day.",
+      "category": "kindness",
+      "active": true
+    },
+    {
+      "id": "peace-071",
+      "text": "Pick up one piece of litter.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-072",
+      "text": "Water a plant at home or in your neighborhood.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-073",
+      "text": "Take a five-minute walk outside without your phone.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-074",
+      "text": "Notice three sounds in nature around you.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-075",
+      "text": "Feed birds or leave water for local wildlife if safe.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-076",
+      "text": "Turn off unnecessary lights for an hour.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-077",
+      "text": "Use a reusable bag or bottle today.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-078",
+      "text": "Plant a seed, herb, or flower if you can.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-079",
+      "text": "Take three deep breaths of fresh air mindfully.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-080",
+      "text": "Walk barefoot on grass for a minute if possible.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-081",
+      "text": "Recycle something you would normally throw away.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-082",
+      "text": "Open a window and listen to the world outside.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-083",
+      "text": "Watch the sky for five minutes without distraction.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-084",
+      "text": "Compost food scraps if you have access.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-085",
+      "text": "Avoid single-use plastic for one day where you can.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-086",
+      "text": "Photograph something beautiful in nature and appreciate it.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-087",
+      "text": "Clean a small outdoor space near your home.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-088",
+      "text": "Take the stairs instead of the elevator once today.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-089",
+      "text": "Unplug devices you are not using.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-090",
+      "text": "Eat one meal slowly and notice where your food came from.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-091",
+      "text": "Walk or cycle instead of driving for one short trip.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-092",
+      "text": "Place a bowl of water outside for birds on a warm day.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-093",
+      "text": "Spend a moment thanking the earth beneath your feet.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-094",
+      "text": "Collect rainwater for plants if practical.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-095",
+      "text": "Repair something instead of replacing it.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-096",
+      "text": "Share a ride or combine errands to reduce trips.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-097",
+      "text": "Buy local produce if available.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-098",
+      "text": "Spend lunch outside under open sky.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-099",
+      "text": "Name five living things you can see from your window.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-100",
+      "text": "Reduce food waste by using leftovers creatively.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-101",
+      "text": "Turn off the tap while brushing your teeth.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-102",
+      "text": "Hang laundry to dry instead of using a machine once.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-103",
+      "text": "Learn one fact about a local tree or animal.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-104",
+      "text": "Leave a place cleaner than you found it.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-105",
+      "text": "Express gratitude for clean water when you drink it.",
+      "category": "nature",
+      "active": true
+    },
+    {
+      "id": "peace-106",
+      "text": "Write down three things you are grateful for today.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-107",
+      "text": "Thank your body for carrying you through the day.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-108",
+      "text": "Say grace or a moment of thanks before a meal.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-109",
+      "text": "List five simple comforts you often take for granted.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-110",
+      "text": "Thank someone who made your day easier.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-111",
+      "text": "Reflect on one challenge that helped you grow.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-112",
+      "text": "Write a gratitude letter you may or may not send.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-113",
+      "text": "Notice something beautiful and silently appreciate it.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-114",
+      "text": "Thank yourself for one thing you did well today.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-115",
+      "text": "Share gratitude with a housemate or family member.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-116",
+      "text": "Keep a one-line gratitude journal entry tonight.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-117",
+      "text": "Think of someone who believed in you and feel thankful.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-118",
+      "text": "Appreciate the roof over your head for one quiet minute.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-119",
+      "text": "Thank a healthcare or essential worker in your thoughts.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-120",
+      "text": "Acknowledge a privilege you have and use it kindly.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-121",
+      "text": "Say thank you for something ordinary, like hot water.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-122",
+      "text": "Remember a moment of joy from this week and savor it.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-123",
+      "text": "Thank the earth for one resource you used today.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-124",
+      "text": "Express appreciation for peace in your immediate surroundings.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-125",
+      "text": "Write down why today was worth living, even if small.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-126",
+      "text": "Thank your past self for a good decision.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-127",
+      "text": "Notice the hands that prepared your food and feel grateful.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-128",
+      "text": "Share one thing you are grateful for on a call or text.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-129",
+      "text": "Pause before sleep and name one gentle moment from today.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-130",
+      "text": "Thank a friend for simply being in your life.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-131",
+      "text": "Appreciate silence for thirty seconds.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-132",
+      "text": "Feel gratitude for music that has comforted you.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-133",
+      "text": "Thank someone who taught you patience.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-134",
+      "text": "Recognize a stranger’s kindness from memory and appreciate it.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-135",
+      "text": "Write a short prayer or poem of thanks in any form.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-136",
+      "text": "Thank your home for sheltering you.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-137",
+      "text": "Appreciate the ability to breathe deeply.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-138",
+      "text": "Thank technology that connected you to someone you love.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-139",
+      "text": "Reflect on freedom you enjoy and honor it responsibly.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-140",
+      "text": "End the day by saying thank you out loud once.",
+      "category": "gratitude",
+      "active": true
+    },
+    {
+      "id": "peace-141",
+      "text": "Take ten slow breaths with your eyes closed.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-142",
+      "text": "Drink a full glass of water mindfully.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-143",
+      "text": "Stretch your shoulders and neck gently.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-144",
+      "text": "Rest for five minutes without screens.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-145",
+      "text": "Go to bed thirty minutes earlier tonight.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-146",
+      "text": "Say no to one thing that drains your peace.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-147",
+      "text": "Write down what is weighing on you and close the notebook.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-148",
+      "text": "Listen to one song that calms you.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-149",
+      "text": "Take a warm shower or wash your face with intention.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-150",
+      "text": "Walk slowly and notice each step.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-151",
+      "text": "Eat something nourishing without rushing.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-152",
+      "text": "Put your phone in another room for thirty minutes.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-153",
+      "text": "Forgive yourself for one mistake today.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-154",
+      "text": "Set one gentle boundary with kindness.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-155",
+      "text": "Light a candle or sit near soft light and breathe.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-156",
+      "text": "Repeat a peaceful phrase such as: I am enough.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-157",
+      "text": "Tidy one small corner of your space.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-158",
+      "text": "Wear something comfortable that makes you feel good.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-159",
+      "text": "Step outside and feel sunlight or fresh air on your skin.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-160",
+      "text": "Do one thing today only because it brings you joy.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-161",
+      "text": "Limit news intake for a few hours.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-162",
+      "text": "Write a kind message and send it to yourself.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-163",
+      "text": "Release tension in your jaw and unclench your hands.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-164",
+      "text": "Take a break before you feel exhausted.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-165",
+      "text": "Ask for help with one small thing.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-166",
+      "text": "Sit in stillness for three minutes.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-167",
+      "text": "Prepare a cup of tea or coffee and savor it.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-168",
+      "text": "Move your body gently for five minutes.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-169",
+      "text": "Celebrate one small win from today.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-170",
+      "text": "Choose rest over perfection once today.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-171",
+      "text": "Speak to yourself the way you would to a good friend.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-172",
+      "text": "Declutter one drawer or surface.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-173",
+      "text": "Look at the stars or clouds tonight.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-174",
+      "text": "Accept a compliment without deflecting it.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-175",
+      "text": "Plan one small joy for tomorrow.",
+      "category": "selfcare",
+      "active": true
+    },
+    {
+      "id": "peace-176",
+      "text": "Support a local charity with a small donation if you can.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-177",
+      "text": "Share information about a community event with someone.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-178",
+      "text": "Attend or join a local gathering if one is happening.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-179",
+      "text": "Sign a petition for a cause you believe in peacefully.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-180",
+      "text": "Volunteer one hour of your time if possible.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-181",
+      "text": "Bring surplus food to a neighbor or food bank.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-182",
+      "text": "Learn one fact about your neighborhood’s history.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-183",
+      "text": "Greet a shop owner by name if you know it.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-184",
+      "text": "Offer to watch a neighbor’s pet or plant briefly.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-185",
+      "text": "Share resources with someone who needs them.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-186",
+      "text": "Participate in a community cleanup if available.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-187",
+      "text": "Recommend a local business to a friend.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-188",
+      "text": "Donate books to a library or little free library.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-189",
+      "text": "Help register someone to vote if appropriate and invited.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-190",
+      "text": "Bring flowers or baked goods to a community space.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-191",
+      "text": "Introduce two people who might benefit from knowing each other.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-192",
+      "text": "Offer translation or tech help to someone who needs it.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-193",
+      "text": "Support an artist or musician from your area.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-194",
+      "text": "Share a community announcement respectfully online.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-195",
+      "text": "Visit a public park and treat it with care.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-196",
+      "text": "Offer babysitting help to a parent you know.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-197",
+      "text": "Bring in a neighbor’s bin or mail if they are away.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-198",
+      "text": "Learn the name of a regular person in your daily route.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-199",
+      "text": "Contribute to a mutual aid request if you are able.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-200",
+      "text": "Attend a town or school meeting once this month.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-201",
+      "text": "Offer tools or supplies to someone doing home repairs.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-202",
+      "text": "Celebrate cultural diversity in your community with curiosity.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-203",
+      "text": "Share a ride with someone going your way.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-204",
+      "text": "Help someone practice a language they are learning.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-205",
+      "text": "Leave a positive note in a community board.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-206",
+      "text": "Support a school fundraiser if one exists nearby.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-207",
+      "text": "Offer to walk an elderly neighbor’s dog.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-208",
+      "text": "Promote peace in a local online group.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-209",
+      "text": "Bring reusable cups to a community event.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-210",
+      "text": "Thank a community leader for their service.",
+      "category": "community",
+      "active": true
+    },
+    {
+      "id": "peace-211",
+      "text": "Imagine how someone else might be feeling today.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-212",
+      "text": "Read about a culture different from your own.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-213",
+      "text": "Pause before judging and ask what you might not know.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-214",
+      "text": "Apologize sincerely for one small hurt you caused.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-215",
+      "text": "Listen to someone whose views differ from yours without arguing.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-216",
+      "text": "Put yourself in the shoes of a refugee or displaced person for a moment.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-217",
+      "text": "Learn one word in another language that means peace.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-218",
+      "text": "Reflect on a time someone forgave you and pay it forward.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-219",
+      "text": "Avoid sarcasm in one conversation today.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-220",
+      "text": "Ask someone: What do you need right now?",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-221",
+      "text": "Sit with discomfort instead of reacting immediately.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-222",
+      "text": "Acknowledge someone’s pain without trying to fix it.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-223",
+      "text": "Read a story from someone with a different life experience.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-224",
+      "text": "Notice your assumptions and question one of them.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-225",
+      "text": "Offer silence when someone needs to cry or think.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-226",
+      "text": "Respond to criticism with curiosity instead of defense.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-227",
+      "text": "Think of a person you disagree with and wish them well.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-228",
+      "text": "Practice patience with someone learning at a different pace.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-229",
+      "text": "Validate someone’s feelings even if you see things differently.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-230",
+      "text": "Learn about a historical peace maker.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-231",
+      "text": "Avoid interrupting for one full conversation.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-232",
+      "text": "Consider how your actions affect the most vulnerable.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-233",
+      "text": "Write about a time you felt misunderstood and grow from it.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-234",
+      "text": "Offer a gentle question instead of advice.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-235",
+      "text": "Stand up calmly for someone treated unfairly.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-236",
+      "text": "Reflect on what peace means to you personally.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-237",
+      "text": "Notice body language and respond with care.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-238",
+      "text": "Share a meal with someone from a different background.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-239",
+      "text": "Practice humility by admitting you do not know something.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-240",
+      "text": "Send compassion to someone you find difficult.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-241",
+      "text": "Learn about a conflict zone and hope for its healing.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-242",
+      "text": "Choose words that build bridges, not walls.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-243",
+      "text": "Remember that everyone is fighting a battle you cannot see.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-244",
+      "text": "Hold space for joy and grief in the same day.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-245",
+      "text": "End a disagreement by finding one point of agreement.",
+      "category": "empathy",
+      "active": true
+    },
+    {
+      "id": "peace-246",
+      "text": "Cook a meal with love for yourself or others.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-247",
+      "text": "Set the table nicely even for a simple dinner.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-248",
+      "text": "Clean a shared space without being asked.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-249",
+      "text": "Leave an encouraging note for someone in your home.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-250",
+      "text": "Fix something small that has been broken for a while.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-251",
+      "text": "Play calming music while doing household chores.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-252",
+      "text": "Share chores fairly with housemates or family.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-253",
+      "text": "Create a cozy corner for quiet reflection.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-254",
+      "text": "Open curtains and let natural light in.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-255",
+      "text": "Prepare tomorrow’s clothes or bag to reduce morning stress.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-256",
+      "text": "Say good morning warmly to everyone you live with.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-257",
+      "text": "Make someone’s favorite snack.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-258",
+      "text": "Turn off screens during one shared meal.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-259",
+      "text": "Organize a drawer that has been cluttered.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-260",
+      "text": "Display a photo that reminds you of love.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-261",
+      "text": "Wash dishes mindfully as an act of care.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-262",
+      "text": "Change bedsheets for fresh comfort.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-263",
+      "text": "Write a household gratitude list on the fridge.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-264",
+      "text": "Resolve a small household tension with kindness.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-265",
+      "text": "Plant herbs on a windowsill.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-266",
+      "text": "Create a playlist for peaceful evenings at home.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-267",
+      "text": "Offer to cook so someone else can rest.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-268",
+      "text": "Repair or mend clothing instead of discarding it.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-269",
+      "text": "Use a calming scent like lavender if you have it.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-270",
+      "text": "Read aloud to someone or listen together.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-271",
+      "text": "Establish a five-minute tidy ritual tonight.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-272",
+      "text": "Leave flowers on the kitchen table.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-273",
+      "text": "Share a memory from home that makes you smile.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-274",
+      "text": "Turn off notifications during family time.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-275",
+      "text": "Create a bowl for keys and phones at the door.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-276",
+      "text": "Write a kind rule for how your home treats each other.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-277",
+      "text": "Celebrate a mundane moment like tea time together.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-278",
+      "text": "Make your bed as a small gift to your future self.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-279",
+      "text": "Share blankets or warmth with someone who is cold.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-280",
+      "text": "Speak softly in your home for one hour.",
+      "category": "home",
+      "active": true
+    },
+    {
+      "id": "peace-281",
+      "text": "Release one expectation that causes you stress.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-282",
+      "text": "Write down a fear and fold the paper away.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-283",
+      "text": "Send healing thoughts to someone who is ill.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-284",
+      "text": "Donate blood if you are able and eligible.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-285",
+      "text": "Learn the basics of mental health first aid online.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-286",
+      "text": "Share a resource about peace with someone who might need it.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-287",
+      "text": "Pray or meditate for victims of violence.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-288",
+      "text": "Light a candle for someone you have lost.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-289",
+      "text": "Practice forgiveness toward yourself for one old wound.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-290",
+      "text": "Avoid violent media for one day.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-291",
+      "text": "Speak about conflict using calm language.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-292",
+      "text": "Support a peace organization with a small gift if you can.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-293",
+      "text": "Educate yourself about nonviolent communication.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-294",
+      "text": "Offer a hug to someone who consents and needs it.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-295",
+      "text": "Write a letter releasing anger you no longer need.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-296",
+      "text": "Visit a place that helps you feel restored.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-297",
+      "text": "Reduce harsh self-criticism in your inner voice.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-298",
+      "text": "Encourage someone seeking help to follow through.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-299",
+      "text": "Share a story of reconciliation that inspires you.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-300",
+      "text": "Walk away from one argument before it escalates.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-301",
+      "text": "Practice a relaxation technique before a stressful task.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-302",
+      "text": "Acknowledge grief instead of hiding it.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-303",
+      "text": "Support a friend in recovery or healing.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-304",
+      "text": "Learn about trauma-informed kindness.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-305",
+      "text": "Replace one harsh word with a softer one today.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-306",
+      "text": "Sit with a memory and let it soften over time.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-307",
+      "text": "Offer patience to someone who is healing slowly.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-308",
+      "text": "Create art that expresses hope.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-309",
+      "text": "Read about restorative justice.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-310",
+      "text": "Breathe peace into a part of your body that feels tight.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-311",
+      "text": "Commit to one day without raising your voice.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-312",
+      "text": "Help someone access care they need.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-313",
+      "text": "Honor your own need for rest without guilt.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-314",
+      "text": "Plant hope by planning something kind for next week.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-315",
+      "text": "Whisper a wish for peace in the world before sleep.",
+      "category": "healing",
+      "active": true
+    },
+    {
+      "id": "peace-316",
+      "text": "Learn one fact about another country’s culture.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-317",
+      "text": "Listen to music from a country you have never visited.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-318",
+      "text": "Read news from an international source with an open mind.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-319",
+      "text": "Learn how to say peace in another language.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-320",
+      "text": "Think of one way your daily choices affect the wider world.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-321",
+      "text": "Reduce waste as an act of care for future generations.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-322",
+      "text": "Support fair trade when you shop if possible.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-323",
+      "text": "Watch a documentary about global unity or nature.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-324",
+      "text": "Reflect on what connects all humans regardless of borders.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-325",
+      "text": "Send a donation to disaster relief if you are able.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-326",
+      "text": "Learn about a UNESCO World Heritage site.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-327",
+      "text": "Cook a dish from another culture respectfully.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-328",
+      "text": "Avoid stereotypes in conversation today.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-329",
+      "text": "Study a global issue and share one hopeful fact.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-330",
+      "text": "Imagine the world singing together and feel part of it.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-331",
+      "text": "Write a message of peace in your own words.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-332",
+      "text": "Consider the moon or sun is the same for everyone today.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-333",
+      "text": "Learn about World Choir and share its mission with one person.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-334",
+      "text": "Think of children worldwide and wish them safety.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-335",
+      "text": "Reduce energy use as care for the shared planet.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-336",
+      "text": "Follow an international artist or writer with curiosity.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-337",
+      "text": "Reflect on water as a shared resource across nations.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-338",
+      "text": "Speak about other countries with respect.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-339",
+      "text": "Learn a greeting from another language and use it.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-340",
+      "text": "Contemplate silence as a language everyone understands.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-341",
+      "text": "Support refugees through a trusted organization if you can.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-342",
+      "text": "Read a poem about peace from another culture.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-343",
+      "text": "Picture earth from space and feel its fragility.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-344",
+      "text": "Choose cooperation over competition once today.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-345",
+      "text": "Share hope for peace on social media if you use it.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-346",
+      "text": "Learn about a Nobel Peace Prize laureate.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-347",
+      "text": "Acknowledge indigenous wisdom about living in harmony.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-348",
+      "text": "Wish well for a nation in the news for difficult reasons.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-349",
+      "text": "Remember that small acts ripple across the world.",
+      "category": "global",
+      "active": true
+    },
+    {
+      "id": "peace-350",
+      "text": "Join World Choir’s vision: one song, one world, one moment.",
+      "category": "global",
+      "active": true
+    }
+  ]
+}
