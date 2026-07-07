@@ -74,6 +74,10 @@ const WorldChoirConfig = (() => {
   }
 
   function getCalendarDescription() {
+    return getReminderDescription();
+  }
+
+  function getReminderDescription() {
     return [
       'Once a year, the world sings the same song at the exact same time.',
       '',
@@ -236,6 +240,7 @@ const WorldChoirConfig = (() => {
     getEventEnd,
     getCalendarEventEnd,
     getCalendarDescription,
+    getReminderDescription,
     getWebsiteUrl,
     CALENDAR_EVENT_DURATION_MS,
     getSongEndDate: getEventEnd,

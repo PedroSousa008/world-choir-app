@@ -17,7 +17,9 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app uses location to show your city on the global participation map.",
         "NSCalendarsUsageDescription": "World Choir needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar.",
-        "NSCalendarsWriteOnlyAccessUsageDescription": "World Choir needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar."
+        "NSCalendarsWriteOnlyAccessUsageDescription": "World Choir needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar.",
+        "NSRemindersUsageDescription": "World Choir needs access to Reminders to create a reminder when you tap Remind Me.",
+        "NSRemindersFullAccessUsageDescription": "World Choir needs access to Reminders to create a reminder when you tap Remind Me."
       }
     },
     "android": {

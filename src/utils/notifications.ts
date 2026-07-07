@@ -97,6 +97,13 @@ export {
   showCalendarPermissionMessage,
 } from './calendar';
 
+export {
+  setWorldChoirReminders,
+  showReminderPermissionMessage,
+  showReminderSuccessMessage,
+  REMINDER_OPTIONS,
+} from './reminders';
+
 // Check if notifications are enabled
 export const checkNotificationStatus = async (): Promise<boolean> => {
   try {

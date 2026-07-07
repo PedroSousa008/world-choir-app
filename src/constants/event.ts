@@ -10,6 +10,7 @@ export const EVENT_CONFIG = {
     'World Choir 2027',
     'Song: Imagine — John Lennon',
   ].join('\n'),
+  REMINDER_TITLE: 'World Choir 2027',
   EVENT_LOCATION: 'Worldwide',
   CALENDAR_DURATION_MS: 10 * 60 * 1000,
   SONG_NAME: 'Imagine',

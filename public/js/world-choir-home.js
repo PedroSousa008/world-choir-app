@@ -194,68 +194,16 @@ const WorldChoirHome = (() => {
   }
 
   async function saveReminders() {
-    if (!('Notification' in window)) {
-      alert('Notifications are not supported on this device.');
+    const result = await WorldChoirReminders.saveFromModal();
+    if (result.ok) {
+      closeRemindModal();
       return;
     }
-
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') {
-      alert('Enable notifications to receive reminders.');
+    if (result.denied) {
+      alert(result.error || 'Allow notifications to receive reminders for World Choir 2027.');
       return;
     }
-
-    const eventStart = WorldChoirConfig.getEventStart().getTime();
-    const now = Date.now();
-    const options = [
-      { id: 'remind-1d', label: '1 day before', offsetMs: 24 * 60 * 60 * 1000 },
-      { id: 'remind-1h', label: '1 hour before', offsetMs: 60 * 60 * 1000 },
-      { id: 'remind-10m', label: '10 minutes before', offsetMs: 10 * 60 * 1000 },
-    ];
-
-    const scheduled = [];
-    options.forEach((opt) => {
-      const el = document.getElementById(opt.id);
-      if (!el?.checked) return;
-      const fireAt = eventStart - opt.offsetMs;
-      if (fireAt > now) {
-        scheduled.push({ label: opt.label, fireAt, fired: false });
-      }
-    });
-
-    if (scheduled.length === 0) {
-      alert('No reminders could be scheduled. The event may be too soon.');
-      return;
-    }
-
-    localStorage.setItem('wc_reminders', JSON.stringify(scheduled));
-    new Notification('World Choir', {
-      body: `${scheduled.length} reminder${scheduled.length > 1 ? 's' : ''} set for World Choir 2027.`,
-    });
-    closeRemindModal();
-  }
-
-  function checkReminders() {
-    const raw = localStorage.getItem('wc_reminders');
-    if (!raw || Notification.permission !== 'granted') return;
-
-    try {
-      const reminders = JSON.parse(raw);
-      let changed = false;
-      const now = Date.now();
-
-      reminders.forEach((r) => {
-        if (!r.fired && now >= r.fireAt) {
-          new Notification('World Choir 2027', {
-            body: `${r.label}: The world sings together soon. Imagine — John Lennon`,
-          });
-          r.fired = true;
-          changed = true;
-        }
-      });
-
-      if (changed) localStorage.setItem('wc_reminders', JSON.stringify(reminders));
-    } catch (_) { /* ignore */ }
+    alert(result.error || 'Could not set reminders. Please try again.');
   }
 
   /* ─── Calendar & Share ─── */
@@ -312,8 +260,7 @@ const WorldChoirHome = (() => {
     render();
     LiveEventMode.launch();
     countdownTimer = setInterval(updateCountdown, 1000);
-    checkReminders();
-    reminderChecker = setInterval(checkReminders, 30000);
+    reminderChecker = WorldChoirReminders.startWatcher();
   }
 
   return { init, render };
