@@ -31,6 +31,26 @@
   object-fit: contain;
 }
 
+.home-voices-counter {
+  margin: 0 auto 14px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent-aurora);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-voices-counter--loading {
+  opacity: 0.42;
+  animation: homeVoicesPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes homeVoicesPulse {
+  0%, 100% { opacity: 0.42; }
+  50% { opacity: 0.68; }
+}
+
 .home-brand {
   font-size: 0.68rem;
   font-weight: 600;

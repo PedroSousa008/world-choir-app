@@ -86,6 +86,32 @@ const WorldChoirHome = (() => {
     `;
   }
 
+  function getVoicesCounterContent() {
+    if (!WorldChoirDB.isPledgesLoaded()) {
+      return { text: 'LOADING VOICES', loading: true };
+    }
+
+    const stats = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
+    const count = stats?.voices ?? 0;
+    const formatted = count.toLocaleString('en-US');
+    const text = count === 1 ? '1 VOICE' : `${formatted} VOICES`;
+    return { text, loading: false };
+  }
+
+  function renderVoicesCounter() {
+    const { text, loading } = getVoicesCounterContent();
+    return `<p class="home-voices-counter${loading ? ' home-voices-counter--loading' : ''}" id="home-voices-counter" aria-live="polite">${esc(text)}</p>`;
+  }
+
+  function updateVoicesCounter() {
+    const el = document.getElementById('home-voices-counter');
+    if (!el || !isPreEvent() || LiveEventMode.isActive()) return;
+
+    const { text, loading } = getVoicesCounterContent();
+    el.textContent = text;
+    el.classList.toggle('home-voices-counter--loading', loading);
+  }
+
   function renderPledgeButton() {
     const pledgeState = WorldChoirPledgeState.getState();
 
@@ -109,6 +135,7 @@ const WorldChoirHome = (() => {
     const e = WorldChoirConfig.ACTIVE_EVENT;
 
     return `
+      ${renderVoicesCounter()}
       <img class="home-logo" src="${WorldChoirConfig.LOGO.url}" alt="${WorldChoirConfig.LOGO.alt}" width="1024" height="1024" decoding="async">
       <h1 class="home-headline">The world sings together in</h1>
 
@@ -246,6 +273,10 @@ const WorldChoirHome = (() => {
     WorldChoirPledgeState.subscribe(() => {
       if (isPreEvent() && !LiveEventMode.isActive()) render();
     });
+
+    window.addEventListener('wc-pledges-synced', updateVoicesCounter);
+    window.addEventListener('wc-map-data-state', updateVoicesCounter);
+    window.addEventListener('wc-pledge-added', updateVoicesCounter);
 
     LiveEventMode.init();
     render();
