@@ -2,8 +2,41 @@
  * ParticipationStatusCard — pledge status for active event
  */
 const ParticipationStatusCard = (() => {
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function getPledgeState() {
+    if (typeof WorldChoirPledgeState !== 'undefined') {
+      return WorldChoirPledgeState.getState();
+    }
+    if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getPledgeState) {
+      return WorldChoirDB.getPledgeState();
+    }
+    return 'loading';
+  }
+
+  function renderLoading() {
+    return `
+      <div class="glass-card participation-card profile-section participation-card--loading" id="participation-status-card" aria-busy="true">
+        <div class="participation-card-skeleton" aria-hidden="true">
+          <div class="participation-card-skeleton__line participation-card-skeleton__line--wide"></div>
+          <div class="participation-card-skeleton__line participation-card-skeleton__line--btn"></div>
+        </div>
+      </div>
+    `;
+  }
+
   function render() {
-    const pledged = WorldChoirDB.hasPledged();
+    const pledgeState = getPledgeState();
+
+    if (pledgeState === 'loading') {
+      return renderLoading();
+    }
+
+    const pledged = pledgeState === 'pledged';
     const pledge = WorldChoirDB.getPledgeForCurrentUser();
     const eventTitle = WorldChoirConfig.ACTIVE_EVENT.title;
 
@@ -26,12 +59,6 @@ const ParticipationStatusCard = (() => {
         <button class="btn btn-primary" id="ill-sing-btn" type="button">I'll Sing</button>
       </div>
     `;
-  }
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   function mount(container, { onIllSing }) {

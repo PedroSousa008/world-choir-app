@@ -86,9 +86,26 @@ const WorldChoirHome = (() => {
     `;
   }
 
+  function renderPledgeButton() {
+    const pledgeState = WorldChoirPledgeState.getState();
+
+    if (pledgeState === 'loading') {
+      return '<div class="btn-hero-skeleton" aria-hidden="true"></div>';
+    }
+
+    const pledged = pledgeState === 'pledged';
+    return `
+      <button class="btn-hero ${pledged ? 'btn-hero--pledged' : ''}" id="pledge-btn" type="button" ${pledged ? 'disabled' : ''}>
+        <span class="btn-hero__glow"></span>
+        <span class="btn-hero__text">${pledged ? "You're Singing" : "I'll Sing"}</span>
+      </button>
+    `;
+  }
+
   function renderCountdownHome() {
     const t = WorldChoirConfig.getTimeRemaining();
-    const pledged = WorldChoirDB.hasPledged();
+    const pledgeState = WorldChoirPledgeState.getState();
+    const pledged = pledgeState === 'pledged';
     const e = WorldChoirConfig.ACTIVE_EVENT;
 
     return `
@@ -107,10 +124,7 @@ const WorldChoirHome = (() => {
       <p class="home-meta">${esc(WorldChoirConfig.formatEventDate())} · 16:00 UTC</p>
       <p class="home-song">${esc(e.songName)} — ${esc(e.artistName)}</p>
 
-      <button class="btn-hero ${pledged ? 'btn-hero--pledged' : ''}" id="pledge-btn" type="button" ${pledged ? 'disabled' : ''}>
-        <span class="btn-hero__glow"></span>
-        <span class="btn-hero__text">${pledged ? "You're Singing" : "I'll Sing"}</span>
-      </button>
+      ${renderPledgeButton()}
 
       <div class="secondary-actions">
         <button class="btn-icon" type="button" id="remind-btn" aria-label="Remind Me">${actionIcon('remind')}</button>
@@ -121,7 +135,8 @@ const WorldChoirHome = (() => {
   }
 
   function renderPostEventHome() {
-    const pledged = WorldChoirDB.hasPledged();
+    const pledgeState = WorldChoirPledgeState.getState();
+    const pledged = pledgeState === 'pledged';
     const hasPromise = WorldChoirDB.hasSubmittedPromise();
     const e = WorldChoirConfig.ACTIVE_EVENT;
 
@@ -204,7 +219,7 @@ const WorldChoirHome = (() => {
   }
 
   function init() {
-    WorldChoirDB.ready()
+    WorldChoirPledgeState.init()
       .then(startHome)
       .catch((err) => {
         console.error('Failed to connect to World Choir database:', err);
@@ -228,6 +243,9 @@ const WorldChoirHome = (() => {
     });
 
     WorldChoirReminders.init();
+    WorldChoirPledgeState.subscribe(() => {
+      if (isPreEvent() && !LiveEventMode.isActive()) render();
+    });
 
     LiveEventMode.init();
     render();

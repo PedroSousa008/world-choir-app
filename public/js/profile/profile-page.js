@@ -46,16 +46,14 @@ const ProfilePage = (() => {
   }
 
   function init() {
-    WorldChoirDB.ready()
+    WorldChoirPledgeState.init()
       .then(() => {
         ChangeLocationModal.init();
         PracticeMode.init();
         OwnerAccess.init();
         WorldChoirNav.startWatcher('profile');
         render();
-        window.addEventListener('wc-pledge-added', refresh);
-        window.addEventListener('wc-pledge-updated', refresh);
-        window.addEventListener('wc-pledges-synced', refresh);
+        WorldChoirPledgeState.subscribe(() => refresh());
       })
       .catch((err) => {
         console.error('Failed to connect to World Choir database:', err);

@@ -12,7 +12,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20270701e">
-  <link rel="stylesheet" href="css/map.css?v=20270701e">
+  <link rel="stylesheet" href="css/map.css?v=20270707f">
+  <style>
+    #map-empty-btn { display: none !important; }
+    #map-empty-btn:not([hidden]) { display: inline-flex !important; }
+    #map-empty-btn-skeleton { display: none; }
+    #map-empty-btn-skeleton.visible { display: block; }
+  </style>
 </head>
 <body>
   <div class="map-page__stars"></div>
@@ -58,7 +64,10 @@
     <div class="map-empty" id="map-empty">
       <p class="map-empty__title">No voices yet</p>
       <p class="map-empty__copy">Be the first to light up the world.</p>
-      <button class="map-empty__btn" id="map-empty-btn" type="button">I'll Sing</button>
+      <div class="map-empty__cta" id="map-empty-cta">
+        <div class="map-empty__btn-skeleton" id="map-empty-btn-skeleton" aria-hidden="true"></div>
+        <button class="map-empty__btn" id="map-empty-btn" type="button" hidden>I'll Sing</button>
+      </div>
     </div>
 
     <div class="city-card" id="city-card">
@@ -97,11 +106,12 @@
   <div id="nav-root"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="js/world-choir-config.js?v=20270701"></script>
-  <script src="js/world-choir-db.js?v=20270701"></script>
-  <script src="js/world-choir-nav.js?v=20270701"></script>
-  <script src="js/world-choir-participation.js?v=20270701"></script>
-  <script src="js/world-choir-map.js?v=20270701"></script>
+  <script src="js/world-choir-config.js?v=20270707f"></script>
+  <script src="js/world-choir-db.js?v=20270707f"></script>
+  <script src="js/world-choir-pledge-state.js?v=20270707f"></script>
+  <script src="js/world-choir-nav.js?v=20270707f"></script>
+  <script src="js/world-choir-participation.js?v=20270707f"></script>
+  <script src="js/world-choir-map.js?v=20270707f"></script>
   <script>WorldChoirMap.init();</script>
 </body>
 </html>

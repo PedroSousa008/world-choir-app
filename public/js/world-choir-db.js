@@ -13,7 +13,7 @@ const WorldChoirDB = (() => {
   };
 
   let remoteUser = null;
-  let myPledgeCache = null;
+  let myPledgeCache = undefined;
   let cachedPledges = [];
   let bootstrapPromise = null;
 
@@ -294,12 +294,29 @@ const WorldChoirDB = (() => {
   }
 
   function getPledgeForCurrentUser(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    if (myPledgeCache && myPledgeCache.event_id === eventId) {
-      return myPledgeCache;
+    if (myPledgeCache !== undefined) {
+      if (myPledgeCache && myPledgeCache.event_id === eventId) {
+        return myPledgeCache;
+      }
+      return null;
     }
-    return cachedPledges.find(
-      (p) => p.user_id === remoteUser?.id && p.event_id === eventId
-    ) || null;
+
+    if (remoteUser?.id) {
+      return cachedPledges.find(
+        (p) => p.user_id === remoteUser.id && p.event_id === eventId
+      ) || null;
+    }
+
+    return null;
+  }
+
+  function isPledgeLoaded() {
+    return myPledgeCache !== undefined;
+  }
+
+  function getPledgeState(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    if (!isPledgeLoaded()) return 'loading';
+    return hasPledged(eventId) ? 'pledged' : 'not_pledged';
   }
 
   function hasPledged(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
@@ -485,6 +502,8 @@ const WorldChoirDB = (() => {
     updateParticipationLocation,
     geocodeCityCountry,
     getPledgeForCurrentUser,
+    isPledgeLoaded,
+    getPledgeState,
     hasPledged,
     getPledgesForEvent,
     createPromise,

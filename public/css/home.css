@@ -198,6 +198,27 @@
   z-index: 1;
 }
 
+.btn-hero-skeleton {
+  width: 100%;
+  max-width: 320px;
+  height: 56px;
+  margin: 0 auto 28px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: btnHeroSkeleton 1.4s ease-in-out infinite;
+}
+
+@keyframes btnHeroSkeleton {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
 /* Secondary actions — icon buttons */
 .secondary-actions {
   display: flex;

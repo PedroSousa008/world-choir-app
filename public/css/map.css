@@ -297,6 +297,41 @@ body.map-page {
   line-height: 1.5;
 }
 
+.map-empty__cta {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-empty__btn-skeleton {
+  display: none;
+  width: 132px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: map-empty-skeleton 1.4s ease-in-out infinite;
+}
+
+.map-empty__btn-skeleton.visible {
+  display: block;
+}
+
+.map-empty--resolving .map-empty__copy {
+  margin-bottom: 16px;
+}
+
+@keyframes map-empty-skeleton {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
 .map-empty__btn {
   display: inline-flex;
   padding: 12px 28px;

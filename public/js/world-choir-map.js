@@ -133,12 +133,28 @@ const WorldChoirMap = (() => {
   function updateEmptyState() {
     const stats = WorldChoirDB.getMapStats();
     const empty = document.getElementById('map-empty');
-    const pledged = WorldChoirDB.hasPledged();
+    const btn = document.getElementById('map-empty-btn');
+    const skeleton = document.getElementById('map-empty-btn-skeleton');
+    const pledgeState = WorldChoirPledgeState.getState();
+
     if (stats.voices === 0) {
       empty.classList.remove('hidden');
-      empty.querySelector('.map-empty__btn').style.display = pledged ? 'none' : 'inline-flex';
+      empty.classList.toggle('map-empty--resolving', pledgeState === 'loading');
+
+      if (pledgeState === 'loading') {
+        btn.hidden = true;
+        skeleton?.classList.add('visible');
+      } else if (pledgeState === 'pledged') {
+        btn.hidden = true;
+        skeleton?.classList.remove('visible');
+      } else {
+        btn.hidden = false;
+        skeleton?.classList.remove('visible');
+      }
     } else {
       empty.classList.add('hidden');
+      btn.hidden = true;
+      skeleton?.classList.remove('visible');
     }
   }
 
@@ -216,7 +232,7 @@ const WorldChoirMap = (() => {
   }
 
   function init() {
-    WorldChoirDB.ready().then(startMap).catch((err) => {
+    WorldChoirPledgeState.init().then(startMap).catch((err) => {
       console.error('Failed to connect to World Choir database:', err);
       startMap();
     });
@@ -228,6 +244,7 @@ const WorldChoirMap = (() => {
 
     initMap();
     refreshMapData();
+    WorldChoirPledgeState.subscribe(() => updateEmptyState());
     updateCountdown();
     setInterval(updateCountdown, 1000);
 
@@ -240,7 +257,8 @@ const WorldChoirMap = (() => {
     });
 
     document.getElementById('map-empty-btn')?.addEventListener('click', () => {
-      if (!WorldChoirDB.hasPledged()) WorldChoirParticipation.open();
+      if (WorldChoirPledgeState.isPledged()) return;
+      WorldChoirParticipation.open();
     });
 
     document.getElementById('map-info-btn')?.addEventListener('click', toggleInfoSheet);

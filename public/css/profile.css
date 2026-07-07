@@ -96,6 +96,44 @@
   pointer-events: none;
 }
 
+.participation-card--loading {
+  min-height: 148px;
+}
+
+.participation-card-skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.participation-card-skeleton__line {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: participationSkeleton 1.4s ease-in-out infinite;
+}
+
+.participation-card-skeleton__line--wide {
+  width: min(100%, 280px);
+  height: 18px;
+}
+
+.participation-card-skeleton__line--btn {
+  width: 160px;
+  height: 44px;
+}
+
+@keyframes participationSkeleton {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
 /* Practice button */
 .practice-section {
   margin: 28px 0;
