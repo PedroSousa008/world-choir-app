@@ -14,7 +14,8 @@ const WorldChoirDB = (() => {
 
   let remoteUser = null;
   let myPledgeCache = undefined;
-  let cachedPledges = [];
+  let cachedPledges = undefined;
+  let pledgesLoadError = null;
   let bootstrapPromise = null;
 
   function apiBase() {
@@ -79,10 +80,20 @@ const WorldChoirDB = (() => {
   }
 
   async function syncAllPledges(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    const data = await apiFetch(`/api/pledges?eventId=${encodeURIComponent(eventId)}`);
-    cachedPledges = data.pledges || [];
-    window.dispatchEvent(new CustomEvent('wc-pledges-synced', { detail: cachedPledges }));
-    return cachedPledges;
+    try {
+      const data = await apiFetch(`/api/pledges?eventId=${encodeURIComponent(eventId)}`);
+      cachedPledges = data.pledges || [];
+      pledgesLoadError = null;
+      window.dispatchEvent(new CustomEvent('wc-pledges-synced', { detail: cachedPledges }));
+      window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
+      return cachedPledges;
+    } catch (err) {
+      pledgesLoadError = err;
+      if (cachedPledges === undefined) {
+        window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
+      }
+      throw err;
+    }
   }
 
   async function bootstrap() {
@@ -302,7 +313,7 @@ const WorldChoirDB = (() => {
     }
 
     if (remoteUser?.id) {
-      return cachedPledges.find(
+      return (cachedPledges || []).find(
         (p) => p.user_id === remoteUser.id && p.event_id === eventId
       ) || null;
     }
@@ -323,13 +334,27 @@ const WorldChoirDB = (() => {
     return !!getPledgeForCurrentUser(eventId);
   }
 
+  function isPledgesLoaded() {
+    return cachedPledges !== undefined;
+  }
+
+  function getMapDataState(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    if (!isPledgesLoaded()) {
+      return pledgesLoadError ? 'error' : 'loading';
+    }
+
+    const stats = getMapStats(eventId);
+    return stats.voices === 0 ? 'loaded_empty' : 'loaded_with_voices';
+  }
+
   function getPledgesForEvent(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    if (!isPledgesLoaded()) return [];
     return cachedPledges.filter((p) => p.event_id === eventId);
   }
 
   function getVoiceNameForUser(userId = remoteUser?.id, eventId = WorldChoirConfig.CURRENT_EVENT.id) {
     const pledge = userId
-      ? cachedPledges.find((p) => p.user_id === userId && p.event_id === eventId)
+      ? (cachedPledges || []).find((p) => p.user_id === userId && p.event_id === eventId)
       : getPledgeForCurrentUser(eventId);
     return pledge?.voiceName || pledge?.display_name || null;
   }
@@ -409,6 +434,8 @@ const WorldChoirDB = (() => {
   }
 
   function getMapStats(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    if (!isPledgesLoaded()) return null;
+
     const pledges = getUniquePledgesForEvent(eventId);
     const withLocation = pledges.filter((p) => p.city && p.country);
     const cities = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
@@ -421,6 +448,8 @@ const WorldChoirDB = (() => {
   }
 
   function getAggregatedCities(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    if (!isPledgesLoaded()) return [];
+
     const pledges = getUniquePledgesForEvent(eventId).filter(
       (p) => p.latitude != null && p.longitude != null && p.city && p.country
     );
@@ -465,7 +494,7 @@ const WorldChoirDB = (() => {
 
   function getParticipationHistory() {
     const user = getCurrentUser();
-    const pledges = cachedPledges.filter((p) => p.user_id === user.id);
+    const pledges = (cachedPledges || []).filter((p) => p.user_id === user.id);
     const promises = read(KEYS.promises).filter((p) => p.user_id === user.id);
     const events = read(KEYS.events);
 
@@ -506,6 +535,8 @@ const WorldChoirDB = (() => {
     getPledgeState,
     hasPledged,
     getPledgesForEvent,
+    isPledgesLoaded,
+    getMapDataState,
     createPromise,
     hasSubmittedPromise,
     getPromiseForCurrentUser,

@@ -45,6 +45,9 @@ const WorldChoirMap = (() => {
   }
 
   function rebuildMarkers() {
+    if (!cityLightsLayer || !gatheringLayer) return;
+    if (!WorldChoirDB.isPledgesLoaded()) return;
+
     cityLightsLayer.clearLayers();
     gatheringLayer.clearLayers();
 
@@ -116,52 +119,83 @@ const WorldChoirMap = (() => {
     document.getElementById('city-card').classList.remove('visible');
   }
 
-  function refreshMapData() {
-    rebuildMarkers();
-    updateStats();
-    updateEmptyState();
-    updateInfoSheet();
+  function updateLoadingState() {
+    const mapDataState = WorldChoirDB.getMapDataState();
+    const loadingEl = document.getElementById('map-data-loading');
+    const loadingText = document.getElementById('map-data-loading-text');
+    const mapStats = document.getElementById('map-stats');
+    const isResolving = mapDataState === 'loading' || mapDataState === 'error';
+
+    loadingEl?.classList.toggle('is-visible', isResolving);
+    mapStats?.classList.toggle('map-stats--loading', mapDataState === 'loading');
+    mapStats?.classList.toggle('map-stats--loaded', mapDataState === 'loaded_empty' || mapDataState === 'loaded_with_voices');
+    mapStats?.classList.toggle('map-stats--error', mapDataState === 'error');
+
+    if (loadingText) {
+      loadingText.textContent = mapDataState === 'error'
+        ? 'Could not load voices. Please try again.'
+        : 'Loading real voices…';
+    }
   }
 
   function updateStats() {
     const stats = WorldChoirDB.getMapStats();
+    if (!stats) return;
+
     document.getElementById('stat-voices').textContent = formatNumber(stats.voices);
     document.getElementById('stat-cities').textContent = formatNumber(stats.cities);
     document.getElementById('stat-countries').textContent = formatNumber(stats.countries);
   }
 
   function updateEmptyState() {
-    const stats = WorldChoirDB.getMapStats();
+    const mapDataState = WorldChoirDB.getMapDataState();
     const empty = document.getElementById('map-empty');
     const btn = document.getElementById('map-empty-btn');
     const skeleton = document.getElementById('map-empty-btn-skeleton');
     const pledgeState = WorldChoirPledgeState.getState();
 
-    if (stats.voices === 0) {
-      empty.classList.remove('hidden');
-      empty.classList.toggle('map-empty--resolving', pledgeState === 'loading');
-
-      if (pledgeState === 'loading') {
-        btn.hidden = true;
-        skeleton?.classList.add('visible');
-      } else if (pledgeState === 'pledged') {
-        btn.hidden = true;
-        skeleton?.classList.remove('visible');
-      } else {
-        btn.hidden = false;
-        skeleton?.classList.remove('visible');
-      }
-    } else {
-      empty.classList.add('hidden');
+    if (mapDataState !== 'loaded_empty') {
+      empty?.classList.add('hidden');
       btn.hidden = true;
+      skeleton?.classList.remove('visible');
+      return;
+    }
+
+    empty?.classList.remove('hidden');
+    empty.classList.toggle('map-empty--resolving', pledgeState === 'loading');
+
+    if (pledgeState === 'loading') {
+      btn.hidden = true;
+      skeleton?.classList.add('visible');
+    } else if (pledgeState === 'pledged') {
+      btn.hidden = true;
+      skeleton?.classList.remove('visible');
+    } else {
+      btn.hidden = false;
       skeleton?.classList.remove('visible');
     }
   }
 
   function updateInfoSheet() {
+    if (!WorldChoirDB.isPledgesLoaded()) return;
+
     const gatherings = WorldChoirDB.getGatheringPlaces();
     const goldRow = document.getElementById('info-gold-row');
     if (goldRow) goldRow.style.display = gatherings.length > 0 ? 'flex' : 'none';
+  }
+
+  function refreshMapData() {
+    updateLoadingState();
+
+    const mapDataState = WorldChoirDB.getMapDataState();
+    if (mapDataState === 'loading' || mapDataState === 'error') {
+      return;
+    }
+
+    rebuildMarkers();
+    updateStats();
+    updateEmptyState();
+    updateInfoSheet();
   }
 
   function updateCountdown() {
@@ -232,6 +266,8 @@ const WorldChoirMap = (() => {
   }
 
   function init() {
+    refreshMapData();
+
     WorldChoirPledgeState.init().then(startMap).catch((err) => {
       console.error('Failed to connect to World Choir database:', err);
       startMap();
@@ -249,7 +285,7 @@ const WorldChoirMap = (() => {
     setInterval(updateCountdown, 1000);
 
     setInterval(() => {
-      WorldChoirDB.syncAllPledges().then(refreshMapData).catch(() => {});
+      WorldChoirDB.syncAllPledges().then(refreshMapData).catch(() => refreshMapData());
     }, 15000);
 
     WorldChoirParticipation.init({
@@ -283,6 +319,7 @@ const WorldChoirMap = (() => {
     });
     window.addEventListener('wc-pledge-updated', refreshMapData);
     window.addEventListener('wc-pledges-synced', refreshMapData);
+    window.addEventListener('wc-map-data-state', refreshMapData);
 
     checkVoiceJoinedFromSession();
   }

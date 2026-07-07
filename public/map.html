@@ -12,12 +12,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20270701e">
-  <link rel="stylesheet" href="css/map.css?v=20270707f">
+  <link rel="stylesheet" href="css/map.css?v=20270707g">
   <style>
+    #map-empty { display: none !important; }
+    #map-empty:not(.hidden) { display: block !important; }
     #map-empty-btn { display: none !important; }
     #map-empty-btn:not([hidden]) { display: inline-flex !important; }
     #map-empty-btn-skeleton { display: none; }
     #map-empty-btn-skeleton.visible { display: block; }
+    .map-stats__values { display: none !important; }
+    .map-stats--loaded .map-stats__values { display: flex !important; }
+    .map-stats__loading { display: flex !important; }
+    .map-stats--loaded .map-stats__loading { display: none !important; }
+    .map-data-loading { display: none; }
+    .map-data-loading.is-visible { display: block; }
   </style>
 </head>
 <body>
@@ -33,18 +41,38 @@
 
     <div id="world-map"></div>
 
-    <div class="map-stats">
-      <div class="map-stat">
-        <span class="map-stat__num" id="stat-voices">0</span>
-        <span class="map-stat__lbl">Voices</span>
+    <div class="map-data-loading is-visible" id="map-data-loading" aria-live="polite">
+      <p class="map-data-loading__text" id="map-data-loading-text">Loading real voices…</p>
+    </div>
+
+    <div class="map-stats map-stats--loading" id="map-stats">
+      <div class="map-stats__loading" id="map-stats-loading" aria-hidden="false">
+        <div class="map-stat map-stat--shimmer">
+          <span class="map-stat__shimmer" aria-hidden="true"></span>
+          <span class="map-stat__lbl">Voices</span>
+        </div>
+        <div class="map-stat map-stat--shimmer">
+          <span class="map-stat__shimmer" aria-hidden="true"></span>
+          <span class="map-stat__lbl">Cities</span>
+        </div>
+        <div class="map-stat map-stat--shimmer">
+          <span class="map-stat__shimmer" aria-hidden="true"></span>
+          <span class="map-stat__lbl">Countries</span>
+        </div>
       </div>
-      <div class="map-stat">
-        <span class="map-stat__num" id="stat-cities">0</span>
-        <span class="map-stat__lbl">Cities</span>
-      </div>
-      <div class="map-stat">
-        <span class="map-stat__num" id="stat-countries">0</span>
-        <span class="map-stat__lbl">Countries</span>
+      <div class="map-stats__values" id="map-stats-values">
+        <div class="map-stat">
+          <span class="map-stat__num" id="stat-voices">0</span>
+          <span class="map-stat__lbl">Voices</span>
+        </div>
+        <div class="map-stat">
+          <span class="map-stat__num" id="stat-cities">0</span>
+          <span class="map-stat__lbl">Cities</span>
+        </div>
+        <div class="map-stat">
+          <span class="map-stat__num" id="stat-countries">0</span>
+          <span class="map-stat__lbl">Countries</span>
+        </div>
       </div>
     </div>
 
@@ -61,7 +89,7 @@
       </div>
     </div>
 
-    <div class="map-empty" id="map-empty">
+    <div class="map-empty hidden" id="map-empty">
       <p class="map-empty__title">No voices yet</p>
       <p class="map-empty__copy">Be the first to light up the world.</p>
       <div class="map-empty__cta" id="map-empty-cta">
@@ -107,11 +135,11 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="js/world-choir-config.js?v=20270707f"></script>
-  <script src="js/world-choir-db.js?v=20270707f"></script>
-  <script src="js/world-choir-pledge-state.js?v=20270707f"></script>
-  <script src="js/world-choir-nav.js?v=20270707f"></script>
-  <script src="js/world-choir-participation.js?v=20270707f"></script>
-  <script src="js/world-choir-map.js?v=20270707f"></script>
+  <script src="js/world-choir-db.js?v=20270707g"></script>
+  <script src="js/world-choir-pledge-state.js?v=20270707g"></script>
+  <script src="js/world-choir-nav.js?v=20270707g"></script>
+  <script src="js/world-choir-participation.js?v=20270707g"></script>
+  <script src="js/world-choir-map.js?v=20270707g"></script>
   <script>WorldChoirMap.init();</script>
 </body>
 </html>
