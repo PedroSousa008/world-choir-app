@@ -301,8 +301,15 @@
 }
 
 .remind-fallback-copy {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   line-height: 1.6;
+}
+
+.remind-fallback-note {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0 0 20px;
+  line-height: 1.5;
 }
 
 .remind-fallback-actions {

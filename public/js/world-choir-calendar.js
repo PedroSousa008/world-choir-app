@@ -190,7 +190,7 @@ const WorldChoirCalendar = (() => {
       console.error('WorldChoirCalendar.addWithAlerts failed:', err);
       return {
         ok: false,
-        error: 'We could not add the event to your calendar. Please try again.',
+        error: 'We could not set reminders. Please try again.',
       };
     }
   }
