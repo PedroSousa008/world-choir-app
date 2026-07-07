@@ -13,7 +13,7 @@ import { EVENT_CONFIG, THEME, EventState } from '../constants/event';
 import { AppState } from '../types';
 import { getAppState, saveAppState, getUserPledge, saveUserPledge, getUserId } from '../utils/storage';
 import { getUserLocationWithCity } from '../utils/location';
-import { scheduleEventNotifications, addEventToCalendar, checkNotificationStatus } from '../utils/notifications';
+import { scheduleEventNotifications, addEventToCalendar, showCalendarPermissionMessage, checkNotificationStatus } from '../utils/notifications';
 
 export const HomeScreen: React.FC = () => {
   const [appState, setAppState] = useState<AppState>({
@@ -123,17 +123,28 @@ export const HomeScreen: React.FC = () => {
 
   const handleAddToCalendar = async () => {
     try {
-      const success = await addEventToCalendar();
-      if (success) {
+      const result = await addEventToCalendar();
+      if (result === 'success') {
         await saveAppState({ calendarEventAdded: true });
         setAppState(prev => ({ ...prev, calendarEventAdded: true }));
-        Alert.alert('Success', 'Event added to your calendar!');
-      } else {
-        Alert.alert('Error', 'Failed to add event to calendar. Please try again.');
+        return;
       }
+      if (result === 'denied') {
+        showCalendarPermissionMessage();
+        return;
+      }
+      Alert.alert(
+        'Could not open calendar',
+        'We could not open your calendar app. Please try again later.',
+        [{ text: 'OK' }]
+      );
     } catch (error) {
       console.error('Error adding to calendar:', error);
-      Alert.alert('Error', 'Failed to add event to calendar.');
+      Alert.alert(
+        'Could not open calendar',
+        'We could not open your calendar app. Please try again later.',
+        [{ text: 'OK' }]
+      );
     }
   };
 

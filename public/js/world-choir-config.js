@@ -55,6 +55,37 @@ const WorldChoirConfig = (() => {
     return new Date(getEventStart().getTime() + ACTIVE_EVENT.songDurationSeconds * 1000);
   }
 
+  /** Calendar invite duration (10 minutes) — separate from live song length */
+  const CALENDAR_EVENT_DURATION_MS = 10 * 60 * 1000;
+
+  function getCalendarEventEnd() {
+    return new Date(getEventStart().getTime() + CALENDAR_EVENT_DURATION_MS);
+  }
+
+  function getWebsiteUrl() {
+    if (typeof window !== 'undefined' && window.location) {
+      const origin = window.location.origin;
+      const path = window.location.pathname.replace(/index\.html$/, '').replace(/\/$/, '');
+      return origin + (path || '');
+    }
+    return 'https://world-choir-app.vercel.app';
+  }
+
+  function getCalendarDescription() {
+    const website = getWebsiteUrl();
+    return [
+      'Once a year, the world sings the same song at the exact same time.',
+      '',
+      'World Choir 2027',
+      '',
+      'Song:',
+      'Imagine — John Lennon',
+      '',
+      'Website:',
+      website,
+    ].join('\n');
+  }
+
   function getFinalHourStart() {
     return new Date(getEventStart().getTime() - 60 * 60 * 1000);
   }
@@ -207,6 +238,10 @@ const WorldChoirConfig = (() => {
     getEventDate: getEventStart,
     getEventStart,
     getEventEnd,
+    getCalendarEventEnd,
+    getCalendarDescription,
+    getWebsiteUrl,
+    CALENDAR_EVENT_DURATION_MS,
     getSongEndDate: getEventEnd,
     getFinalHourStart,
     SONG_DURATION_MS: getSongDurationMs(),

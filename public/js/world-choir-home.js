@@ -259,13 +259,12 @@ const WorldChoirHome = (() => {
   }
 
   /* ─── Calendar & Share ─── */
-  function addToCalendar() {
-    const start = WorldChoirConfig.getEventStart();
-    const end = WorldChoirConfig.getEventEnd();
-    const fmt = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const details = 'Once a year, the world sings the same song at the exact same time. Join World Choir 2027.\n\nSong: Imagine — John Lennon';
-    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('World Choir 2027')}&dates=${fmt(start)}/${fmt(end)}&details=${encodeURIComponent(details)}&location=Global`;
-    window.open(url, '_blank');
+  async function addToCalendar() {
+    const result = await WorldChoirCalendar.addToCalendar();
+    if (result.cancelled) return;
+    if (!result.ok) {
+      alert(result.error || 'We could not open your calendar app. Please try again later.');
+    }
   }
 
   function shareCountdown() {
