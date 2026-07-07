@@ -59,7 +59,9 @@ const WorldChoirConfig = (() => {
   const CALENDAR_EVENT_DURATION_MS = 10 * 60 * 1000;
 
   function getCalendarEventEnd() {
-    return new Date(getEventStart().getTime() + CALENDAR_EVENT_DURATION_MS);
+    const songMs = ACTIVE_EVENT.songDurationSeconds * 1000;
+    const durationMs = songMs > 0 ? songMs : CALENDAR_EVENT_DURATION_MS;
+    return new Date(getEventStart().getTime() + durationMs);
   }
 
   function getWebsiteUrl() {
@@ -72,17 +74,11 @@ const WorldChoirConfig = (() => {
   }
 
   function getCalendarDescription() {
-    const website = getWebsiteUrl();
     return [
       'Once a year, the world sings the same song at the exact same time.',
       '',
       'World Choir 2027',
-      '',
-      'Song:',
-      'Imagine — John Lennon',
-      '',
-      'Website:',
-      website,
+      'Song: Imagine — John Lennon',
     ].join('\n');
   }
 

@@ -504,3 +504,12 @@
   font-size: 0.9rem;
   margin: 0 0 16px;
 }
+
+.ios-calendar-modal {
+  max-width: 420px;
+}
+
+.ios-calendar-modal .modal-copy strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}

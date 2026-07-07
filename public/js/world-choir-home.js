@@ -261,7 +261,7 @@ const WorldChoirHome = (() => {
   /* ─── Calendar & Share ─── */
   async function addToCalendar() {
     const result = await WorldChoirCalendar.addToCalendar();
-    if (result.cancelled) return;
+    if (result.iosWebGuidance) return;
     if (!result.ok) {
       alert(result.error || 'We could not open your calendar app. Please try again later.');
     }

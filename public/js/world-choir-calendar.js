@@ -1,6 +1,8 @@
 /**
- * World Choir — Native calendar integration (web / mobile browser)
- * Opens the device calendar app via ICS — never redirects to Google Calendar.
+ * World Choir — Calendar integration
+ * - iOS/Android native app: system calendar event editor (expo / native module)
+ * - iOS Safari/web: guidance modal + direct file download (never share sheet)
+ * - Other platforms: ICS file download
  */
 const WorldChoirCalendar = (() => {
   const FILENAME = 'world-choir-2027.ics';
@@ -54,83 +56,97 @@ const WorldChoirCalendar = (() => {
     return /Android/i.test(navigator.userAgent);
   }
 
-  function isMobile() {
-    return isIOS() || isAndroid();
+  function isNativeAppShell() {
+    return !!(window.ReactNativeWebView || window.expo);
   }
 
-  function createIcsBlob() {
-    return new Blob([buildIcs()], { type: 'text/calendar;charset=utf-8' });
-  }
+  function ensureIosWebModal() {
+    if (document.getElementById('ios-calendar-overlay')) return;
 
-  function createIcsFile() {
-    const blob = createIcsBlob();
-    return new File([blob], FILENAME, { type: 'text/calendar' });
-  }
+    const html = `
+      <div class="overlay" id="ios-calendar-overlay" aria-hidden="true">
+        <div class="modal ios-calendar-modal" role="dialog" aria-labelledby="ios-calendar-title">
+          <h2 class="modal-title" id="ios-calendar-title">Add to Apple Calendar</h2>
+          <p class="modal-copy">
+            To add this event to Apple Calendar, download the calendar file below.
+            When it opens, tap <strong>Add to Calendar</strong> to review and save the event.
+          </p>
+          <div class="actions-row">
+            <button class="btn btn-primary" id="ios-calendar-download" type="button">Download Calendar File</button>
+            <button class="btn btn-secondary" id="ios-calendar-cancel" type="button">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
 
-  async function shareIcsFile() {
-    const file = createIcsFile();
-    if (!navigator.share) return false;
-    if (navigator.canShare && !navigator.canShare({ files: [file] })) return false;
-
-    await navigator.share({
-      title: 'World Choir 2027',
-      text: 'Add World Choir 2027 to your calendar',
-      files: [file],
+    document.getElementById('ios-calendar-download')?.addEventListener('click', () => {
+      downloadIcsFile();
+      hideIosWebModal();
     });
-    return true;
+    document.getElementById('ios-calendar-cancel')?.addEventListener('click', hideIosWebModal);
+    document.getElementById('ios-calendar-overlay')?.addEventListener('click', (e) => {
+      if (e.target.id === 'ios-calendar-overlay') hideIosWebModal();
+    });
   }
 
-  function openIcsDataUrl() {
-    const ics = buildIcs();
-    window.location.assign('data:text/calendar;charset=utf-8,' + encodeURIComponent(ics));
-    return true;
+  function showIosWebModal() {
+    ensureIosWebModal();
+    const overlay = document.getElementById('ios-calendar-overlay');
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
   }
 
-  function openIcsBlobUrl() {
-    const url = URL.createObjectURL(createIcsBlob());
+  function hideIosWebModal() {
+    const overlay = document.getElementById('ios-calendar-overlay');
+    overlay?.classList.remove('active');
+    overlay?.setAttribute('aria-hidden', 'true');
+  }
+
+  function downloadIcsFile() {
+    const blob = new Blob([buildIcs()], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
+    link.download = FILENAME;
     link.style.display = 'none';
-    if (!isIOS()) {
-      link.download = FILENAME;
-    }
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-    return true;
+  }
+
+  function openAndroidCalendar() {
+    const ics = buildIcs();
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    window.location.assign(url);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
   /**
-   * @returns {Promise<{ ok: boolean, cancelled?: boolean, error?: string }>}
+   * @returns {Promise<{ ok: boolean, iosWebGuidance?: boolean, error?: string }>}
    */
   async function addToCalendar() {
     try {
-      if (isMobile()) {
-        try {
-          const shared = await shareIcsFile();
-          if (shared) return { ok: true };
-        } catch (err) {
-          if (err?.name === 'AbortError') return { ok: false, cancelled: true };
-        }
+      if (isNativeAppShell()) {
+        return {
+          ok: false,
+          error: 'Use the native Add to Calendar button in the World Choir app.',
+        };
+      }
 
-        if (isIOS()) {
-          openIcsDataUrl();
-          return { ok: true };
-        }
+      if (isIOS()) {
+        showIosWebModal();
+        return { ok: true, iosWebGuidance: true };
+      }
 
-        openIcsBlobUrl();
+      if (isAndroid()) {
+        openAndroidCalendar();
         return { ok: true };
       }
 
-      try {
-        const shared = await shareIcsFile();
-        if (shared) return { ok: true };
-      } catch (err) {
-        if (err?.name === 'AbortError') return { ok: false, cancelled: true };
-      }
-
-      openIcsBlobUrl();
+      downloadIcsFile();
       return { ok: true };
     } catch (err) {
       console.error('WorldChoirCalendar.addToCalendar failed:', err);
@@ -141,5 +157,5 @@ const WorldChoirCalendar = (() => {
     }
   }
 
-  return { addToCalendar, buildIcs };
+  return { addToCalendar, buildIcs, downloadIcsFile };
 })();

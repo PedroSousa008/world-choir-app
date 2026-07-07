@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app uses location to show your city on the global participation map.",
-        "NSCalendarsUsageDescription": "This app can add the global singing event to your calendar."
+        "NSCalendarsUsageDescription": "World Choir needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "World Choir needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar."
       }
     },
     "android": {
@@ -48,7 +49,8 @@
           "icon": "./assets/notification-icon.png",
           "color": "#ffffff"
         }
-      ]
+      ],
+      "expo-calendar"
     ]
   }
 }

@@ -129,6 +129,9 @@ export const HomeScreen: React.FC = () => {
         setAppState(prev => ({ ...prev, calendarEventAdded: true }));
         return;
       }
+      if (result === 'cancelled') {
+        return;
+      }
       if (result === 'denied') {
         showCalendarPermissionMessage();
         return;
