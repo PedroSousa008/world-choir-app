@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20270706b">
-  <link rel="stylesheet" href="css/home.css?v=20270706b">
+  <link rel="stylesheet" href="css/home.css?v=20270707d">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
 </head>
 <body>
@@ -47,34 +47,6 @@
     </div>
   </div>
 
-  <!-- Reminder modal -->
-  <div class="overlay" id="remind-overlay">
-    <div class="modal" role="dialog" aria-labelledby="remind-title">
-      <h2 class="modal-title" id="remind-title">Remind Me</h2>
-      <p class="modal-copy" id="remind-modal-copy">Choose when to be reminded before the world sings together. On the installed app, this opens your device's Reminders app.</p>
-
-      <div class="remind-options">
-        <label class="remind-option">
-          <input type="checkbox" id="remind-1d" checked>
-          <span>1 day before</span>
-        </label>
-        <label class="remind-option">
-          <input type="checkbox" id="remind-1h" checked>
-          <span>1 hour before</span>
-        </label>
-        <label class="remind-option">
-          <input type="checkbox" id="remind-10m" checked>
-          <span>10 minutes before</span>
-        </label>
-      </div>
-
-      <div class="actions-row">
-        <button class="btn btn-primary" id="remind-save" type="button">Save Reminders</button>
-        <button class="btn btn-secondary" id="remind-cancel" type="button">Cancel</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Live event — synced music + lyrics → promise → final moment -->
   <div class="practice-mode" id="live-event-mode" aria-hidden="true">
     <div id="live-event-content"></div>
@@ -84,6 +56,8 @@
 
   <script src="js/world-choir-config.js"></script>
   <script src="js/world-choir-calendar.js"></script>
+  <script src="js/reminders/reminders.web.js"></script>
+  <script src="js/reminders/reminders.native.js"></script>
   <script src="js/world-choir-reminders.js"></script>
   <script src="js/world-choir-db.js"></script>
   <script src="js/world-choir-nav.js"></script>
@@ -91,7 +65,7 @@
   <script src="js/world-choir-practice-config.js"></script>
   <script src="js/profile/lyrics-display.js"></script>
   <script src="js/world-choir-live-event.js"></script>
-  <script src="js/world-choir-home.js?v=20270707c"></script>
+  <script src="js/world-choir-home.js?v=20270707d"></script>
   <script>WorldChoirHome.init();</script>
 </body>
 </html>

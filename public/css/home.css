@@ -294,6 +294,39 @@
   height: 18px;
 }
 
+/* Remind Me — web/PWA fallback */
+.remind-fallback-modal {
+  max-width: 400px;
+  text-align: center;
+}
+
+.remind-fallback-copy {
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.remind-fallback-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.remind-fallback-actions .btn {
+  width: 100%;
+  max-width: none;
+}
+
+.remind-fallback-hint {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: -8px 0 16px;
+  line-height: 1.5;
+}
+
+.remind-fallback-hint--success {
+  color: #8fd4a8;
+}
+
 /* Live event — promise & final moment */
 .live-promise,
 .live-final,

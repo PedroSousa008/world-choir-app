@@ -3,7 +3,6 @@
  */
 const WorldChoirHome = (() => {
   let countdownTimer = null;
-  let reminderChecker = null;
 
   function esc(str) {
     const d = document.createElement('div');
@@ -180,30 +179,8 @@ const WorldChoirHome = (() => {
   function bindActions() {
     document.getElementById('pledge-btn')?.addEventListener('click', () => WorldChoirParticipation.open());
     document.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
-    document.getElementById('remind-btn')?.addEventListener('click', openRemindModal);
+    document.getElementById('remind-btn')?.addEventListener('click', () => WorldChoirReminders.open());
     document.getElementById('share-btn')?.addEventListener('click', shareCountdown);
-  }
-
-  /* ─── Reminders ─── */
-  function openRemindModal() {
-    document.getElementById('remind-overlay').classList.add('active');
-  }
-
-  function closeRemindModal() {
-    document.getElementById('remind-overlay').classList.remove('active');
-  }
-
-  async function saveReminders() {
-    const result = await WorldChoirReminders.saveFromModal();
-    if (result.ok) {
-      closeRemindModal();
-      return;
-    }
-    if (result.denied) {
-      alert(result.error || 'Allow notifications to receive reminders for World Choir 2027.');
-      return;
-    }
-    alert(result.error || 'Could not set reminders. Please try again.');
   }
 
   /* ─── Calendar & Share ─── */
@@ -250,17 +227,12 @@ const WorldChoirHome = (() => {
       },
     });
 
-    document.getElementById('remind-save').addEventListener('click', saveReminders);
-    document.getElementById('remind-cancel').addEventListener('click', closeRemindModal);
-    document.getElementById('remind-overlay').addEventListener('click', (e) => {
-      if (e.target.id === 'remind-overlay') closeRemindModal();
-    });
+    WorldChoirReminders.init();
 
     LiveEventMode.init();
     render();
     LiveEventMode.launch();
     countdownTimer = setInterval(updateCountdown, 1000);
-    reminderChecker = WorldChoirReminders.startWatcher();
   }
 
   return { init, render };

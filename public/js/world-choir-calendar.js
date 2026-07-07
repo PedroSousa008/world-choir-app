@@ -20,13 +20,13 @@ const WorldChoirCalendar = (() => {
       .replace(/\n/g, '\\n');
   }
 
-  function buildIcs() {
+  function buildIcs({ withAlerts = false } = {}) {
     const start = WorldChoirConfig.getEventStart();
     const end = WorldChoirConfig.getCalendarEventEnd();
     const description = WorldChoirConfig.getCalendarDescription();
     const website = WorldChoirConfig.getWebsiteUrl();
 
-    return [
+    const lines = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       'PRODID:-//World Choir//World Choir 2027//EN',
@@ -41,10 +41,34 @@ const WorldChoirCalendar = (() => {
       `LOCATION:${escapeIcsText('Worldwide')}`,
       `DESCRIPTION:${escapeIcsText(description)}`,
       `URL:${website}`,
-      'END:VEVENT',
-      'END:VCALENDAR',
-      '',
-    ].join('\r\n');
+    ];
+
+    if (withAlerts) {
+      lines.push(
+        'BEGIN:VALARM',
+        'TRIGGER:-P1D',
+        'ACTION:DISPLAY',
+        'DESCRIPTION:World Choir 2027 — 1 day to go',
+        'END:VALARM',
+        'BEGIN:VALARM',
+        'TRIGGER:-PT1H',
+        'ACTION:DISPLAY',
+        'DESCRIPTION:World Choir 2027 — 1 hour to go',
+        'END:VALARM',
+        'BEGIN:VALARM',
+        'TRIGGER:-PT10M',
+        'ACTION:DISPLAY',
+        'DESCRIPTION:World Choir 2027 — starting soon',
+        'END:VALARM'
+      );
+    }
+
+    lines.push('END:VEVENT', 'END:VCALENDAR', '');
+    return lines.join('\r\n');
+  }
+
+  function buildIcsWithAlerts() {
+    return buildIcs({ withAlerts: true });
   }
 
   function isIOS() {
@@ -103,8 +127,8 @@ const WorldChoirCalendar = (() => {
     overlay?.setAttribute('aria-hidden', 'true');
   }
 
-  function downloadIcsFile() {
-    const blob = new Blob([buildIcs()], { type: 'text/calendar;charset=utf-8' });
+  function downloadIcsFile(icsContent) {
+    const blob = new Blob([icsContent || buildIcs()], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -122,6 +146,53 @@ const WorldChoirCalendar = (() => {
     const url = URL.createObjectURL(blob);
     window.location.assign(url);
     setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  function openIcsContent(ics) {
+    if (isIOS()) {
+      window.location.assign('data:text/calendar;charset=utf-8,' + encodeURIComponent(ics));
+      return;
+    }
+
+    if (isAndroid()) {
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      window.location.assign(url);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      return;
+    }
+
+    downloadIcsFile(ics);
+  }
+
+  /**
+   * @returns {Promise<{ ok: boolean, iosWebGuidance?: boolean, error?: string }>}
+   */
+  async function addWithAlerts() {
+    try {
+      if (isNativeAppShell()) {
+        return {
+          ok: false,
+          error: 'Use Remind Me in the World Choir app.',
+        };
+      }
+
+      const ics = buildIcsWithAlerts();
+
+      if (isIOS()) {
+        openIcsContent(ics);
+        return { ok: true };
+      }
+
+      openIcsContent(ics);
+      return { ok: true };
+    } catch (err) {
+      console.error('WorldChoirCalendar.addWithAlerts failed:', err);
+      return {
+        ok: false,
+        error: 'We could not add the event to your calendar. Please try again.',
+      };
+    }
   }
 
   /**
@@ -157,5 +228,5 @@ const WorldChoirCalendar = (() => {
     }
   }
 
-  return { addToCalendar, buildIcs, downloadIcsFile };
+  return { addToCalendar, addWithAlerts, buildIcs, buildIcsWithAlerts, downloadIcsFile };
 })();
