@@ -1,6 +1,6 @@
 /**
  * World Choir — Shared bottom navigation
- * Memory tab appears only after the active event is globally completed.
+ * Donate is permanent. Memory appears only after the active event is globally completed.
  */
 const WorldChoirNav = (() => {
   let watchInterval = null;
@@ -8,6 +8,7 @@ const WorldChoirNav = (() => {
   const ALL_PAGES = [
     { id: 'home', href: 'index.html', label: 'Home', icon: '◉' },
     { id: 'map', href: 'map.html', label: 'Map', icon: '◎' },
+    { id: 'donate', href: 'donate.html', label: 'Donate', icon: '♡' },
     { id: 'memory', href: 'memory.html', label: 'Memory', icon: '◇', requiresMemory: true },
     { id: 'profile', href: 'profile.html', label: 'Profile', icon: '○' },
   ];
