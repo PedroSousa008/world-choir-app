@@ -1,9 +1,15 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { getOwnerPasswordHash, saveOwnerPasswordHash } = require('./store');
+const {
+  getOwnerPasswordHash,
+  saveOwnerPasswordHash,
+  getOwnerEmailOverride,
+  saveOwnerEmail,
+} = require('./store');
 
 const SESSION_COOKIE = 'wc_owner_session';
-const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+const MEMBERS_SESSION_COOKIE = 'wc_members_session';
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const MIN_PASSWORD_LENGTH = 8;
 
 function getOwnerConfig() {
@@ -14,9 +20,15 @@ function getOwnerConfig() {
   };
 }
 
+async function getEffectiveOwnerEmail() {
+  const override = await getOwnerEmailOverride();
+  if (override) return override;
+  return getOwnerConfig().email;
+}
+
 function isOwnerAuthConfigured() {
   const cfg = getOwnerConfig();
-  const hasPassword = !!(process.env.OWNER_PASSWORD_HASH);
+  const hasPassword = !!process.env.OWNER_PASSWORD_HASH;
   return !!(cfg.email && cfg.relationshipDate && cfg.sessionSecret && hasPassword);
 }
 
@@ -56,7 +68,7 @@ function signSession(payload) {
   return `${data}.${sig}`;
 }
 
-function verifySessionToken(token) {
+function verifySessionToken(token, { allowedRoles = ['owner'] } = {}) {
   if (!token || !isOwnerAuthConfigured()) return null;
 
   const parts = token.split('.');
@@ -78,7 +90,7 @@ function verifySessionToken(token) {
 
   try {
     const payload = JSON.parse(Buffer.from(data, 'base64url').toString('utf8'));
-    if (payload.role !== 'owner') return null;
+    if (!allowedRoles.includes(payload.role)) return null;
     if (!payload.exp || payload.exp < Date.now()) return null;
     return payload;
   } catch {
@@ -88,7 +100,26 @@ function verifySessionToken(token) {
 
 function getSessionFromRequest(req) {
   const cookies = parseCookies(req);
-  return verifySessionToken(cookies[SESSION_COOKIE]);
+  return verifySessionToken(cookies[SESSION_COOKIE], { allowedRoles: ['owner'] });
+}
+
+function getMembersSessionFromRequest(req) {
+  const cookies = parseCookies(req);
+  return verifySessionToken(cookies[MEMBERS_SESSION_COOKIE], {
+    allowedRoles: ['owner', 'influencer'],
+  });
+}
+
+function buildSessionCookie(name, token, maxAgeSeconds) {
+  const secure = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+  return [
+    `${name}=${encodeURIComponent(token)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Strict',
+    `Max-Age=${maxAgeSeconds}`,
+    secure ? 'Secure' : '',
+  ].filter(Boolean).join('; ');
 }
 
 function setOwnerSessionCookie(res) {
@@ -97,36 +128,49 @@ function setOwnerSessionCookie(res) {
     iat: Date.now(),
     exp: Date.now() + SESSION_TTL_MS,
   });
+  res.setHeader('Set-Cookie', buildSessionCookie(SESSION_COOKIE, token, Math.floor(SESSION_TTL_MS / 1000)));
+}
 
-  const secure = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
-  const cookie = [
-    `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Strict',
-    `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
-    secure ? 'Secure' : '',
-  ].filter(Boolean).join('; ');
-
-  res.setHeader('Set-Cookie', cookie);
+function setMembersSessionCookie(res, payload) {
+  const token = signSession({
+    ...payload,
+    iat: Date.now(),
+    exp: Date.now() + SESSION_TTL_MS,
+  });
+  res.setHeader(
+    'Set-Cookie',
+    buildSessionCookie(MEMBERS_SESSION_COOKIE, token, Math.floor(SESSION_TTL_MS / 1000))
+  );
 }
 
 function clearOwnerSessionCookie(res) {
-  const secure = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
-  const cookie = [
-    `${SESSION_COOKIE}=`,
-    'Path=/',
-    'HttpOnly',
-    'SameSite=Strict',
-    'Max-Age=0',
-    secure ? 'Secure' : '',
-  ].filter(Boolean).join('; ');
+  res.setHeader('Set-Cookie', buildSessionCookie(SESSION_COOKIE, '', 0));
+}
 
-  res.setHeader('Set-Cookie', cookie);
+function clearMembersSessionCookie(res) {
+  res.setHeader('Set-Cookie', buildSessionCookie(MEMBERS_SESSION_COOKIE, '', 0));
 }
 
 function requireOwner(req, res) {
   const session = getSessionFromRequest(req);
+  if (!session) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return null;
+  }
+  return session;
+}
+
+function requireMembersOwner(req, res) {
+  const session = getMembersSessionFromRequest(req);
+  if (!session || session.role !== 'owner') {
+    res.status(401).json({ error: 'Unauthorized' });
+    return null;
+  }
+  return session;
+}
+
+function requireMembersSession(req, res) {
+  const session = getMembersSessionFromRequest(req);
   if (!session) {
     res.status(401).json({ error: 'Unauthorized' });
     return null;
@@ -149,14 +193,14 @@ async function verifyOwnerCredentials({ email, password, relationshipDate }) {
   const cfg = getOwnerConfig();
   const normalizedEmail = String(email || '').trim().toLowerCase();
   const normalizedDate = normalizeRelationshipDate(relationshipDate);
+  const ownerEmail = await getEffectiveOwnerEmail();
 
   if (!normalizedEmail || !password || !normalizedDate) {
     return { ok: false, error: 'Email, password, and relationship date are required' };
   }
 
-  const emailMatch = safeEqual(normalizedEmail, cfg.email);
+  const emailMatch = safeEqual(normalizedEmail, ownerEmail);
   const dateMatch = safeEqual(normalizedDate, cfg.relationshipDate);
-
   const passwordMatch = await bcrypt.compare(String(password), await getOwnerPasswordHash());
 
   if (!emailMatch || !dateMatch || !passwordMatch) {
@@ -198,6 +242,41 @@ async function changeOwnerPassword({ currentPassword, newPassword, confirmPasswo
   return { ok: true };
 }
 
+async function changeOwnerEmail({ currentPassword, newEmail, confirmEmail }) {
+  if (!currentPassword || !newEmail || !confirmEmail) {
+    return { ok: false, error: 'All email fields are required' };
+  }
+
+  const normalized = String(newEmail).trim().toLowerCase();
+  const confirmed = String(confirmEmail).trim().toLowerCase();
+
+  if (normalized !== confirmed) {
+    return { ok: false, error: 'Email addresses do not match' };
+  }
+
+  if (!normalized.includes('@')) {
+    return { ok: false, error: 'Enter a valid email address' };
+  }
+
+  const currentHash = await getOwnerPasswordHash();
+  if (!currentHash) {
+    return { ok: false, error: 'Owner authentication is not configured' };
+  }
+
+  const passwordMatch = await bcrypt.compare(String(currentPassword), currentHash);
+  if (!passwordMatch) {
+    return { ok: false, error: 'Current password is incorrect' };
+  }
+
+  const currentEmail = await getEffectiveOwnerEmail();
+  if (safeEqual(normalized, currentEmail)) {
+    return { ok: false, error: 'New email must be different from your current email' };
+  }
+
+  await saveOwnerEmail(normalized);
+  return { ok: true, email: normalized };
+}
+
 function corsHeaders(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -206,14 +285,24 @@ function corsHeaders(res) {
 
 module.exports = {
   SESSION_COOKIE,
+  MEMBERS_SESSION_COOKIE,
+  MIN_PASSWORD_LENGTH,
   corsHeaders,
   getOwnerConfig,
+  getEffectiveOwnerEmail,
   isOwnerAuthConfigured,
   normalizeRelationshipDate,
   getSessionFromRequest,
+  getMembersSessionFromRequest,
   setOwnerSessionCookie,
+  setMembersSessionCookie,
   clearOwnerSessionCookie,
+  clearMembersSessionCookie,
   requireOwner,
+  requireMembersOwner,
+  requireMembersSession,
   verifyOwnerCredentials,
   changeOwnerPassword,
+  changeOwnerEmail,
+  safeEqual,
 };

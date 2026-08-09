@@ -57,7 +57,7 @@ const CreatorFoundationsStore = (() => {
 
         catalog = {
           version: data.version || 3,
-          platform: data.platform || { feePercent: 5 },
+          platform: data.platform || { feePercent: 10 },
           currency: data.currency || 'EUR',
           supportedCurrencies: data.supportedCurrencies || ['EUR'],
           suggestedAmounts: data.suggestedAmounts || [5, 10, 25, 50, 100],
@@ -222,7 +222,7 @@ const CreatorFoundationsStore = (() => {
   }
 
   function getPlatform() {
-    return catalog?.platform || { feePercent: 5, feePurpose: '' };
+    return catalog?.platform || { feePercent: 10, feePurpose: '' };
   }
 
   function getCurrency() {

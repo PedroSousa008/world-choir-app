@@ -363,7 +363,7 @@ const WorldChoirDonate = (() => {
             <h3>Financial allocation</h3>
             <div class="cf-alloc">${allocation}</div>
             <p class="cf-fee-note">
-              Platform fee: ${esc(String(platform.feePercent || 5))}% —
+              Platform fee: ${esc(String(platform.feePercent || 10))}% —
               ${esc(platform.feePurpose || 'Operational costs that keep World Choir and Creator Foundations running.')}
             </p>
           ` : `
@@ -488,7 +488,7 @@ const WorldChoirDonate = (() => {
       </div>
 
       <p class="donate-modal__note">
-        A ${CreatorFoundationsStore.getPlatform().feePercent || 5}% platform fee helps keep World Choir and Creator Foundations working.
+        A ${CreatorFoundationsStore.getPlatform().feePercent || 10}% platform fee helps keep World Choir and Creator Foundations working.
         Payments are not live yet — this flow is a preview only. Simulated gifts never appear as real supporter totals or funding progress.
       </p>
 

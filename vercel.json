@@ -6,7 +6,8 @@
     { "source": "/donate", "destination": "/donate.html" },
     { "source": "/memory", "destination": "/memory.html" },
     { "source": "/profile", "destination": "/profile.html" },
-    { "source": "/owner-database", "destination": "/owner-database.html" }
+    { "source": "/owner-database", "destination": "/owner-database.html" },
+    { "source": "/members", "destination": "/members.html" }
   ],
   "functions": {
     "api/**/*.js": {

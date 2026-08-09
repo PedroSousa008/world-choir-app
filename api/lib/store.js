@@ -54,20 +54,41 @@ async function writeJson(pathname, data, { overwrite = true } = {}) {
 
 const OWNER_AUTH_PATH = `${ROOT}/admin/owner-auth.json`;
 
-async function getOwnerPasswordHash() {
+async function getOwnerAuthData() {
   try {
-    const data = await readBlobJson(OWNER_AUTH_PATH);
-    if (data?.password_hash) return data.password_hash;
+    return await readBlobJson(OWNER_AUTH_PATH);
   } catch {
-    // Fall back to env var (initial bootstrap).
+    return {};
   }
+}
+
+async function getOwnerPasswordHash() {
+  const data = await getOwnerAuthData();
+  if (data?.password_hash) return data.password_hash;
   return process.env.OWNER_PASSWORD_HASH || '';
+}
+
+async function getOwnerEmailOverride() {
+  const data = await getOwnerAuthData();
+  return (data?.email || '').trim().toLowerCase();
 }
 
 async function saveOwnerPasswordHash(passwordHash) {
   assertBlobConfigured();
+  const existing = await getOwnerAuthData();
   await writeJson(OWNER_AUTH_PATH, {
+    ...existing,
     password_hash: passwordHash,
+    updated_at: new Date().toISOString(),
+  }, { overwrite: true });
+}
+
+async function saveOwnerEmail(email) {
+  assertBlobConfigured();
+  const existing = await getOwnerAuthData();
+  await writeJson(OWNER_AUTH_PATH, {
+    ...existing,
+    email: String(email || '').trim().toLowerCase(),
     updated_at: new Date().toISOString(),
   }, { overwrite: true });
 }
@@ -416,7 +437,9 @@ module.exports = {
   listAllPromises,
   buildOwnerDatabaseRows,
   getOwnerPasswordHash,
+  getOwnerEmailOverride,
   saveOwnerPasswordHash,
+  saveOwnerEmail,
   readBlobJson,
   writeJson,
   assertBlobConfigured,

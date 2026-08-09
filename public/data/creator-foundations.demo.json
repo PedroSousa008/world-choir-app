@@ -7,7 +7,7 @@
   },
   "platform": {
     "name": "Creator Foundations",
-    "feePercent": 5,
+    "feePercent": 10,
     "feePurpose": "Operational costs that keep World Choir running and the Creator Foundations platform secure and transparent."
   },
   "currency": "EUR",
