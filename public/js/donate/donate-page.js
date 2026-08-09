@@ -1,6 +1,7 @@
 /**
- * WorldChoirDonate — Creator Foundations experience (Donate tab)
- * Views: list → foundation profile → donate modal → confirmation
+ * WorldChoirDonate — editorial Creator Foundations experience
+ * Views: home → foundation profile → donate modal → confirmation
+ * Data integrity: never invent raised / supporters / projects.
  */
 const WorldChoirDonate = (() => {
   const AMOUNTS = () => CreatorFoundationsStore.getSuggestedAmounts();
@@ -16,8 +17,10 @@ const WorldChoirDonate = (() => {
   let selectedAmount = 25;
   let customAmount = '';
   let selectedPayment = 'card';
-  let page = 1;
   let isSubmitting = false;
+  let searchOpen = false;
+  let searchQuery = '';
+  let lastFocusEl = null;
 
   function esc(str) {
     const d = document.createElement('div');
@@ -46,168 +49,351 @@ const WorldChoirDonate = (() => {
   function initials(name) {
     return (name || '?')
       .split(/\s+/)
+      .filter(Boolean)
       .slice(0, 2)
       .map((w) => w[0])
       .join('')
       .toUpperCase();
   }
 
-  function portraitHtml(foundation, sizeClass = '') {
-    const label = initials(foundation.creatorName);
-    if (foundation.profileImage) {
-      return `
-        <div class="cf-portrait ${sizeClass}">
-          <img
-            class="cf-portrait__img"
-            src="${esc(foundation.profileImage)}"
-            alt=""
-            loading="lazy"
-            decoding="async"
-            onerror="this.style.display='none';this.nextElementSibling.hidden=false;"
-          >
-          <span class="cf-portrait__fallback" hidden aria-hidden="true">${esc(label)}</span>
-        </div>
-      `;
+  function identityGlyph(foundation) {
+    const words = String(foundation.foundationName || foundation.creatorName || '')
+      .split(/\s+/)
+      .filter(Boolean);
+    if (words.length >= 2) {
+      return (words[0][0] + words[words.length - 1][0]).toUpperCase();
     }
+    return initials(foundation.foundationName || foundation.creatorName).slice(0, 2);
+  }
+
+  function isFirstFoundation(foundation) {
+    if (!foundation) return false;
+    const creator = String(foundation.creatorName || '').toLowerCase();
+    const name = String(foundation.foundationName || '').toLowerCase();
+    return creator.includes('josh liljenquist') || name.includes('live to love');
+  }
+
+  function getAllFoundations() {
+    const result = CreatorFoundationsStore.listActive({
+      page: 1,
+      pageSize: 500,
+      sort: 'featured',
+    });
+    return result.items || [];
+  }
+
+  function getFeaturedFoundation(items) {
+    if (!items.length) return null;
+    const josh = items.find(isFirstFoundation);
+    if (josh) return josh;
+    return items.find((f) => f.featured) || items[0];
+  }
+
+  function searchIconSvg() {
     return `
-      <div class="cf-portrait ${sizeClass}">
-        <span class="cf-portrait__fallback" aria-hidden="true">${esc(label)}</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="6.5"></circle>
+        <path d="M16.2 16.2L21 21" stroke-linecap="round"></path>
+      </svg>
+    `;
+  }
+
+  function arrowSvg() {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    `;
+  }
+
+  function verifiedMark(status) {
+    if (status !== 'verified') return '';
+    return `<span class="df-verified">Verified</span>`;
+  }
+
+  function metricsRow(foundation) {
+    const currency = CreatorFoundationsStore.getCurrency();
+    return `
+      <div class="df-metrics" aria-label="Foundation metrics">
+        <div>
+          <span class="df-metric__label">Raised</span>
+          <span class="df-metric__value">${esc(formatMoney(foundation.totalRaised || 0, currency))}</span>
+        </div>
+        <div>
+          <span class="df-metric__label">Supporters</span>
+          <span class="df-metric__value">${esc(formatCount(foundation.uniqueSupporters || 0))}</span>
+        </div>
+        <div>
+          <span class="df-metric__label">Active projects</span>
+          <span class="df-metric__value">${esc(formatCount(foundation.activeProjectCount || 0))}</span>
+        </div>
       </div>
     `;
   }
 
-  function verifiedBadge(status) {
-    if (status !== 'verified') return '';
-    return `<span class="cf-verified" title="Verified Creator Foundation"><span aria-hidden="true">✓</span> Verified</span>`;
+  function renderTopbar() {
+    return `
+      <div class="df-topbar df-rise">
+        <p class="df-kicker">Donate</p>
+        <button type="button" class="df-search-trigger" id="df-search-open" aria-label="Search foundations">
+          ${searchIconSvg()}
+        </button>
+      </div>
+    `;
   }
 
-  function renderHero() {
+  function renderIntro() {
     return `
-      <header class="donate-hero fade-in">
-        <p class="cf-kicker">Creator Foundations</p>
-        <h1 class="donate-hero__title">Support people creating real change.</h1>
-        <p class="donate-hero__copy">
-          Every Creator Foundation represents someone who has consistently dedicated their time,
-          creativity and community to improving the lives of others. Support verified missions
-          and follow the impact your generosity creates.
-        </p>
+      <header class="df-intro df-rise df-rise-delay-1">
+        <h1 class="df-intro__title">Creator Foundations</h1>
+        <p class="df-intro__copy">Support verified people turning influence into meaningful action.</p>
       </header>
     `;
   }
 
-  function renderCard(foundation) {
-    const raisedLabel = formatMoney(
-      foundation.totalRaised || 0,
-      CreatorFoundationsStore.getCurrency()
-    );
-    const supportersLabel = foundation.uniqueSupporters === 1
-      ? '1 supporter'
-      : foundation.uniqueSupporters > 1
-        ? `${formatCount(foundation.uniqueSupporters)} supporters`
-        : null;
+  function renderIdentityPanel(foundation) {
+    if (foundation.coverImage || foundation.profileImage) {
+      const src = foundation.coverImage || foundation.profileImage;
+      return `
+        <aside class="df-identity" aria-hidden="true">
+          <div class="df-identity__mark">
+            <img src="${esc(src)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.35;">
+            <span class="df-identity__glyph">${esc(identityGlyph(foundation))}</span>
+          </div>
+          <div class="df-identity__rule"></div>
+          <p class="df-identity__word">${esc(foundation.foundationName)}</p>
+          <p class="df-identity__caption">${esc(foundation.creatorName)}</p>
+        </aside>
+      `;
+    }
 
     return `
-      <article class="cf-card" data-id="${esc(foundation.id)}">
-        <div class="cf-card__top">
-          ${portraitHtml(foundation)}
-          <div class="cf-card__meta">
-            <div class="cf-card__title-row">
-              <h3 class="cf-card__creator">${esc(foundation.creatorName)}</h3>
-              ${verifiedBadge(foundation.verificationStatus)}
-            </div>
-            <p class="cf-card__foundation">${esc(foundation.foundationName)}</p>
-            ${foundation.country ? `<p class="cf-card__country">${esc(foundation.country)}</p>` : ''}
-          </div>
+      <aside class="df-identity" aria-hidden="true">
+        <div class="df-identity__mark">
+          <span class="df-identity__glyph">${esc(identityGlyph(foundation))}</span>
         </div>
-        ${foundation.mission
-          ? `<p class="cf-card__mission">${esc(foundation.mission)}</p>`
-          : `<p class="cf-card__mission cf-card__mission--pending">This information has not yet been published.</p>`}
-        <div class="cf-card__chips">
-          ${foundation.primaryCategory ? `<span class="donate-chip">${esc(foundation.primaryCategory)}</span>` : ''}
-        </div>
-        <div class="cf-card__raised">
-          <span class="cf-card__raised-value">${esc(raisedLabel)}</span>
-          <span class="cf-card__raised-label">Raised so far</span>
-        </div>
-        <div class="cf-card__stats">
-          <div>
-            ${supportersLabel
-              ? `<span class="cf-card__stat-value">${esc(supportersLabel.split(' ')[0])}</span>
-                 <span class="cf-card__stat-label">${foundation.uniqueSupporters === 1 ? 'Supporter' : 'Supporters'}</span>`
-              : `<span class="cf-card__stat-empty">Be among the first to support this mission.</span>`}
-          </div>
-          <div>
-            <span class="cf-card__stat-value">${formatCount(foundation.activeProjectCount)}</span>
-            <span class="cf-card__stat-label">Active projects</span>
-          </div>
-        </div>
-        <button class="btn btn-secondary cf-card__cta" type="button" data-action="view" data-id="${esc(foundation.id)}">
-          View Foundation
-        </button>
-      </article>
+        <div class="df-identity__rule"></div>
+        <p class="df-identity__word">${esc(foundation.foundationName)}</p>
+        <p class="df-identity__caption">${esc(foundation.creatorName)}</p>
+      </aside>
     `;
   }
 
-  function renderList() {
-    const result = CreatorFoundationsStore.listActive({ page, pageSize: CreatorFoundationsStore.PAGE_SIZE });
-    const root = document.getElementById('donate-content');
-    const demoBanner = CreatorFoundationsStore.usingDemoCatalog()
-      ? `<p class="cf-demo-banner" role="status">Development demo catalog — not real production data.</p>`
+  function renderFeatured(foundation) {
+    if (!foundation) return '';
+    const firstNote = isFirstFoundation(foundation)
+      ? `<p class="df-featured__note">First Creator Foundation</p>`
+      : '';
+    const invite = (foundation.uniqueSupporters || 0) === 0
+      ? `<p class="df-featured__invite">Be among the first to support this mission.</p>`
       : '';
 
-    if (!result.total) {
-      root.innerHTML = `
-        ${renderHero()}
-        ${demoBanner}
-        <div class="donate-state glass-card">
-          <p class="donate-state__title">No Creator Foundations yet</p>
-          <p class="donate-state__copy">
-            Verified creators will appear here as the ecosystem grows.
-            We only show real foundations — never placeholders.
-          </p>
+    return `
+      <section class="df-featured df-rise df-rise-delay-2" aria-labelledby="df-featured-title">
+        <p class="df-featured__label">Featured Foundation</p>
+        <div class="df-featured__layout">
+          <div class="df-featured__content">
+            <h2 class="df-featured__title" id="df-featured-title">${esc(foundation.foundationName)}</h2>
+            <p class="df-featured__byline">Founded by ${esc(foundation.creatorName)}</p>
+            ${foundation.country ? `<p class="df-featured__place">${esc(foundation.country)}</p>` : ''}
+            ${firstNote}
+            ${foundation.mission
+              ? `<p class="df-featured__mission">${esc(foundation.mission)}</p>`
+              : `<p class="df-featured__mission df-muted">Mission details will appear as they are published.</p>`}
+            <button type="button" class="df-featured__cta" data-open-foundation="${esc(foundation.id)}">
+              Explore Foundation
+            </button>
+            ${metricsRow(foundation)}
+            ${invite}
+          </div>
+          ${renderIdentityPanel(foundation)}
         </div>
+      </section>
+    `;
+  }
+
+  function renderDiscoverRow(foundation) {
+    const currency = CreatorFoundationsStore.getCurrency();
+    const mark = foundation.profileImage
+      ? `<img src="${esc(foundation.profileImage)}" alt="">`
+      : esc(identityGlyph(foundation));
+
+    return `
+      <li>
+        <button type="button" class="df-row" data-open-foundation="${esc(foundation.id)}">
+          <span class="df-row__mark">${mark}</span>
+          <span class="df-row__body">
+            <h3 class="df-row__name">${esc(foundation.foundationName)}</h3>
+            <p class="df-row__meta">
+              ${esc(foundation.creatorName)}${foundation.country ? ` · ${esc(foundation.country)}` : ''}
+            </p>
+            ${foundation.mission
+              ? `<p class="df-row__mission">${esc(foundation.mission)}</p>`
+              : ''}
+            <div class="df-row__stats">
+              <span><strong>${esc(formatMoney(foundation.totalRaised || 0, currency))}</strong> raised</span>
+              <span><strong>${esc(formatCount(foundation.activeProjectCount || 0))}</strong> active projects</span>
+            </div>
+          </span>
+          <span class="df-row__arrow" aria-hidden="true">${arrowSvg()}</span>
+        </button>
+      </li>
+    `;
+  }
+
+  function renderDiscover(items) {
+    if (!items.length) {
+      return `
+        <section class="df-discover df-rise df-rise-delay-3">
+          <p class="df-discover__label">Discover Foundations</p>
+          <div class="df-empty">
+            <p class="df-empty__title">A carefully curated beginning</p>
+            <p class="df-empty__copy">
+              Verified Creator Foundations will appear here as the circle grows.
+              We only show real people and real missions.
+            </p>
+          </div>
+        </section>
       `;
+    }
+
+    return `
+      <section class="df-discover df-rise df-rise-delay-3" aria-labelledby="df-discover-label">
+        <p class="df-discover__label" id="df-discover-label">Discover Foundations</p>
+        <p class="df-discover__note">A growing collection of people committed to creating meaningful change.</p>
+        <ul class="df-list">
+          ${items.map(renderDiscoverRow).join('')}
+        </ul>
+      </section>
+    `;
+  }
+
+  function ensureSearchShell() {
+    if (document.getElementById('df-search')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="df-search" id="df-search" aria-hidden="true">
+        <div class="df-search__backdrop" id="df-search-backdrop"></div>
+        <div class="df-search__panel" role="dialog" aria-modal="true" aria-label="Search Creator Foundations">
+          <div class="df-search__bar">
+            <input
+              class="df-search__input"
+              id="df-search-input"
+              type="search"
+              placeholder="Search by foundation or creator"
+              autocomplete="off"
+              enterkeyhint="search"
+            >
+            <button type="button" class="df-search__close" id="df-search-close">Close</button>
+          </div>
+          <p class="df-search__hint" id="df-search-hint">Type a name to begin.</p>
+          <div class="df-search__results" id="df-search-results"></div>
+        </div>
+      </div>
+    `);
+
+    document.getElementById('df-search-backdrop')?.addEventListener('click', closeSearch);
+    document.getElementById('df-search-close')?.addEventListener('click', closeSearch);
+    document.getElementById('df-search-input')?.addEventListener('input', (e) => {
+      searchQuery = e.target.value || '';
+      renderSearchResults();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && searchOpen) closeSearch();
+    });
+  }
+
+  function renderSearchResults() {
+    const resultsEl = document.getElementById('df-search-results');
+    const hintEl = document.getElementById('df-search-hint');
+    if (!resultsEl) return;
+
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      if (hintEl) hintEl.textContent = 'Type a name to begin.';
+      resultsEl.innerHTML = '';
       return;
     }
 
-    root.innerHTML = `
-      ${renderHero()}
-      ${demoBanner}
-      <section class="donate-section" aria-labelledby="cf-featured-title">
-        <h2 class="donate-section__title" id="cf-featured-title">Featured Creator Foundations</h2>
-        <p class="donate-section__subtitle">A carefully curated circle of verified people creating lasting impact.</p>
-        <div class="donate-grid" id="donate-grid">
-          ${result.items.map(renderCard).join('')}
-        </div>
-        ${result.hasMore ? `
-          <div class="donate-load-more">
-            <button class="btn btn-secondary" type="button" id="donate-load-more">Show more</button>
-          </div>
-        ` : ''}
-      </section>
-    `;
+    const matches = getAllFoundations().filter((f) =>
+      f.creatorName.toLowerCase().includes(q)
+      || f.foundationName.toLowerCase().includes(q)
+      || (f.mission || '').toLowerCase().includes(q)
+      || (f.country || '').toLowerCase().includes(q)
+    );
 
-    bindListEvents();
+    if (hintEl) {
+      hintEl.textContent = matches.length
+        ? `${matches.length} result${matches.length === 1 ? '' : 's'}`
+        : 'No matching foundations.';
+    }
+
+    if (!matches.length) {
+      resultsEl.innerHTML = `<p class="df-search__empty">No foundations match “${esc(searchQuery.trim())}”.</p>`;
+      return;
+    }
+
+    resultsEl.innerHTML = `<ul class="df-list">${matches.map(renderDiscoverRow).join('')}</ul>`;
+    resultsEl.querySelectorAll('[data-open-foundation]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const foundation = CreatorFoundationsStore.getById(btn.getAttribute('data-open-foundation'));
+        closeSearch();
+        if (foundation) openProfile(foundation);
+      });
+    });
   }
 
-  function bindListEvents() {
-    document.getElementById('donate-grid')?.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action="view"]');
-      if (!btn) return;
-      const foundation = CreatorFoundationsStore.getById(btn.getAttribute('data-id'));
-      if (foundation) openProfile(foundation);
-    });
+  function openSearch() {
+    ensureSearchShell();
+    lastFocusEl = document.activeElement;
+    searchOpen = true;
+    searchQuery = '';
+    const shell = document.getElementById('df-search');
+    const input = document.getElementById('df-search-input');
+    shell?.classList.add('is-open');
+    shell?.setAttribute('aria-hidden', 'false');
+    if (input) {
+      input.value = '';
+      requestAnimationFrame(() => input.focus());
+    }
+    renderSearchResults();
+  }
 
-    document.getElementById('donate-load-more')?.addEventListener('click', () => {
-      page += 1;
-      const more = CreatorFoundationsStore.listActive({ page, pageSize: CreatorFoundationsStore.PAGE_SIZE });
-      const grid = document.getElementById('donate-grid');
-      if (!grid) return;
-      grid.insertAdjacentHTML('beforeend', more.items.map(renderCard).join(''));
-      if (!more.hasMore) {
-        document.getElementById('donate-load-more')?.closest('.donate-load-more')?.remove();
-      }
+  function closeSearch() {
+    searchOpen = false;
+    const shell = document.getElementById('df-search');
+    shell?.classList.remove('is-open');
+    shell?.setAttribute('aria-hidden', 'true');
+    if (lastFocusEl && typeof lastFocusEl.focus === 'function') {
+      lastFocusEl.focus();
+    }
+  }
+
+  function bindHomeEvents() {
+    document.getElementById('df-search-open')?.addEventListener('click', openSearch);
+    document.querySelectorAll('[data-open-foundation]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const foundation = CreatorFoundationsStore.getById(btn.getAttribute('data-open-foundation'));
+        if (foundation) openProfile(foundation);
+      });
     });
+  }
+
+  function renderHome() {
+    const items = getAllFoundations();
+    const featured = getFeaturedFoundation(items);
+    const root = document.getElementById('donate-content');
+    const demoBanner = CreatorFoundationsStore.usingDemoCatalog()
+      ? `<p class="df-demo-banner" role="status">Development demo catalog — not production data.</p>`
+      : '';
+
+    root.innerHTML = `
+      ${renderTopbar()}
+      ${demoBanner}
+      ${renderIntro()}
+      ${renderFeatured(featured)}
+      ${renderDiscover(items)}
+    `;
+    bindHomeEvents();
   }
 
   function renderProjectCard(project, foundation) {
@@ -221,39 +407,37 @@ const WorldChoirDonate = (() => {
       : null;
 
     return `
-      <article class="cf-project">
-        <div class="cf-project__head">
-          <h3 class="cf-project__title">${esc(project.title)}</h3>
-          ${project.location ? `<p class="cf-project__location">${esc(project.location)}</p>` : ''}
-        </div>
+      <article class="df-project">
+        <h3 class="df-project__title">${esc(project.title)}</h3>
+        ${project.location ? `<p class="df-project__location">${esc(project.location)}</p>` : ''}
         ${project.description
-          ? `<p class="cf-project__desc">${esc(project.description)}</p>`
-          : `<p class="cf-project__desc cf-muted">This information has not yet been published.</p>`}
+          ? `<p class="df-project__desc">${esc(project.description)}</p>`
+          : `<p class="df-project__desc df-muted">Project details will appear as they are published.</p>`}
         ${showProgress ? `
-          <div class="cf-progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Project funding progress">
-            <div class="cf-progress__bar" style="width:${pct}%"></div>
+          <div class="df-progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+            <div class="df-progress__bar" style="width:${pct}%"></div>
           </div>
-          <div class="cf-project__meta">
+          <div class="df-project__meta">
             <span>${formatMoney(project.raisedAmount, currency)} raised</span>
             <span>Goal ${formatMoney(project.goalAmount, currency)}</span>
           </div>
         ` : `
-          <div class="cf-project__meta">
+          <div class="df-project__meta">
             ${project.goalAmount != null
               ? `<span>Goal ${formatMoney(project.goalAmount, currency)}</span>`
-              : '<span class="cf-muted">Funding progress will appear when verified donations are recorded.</span>'}
+              : '<span>Funding progress appears when verified donations are recorded.</span>'}
           </div>
         `}
-        ${project.impactSummary ? `<p class="cf-project__impact">${esc(project.impactSummary)}</p>` : ''}
+        ${project.impactSummary ? `<p class="df-project__desc">${esc(project.impactSummary)}</p>` : ''}
         <button
-          class="btn btn-primary"
+          class="df-featured__cta"
           type="button"
           data-action="donate-project"
           data-foundation="${esc(foundation.id)}"
           data-project="${esc(project.id)}"
           ${!foundation.donationsEnabled ? 'disabled' : ''}
         >
-          Donate directly
+          Donate to project
         </button>
       </article>
     `;
@@ -261,14 +445,14 @@ const WorldChoirDonate = (() => {
 
   function renderImpactMetrics(metrics) {
     if (!metrics.length) {
-      return `<p class="cf-muted">Impact data will appear here as this mission grows.</p>`;
+      return `<p class="df-muted">Impact measures appear here only when verified.</p>`;
     }
     return `
-      <div class="donate-metrics">
+      <div class="df-impact-grid">
         ${metrics.map((m) => `
-          <div class="donate-metric">
-            <span class="donate-metric__value">${esc(String(m.value))}</span>
-            <span class="donate-metric__label">${esc(m.label)}</span>
+          <div>
+            <span class="df-impact-item__value">${esc(String(m.value))}</span>
+            <span class="df-impact-item__label">${esc(m.label)}</span>
           </div>
         `).join('')}
       </div>
@@ -279,7 +463,7 @@ const WorldChoirDonate = (() => {
     const platform = CreatorFoundationsStore.getPlatform();
     const allocation = (foundation.financialAllocation || [])
       .map((row) => `
-        <div class="cf-alloc-row">
+        <div class="df-alloc-row">
           <span>${esc(row.label)}</span>
           <strong>${esc(String(row.percent))}%</strong>
         </div>
@@ -287,61 +471,48 @@ const WorldChoirDonate = (() => {
       .join('');
 
     const values = (foundation.coreValues || [])
-      .map((v) => `<span class="donate-chip">${esc(v)}</span>`)
+      .map((v) => `<span class="df-chip">${esc(v)}</span>`)
       .join('');
 
     const activeProjects = foundation.projects.filter((p) => p.status === 'active');
-    const raisedCopy = formatMoney(
-      foundation.totalRaised || 0,
-      CreatorFoundationsStore.getCurrency()
-    );
-    const supportersCopy = foundation.uniqueSupporters === 0
-      ? 'Be among the first to support this mission.'
-      : foundation.uniqueSupporters === 1
-        ? '1 supporter'
-        : `${formatCount(foundation.uniqueSupporters)} supporters`;
+    const invite = (foundation.uniqueSupporters || 0) === 0
+      ? `<p class="df-featured__invite">Be among the first to support this mission.</p>`
+      : '';
 
     return `
-      <div class="cf-profile fade-in">
-        <button class="donate-back" type="button" id="donate-back">← Back</button>
+      <div class="df-profile df-rise">
+        <button class="df-back" type="button" id="donate-back">← Back</button>
 
-        <header class="cf-profile__hero">
-          ${portraitHtml(foundation, 'cf-portrait--xl')}
-          <div class="cf-profile__hero-text">
-            <div class="cf-card__title-row">
-              <h1 class="cf-profile__foundation">${esc(foundation.foundationName)}</h1>
-              ${verifiedBadge(foundation.verificationStatus)}
-            </div>
-            <p class="cf-profile__creator">by ${esc(foundation.creatorName)}</p>
-            ${foundation.mission
-              ? `<p class="cf-profile__mission">${esc(foundation.mission)}</p>`
-              : `<p class="cf-profile__mission cf-muted">This information has not yet been published.</p>`}
-            <div class="cf-profile__raised">
-              <span class="cf-profile__raised-value">${esc(raisedCopy)}</span>
-              <span class="cf-profile__raised-label">Raised so far</span>
-            </div>
-            <div class="cf-profile__facts">
-              ${foundation.country ? `<span>${esc(foundation.country)}</span>` : ''}
-              ${foundation.yearsActive != null ? `<span>${foundation.yearsActive} years active</span>` : ''}
-              ${foundation.primaryCategory ? `<span>${esc(foundation.primaryCategory)}</span>` : ''}
-              <span>${esc(supportersCopy)}</span>
-            </div>
-            <button
-              class="btn btn-primary cf-profile__donate"
-              type="button"
-              id="cf-profile-donate"
-              ${!foundation.donationsEnabled ? 'disabled' : ''}
-            >
-              ${foundation.donationsEnabled ? 'Donate' : 'Temporarily unavailable'}
-            </button>
-          </div>
-        </header>
+        <h1 class="df-profile__title">
+          ${esc(foundation.foundationName)}
+          ${verifiedMark(foundation.verificationStatus)}
+        </h1>
+        <p class="df-profile__byline">Founded by ${esc(foundation.creatorName)}</p>
+        ${foundation.country ? `<p class="df-profile__place">${esc(foundation.country)}</p>` : ''}
 
-        <section class="cf-section">
+        ${foundation.mission
+          ? `<p class="df-profile__mission">${esc(foundation.mission)}</p>`
+          : `<p class="df-profile__mission df-muted">Mission details will appear as they are published.</p>`}
+
+        ${metricsRow(foundation)}
+        ${invite}
+
+        <div class="df-profile__actions">
+          <button
+            class="df-btn-primary"
+            type="button"
+            id="cf-profile-donate"
+            ${!foundation.donationsEnabled ? 'disabled' : ''}
+          >
+            ${foundation.donationsEnabled ? 'Donate' : 'Temporarily unavailable'}
+          </button>
+        </div>
+
+        <section class="df-section">
           <h2>About</h2>
           ${foundation.biography
             ? `<p>${esc(foundation.biography)}</p>`
-            : `<p class="cf-muted">This information has not yet been published.</p>`}
+            : `<p class="df-muted">This information has not yet been published.</p>`}
           ${foundation.whyStarted ? `
             <h3>Why this began</h3>
             <p>${esc(foundation.whyStarted)}</p>
@@ -350,42 +521,38 @@ const WorldChoirDonate = (() => {
             <h3>How the foundation works</h3>
             <p>${esc(foundation.howItWorks)}</p>
           ` : ''}
-          ${values ? `<div class="cf-card__chips" style="margin-top:16px">${values}</div>` : ''}
+          ${values ? `<div class="df-chips">${values}</div>` : ''}
         </section>
 
-        <section class="cf-section" aria-labelledby="cf-impact-title">
-          <h2 id="cf-impact-title">Impact</h2>
+        <section class="df-section">
+          <h2>Impact</h2>
           ${renderImpactMetrics(foundation.impactMetrics)}
         </section>
 
-        <section class="cf-section" aria-labelledby="cf-projects-title">
-          <h2 id="cf-projects-title">Active Projects</h2>
+        <section class="df-section">
+          <h2>Active Projects</h2>
           ${activeProjects.length
-            ? `<div class="cf-projects">${activeProjects.map((p) => renderProjectCard(p, foundation)).join('')}</div>`
-            : `<p class="cf-muted">No active projects at the moment.</p>`}
+            ? `<div class="df-projects">${activeProjects.map((p) => renderProjectCard(p, foundation)).join('')}</div>`
+            : `<p class="df-muted">0 active projects.</p>`}
         </section>
 
-        <section class="cf-section" aria-labelledby="cf-transparency-title">
-          <h2 id="cf-transparency-title">Transparency</h2>
-          ${foundation.howDonationsAreUsed ? `
-            <h3>How donations are used</h3>
-            <p>${esc(foundation.howDonationsAreUsed)}</p>
-          ` : `
-            <h3>How donations are used</h3>
-            <p class="cf-muted">This information has not yet been published.</p>
-          `}
+        <section class="df-section">
+          <h2>Transparency</h2>
+          <h3>How donations are used</h3>
+          ${foundation.howDonationsAreUsed
+            ? `<p>${esc(foundation.howDonationsAreUsed)}</p>`
+            : `<p class="df-muted">This information has not yet been published.</p>`}
 
-          ${allocation ? `
-            <h3>Financial allocation</h3>
-            <div class="cf-alloc">${allocation}</div>
-            <p class="cf-fee-note">
-              Platform fee: ${esc(String(platform.feePercent || 10))}% —
-              ${esc(platform.feePurpose || 'Operational costs that keep World Choir and Creator Foundations running.')}
-            </p>
-          ` : `
-            <h3>Financial allocation</h3>
-            <p class="cf-muted">This information has not yet been published.</p>
-          `}
+          <h3>Financial allocation</h3>
+          ${allocation
+            ? `
+              <div class="df-alloc">${allocation}</div>
+              <p class="df-fee-note">
+                Platform fee: ${esc(String(platform.feePercent || 10))}% —
+                ${esc(platform.feePurpose || 'Operational costs that keep World Choir and Creator Foundations running.')}
+              </p>
+            `
+            : `<p class="df-muted">This information has not yet been published.</p>`}
 
           <h3>Verification</h3>
           <p>
@@ -393,20 +560,19 @@ const WorldChoirDonate = (() => {
             <strong>${foundation.verificationStatus === 'verified' ? 'Verified' : esc(foundation.verificationStatus || 'Pending')}</strong>
           </p>
           ${foundation.verificationNotes
-            ? `<p class="cf-muted">${esc(foundation.verificationNotes)}</p>`
+            ? `<p class="df-muted" style="margin-top:8px">${esc(foundation.verificationNotes)}</p>`
             : ''}
 
-          ${foundation.legalOrganization ? `
-            <h3>Legal organization</h3>
-            <p>
-              ${esc(foundation.legalOrganization.name)}
-              ${foundation.legalOrganization.type ? ` · ${esc(foundation.legalOrganization.type)}` : ''}
-              ${foundation.legalOrganization.registrationId ? `<br><span class="cf-muted">${esc(foundation.legalOrganization.registrationId)}</span>` : ''}
-            </p>
-          ` : `
-            <h3>Legal organization</h3>
-            <p class="cf-muted">This information has not yet been published.</p>
-          `}
+          <h3>Legal organization</h3>
+          ${foundation.legalOrganization
+            ? `<p>
+                ${esc(foundation.legalOrganization.name)}
+                ${foundation.legalOrganization.type ? ` · ${esc(foundation.legalOrganization.type)}` : ''}
+                ${foundation.legalOrganization.registrationId
+                  ? `<br><span class="df-muted">${esc(foundation.legalOrganization.registrationId)}</span>`
+                  : ''}
+              </p>`
+            : `<p class="df-muted">This information has not yet been published.</p>`}
         </section>
       </div>
     `;
@@ -422,8 +588,7 @@ const WorldChoirDonate = (() => {
     document.getElementById('donate-back')?.addEventListener('click', () => {
       selectedFoundation = null;
       selectedProject = null;
-      page = 1;
-      renderList();
+      renderHome();
     });
 
     document.getElementById('cf-profile-donate')?.addEventListener('click', () => {
@@ -636,20 +801,17 @@ const WorldChoirDonate = (() => {
     const firstName = (foundation.creatorName || 'this creator').split(' ')[0];
     const root = document.getElementById('donate-content');
     root.innerHTML = `
-      <div class="donate-confirm fade-in">
-        <div class="donate-confirm__icon" aria-hidden="true">
-          <span class="donate-confirm__check"></span>
-        </div>
-        <h1 class="donate-confirm__title">Thank you for supporting ${esc(firstName)}'s mission.</h1>
-        <p class="donate-confirm__copy">
+      <div class="df-confirm df-rise">
+        <h1 class="df-confirm__title">Thank you for supporting ${esc(firstName)}'s mission.</h1>
+        <p class="df-confirm__copy">
           Your generosity helps transform compassion into action.
           You'll be able to follow the progress of the projects you helped make possible.
         </p>
-        <p class="donate-confirm__meta">${formatMoney(amount)} · ${esc(foundation.foundationName)}</p>
-        <p class="cf-muted donate-confirm__note">
+        <p class="df-confirm__meta">${formatMoney(amount)} · ${esc(foundation.foundationName)}</p>
+        <p class="df-confirm__note">
           Preview only — this gift was not charged and is not counted in public totals until real payments are connected.
         </p>
-        <button class="btn btn-primary" type="button" id="donate-confirm-return">
+        <button class="df-btn-primary" type="button" id="donate-confirm-return">
           Return to Foundation
         </button>
       </div>
@@ -662,18 +824,20 @@ const WorldChoirDonate = (() => {
 
   function renderLoading() {
     document.getElementById('donate-content').innerHTML = `
-      <div class="donate-state">
-        <p class="donate-state__loading">Loading Creator Foundations…</p>
+      <div class="df-state">
+        <p class="df-state__loading">Loading Creator Foundations…</p>
       </div>
     `;
   }
 
   function renderError(message) {
     document.getElementById('donate-content').innerHTML = `
-      <div class="donate-state glass-card">
-        <p class="donate-state__title">Something went quiet</p>
-        <p class="donate-state__copy">${esc(message || 'Could not load Creator Foundations. Please try again.')}</p>
-        <button class="btn btn-secondary" type="button" id="donate-retry">Try again</button>
+      <div class="df-state">
+        <p class="df-state__title">Something went quiet</p>
+        <p class="df-state__copy">${esc(message || 'Could not load Creator Foundations. Please try again.')}</p>
+        <div style="margin-top:22px">
+          <button class="df-featured__cta" type="button" id="donate-retry">Try again</button>
+        </div>
       </div>
     `;
     document.getElementById('donate-retry')?.addEventListener('click', init);
@@ -682,12 +846,12 @@ const WorldChoirDonate = (() => {
   async function init() {
     WorldChoirNav.startWatcher('donate');
     ensureModal();
+    ensureSearchShell();
     renderLoading();
 
     try {
       await CreatorFoundationsStore.ready();
-      page = 1;
-      renderList();
+      renderHome();
     } catch (err) {
       console.error('Creator Foundations init failed:', err);
       const offline = typeof navigator !== 'undefined' && !navigator.onLine;
