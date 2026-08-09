@@ -114,13 +114,6 @@
               <label for="members-password">Password</label>
               <input id="members-password" name="password" type="password" required autocomplete="current-password">
             </div>
-            ${isOwner ? `
-              <div class="members-field">
-                <label for="members-relationship">Relationship date</label>
-                <input id="members-relationship" name="relationshipDate" type="text" required
-                  placeholder="DD.MM.YYYY" autocomplete="off">
-              </div>
-            ` : ''}
             <div class="members-actions">
               <button class="members-btn members-btn--primary" type="submit" ${state.busy ? 'disabled' : ''}>
                 ${state.busy ? 'Signing in…' : 'Sign in'}
@@ -144,7 +137,6 @@
       const form = e.target;
       const email = form.email.value.trim();
       const password = form.password.value;
-      const relationshipDate = form.relationshipDate?.value.trim();
 
       state.busy = true;
       state.error = null;
@@ -156,7 +148,6 @@
           body: {
             email,
             password,
-            relationshipDate: state.loginRole === 'owner' ? relationshipDate : undefined,
             roleHint: state.loginRole,
           },
         });

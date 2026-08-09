@@ -27,10 +27,6 @@ const OwnerAccess = (() => {
             <label class="form-label" for="owner-password">Password</label>
             <input class="form-input" id="owner-password" type="password" autocomplete="current-password" placeholder="Password">
           </div>
-          <div class="form-group">
-            <label class="form-label" for="owner-relationship-date">Relationship date</label>
-            <input class="form-input" id="owner-relationship-date" type="text" inputmode="numeric" placeholder="DD.MM.YYYY" autocomplete="off">
-          </div>
 
           <p class="owner-login-error" id="owner-login-error" hidden></p>
 
@@ -60,7 +56,6 @@ const OwnerAccess = (() => {
     document.getElementById('owner-login-error').hidden = true;
     document.getElementById('owner-email').value = '';
     document.getElementById('owner-password').value = '';
-    document.getElementById('owner-relationship-date').value = '';
     overlayEl.classList.add('active');
     overlayEl.setAttribute('aria-hidden', 'false');
     document.getElementById('owner-email')?.focus();
@@ -81,11 +76,10 @@ const OwnerAccess = (() => {
   async function submit() {
     const email = document.getElementById('owner-email')?.value.trim();
     const password = document.getElementById('owner-password')?.value;
-    const relationshipDate = document.getElementById('owner-relationship-date')?.value.trim();
     const btn = document.getElementById('owner-login-submit');
 
-    if (!email || !password || !relationshipDate) {
-      showError('Please fill in all fields.');
+    if (!email || !password) {
+      showError('Please enter your email and password.');
       return;
     }
 
@@ -98,7 +92,7 @@ const OwnerAccess = (() => {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, relationshipDate }),
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json().catch(() => ({}));
 

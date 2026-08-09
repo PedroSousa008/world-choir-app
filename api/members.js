@@ -38,7 +38,7 @@ module.exports = async function handler(req, res) {
         return res.status(503).json({ error: 'Members authentication is not configured' });
       }
 
-      const { email, password, relationshipDate, roleHint } = req.body || {};
+      const { email, password, roleHint } = req.body || {};
       const normalizedEmail = String(email || '').trim().toLowerCase();
 
       if (!normalizedEmail || !password) {
@@ -49,7 +49,7 @@ module.exports = async function handler(req, res) {
       const tryingOwner = roleHint === 'owner' || normalizedEmail === ownerEmail;
 
       if (tryingOwner) {
-        const result = await verifyOwnerCredentials({ email, password, relationshipDate });
+        const result = await verifyOwnerCredentials({ email, password });
         if (!result.ok) {
           return res.status(401).json({ error: result.error || 'Invalid credentials' });
         }

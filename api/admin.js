@@ -23,8 +23,8 @@ module.exports = async function handler(req, res) {
       if (!isOwnerAuthConfigured()) {
         return res.status(503).json({ error: 'Owner authentication is not configured' });
       }
-      const { email, password, relationshipDate } = req.body || {};
-      const result = await verifyOwnerCredentials({ email, password, relationshipDate });
+      const { email, password } = req.body || {};
+      const result = await verifyOwnerCredentials({ email, password });
       if (!result.ok) {
         return res.status(401).json({ error: result.error || 'Invalid owner credentials' });
       }

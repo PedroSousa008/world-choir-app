@@ -29,7 +29,7 @@ async function getEffectiveOwnerEmail() {
 function isOwnerAuthConfigured() {
   const cfg = getOwnerConfig();
   const hasPassword = !!process.env.OWNER_PASSWORD_HASH;
-  return !!(cfg.email && cfg.relationshipDate && cfg.sessionSecret && hasPassword);
+  return !!(cfg.email && cfg.sessionSecret && hasPassword);
 }
 
 function normalizeRelationshipDate(input) {
@@ -185,25 +185,22 @@ function safeEqual(a, b) {
   return crypto.timingSafeEqual(aBuf, bBuf);
 }
 
-async function verifyOwnerCredentials({ email, password, relationshipDate }) {
+async function verifyOwnerCredentials({ email, password }) {
   if (!isOwnerAuthConfigured()) {
     return { ok: false, error: 'Owner authentication is not configured' };
   }
 
-  const cfg = getOwnerConfig();
   const normalizedEmail = String(email || '').trim().toLowerCase();
-  const normalizedDate = normalizeRelationshipDate(relationshipDate);
   const ownerEmail = await getEffectiveOwnerEmail();
 
-  if (!normalizedEmail || !password || !normalizedDate) {
-    return { ok: false, error: 'Email, password, and relationship date are required' };
+  if (!normalizedEmail || !password) {
+    return { ok: false, error: 'Email and password are required' };
   }
 
   const emailMatch = safeEqual(normalizedEmail, ownerEmail);
-  const dateMatch = safeEqual(normalizedDate, cfg.relationshipDate);
   const passwordMatch = await bcrypt.compare(String(password), await getOwnerPasswordHash());
 
-  if (!emailMatch || !dateMatch || !passwordMatch) {
+  if (!emailMatch || !passwordMatch) {
     return { ok: false, error: 'Invalid owner credentials' };
   }
 
