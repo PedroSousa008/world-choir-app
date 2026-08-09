@@ -1,4 +1,4 @@
-const { listPledges, mapPledgeRow } = require('./lib/store');
+const { listPledges, mapPledgeRow } = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

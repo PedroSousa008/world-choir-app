@@ -1,4 +1,4 @@
-const { ensureUser } = require('./lib/store');
+const { ensureUser } = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

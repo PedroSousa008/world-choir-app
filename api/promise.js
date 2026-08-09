@@ -1,4 +1,4 @@
-const { findUserByDevice, savePromise } = require('./lib/store');
+const { findUserByDevice, savePromise } = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

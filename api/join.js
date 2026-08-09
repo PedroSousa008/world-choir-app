@@ -1,4 +1,4 @@
-const { joinWorldChoir, mapPledgeRow } = require('./lib/store');
+const { joinWorldChoir, mapPledgeRow } = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

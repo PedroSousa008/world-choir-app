@@ -2,7 +2,7 @@ const {
   getOrAssignDailyAct,
   completeDailyAct,
   getUtcDateString,
-} = require('./lib/daily-peace');
+} = require('./_lib/daily-peace');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

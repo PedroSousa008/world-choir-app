@@ -10,7 +10,7 @@ const {
   changeOwnerPassword,
   changeOwnerEmail,
   getEffectiveOwnerEmail,
-} = require('./lib/auth');
+} = require('./_lib/auth');
 const {
   listInfluencers,
   createInfluencer,
@@ -21,7 +21,7 @@ const {
   changeInfluencerEmail,
   getOperationsOverview,
   publicInfluencer,
-} = require('./lib/members-store');
+} = require('./_lib/members-store');
 
 module.exports = async function handler(req, res) {
   corsHeaders(res);

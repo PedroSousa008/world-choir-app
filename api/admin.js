@@ -7,8 +7,8 @@ const {
   changeOwnerPassword,
   isOwnerAuthConfigured,
   getSessionFromRequest,
-} = require('./lib/auth');
-const { buildOwnerDatabaseRows } = require('./lib/store');
+} = require('./_lib/auth');
+const { buildOwnerDatabaseRows } = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
   corsHeaders(res);
