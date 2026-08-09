@@ -91,12 +91,6 @@ const WorldChoirDonate = (() => {
           creativity and community to improving the lives of others. Support verified missions
           and follow the impact your generosity creates.
         </p>
-        <div class="donate-hero__art" aria-hidden="true">
-          <span class="donate-hero__orb donate-hero__orb--a"></span>
-          <span class="donate-hero__orb donate-hero__orb--b"></span>
-          <span class="donate-hero__orb donate-hero__orb--c"></span>
-          <span class="donate-hero__ring"></span>
-        </div>
       </header>
     `;
   }
