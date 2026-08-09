@@ -1,10 +1,9 @@
 /**
- * WorldChoirDonate — Donate tab experience
- * Views: list → detail → donate modal → confirmation
- * Payments are mocked / architecture-ready (Apple Pay, Google Pay, Card, PayPal).
+ * WorldChoirDonate — Creator Foundations experience (Donate tab)
+ * Views: list → foundation profile → donate modal → confirmation
  */
 const WorldChoirDonate = (() => {
-  const AMOUNTS = () => FoundationsStore.getSuggestedAmounts();
+  const AMOUNTS = () => CreatorFoundationsStore.getSuggestedAmounts();
   const PAYMENT_METHODS = [
     { id: 'apple_pay', label: 'Apple Pay', ready: true },
     { id: 'google_pay', label: 'Google Pay', ready: true },
@@ -12,8 +11,8 @@ const WorldChoirDonate = (() => {
     { id: 'paypal', label: 'PayPal', ready: true },
   ];
 
-  let view = 'list';
   let selectedFoundation = null;
+  let selectedProject = null;
   let selectedAmount = 25;
   let customAmount = '';
   let selectedPayment = 'card';
@@ -26,62 +25,76 @@ const WorldChoirDonate = (() => {
     return d.innerHTML;
   }
 
-  function formatEuro(amount) {
+  function formatMoney(amount, currency = 'EUR') {
     const n = Number(amount);
-    if (!Number.isFinite(n)) return '€—';
-    return `€${n % 1 === 0 ? n : n.toFixed(2)}`;
+    if (!Number.isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: n % 1 === 0 ? 0 : 2,
+      }).format(n);
+    } catch {
+      return `€${n % 1 === 0 ? n : n.toFixed(2)}`;
+    }
   }
 
-  function logoHtml(foundation, sizeClass = '') {
-    const initials = (foundation.name || '?')
+  function formatCount(n) {
+    return Number(n || 0).toLocaleString('en-US');
+  }
+
+  function progressPercent(raised, goal) {
+    if (!goal || goal <= 0) return 0;
+    return Math.min(100, Math.round((raised / goal) * 100));
+  }
+
+  function initials(name) {
+    return (name || '?')
       .split(/\s+/)
       .slice(0, 2)
       .map((w) => w[0])
       .join('')
       .toUpperCase();
+  }
 
-    if (foundation.logo) {
+  function portraitHtml(foundation, sizeClass = '') {
+    const label = initials(foundation.creatorName);
+    if (foundation.profileImage) {
       return `
-        <div class="donate-logo ${sizeClass}">
+        <div class="cf-portrait ${sizeClass}">
           <img
-            class="donate-logo__img"
-            src="${esc(foundation.logo)}"
+            class="cf-portrait__img"
+            src="${esc(foundation.profileImage)}"
             alt=""
             loading="lazy"
             decoding="async"
             onerror="this.style.display='none';this.nextElementSibling.hidden=false;"
           >
-          <span class="donate-logo__fallback" hidden aria-hidden="true">${esc(initials)}</span>
+          <span class="cf-portrait__fallback" hidden aria-hidden="true">${esc(label)}</span>
         </div>
       `;
     }
-
     return `
-      <div class="donate-logo ${sizeClass}">
-        <span class="donate-logo__fallback" aria-hidden="true">${esc(initials)}</span>
+      <div class="cf-portrait ${sizeClass}">
+        <span class="cf-portrait__fallback" aria-hidden="true">${esc(label)}</span>
       </div>
     `;
   }
 
-  function categoryChips(categories) {
-    return (categories || [])
-      .slice(0, 3)
-      .map((c) => `<span class="donate-chip">${esc(c)}</span>`)
-      .join('');
-  }
-
-  function verificationBadge(status) {
+  function verifiedBadge(status) {
     if (status !== 'verified') return '';
-    return `<span class="donate-verified" title="Verified organization"><span aria-hidden="true">✓</span> Verified</span>`;
+    return `<span class="cf-verified" title="Verified Creator Foundation"><span aria-hidden="true">✓</span> Verified</span>`;
   }
 
   function renderHero() {
     return `
       <header class="donate-hero fade-in">
-        <h1 class="donate-hero__title">Turn harmony into action</h1>
+        <p class="cf-kicker">Creator Foundations</p>
+        <h1 class="donate-hero__title">Support people creating real change.</h1>
         <p class="donate-hero__copy">
-          Music can unite us for a moment.<br>
-          Kindness can change lives for much longer.
+          Every Creator Foundation represents someone who has consistently dedicated their time,
+          creativity and community to improving the lives of others. Support verified missions
+          and follow the impact your generosity creates.
         </p>
         <div class="donate-hero__art" aria-hidden="true">
           <span class="donate-hero__orb donate-hero__orb--a"></span>
@@ -94,49 +107,50 @@ const WorldChoirDonate = (() => {
   }
 
   function renderCard(foundation) {
-    const unavailable = !foundation.donationsEnabled;
     return `
-      <article class="donate-card" data-id="${esc(foundation.id)}">
-        <div class="donate-card__top">
-          ${logoHtml(foundation)}
-          <div class="donate-card__meta">
-            <div class="donate-card__title-row">
-              <h3 class="donate-card__name">${esc(foundation.name)}</h3>
-              ${verificationBadge(foundation.verificationStatus)}
+      <article class="cf-card" data-id="${esc(foundation.id)}">
+        <div class="cf-card__top">
+          ${portraitHtml(foundation)}
+          <div class="cf-card__meta">
+            <div class="cf-card__title-row">
+              <h3 class="cf-card__creator">${esc(foundation.creatorName)}</h3>
+              ${verifiedBadge(foundation.verificationStatus)}
             </div>
-            <p class="donate-card__country">${esc(foundation.country)}</p>
+            <p class="cf-card__foundation">${esc(foundation.foundationName)}</p>
+            <p class="cf-card__country">${esc(foundation.country)}</p>
           </div>
         </div>
-        <p class="donate-card__desc">${esc(foundation.description)}</p>
-        <div class="donate-card__chips">${categoryChips(foundation.categories)}</div>
-        <div class="donate-card__actions">
-          <button class="btn btn-secondary donate-card__learn" type="button" data-action="learn" data-id="${esc(foundation.id)}">
-            Learn More
-          </button>
-          <button
-            class="btn btn-primary donate-card__donate"
-            type="button"
-            data-action="donate"
-            data-id="${esc(foundation.id)}"
-            ${unavailable ? 'disabled' : ''}
-          >
-            ${unavailable ? 'Unavailable' : 'Donate'}
-          </button>
+        <p class="cf-card__mission">${esc(foundation.mission)}</p>
+        <div class="cf-card__chips">
+          ${foundation.primaryCategory ? `<span class="donate-chip">${esc(foundation.primaryCategory)}</span>` : ''}
         </div>
+        <div class="cf-card__stats">
+          <div>
+            <span class="cf-card__stat-value">${formatCount(foundation.donorCount)}</span>
+            <span class="cf-card__stat-label">People donated</span>
+          </div>
+          <div>
+            <span class="cf-card__stat-value">${formatCount(foundation.activeProjectCount)}</span>
+            <span class="cf-card__stat-label">Active projects</span>
+          </div>
+        </div>
+        <button class="btn btn-secondary cf-card__cta" type="button" data-action="view" data-id="${esc(foundation.id)}">
+          View Foundation
+        </button>
       </article>
     `;
   }
 
   function renderList() {
-    const result = FoundationsStore.listActive({ page, pageSize: FoundationsStore.PAGE_SIZE });
+    const result = CreatorFoundationsStore.listActive({ page, pageSize: CreatorFoundationsStore.PAGE_SIZE });
     const root = document.getElementById('donate-content');
 
     if (!result.total) {
       root.innerHTML = `
         ${renderHero()}
         <div class="donate-state glass-card">
-          <p class="donate-state__title">No foundations available</p>
-          <p class="donate-state__copy">Charitable partners will appear here soon.</p>
+          <p class="donate-state__title">No Creator Foundations yet</p>
+          <p class="donate-state__copy">Verified creators will appear here as the ecosystem grows.</p>
         </div>
       `;
       return;
@@ -144,9 +158,9 @@ const WorldChoirDonate = (() => {
 
     root.innerHTML = `
       ${renderHero()}
-      <section class="donate-section" aria-labelledby="donate-featured-title">
-        <h2 class="donate-section__title" id="donate-featured-title">Featured Foundations</h2>
-        <p class="donate-section__subtitle">Carefully selected organizations creating real-world impact.</p>
+      <section class="donate-section" aria-labelledby="cf-featured-title">
+        <h2 class="donate-section__title" id="cf-featured-title">Featured Creator Foundations</h2>
+        <p class="donate-section__subtitle">A carefully curated circle of verified people creating lasting impact.</p>
         <div class="donate-grid" id="donate-grid">
           ${result.items.map(renderCard).join('')}
         </div>
@@ -163,22 +177,15 @@ const WorldChoirDonate = (() => {
 
   function bindListEvents() {
     document.getElementById('donate-grid')?.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action]');
+      const btn = e.target.closest('[data-action="view"]');
       if (!btn) return;
-      const id = btn.getAttribute('data-id');
-      const foundation = FoundationsStore.getById(id);
-      if (!foundation) return;
-
-      if (btn.getAttribute('data-action') === 'learn') {
-        openDetail(foundation);
-      } else if (btn.getAttribute('data-action') === 'donate') {
-        openDonateModal(foundation);
-      }
+      const foundation = CreatorFoundationsStore.getById(btn.getAttribute('data-id'));
+      if (foundation) openProfile(foundation);
     });
 
     document.getElementById('donate-load-more')?.addEventListener('click', () => {
       page += 1;
-      const more = FoundationsStore.listActive({ page, pageSize: FoundationsStore.PAGE_SIZE });
+      const more = CreatorFoundationsStore.listActive({ page, pageSize: CreatorFoundationsStore.PAGE_SIZE });
       const grid = document.getElementById('donate-grid');
       if (!grid) return;
       grid.insertAdjacentHTML('beforeend', more.items.map(renderCard).join(''));
@@ -188,110 +195,172 @@ const WorldChoirDonate = (() => {
     });
   }
 
-  function renderDetail(foundation) {
-    const metrics = (foundation.impactMetrics || [])
-      .map((m) => `
-        <div class="donate-metric">
-          <span class="donate-metric__value">${esc(m.value)}</span>
-          <span class="donate-metric__label">${esc(m.label)}</span>
+  function renderProjectCard(project, foundation) {
+    const pct = progressPercent(project.raisedAmount, project.goalAmount);
+    const currency = project.currency || CreatorFoundationsStore.getCurrency();
+    return `
+      <article class="cf-project">
+        <div class="cf-project__head">
+          <h3 class="cf-project__title">${esc(project.title)}</h3>
+          <p class="cf-project__location">${esc(project.location)}</p>
+        </div>
+        <p class="cf-project__desc">${esc(project.description)}</p>
+        <div class="cf-progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Project funding progress">
+          <div class="cf-progress__bar" style="width:${pct}%"></div>
+        </div>
+        <div class="cf-project__meta">
+          <span>${formatMoney(project.raisedAmount, currency)} raised</span>
+          <span>Goal ${formatMoney(project.goalAmount, currency)}</span>
+        </div>
+        ${project.impactSummary ? `<p class="cf-project__impact">${esc(project.impactSummary)}</p>` : ''}
+        <button
+          class="btn btn-primary"
+          type="button"
+          data-action="donate-project"
+          data-foundation="${esc(foundation.id)}"
+          data-project="${esc(project.id)}"
+          ${!foundation.donationsEnabled ? 'disabled' : ''}
+        >
+          Donate directly
+        </button>
+      </article>
+    `;
+  }
+
+  function renderProfile(foundation) {
+    const platform = CreatorFoundationsStore.getPlatform();
+    const allocation = (foundation.financialAllocation || [])
+      .map((row) => `
+        <div class="cf-alloc-row">
+          <span>${esc(row.label)}</span>
+          <strong>${esc(String(row.percent))}%</strong>
         </div>
       `)
       .join('');
 
-    const updates = (foundation.recentUpdates || [])
-      .map((u) => `<li>${esc(u)}</li>`)
+    const values = (foundation.coreValues || [])
+      .map((v) => `<span class="donate-chip">${esc(v)}</span>`)
       .join('');
 
+    const activeProjects = foundation.projects.filter((p) => p.status === 'active');
+
     return `
-      <div class="donate-detail fade-in">
+      <div class="cf-profile fade-in">
         <button class="donate-back" type="button" id="donate-back">← Back</button>
 
-        <div class="donate-detail__header">
-          ${logoHtml(foundation, 'donate-logo--lg')}
-          <div>
-            <div class="donate-card__title-row">
-              <h1 class="donate-detail__name">${esc(foundation.name)}</h1>
-              ${verificationBadge(foundation.verificationStatus)}
+        <header class="cf-profile__hero">
+          ${portraitHtml(foundation, 'cf-portrait--xl')}
+          <div class="cf-profile__hero-text">
+            <div class="cf-card__title-row">
+              <h1 class="cf-profile__foundation">${esc(foundation.foundationName)}</h1>
+              ${verifiedBadge(foundation.verificationStatus)}
             </div>
-            <p class="donate-detail__country">${esc(foundation.country)}</p>
-            <div class="donate-card__chips">${categoryChips(foundation.categories)}</div>
+            <p class="cf-profile__creator">by ${esc(foundation.creatorName)}</p>
+            <p class="cf-profile__mission">${esc(foundation.mission)}</p>
+            <div class="cf-profile__facts">
+              <span>${esc(foundation.country)}</span>
+              ${foundation.yearsActive != null ? `<span>${foundation.yearsActive} years active</span>` : ''}
+              ${foundation.primaryCategory ? `<span>${esc(foundation.primaryCategory)}</span>` : ''}
+            </div>
+            <button
+              class="btn btn-primary cf-profile__donate"
+              type="button"
+              id="cf-profile-donate"
+              ${!foundation.donationsEnabled ? 'disabled' : ''}
+            >
+              ${foundation.donationsEnabled ? 'Donate' : 'Temporarily unavailable'}
+            </button>
           </div>
-        </div>
+        </header>
 
-        <section class="donate-detail__block">
-          <h2>Mission</h2>
-          <p>${esc(foundation.longDescription)}</p>
+        <section class="cf-section">
+          <h2>About</h2>
+          <p>${esc(foundation.biography)}</p>
+          ${foundation.whyStarted ? `
+            <h3>Why this began</h3>
+            <p>${esc(foundation.whyStarted)}</p>
+          ` : ''}
+          ${foundation.howItWorks ? `
+            <h3>How the foundation works</h3>
+            <p>${esc(foundation.howItWorks)}</p>
+          ` : ''}
+          ${values ? `<div class="cf-card__chips" style="margin-top:16px">${values}</div>` : ''}
         </section>
 
-        ${metrics ? `
-          <section class="donate-detail__block">
-            <h2>Impact</h2>
-            <div class="donate-metrics">${metrics}</div>
-          </section>
-        ` : ''}
+        <section class="cf-section" aria-labelledby="cf-projects-title">
+          <h2 id="cf-projects-title">Active Projects</h2>
+          ${activeProjects.length
+            ? `<div class="cf-projects">${activeProjects.map((p) => renderProjectCard(p, foundation)).join('')}</div>`
+            : `<p class="cf-muted">No active projects at the moment.</p>`}
+        </section>
 
-        ${foundation.howDonationsAreUsed ? `
-          <section class="donate-detail__block">
-            <h2>How donations are used</h2>
+        <section class="cf-section" aria-labelledby="cf-transparency-title">
+          <h2 id="cf-transparency-title">Transparency</h2>
+          ${foundation.howDonationsAreUsed ? `
+            <h3>How donations are used</h3>
             <p>${esc(foundation.howDonationsAreUsed)}</p>
-          </section>
-        ` : ''}
-
-        ${foundation.transparency ? `
-          <section class="donate-detail__block">
-            <h2>Transparency</h2>
-            <p>${esc(foundation.transparency)}</p>
-          </section>
-        ` : ''}
-
-        ${updates ? `
-          <section class="donate-detail__block">
-            <h2>Recent updates</h2>
-            <ul class="donate-updates">${updates}</ul>
-          </section>
-        ` : ''}
-
-        <div class="donate-detail__actions">
-          ${foundation.website ? `
-            <a class="btn btn-secondary" href="${esc(foundation.website)}" target="_blank" rel="noopener noreferrer">
-              Official website
-            </a>
           ` : ''}
-          <button
-            class="btn btn-primary"
-            type="button"
-            id="donate-detail-cta"
-            ${!foundation.donationsEnabled ? 'disabled' : ''}
-          >
-            ${foundation.donationsEnabled ? 'Donate' : 'Temporarily unavailable'}
-          </button>
-        </div>
+
+          ${allocation ? `
+            <h3>Financial allocation</h3>
+            <div class="cf-alloc">${allocation}</div>
+            <p class="cf-fee-note">
+              Platform fee: ${esc(String(platform.feePercent || 5))}% —
+              ${esc(platform.feePurpose || 'Operational costs that keep World Choir and Creator Foundations running.')}
+            </p>
+          ` : ''}
+
+          <h3>Verification</h3>
+          <p>
+            Status:
+            <strong>${foundation.verificationStatus === 'verified' ? 'Verified' : esc(foundation.verificationStatus)}</strong>
+          </p>
+          ${foundation.verificationNotes ? `<p class="cf-muted">${esc(foundation.verificationNotes)}</p>` : ''}
+
+          ${foundation.legalOrganization ? `
+            <h3>Legal organization</h3>
+            <p>
+              ${esc(foundation.legalOrganization.name)}
+              ${foundation.legalOrganization.type ? ` · ${esc(foundation.legalOrganization.type)}` : ''}
+              ${foundation.legalOrganization.registrationId ? `<br><span class="cf-muted">${esc(foundation.legalOrganization.registrationId)}</span>` : ''}
+            </p>
+          ` : ''}
+        </section>
       </div>
     `;
   }
 
-  function openDetail(foundation) {
-    view = 'detail';
+  function openProfile(foundation) {
     selectedFoundation = foundation;
+    selectedProject = null;
     const root = document.getElementById('donate-content');
-    root.innerHTML = renderDetail(foundation);
+    root.innerHTML = renderProfile(foundation);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     document.getElementById('donate-back')?.addEventListener('click', () => {
-      view = 'list';
       selectedFoundation = null;
+      selectedProject = null;
       page = 1;
       renderList();
     });
 
-    document.getElementById('donate-detail-cta')?.addEventListener('click', () => {
-      if (foundation.donationsEnabled) openDonateModal(foundation);
+    document.getElementById('cf-profile-donate')?.addEventListener('click', () => {
+      if (foundation.donationsEnabled) openDonateModal(foundation, null);
+    });
+
+    root.querySelectorAll('[data-action="donate-project"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const project = CreatorFoundationsStore.getProject(
+          btn.getAttribute('data-foundation'),
+          btn.getAttribute('data-project')
+        );
+        if (foundation.donationsEnabled) openDonateModal(foundation, project);
+      });
     });
   }
 
   function ensureModal() {
     if (document.getElementById('donate-modal-overlay')) return;
-
     document.body.insertAdjacentHTML('beforeend', `
       <div class="overlay" id="donate-modal-overlay" aria-hidden="true">
         <div class="modal donate-modal" role="dialog" aria-modal="true" aria-labelledby="donate-modal-title">
@@ -299,7 +368,6 @@ const WorldChoirDonate = (() => {
         </div>
       </div>
     `);
-
     document.getElementById('donate-modal-overlay')?.addEventListener('click', (e) => {
       if (e.target.id === 'donate-modal-overlay') closeModal();
     });
@@ -313,40 +381,34 @@ const WorldChoirDonate = (() => {
     return selectedAmount;
   }
 
-  function renderModalBody(foundation) {
+  function renderModalBody(foundation, project) {
     const amounts = AMOUNTS();
+    const title = project
+      ? `Support ${foundation.creatorName}'s project`
+      : `Support ${foundation.creatorName}'s mission`;
+    const subtitle = project
+      ? `Donate to “${project.title}”.`
+      : `Donate to ${foundation.foundationName}.`;
+
     return `
-      <h2 class="modal-title" id="donate-modal-title">Donate to ${esc(foundation.name)}</h2>
-      <p class="modal-copy">Choose an amount. Your gift extends the spirit of World Choir into the world.</p>
+      <h2 class="modal-title" id="donate-modal-title">${esc(title)}</h2>
+      <p class="modal-copy">${esc(subtitle)}</p>
 
       <p class="donate-modal__label">One-time donation</p>
       <div class="donate-amounts" role="group" aria-label="Donation amount">
         ${amounts.map((a) => `
-          <button
-            type="button"
-            class="donate-amount${selectedAmount === a ? ' is-selected' : ''}"
-            data-amount="${a}"
-          >${formatEuro(a)}</button>
+          <button type="button" class="donate-amount${selectedAmount === a ? ' is-selected' : ''}" data-amount="${a}">
+            ${formatMoney(a)}
+          </button>
         `).join('')}
-        <button
-          type="button"
-          class="donate-amount${selectedAmount === 'custom' ? ' is-selected' : ''}"
-          data-amount="custom"
-        >Custom</button>
+        <button type="button" class="donate-amount${selectedAmount === 'custom' ? ' is-selected' : ''}" data-amount="custom">
+          Custom
+        </button>
       </div>
 
       <div class="donate-custom" id="donate-custom" ${selectedAmount === 'custom' ? '' : 'hidden'}>
-        <label class="form-label" for="donate-custom-input">Custom amount (EUR)</label>
-        <input
-          class="form-input"
-          id="donate-custom-input"
-          type="number"
-          min="1"
-          step="0.01"
-          inputmode="decimal"
-          placeholder="Enter amount"
-          value="${esc(customAmount)}"
-        >
+        <label class="form-label" for="donate-custom-input">Custom amount (${esc(CreatorFoundationsStore.getCurrency())})</label>
+        <input class="form-input" id="donate-custom-input" type="number" min="1" step="0.01" inputmode="decimal" placeholder="Enter amount" value="${esc(customAmount)}">
       </div>
 
       <p class="donate-modal__label">Payment method</p>
@@ -359,7 +421,10 @@ const WorldChoirDonate = (() => {
         `).join('')}
       </div>
 
-      <p class="donate-modal__note">Secure payment integration is being prepared. For now, confirmation is simulated.</p>
+      <p class="donate-modal__note">
+        A ${CreatorFoundationsStore.getPlatform().feePercent || 5}% platform fee helps keep World Choir and Creator Foundations working.
+        Payment providers will be connected soon — confirmation is simulated for now.
+      </p>
 
       <div class="actions-row donate-modal__actions">
         <button class="btn btn-primary" type="button" id="donate-confirm-btn">Continue</button>
@@ -368,7 +433,7 @@ const WorldChoirDonate = (() => {
     `;
   }
 
-  function openDonateModal(foundation) {
+  function openDonateModal(foundation, project) {
     if (!foundation.donationsEnabled) {
       alert('Donations for this foundation are temporarily unavailable.');
       return;
@@ -376,6 +441,7 @@ const WorldChoirDonate = (() => {
 
     ensureModal();
     selectedFoundation = foundation;
+    selectedProject = project || null;
     selectedAmount = 25;
     customAmount = '';
     selectedPayment = 'card';
@@ -383,7 +449,7 @@ const WorldChoirDonate = (() => {
 
     const overlay = document.getElementById('donate-modal-overlay');
     const body = document.getElementById('donate-modal-body');
-    body.innerHTML = renderModalBody(foundation);
+    body.innerHTML = renderModalBody(foundation, selectedProject);
     overlay.classList.add('active');
     overlay.setAttribute('aria-hidden', 'false');
     bindModalEvents();
@@ -396,12 +462,9 @@ const WorldChoirDonate = (() => {
       btn.addEventListener('click', () => {
         const raw = btn.getAttribute('data-amount');
         selectedAmount = raw === 'custom' ? 'custom' : Number(raw);
-        const body = document.getElementById('donate-modal-body');
-        body.innerHTML = renderModalBody(selectedFoundation);
+        document.getElementById('donate-modal-body').innerHTML = renderModalBody(selectedFoundation, selectedProject);
         bindModalEvents();
-        if (selectedAmount === 'custom') {
-          document.getElementById('donate-custom-input')?.focus();
-        }
+        if (selectedAmount === 'custom') document.getElementById('donate-custom-input')?.focus();
       });
     });
 
@@ -429,7 +492,6 @@ const WorldChoirDonate = (() => {
 
   async function submitDonation() {
     if (isSubmitting || !selectedFoundation) return;
-
     const amount = getChosenAmount();
     if (!amount) {
       alert('Please enter a valid donation amount.');
@@ -444,13 +506,19 @@ const WorldChoirDonate = (() => {
     }
 
     try {
-      // Architecture-ready payment hook — mocked until provider is connected.
       await mockProcessPayment({
         foundationId: selectedFoundation.id,
+        projectId: selectedProject?.id || null,
         amount,
-        currency: FoundationsStore.getCurrency(),
+        currency: CreatorFoundationsStore.getCurrency(),
         method: selectedPayment,
-        // recurring: false — future support without UI exposure
+      });
+
+      CreatorFoundationsStore.UserSupport.recordDonation({
+        foundationId: selectedFoundation.id,
+        projectId: selectedProject?.id || null,
+        amount,
+        currency: CreatorFoundationsStore.getCurrency(),
       });
 
       closeModal();
@@ -483,38 +551,34 @@ const WorldChoirDonate = (() => {
   }
 
   function showConfirmation(foundation, amount) {
+    const firstName = (foundation.creatorName || 'this creator').split(' ')[0];
     const root = document.getElementById('donate-content');
     root.innerHTML = `
       <div class="donate-confirm fade-in">
         <div class="donate-confirm__icon" aria-hidden="true">
           <span class="donate-confirm__check"></span>
         </div>
-        <h1 class="donate-confirm__title">Thank you.</h1>
+        <h1 class="donate-confirm__title">Thank you for supporting ${esc(firstName)}'s mission.</h1>
         <p class="donate-confirm__copy">
-          Every act of generosity carries the spirit of World Choir beyond the music.
+          Your generosity helps transform compassion into action.
+          You'll be able to follow the progress of the projects you helped make possible.
         </p>
-        <p class="donate-confirm__meta">
-          ${formatEuro(amount)} · ${esc(foundation.name)}
-        </p>
+        <p class="donate-confirm__meta">${formatMoney(amount)} · ${esc(foundation.foundationName)}</p>
         <button class="btn btn-primary" type="button" id="donate-confirm-return">
-          Return
+          Return to Foundation
         </button>
       </div>
     `;
 
     document.getElementById('donate-confirm-return')?.addEventListener('click', () => {
-      view = 'list';
-      selectedFoundation = null;
-      page = 1;
-      renderList();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      openProfile(foundation);
     });
   }
 
   function renderLoading() {
     document.getElementById('donate-content').innerHTML = `
       <div class="donate-state">
-        <p class="donate-state__loading">Loading foundations…</p>
+        <p class="donate-state__loading">Loading Creator Foundations…</p>
       </div>
     `;
   }
@@ -523,7 +587,7 @@ const WorldChoirDonate = (() => {
     document.getElementById('donate-content').innerHTML = `
       <div class="donate-state glass-card">
         <p class="donate-state__title">Something went quiet</p>
-        <p class="donate-state__copy">${esc(message || 'Could not load foundations. Please try again.')}</p>
+        <p class="donate-state__copy">${esc(message || 'Could not load Creator Foundations. Please try again.')}</p>
         <button class="btn btn-secondary" type="button" id="donate-retry">Try again</button>
       </div>
     `;
@@ -536,16 +600,15 @@ const WorldChoirDonate = (() => {
     renderLoading();
 
     try {
-      await FoundationsStore.ready();
+      await CreatorFoundationsStore.ready();
       page = 1;
-      view = 'list';
       renderList();
     } catch (err) {
-      console.error('Donate init failed:', err);
+      console.error('Creator Foundations init failed:', err);
       const offline = typeof navigator !== 'undefined' && !navigator.onLine;
       renderError(offline
         ? 'You appear to be offline. Please reconnect and try again.'
-        : (err.message || 'Could not load foundations.'));
+        : (err.message || 'Could not load Creator Foundations.'));
     }
   }
 

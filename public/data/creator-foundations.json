@@ -1,0 +1,453 @@
+{
+  "version": 2,
+  "platform": {
+    "name": "Creator Foundations",
+    "feePercent": 5,
+    "feePurpose": "Operational costs that keep World Choir running and the Creator Foundations platform secure and transparent."
+  },
+  "currency": "EUR",
+  "supportedCurrencies": ["EUR", "USD", "GBP"],
+  "suggestedAmounts": [5, 10, 25, 50, 100],
+  "foundations": [
+    {
+      "id": "cf-josh-rivera",
+      "slug": "josh-rivera-foundation",
+      "creatorName": "Josh Rivera",
+      "foundationName": "Open Hands Studio",
+      "mission": "Bringing creative workshops and safe spaces to children recovering from hardship.",
+      "biography": "Josh spent a decade documenting community stories before turning his platform into a foundation. After volunteering in shelters and schools, he built Open Hands Studio so creativity could become a daily tool for healing — not a luxury. The foundation funds workshops, art supplies, and mentors who stay with children long after the cameras leave.",
+      "whyStarted": "Josh saw how often attention fades after a crisis ends. He wanted a lasting structure that continues to show up for children when the headlines move on.",
+      "howItWorks": "Donations fund verified local workshop partners. Every active project publishes progress updates with photos and spending summaries. Josh's team reviews partners quarterly and publishes allocation reports.",
+      "coreValues": ["Dignity", "Consistency", "Creativity", "Transparency"],
+      "country": "Portugal",
+      "languages": ["English", "Portuguese", "Spanish"],
+      "categories": ["Children", "Education"],
+      "primaryCategory": "Children",
+      "profileImage": "",
+      "coverImage": "",
+      "verificationStatus": "verified",
+      "verificationNotes": "Identity verified. Legal nonprofit documentation reviewed. Project spending reports audited quarterly.",
+      "foundedDate": "2019-04-12",
+      "yearsActive": 7,
+      "website": "https://example.org/open-hands-studio",
+      "socialLinks": {
+        "instagram": "",
+        "youtube": "",
+        "website": "https://example.org/open-hands-studio"
+      },
+      "impactMetrics": [
+        { "label": "Children reached", "value": "4,200+" },
+        { "label": "Workshops funded", "value": "186" },
+        { "label": "Partner cities", "value": "11" }
+      ],
+      "legalOrganization": {
+        "name": "Open Hands Studio Associação",
+        "registrationId": "PT-OHS-2019-0412",
+        "type": "Nonprofit association"
+      },
+      "financialAllocation": [
+        { "label": "Direct program support", "percent": 82 },
+        { "label": "Operations & coordination", "percent": 13 },
+        { "label": "Platform fee", "percent": 5 }
+      ],
+      "howDonationsAreUsed": "Most of every gift goes directly to workshop spaces, supplies, mentors, and safe transportation for children. A small share covers coordination. A 5% platform fee helps World Choir keep Creator Foundations secure and working.",
+      "donorCount": 1284,
+      "featured": true,
+      "active": true,
+      "donationsEnabled": true,
+      "sortOrder": 10,
+      "projects": [
+        {
+          "id": "proj-lisbon-atelier",
+          "foundationId": "cf-josh-rivera",
+          "title": "Lisbon Atelier for Recovery",
+          "description": "A year-round creative atelier for children rebuilding confidence after family hardship — painting, music, and storytelling with trained mentors.",
+          "goalAmount": 25000,
+          "raisedAmount": 16840,
+          "currency": "EUR",
+          "location": "Lisbon, Portugal",
+          "startDate": "2026-01-15",
+          "expectedCompletion": "2026-12-31",
+          "completionDate": null,
+          "status": "active",
+          "gallery": [],
+          "videos": [],
+          "beforeImages": [],
+          "afterImages": [],
+          "impactSummary": "Already hosting weekly sessions for 64 children.",
+          "updates": [
+            {
+              "id": "upd-atelier-1",
+              "projectId": "proj-lisbon-atelier",
+              "title": "Spring studio opened",
+              "description": "The atelier welcomed its first cohort with new materials and two full-time mentors.",
+              "date": "2026-03-02",
+              "photos": [],
+              "videos": []
+            }
+          ]
+        },
+        {
+          "id": "proj-mobile-kits",
+          "foundationId": "cf-josh-rivera",
+          "title": "Mobile Creativity Kits",
+          "description": "Portable art and music kits delivered to shelters so children can create even when space is limited.",
+          "goalAmount": 8000,
+          "raisedAmount": 5420,
+          "currency": "EUR",
+          "location": "Porto & Coimbra, Portugal",
+          "startDate": "2026-02-01",
+          "expectedCompletion": "2026-09-30",
+          "completionDate": null,
+          "status": "active",
+          "gallery": [],
+          "videos": [],
+          "beforeImages": [],
+          "afterImages": [],
+          "impactSummary": "112 kits delivered to partner shelters.",
+          "updates": []
+        }
+      ]
+    },
+    {
+      "id": "cf-amira-hassan",
+      "slug": "amira-hassan-foundation",
+      "creatorName": "Amira Hassan",
+      "foundationName": "Bread & Belonging",
+      "mission": "Supporting community kitchens that feed families with dignity and care.",
+      "biography": "Amira began cooking for neighbors during a local crisis and never stopped. Bread & Belonging grew from her kitchen table into a network of community meals, grocery support, and quiet companionship for families facing food insecurity.",
+      "whyStarted": "She believed hunger is not only about calories — it is about being seen. The foundation exists so families can receive help without shame.",
+      "howItWorks": "Funds go to vetted community kitchens and grocery partners. Each project shares meal counts, ingredient sourcing, and volunteer hours.",
+      "coreValues": ["Dignity", "Nourishment", "Community", "Quiet generosity"],
+      "country": "United Kingdom",
+      "languages": ["English", "Arabic"],
+      "categories": ["Hunger", "Community"],
+      "primaryCategory": "Hunger",
+      "profileImage": "",
+      "coverImage": "",
+      "verificationStatus": "verified",
+      "verificationNotes": "Creator identity verified. Charity registration confirmed. Kitchen partners independently reviewed.",
+      "foundedDate": "2020-11-08",
+      "yearsActive": 5,
+      "website": "https://example.org/bread-and-belonging",
+      "socialLinks": { "website": "https://example.org/bread-and-belonging" },
+      "impactMetrics": [
+        { "label": "Meals shared", "value": "91,000+" },
+        { "label": "Partner kitchens", "value": "18" },
+        { "label": "Volunteer hours", "value": "12,400" }
+      ],
+      "legalOrganization": {
+        "name": "Bread & Belonging CIC",
+        "registrationId": "UK-BB-2020-1108",
+        "type": "Community interest company"
+      },
+      "financialAllocation": [
+        { "label": "Food & kitchen support", "percent": 84 },
+        { "label": "Coordination", "percent": 11 },
+        { "label": "Platform fee", "percent": 5 }
+      ],
+      "howDonationsAreUsed": "Gifts purchase ingredients, cover kitchen costs, and support volunteers who prepare and deliver meals with care. A 5% platform fee sustains World Choir operations.",
+      "donorCount": 2156,
+      "featured": true,
+      "active": true,
+      "donationsEnabled": true,
+      "sortOrder": 20,
+      "projects": [
+        {
+          "id": "proj-winter-tables",
+          "foundationId": "cf-amira-hassan",
+          "title": "Winter Tables",
+          "description": "Warm evening meals and take-home grocery parcels for families through the coldest months.",
+          "goalAmount": 40000,
+          "raisedAmount": 29150,
+          "currency": "EUR",
+          "location": "Birmingham, United Kingdom",
+          "startDate": "2025-11-01",
+          "expectedCompletion": "2026-03-31",
+          "completionDate": null,
+          "status": "active",
+          "gallery": [],
+          "videos": [],
+          "beforeImages": [],
+          "afterImages": [],
+          "impactSummary": "Over 18,000 winter meals served this season.",
+          "updates": [
+            {
+              "id": "upd-winter-1",
+              "projectId": "proj-winter-tables",
+              "title": "Midwinter report",
+              "description": "Partner kitchens expanded evening hours and added culturally familiar meals requested by families.",
+              "date": "2026-01-20",
+              "photos": [],
+              "videos": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cf-elena-morales",
+      "slug": "elena-morales-foundation",
+      "creatorName": "Elena Morales",
+      "foundationName": "Blue Horizon Literacy",
+      "mission": "Giving children access to books, tutors, and quiet places to learn.",
+      "biography": "Elena taught herself English through library books. Today Blue Horizon Literacy builds reading corners, trains volunteer tutors, and sends books into homes where learning materials are scarce.",
+      "whyStarted": "She knows how one book can change a child's sense of possibility — and she wanted that chance for many more children.",
+      "howItWorks": "Donations fund books, reading spaces, and tutor stipends. Progress is measured by reading sessions completed and books distributed.",
+      "coreValues": ["Curiosity", "Access", "Patience", "Hope"],
+      "country": "Mexico",
+      "languages": ["Spanish", "English"],
+      "categories": ["Education", "Children"],
+      "primaryCategory": "Education",
+      "profileImage": "",
+      "coverImage": "",
+      "verificationStatus": "verified",
+      "verificationNotes": "Verified creator. Registered education nonprofit. Tutor partners reviewed annually.",
+      "foundedDate": "2018-06-01",
+      "yearsActive": 8,
+      "website": "https://example.org/blue-horizon-literacy",
+      "socialLinks": { "website": "https://example.org/blue-horizon-literacy" },
+      "impactMetrics": [
+        { "label": "Books distributed", "value": "62,000+" },
+        { "label": "Reading corners", "value": "47" },
+        { "label": "Tutors trained", "value": "310" }
+      ],
+      "legalOrganization": {
+        "name": "Blue Horizon Literacy A.C.",
+        "registrationId": "MX-BHL-2018-0601",
+        "type": "Civil association"
+      },
+      "financialAllocation": [
+        { "label": "Books & learning spaces", "percent": 80 },
+        { "label": "Tutor training", "percent": 15 },
+        { "label": "Platform fee", "percent": 5 }
+      ],
+      "howDonationsAreUsed": "Support buys books, builds reading corners, and trains tutors. A 5% platform fee helps keep Creator Foundations running.",
+      "donorCount": 980,
+      "featured": true,
+      "active": true,
+      "donationsEnabled": true,
+      "sortOrder": 30,
+      "projects": [
+        {
+          "id": "proj-oaxaca-corners",
+          "foundationId": "cf-elena-morales",
+          "title": "Oaxaca Reading Corners",
+          "description": "Twelve neighborhood reading corners with bilingual books and after-school tutoring.",
+          "goalAmount": 18000,
+          "raisedAmount": 12100,
+          "currency": "EUR",
+          "location": "Oaxaca, Mexico",
+          "startDate": "2026-01-01",
+          "expectedCompletion": "2026-10-15",
+          "completionDate": null,
+          "status": "active",
+          "gallery": [],
+          "videos": [],
+          "beforeImages": [],
+          "afterImages": [],
+          "impactSummary": "Eight of twelve corners already open.",
+          "updates": []
+        }
+      ]
+    },
+    {
+      "id": "cf-noah-okello",
+      "slug": "noah-okello-foundation",
+      "creatorName": "Noah Okello",
+      "foundationName": "Quiet Waters",
+      "mission": "Restoring clean water access and caring for the land around shared wells.",
+      "biography": "Noah grew up walking long distances for water. Quiet Waters funds well repairs, filtration, and community stewardship so families can drink safely and protect the land that sustains them.",
+      "whyStarted": "He wanted solutions that last longer than a single donation drive — maintained by the communities themselves.",
+      "howItWorks": "Engineers and local stewards co-manage each site. Projects publish before/after documentation and maintenance schedules.",
+      "coreValues": ["Stewardship", "Health", "Local leadership", "Longevity"],
+      "country": "Kenya",
+      "languages": ["English", "Swahili"],
+      "categories": ["Environment", "Health"],
+      "primaryCategory": "Environment",
+      "profileImage": "",
+      "coverImage": "",
+      "verificationStatus": "verified",
+      "verificationNotes": "Identity verified. Water project partners independently inspected. Maintenance logs reviewed.",
+      "foundedDate": "2017-09-20",
+      "yearsActive": 8,
+      "website": "https://example.org/quiet-waters",
+      "socialLinks": { "website": "https://example.org/quiet-waters" },
+      "impactMetrics": [
+        { "label": "Wells restored", "value": "39" },
+        { "label": "People served", "value": "27,500+" },
+        { "label": "Stewards trained", "value": "120" }
+      ],
+      "legalOrganization": {
+        "name": "Quiet Waters Trust",
+        "registrationId": "KE-QW-2017-0920",
+        "type": "Charitable trust"
+      },
+      "financialAllocation": [
+        { "label": "Wells & filtration", "percent": 83 },
+        { "label": "Training & maintenance", "percent": 12 },
+        { "label": "Platform fee", "percent": 5 }
+      ],
+      "howDonationsAreUsed": "Funds repair wells, install filtration, and train local stewards. A 5% platform fee supports World Choir operations.",
+      "donorCount": 1740,
+      "featured": true,
+      "active": true,
+      "donationsEnabled": true,
+      "sortOrder": 40,
+      "projects": [
+        {
+          "id": "proj-nakuru-wells",
+          "foundationId": "cf-noah-okello",
+          "title": "Nakuru Well Restoration",
+          "description": "Restoring three community wells and training stewards for long-term care.",
+          "goalAmount": 32000,
+          "raisedAmount": 20450,
+          "currency": "EUR",
+          "location": "Nakuru County, Kenya",
+          "startDate": "2025-10-01",
+          "expectedCompletion": "2026-06-30",
+          "completionDate": null,
+          "status": "active",
+          "gallery": [],
+          "videos": [],
+          "beforeImages": [],
+          "afterImages": [],
+          "impactSummary": "Two wells restored; third underway.",
+          "updates": []
+        }
+      ]
+    },
+    {
+      "id": "cf-sofia-berg",
+      "slug": "sofia-berg-foundation",
+      "creatorName": "Sofia Berg",
+      "foundationName": "Northlight Care",
+      "mission": "Offering gentle mental health support and peer circles for young people.",
+      "biography": "Sofia used her voice online to speak honestly about mental health. Northlight Care funds confidential counseling access, peer-led circles, and educational resources that help young people feel less alone.",
+      "whyStarted": "She wanted help that feels human — quiet, respectful, and available before a crisis becomes overwhelming.",
+      "howItWorks": "Licensed partners provide care. Peer facilitators are trained and supervised. Impact is shared through anonymized wellbeing summaries.",
+      "coreValues": ["Compassion", "Privacy", "Listening", "Safety"],
+      "country": "Sweden",
+      "languages": ["Swedish", "English"],
+      "categories": ["Mental Health", "Health"],
+      "primaryCategory": "Mental Health",
+      "profileImage": "",
+      "coverImage": "",
+      "verificationStatus": "verified",
+      "verificationNotes": "Creator verified. Clinical partners licensed. Privacy protocols independently reviewed.",
+      "foundedDate": "2021-02-14",
+      "yearsActive": 5,
+      "website": "https://example.org/northlight-care",
+      "socialLinks": { "website": "https://example.org/northlight-care" },
+      "impactMetrics": [
+        { "label": "Young people supported", "value": "3,800+" },
+        { "label": "Peer circles", "value": "64" },
+        { "label": "Counseling hours", "value": "9,100" }
+      ],
+      "legalOrganization": {
+        "name": "Northlight Care Ideell Förening",
+        "registrationId": "SE-NC-2021-0214",
+        "type": "Nonprofit association"
+      },
+      "financialAllocation": [
+        { "label": "Care & peer support", "percent": 81 },
+        { "label": "Training & safeguarding", "percent": 14 },
+        { "label": "Platform fee", "percent": 5 }
+      ],
+      "howDonationsAreUsed": "Most gifts fund counseling access and peer circles. A 5% platform fee helps keep the ecosystem trustworthy and online.",
+      "donorCount": 1522,
+      "featured": false,
+      "active": true,
+      "donationsEnabled": true,
+      "sortOrder": 50,
+      "projects": [
+        {
+          "id": "proj-stockholm-circles",
+          "foundationId": "cf-sofia-berg",
+          "title": "Stockholm Peer Circles",
+          "description": "Weekly facilitated peer circles and counseling vouchers for young people.",
+          "goalAmount": 15000,
+          "raisedAmount": 9800,
+          "currency": "EUR",
+          "location": "Stockholm, Sweden",
+          "startDate": "2026-01-10",
+          "expectedCompletion": "2026-12-01",
+          "completionDate": null,
+          "status": "active",
+          "gallery": [],
+          "videos": [],
+          "beforeImages": [],
+          "afterImages": [],
+          "impactSummary": "14 active circles meeting weekly.",
+          "updates": []
+        }
+      ]
+    },
+    {
+      "id": "cf-kai-tanaka",
+      "slug": "kai-tanaka-foundation",
+      "creatorName": "Kai Tanaka",
+      "foundationName": "Harbor of Peace",
+      "mission": "Helping displaced families rebuild stability through shelter support and community welcome.",
+      "biography": "Kai spent years documenting stories of displacement with care and consent. Harbor of Peace now funds transitional housing support, language help, and welcome circles that treat every family as neighbors — not statistics.",
+      "whyStarted": "He wanted generosity to feel personal: a warm room, a patient guide, a community that says you belong here.",
+      "howItWorks": "Local welcome partners receive grants. Families consent to how their stories are shared. Projects report housing placements and support hours.",
+      "coreValues": ["Welcome", "Safety", "Respect", "Belonging"],
+      "country": "Japan",
+      "languages": ["Japanese", "English"],
+      "categories": ["Peace", "Human Rights"],
+      "primaryCategory": "Peace",
+      "profileImage": "",
+      "coverImage": "",
+      "verificationStatus": "verified",
+      "verificationNotes": "Verified creator. Partner NGOs reviewed. Family privacy standards audited.",
+      "foundedDate": "2016-05-03",
+      "yearsActive": 10,
+      "website": "https://example.org/harbor-of-peace",
+      "socialLinks": { "website": "https://example.org/harbor-of-peace" },
+      "impactMetrics": [
+        { "label": "Families welcomed", "value": "1,140" },
+        { "label": "Welcome circles", "value": "88" },
+        { "label": "Support hours", "value": "24,000+" }
+      ],
+      "legalOrganization": {
+        "name": "Harbor of Peace NPO",
+        "registrationId": "JP-HP-2016-0503",
+        "type": "Nonprofit organization"
+      },
+      "financialAllocation": [
+        { "label": "Shelter & family support", "percent": 82 },
+        { "label": "Welcome programs", "percent": 13 },
+        { "label": "Platform fee", "percent": 5 }
+      ],
+      "howDonationsAreUsed": "Support covers transitional housing assistance, language help, and welcome circles. A 5% platform fee sustains Creator Foundations.",
+      "donorCount": 2033,
+      "featured": true,
+      "active": true,
+      "donationsEnabled": true,
+      "sortOrder": 60,
+      "projects": [
+        {
+          "id": "proj-osaka-welcome",
+          "foundationId": "cf-kai-tanaka",
+          "title": "Osaka Welcome Homes",
+          "description": "Transitional housing support and welcome circles for newly arrived families.",
+          "goalAmount": 50000,
+          "raisedAmount": 33600,
+          "currency": "EUR",
+          "location": "Osaka, Japan",
+          "startDate": "2025-09-01",
+          "expectedCompletion": "2026-08-31",
+          "completionDate": null,
+          "status": "active",
+          "gallery": [],
+          "videos": [],
+          "beforeImages": [],
+          "afterImages": [],
+          "impactSummary": "41 families currently receiving housing support.",
+          "updates": []
+        }
+      ]
+    }
+  ]
+}
