@@ -96,6 +96,10 @@ const WorldChoirDonate = (() => {
   }
 
   function renderCard(foundation) {
+    const raisedLabel = formatMoney(
+      foundation.totalRaised || 0,
+      CreatorFoundationsStore.getCurrency()
+    );
     const supportersLabel = foundation.uniqueSupporters === 1
       ? '1 supporter'
       : foundation.uniqueSupporters > 1
@@ -120,6 +124,10 @@ const WorldChoirDonate = (() => {
           : `<p class="cf-card__mission cf-card__mission--pending">This information has not yet been published.</p>`}
         <div class="cf-card__chips">
           ${foundation.primaryCategory ? `<span class="donate-chip">${esc(foundation.primaryCategory)}</span>` : ''}
+        </div>
+        <div class="cf-card__raised">
+          <span class="cf-card__raised-value">${esc(raisedLabel)}</span>
+          <span class="cf-card__raised-label">Raised so far</span>
         </div>
         <div class="cf-card__stats">
           <div>
@@ -283,6 +291,10 @@ const WorldChoirDonate = (() => {
       .join('');
 
     const activeProjects = foundation.projects.filter((p) => p.status === 'active');
+    const raisedCopy = formatMoney(
+      foundation.totalRaised || 0,
+      CreatorFoundationsStore.getCurrency()
+    );
     const supportersCopy = foundation.uniqueSupporters === 0
       ? 'Be among the first to support this mission.'
       : foundation.uniqueSupporters === 1
@@ -304,6 +316,10 @@ const WorldChoirDonate = (() => {
             ${foundation.mission
               ? `<p class="cf-profile__mission">${esc(foundation.mission)}</p>`
               : `<p class="cf-profile__mission cf-muted">This information has not yet been published.</p>`}
+            <div class="cf-profile__raised">
+              <span class="cf-profile__raised-value">${esc(raisedCopy)}</span>
+              <span class="cf-profile__raised-label">Raised so far</span>
+            </div>
             <div class="cf-profile__facts">
               ${foundation.country ? `<span>${esc(foundation.country)}</span>` : ''}
               ${foundation.yearsActive != null ? `<span>${foundation.yearsActive} years active</span>` : ''}

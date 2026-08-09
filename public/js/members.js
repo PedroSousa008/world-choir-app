@@ -350,7 +350,8 @@
       <div class="members-card">
         <h2 class="members-card__title">Create influencer profile</h2>
         <p class="members-card__hint">
-          Set their login and starting page content. They can change email, password, and page details later.
+          Set their login and starting page content. They appear on the Donate tab right away.
+          They can change email, password, and page details later.
         </p>
         <form class="members-form two-col" id="members-create-form">
           <div class="members-field">

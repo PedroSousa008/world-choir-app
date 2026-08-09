@@ -129,7 +129,8 @@ async function createInfluencer({
         ? [String(primaryCategory).trim()]
         : [],
     active: active !== false,
-    published: false,
+    // Owner-created influencers appear on Donate immediately.
+    published: true,
     createdAt: now,
     updatedAt: now,
   };
@@ -313,6 +314,120 @@ async function getOperationsOverview() {
   };
 }
 
+function slugify(text) {
+  const slug = String(text || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'foundation';
+}
+
+function influencerToFoundation(row) {
+  const displayName = String(row.displayName || '').trim();
+  const foundationName = String(row.foundationName || '').trim()
+    || (displayName ? `${displayName}'s Foundation` : 'Creator Foundation');
+  const categories = Array.isArray(row.categories)
+    ? row.categories.map((c) => String(c).trim()).filter(Boolean)
+    : [];
+  const primaryCategory = String(row.primaryCategory || '').trim() || categories[0] || '';
+
+  return {
+    id: row.id,
+    slug: slugify(foundationName),
+    creatorName: displayName,
+    foundationName,
+    mission: String(row.mission || '').trim(),
+    biography: String(row.biography || '').trim(),
+    whyStarted: String(row.whyStarted || '').trim(),
+    howItWorks: String(row.howItWorks || '').trim(),
+    coreValues: [],
+    country: String(row.country || '').trim(),
+    languages: [],
+    categories: primaryCategory && !categories.includes(primaryCategory)
+      ? [primaryCategory, ...categories]
+      : categories,
+    primaryCategory,
+    profileImage: '',
+    coverImage: '',
+    verificationStatus: 'unverified',
+    verificationNotes: '',
+    foundedDate: row.createdAt || null,
+    website: '',
+    socialLinks: {},
+    impactMetrics: [],
+    legalOrganization: null,
+    financialAllocation: [
+      { label: 'Direct program support', percent: 100 - PLATFORM_FEE_PERCENT },
+      { label: 'Platform fee', percent: PLATFORM_FEE_PERCENT },
+    ],
+    howDonationsAreUsed:
+      `${100 - PLATFORM_FEE_PERCENT}% of every donation goes directly to this Creator Foundation's mission. `
+      + `${PLATFORM_FEE_PERCENT}% helps keep World Choir and Creator Foundations running.`,
+    featured: true,
+    active: row.active !== false,
+    donationsEnabled: true,
+    sortOrder: 100,
+    projects: [],
+  };
+}
+
+/**
+ * Public Donate catalog from Owner-created influencers + verified donation ledger.
+ * Never invents raised totals — ledger only (empty until real payments exist).
+ */
+async function getPublicCreatorFoundationsCatalog() {
+  assertBlobConfigured();
+  const doc = await readInfluencersDoc();
+
+  // Active Owner-created influencers appear on Donate.
+  // Backfill publish flag for profiles created before auto-publish.
+  let mutated = false;
+  doc.influencers.forEach((row) => {
+    if (row.active !== false && row.published !== true) {
+      row.published = true;
+      mutated = true;
+    }
+  });
+  if (mutated) {
+    await writeInfluencersDoc(doc);
+  }
+
+  const influencers = doc.influencers.filter(
+    (row) => row.active !== false && row.published === true
+  );
+
+  const foundations = influencers
+    .map(influencerToFoundation)
+    .sort((a, b) => String(b.foundedDate || '').localeCompare(String(a.foundedDate || '')));
+
+  const foundationIds = new Set(foundations.map((f) => f.id));
+  const ledger = await readDonationsLedger();
+  const donations = ledger.filter((d) => foundationIds.has(d.foundationId));
+
+  return {
+    version: 3,
+    dataPolicy: {
+      production: true,
+      rule:
+        'Display only creator-provided facts and platform-calculated stats from verified records. Never invent numbers.',
+      source: 'owner-influencers',
+    },
+    platform: {
+      name: 'Creator Foundations',
+      feePercent: PLATFORM_FEE_PERCENT,
+      feePurpose:
+        'Operational costs that keep World Choir running and the Creator Foundations platform secure and transparent.',
+    },
+    currency: 'EUR',
+    supportedCurrencies: ['EUR', 'USD', 'GBP'],
+    suggestedAmounts: [5, 10, 25, 50, 100],
+    foundations,
+    donations,
+  };
+}
+
 module.exports = {
   PLATFORM_FEE_PERCENT,
   listInfluencers,
@@ -324,5 +439,6 @@ module.exports = {
   changeInfluencerPassword,
   changeInfluencerEmail,
   getOperationsOverview,
+  getPublicCreatorFoundationsCatalog,
   publicInfluencer,
 };

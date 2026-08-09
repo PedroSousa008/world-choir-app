@@ -10,7 +10,8 @@
  * Demo catalog loads only when ?cfDemo=1 is present (development).
  */
 const CreatorFoundationsStore = (() => {
-  const PRODUCTION_URL = 'data/creator-foundations.json';
+  const PRODUCTION_URL = '/api/creator-foundations';
+  const FALLBACK_URL = 'data/creator-foundations.json';
   const DEMO_URL = 'data/creator-foundations.demo.json';
   const PAGE_SIZE = 24;
   const SUCCESS_STATUSES = new Set(['succeeded', 'completed', 'paid']);
@@ -44,35 +45,50 @@ const CreatorFoundationsStore = (() => {
     if (loadPromise) return loadPromise;
 
     const useDemo = isDemoMode();
-    const url = useDemo ? DEMO_URL : PRODUCTION_URL;
 
-    loadPromise = fetch(url, { cache: 'no-store' })
-      .then(async (res) => {
+    loadPromise = (async () => {
+      let data = null;
+
+      if (useDemo) {
+        const res = await fetch(DEMO_URL, { cache: 'no-store' });
         if (!res.ok) throw new Error('Could not load Creator Foundations.');
-        const data = await res.json();
-
-        if (data?.dataPolicy?.demo === true && !useDemo) {
-          throw new Error('Demo catalog blocked in production mode.');
+        data = await res.json();
+      } else {
+        try {
+          const res = await fetch(PRODUCTION_URL, { cache: 'no-store', credentials: 'omit' });
+          if (res.ok) data = await res.json();
+        } catch {
+          data = null;
         }
 
-        catalog = {
-          version: data.version || 3,
-          platform: data.platform || { feePercent: 10 },
-          currency: data.currency || 'EUR',
-          supportedCurrencies: data.supportedCurrencies || ['EUR'],
-          suggestedAmounts: data.suggestedAmounts || [5, 10, 25, 50, 100],
-          foundations: Array.isArray(data.foundations) ? data.foundations : [],
-          donations: Array.isArray(data.donations) ? data.donations : [],
-        };
-        isDemoCatalog = useDemo || data?.dataPolicy?.demo === true;
-        loadError = null;
-        return catalog;
-      })
-      .catch((err) => {
-        loadError = err;
-        loadPromise = null;
-        throw err;
-      });
+        if (!data) {
+          const res = await fetch(FALLBACK_URL, { cache: 'no-store' });
+          if (!res.ok) throw new Error('Could not load Creator Foundations.');
+          data = await res.json();
+        }
+      }
+
+      if (data?.dataPolicy?.demo === true && !useDemo) {
+        throw new Error('Demo catalog blocked in production mode.');
+      }
+
+      catalog = {
+        version: data.version || 3,
+        platform: data.platform || { feePercent: 10 },
+        currency: data.currency || 'EUR',
+        supportedCurrencies: data.supportedCurrencies || ['EUR'],
+        suggestedAmounts: data.suggestedAmounts || [5, 10, 25, 50, 100],
+        foundations: Array.isArray(data.foundations) ? data.foundations : [],
+        donations: Array.isArray(data.donations) ? data.donations : [],
+      };
+      isDemoCatalog = useDemo || data?.dataPolicy?.demo === true;
+      loadError = null;
+      return catalog;
+    })().catch((err) => {
+      loadError = err;
+      loadPromise = null;
+      throw err;
+    });
 
     return loadPromise;
   }
@@ -207,9 +223,10 @@ const CreatorFoundationsStore = (() => {
       legalOrganization: foundation.legalOrganization || null,
       financialAllocation: foundation.financialAllocation || [],
       howDonationsAreUsed: foundation.howDonationsAreUsed || '',
-      // Platform-generated — never from hard-coded donorCount / raisedAmount fields
+      // Platform-generated — never from hard-coded donorCount / raisedAmount fields.
+      // totalRaised is always a real ledger sum (0 until verified donations exist).
       uniqueSupporters,
-      totalRaised: raisedKnown ? totalRaised : null,
+      totalRaised,
       raisedKnown,
       activeProjectCount: activeProjects.length,
       completedProjectCount: completedProjects.length,
