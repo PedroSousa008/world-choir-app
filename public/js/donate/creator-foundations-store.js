@@ -1,33 +1,70 @@
 /**
- * CreatorFoundationsStore — curated Creator Foundations catalog for Donate.
+ * CreatorFoundationsStore — production-safe Creator Foundations data layer.
  *
- * Scales to thousands of foundations / projects via pagination + future API/Blob.
- * Admin, discovery, and user-profile surfaces are stubbed for future expansion.
+ * DATA POLICY
+ * - Creator-provided fields: display only as submitted/approved.
+ * - Platform stats (supporters, raised totals, progress): calculated from verified donation records only.
+ * - Never invent, estimate, or hard-code public statistics.
+ * - Mock / demo payments never inflate public totals.
+ *
+ * Demo catalog loads only when ?cfDemo=1 is present (development).
  */
 const CreatorFoundationsStore = (() => {
-  const CATALOG_URL = 'data/creator-foundations.json';
+  const PRODUCTION_URL = 'data/creator-foundations.json';
+  const DEMO_URL = 'data/creator-foundations.demo.json';
   const PAGE_SIZE = 24;
+  const SUCCESS_STATUSES = new Set(['succeeded', 'completed', 'paid']);
+  const EXCLUDED_STATUSES = new Set([
+    'failed',
+    'cancelled',
+    'canceled',
+    'refunded',
+    'reversed',
+    'fraudulent',
+    'pending',
+    'completed_mock',
+    'mock',
+  ]);
 
   let catalog = null;
   let loadPromise = null;
   let loadError = null;
+  let isDemoCatalog = false;
+
+  function isDemoMode() {
+    try {
+      return new URLSearchParams(window.location.search).get('cfDemo') === '1';
+    } catch {
+      return false;
+    }
+  }
 
   async function load() {
     if (catalog) return catalog;
     if (loadPromise) return loadPromise;
 
-    loadPromise = fetch(CATALOG_URL, { cache: 'no-store' })
+    const useDemo = isDemoMode();
+    const url = useDemo ? DEMO_URL : PRODUCTION_URL;
+
+    loadPromise = fetch(url, { cache: 'no-store' })
       .then(async (res) => {
         if (!res.ok) throw new Error('Could not load Creator Foundations.');
         const data = await res.json();
+
+        if (data?.dataPolicy?.demo === true && !useDemo) {
+          throw new Error('Demo catalog blocked in production mode.');
+        }
+
         catalog = {
-          version: data.version || 2,
+          version: data.version || 3,
           platform: data.platform || { feePercent: 5 },
           currency: data.currency || 'EUR',
           supportedCurrencies: data.supportedCurrencies || ['EUR'],
           suggestedAmounts: data.suggestedAmounts || [5, 10, 25, 50, 100],
           foundations: Array.isArray(data.foundations) ? data.foundations : [],
+          donations: Array.isArray(data.donations) ? data.donations : [],
         };
+        isDemoCatalog = useDemo || data?.dataPolicy?.demo === true;
         loadError = null;
         return catalog;
       })
@@ -45,27 +82,88 @@ const CreatorFoundationsStore = (() => {
   }
 
   function yearsActiveFrom(foundation) {
-    if (Number.isFinite(foundation.yearsActive)) return foundation.yearsActive;
     if (!foundation.foundedDate) return null;
     const founded = new Date(foundation.foundedDate);
     if (Number.isNaN(founded.getTime())) return null;
-    return Math.max(0, new Date().getFullYear() - founded.getFullYear());
+    const years = new Date().getFullYear() - founded.getFullYear();
+    return years >= 0 ? years : null;
+  }
+
+  function isSuccessfulDonation(donation) {
+    if (!donation) return false;
+    const status = String(donation.paymentStatus || '').toLowerCase();
+    if (EXCLUDED_STATUSES.has(status)) return false;
+    if (donation.mock === true) return false;
+    return SUCCESS_STATUSES.has(status);
+  }
+
+  function getVerifiedDonations(filter = {}) {
+    if (!catalog) return [];
+    return catalog.donations.filter((d) => {
+      if (!isSuccessfulDonation(d)) return false;
+      if (filter.foundationId && d.foundationId !== filter.foundationId) return false;
+      if (filter.projectId && d.projectId !== filter.projectId) return false;
+      return true;
+    });
+  }
+
+  /** Unique supporters — one person, many gifts → one supporter. */
+  function getUniqueSupporterCount(foundationId) {
+    const donors = new Set();
+    getVerifiedDonations({ foundationId }).forEach((d) => {
+      const key = d.donorId || d.deviceId || d.userId || d.emailHash || null;
+      if (key) donors.add(String(key));
+    });
+    return donors.size;
+  }
+
+  function getRaisedAmount(filter = {}) {
+    return getVerifiedDonations(filter).reduce((sum, d) => {
+      const amount = Number(d.amount);
+      return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+    }, 0);
+  }
+
+  function hasVerifiedRaisedData(filter = {}) {
+    return getVerifiedDonations(filter).length > 0;
+  }
+
+  function normalizeImpactMetrics(metrics) {
+    if (!Array.isArray(metrics)) return [];
+    return metrics.filter((m) =>
+      m
+      && m.label
+      && m.value != null
+      && m.value !== ''
+      && (m.verified === true || m.approved === true)
+    );
   }
 
   function normalizeProject(project, foundationId) {
+    const goalAmount = Number(project.goalAmount);
+    const raisedAmount = getRaisedAmount({
+      foundationId,
+      projectId: project.id,
+    });
+    const raisedKnown = hasVerifiedRaisedData({
+      foundationId,
+      projectId: project.id,
+    });
+
     return {
       id: project.id,
       foundationId: project.foundationId || foundationId,
       title: project.title || '',
       description: project.description || '',
-      goalAmount: Number(project.goalAmount) || 0,
-      raisedAmount: Number(project.raisedAmount) || 0,
+      goalAmount: Number.isFinite(goalAmount) && goalAmount > 0 ? goalAmount : null,
+      raisedAmount: raisedKnown ? raisedAmount : null,
+      raisedKnown,
       currency: project.currency || catalog?.currency || 'EUR',
       location: project.location || '',
       startDate: project.startDate || null,
       expectedCompletion: project.expectedCompletion || null,
       completionDate: project.completionDate || null,
-      status: project.status || 'active',
+      status: project.status || 'draft',
       gallery: project.gallery || [],
       videos: project.videos || [],
       beforeImages: project.beforeImages || [],
@@ -78,6 +176,10 @@ const CreatorFoundationsStore = (() => {
   function normalize(foundation) {
     const projects = (foundation.projects || []).map((p) => normalizeProject(p, foundation.id));
     const activeProjects = projects.filter((p) => p.status === 'active');
+    const completedProjects = projects.filter((p) => p.status === 'completed');
+    const uniqueSupporters = getUniqueSupporterCount(foundation.id);
+    const totalRaised = getRaisedAmount({ foundationId: foundation.id });
+    const raisedKnown = hasVerifiedRaisedData({ foundationId: foundation.id });
 
     return {
       id: foundation.id,
@@ -89,7 +191,7 @@ const CreatorFoundationsStore = (() => {
       whyStarted: foundation.whyStarted || '',
       howItWorks: foundation.howItWorks || '',
       coreValues: foundation.coreValues || [],
-      country: foundation.country || 'Global',
+      country: foundation.country || '',
       languages: foundation.languages || [],
       categories: foundation.categories || [],
       primaryCategory: foundation.primaryCategory || (foundation.categories && foundation.categories[0]) || '',
@@ -101,12 +203,16 @@ const CreatorFoundationsStore = (() => {
       yearsActive: yearsActiveFrom(foundation),
       website: foundation.website || '',
       socialLinks: foundation.socialLinks || {},
-      impactMetrics: foundation.impactMetrics || [],
+      impactMetrics: normalizeImpactMetrics(foundation.impactMetrics),
       legalOrganization: foundation.legalOrganization || null,
       financialAllocation: foundation.financialAllocation || [],
       howDonationsAreUsed: foundation.howDonationsAreUsed || '',
-      donorCount: Number(foundation.donorCount) || 0,
+      // Platform-generated — never from hard-coded donorCount / raisedAmount fields
+      uniqueSupporters,
+      totalRaised: raisedKnown ? totalRaised : null,
+      raisedKnown,
       activeProjectCount: activeProjects.length,
+      completedProjectCount: completedProjects.length,
       projects,
       featured: foundation.featured === true,
       active: foundation.active !== false,
@@ -131,10 +237,6 @@ const CreatorFoundationsStore = (() => {
     return catalog?.suggestedAmounts || [5, 10, 25, 50, 100];
   }
 
-  /**
-   * Discovery API (architecture ready — UI not implemented yet).
-   * Supports: creator, foundation, country, category, featured, recentlyUpdated, mostActive, trending.
-   */
   function listActive(options = {}) {
     const {
       featuredOnly = false,
@@ -174,8 +276,10 @@ const CreatorFoundationsStore = (() => {
     }
 
     items.sort((a, b) => {
-      if (sort === 'mostActive') return b.activeProjectCount - a.activeProjectCount || b.donorCount - a.donorCount;
-      if (sort === 'trending') return b.donorCount - a.donorCount;
+      if (sort === 'mostActive') {
+        return b.activeProjectCount - a.activeProjectCount || b.uniqueSupporters - a.uniqueSupporters;
+      }
+      if (sort === 'trending') return b.uniqueSupporters - a.uniqueSupporters;
       if (a.featured !== b.featured) return a.featured ? -1 : 1;
       if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
       return a.creatorName.localeCompare(b.creatorName);
@@ -212,7 +316,10 @@ const CreatorFoundationsStore = (() => {
     return loadError;
   }
 
-  /** Future admin panel — not exposed in UI. */
+  function usingDemoCatalog() {
+    return isDemoCatalog;
+  }
+
   const Admin = {
     listAll() {
       if (!catalog) return [];
@@ -231,8 +338,8 @@ const CreatorFoundationsStore = (() => {
   };
 
   /**
-   * Future user profile surface — donation history, favorites, receipts.
-   * Persists locally for now; server sync later.
+   * Local user support history only.
+   * Mock payments are stored as completed_mock and NEVER counted in public stats.
    */
   const UserSupport = {
     KEY: 'wc_creator_foundations_support',
@@ -249,7 +356,7 @@ const CreatorFoundationsStore = (() => {
     recordDonation({ foundationId, amount, currency, anonymous = false, projectId = null }) {
       const data = this._read();
       data.donations = data.donations || [];
-      data.donations.push({
+      const entry = {
         id: 'local_' + Date.now().toString(36),
         foundationId,
         projectId,
@@ -258,13 +365,15 @@ const CreatorFoundationsStore = (() => {
         anonymous,
         date: new Date().toISOString(),
         paymentStatus: 'completed_mock',
-      });
+        mock: true,
+      };
+      data.donations.push(entry);
       data.supportedFoundationIds = Array.from(new Set([
         ...(data.supportedFoundationIds || []),
         foundationId,
       ]));
       this._write(data);
-      return data.donations[data.donations.length - 1];
+      return entry;
     },
     getDonationHistory() {
       return this._read().donations || [];
@@ -294,10 +403,13 @@ const CreatorFoundationsStore = (() => {
     load,
     isLoaded,
     getLoadError,
+    usingDemoCatalog,
     getPlatform,
     getCurrency,
     getSupportedCurrencies,
     getSuggestedAmounts,
+    getUniqueSupporterCount,
+    getRaisedAmount,
     listActive,
     getById,
     getBySlug,
@@ -308,5 +420,4 @@ const CreatorFoundationsStore = (() => {
   };
 })();
 
-/** Backward-compatible alias while Donate tab migrates. */
 const FoundationsStore = CreatorFoundationsStore;

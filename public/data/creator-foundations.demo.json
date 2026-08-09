@@ -1,0 +1,54 @@
+{
+  "version": 3,
+  "dataPolicy": {
+    "production": false,
+    "demo": true,
+    "warning": "DEVELOPMENT / DEMO ONLY. Never serve this file as production truth. Contains sample creator-provided text with zero platform-generated stats."
+  },
+  "platform": {
+    "name": "Creator Foundations",
+    "feePercent": 5,
+    "feePurpose": "Operational costs that keep World Choir running and the Creator Foundations platform secure and transparent."
+  },
+  "currency": "EUR",
+  "supportedCurrencies": ["EUR", "USD", "GBP"],
+  "suggestedAmounts": [5, 10, 25, 50, 100],
+  "foundations": [
+    {
+      "id": "cf-demo-sample",
+      "slug": "demo-sample-foundation",
+      "creatorName": "Demo Creator",
+      "foundationName": "Demo Mission Foundation",
+      "mission": "A development-only sample used to preview layout. Not a real foundation.",
+      "biography": "This entry exists only for local UI development. It must never appear in production.",
+      "whyStarted": "To test empty-stat and creator-provided field rendering.",
+      "howItWorks": "No real donations or projects are associated with this demo entry.",
+      "coreValues": ["Transparency", "Authenticity"],
+      "country": "Demo",
+      "languages": ["English"],
+      "categories": ["Education"],
+      "primaryCategory": "Education",
+      "profileImage": "",
+      "coverImage": "",
+      "verificationStatus": "unverified",
+      "verificationNotes": "",
+      "foundedDate": null,
+      "website": "",
+      "socialLinks": {},
+      "impactMetrics": [],
+      "legalOrganization": null,
+      "financialAllocation": [
+        { "label": "Direct program support", "percent": 82 },
+        { "label": "Operations & coordination", "percent": 13 },
+        { "label": "Platform fee", "percent": 5 }
+      ],
+      "howDonationsAreUsed": "Demo allocation only — not a live foundation.",
+      "featured": true,
+      "active": true,
+      "donationsEnabled": false,
+      "sortOrder": 10,
+      "projects": []
+    }
+  ],
+  "donations": []
+}

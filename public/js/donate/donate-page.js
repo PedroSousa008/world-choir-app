@@ -43,11 +43,6 @@ const WorldChoirDonate = (() => {
     return Number(n || 0).toLocaleString('en-US');
   }
 
-  function progressPercent(raised, goal) {
-    if (!goal || goal <= 0) return 0;
-    return Math.min(100, Math.round((raised / goal) * 100));
-  }
-
   function initials(name) {
     return (name || '?')
       .split(/\s+/)
@@ -107,6 +102,12 @@ const WorldChoirDonate = (() => {
   }
 
   function renderCard(foundation) {
+    const supportersLabel = foundation.uniqueSupporters === 1
+      ? '1 supporter'
+      : foundation.uniqueSupporters > 1
+        ? `${formatCount(foundation.uniqueSupporters)} supporters`
+        : null;
+
     return `
       <article class="cf-card" data-id="${esc(foundation.id)}">
         <div class="cf-card__top">
@@ -117,17 +118,21 @@ const WorldChoirDonate = (() => {
               ${verifiedBadge(foundation.verificationStatus)}
             </div>
             <p class="cf-card__foundation">${esc(foundation.foundationName)}</p>
-            <p class="cf-card__country">${esc(foundation.country)}</p>
+            ${foundation.country ? `<p class="cf-card__country">${esc(foundation.country)}</p>` : ''}
           </div>
         </div>
-        <p class="cf-card__mission">${esc(foundation.mission)}</p>
+        ${foundation.mission
+          ? `<p class="cf-card__mission">${esc(foundation.mission)}</p>`
+          : `<p class="cf-card__mission cf-card__mission--pending">This information has not yet been published.</p>`}
         <div class="cf-card__chips">
           ${foundation.primaryCategory ? `<span class="donate-chip">${esc(foundation.primaryCategory)}</span>` : ''}
         </div>
         <div class="cf-card__stats">
           <div>
-            <span class="cf-card__stat-value">${formatCount(foundation.donorCount)}</span>
-            <span class="cf-card__stat-label">People donated</span>
+            ${supportersLabel
+              ? `<span class="cf-card__stat-value">${esc(supportersLabel.split(' ')[0])}</span>
+                 <span class="cf-card__stat-label">${foundation.uniqueSupporters === 1 ? 'Supporter' : 'Supporters'}</span>`
+              : `<span class="cf-card__stat-empty">Be among the first to support this mission.</span>`}
           </div>
           <div>
             <span class="cf-card__stat-value">${formatCount(foundation.activeProjectCount)}</span>
@@ -144,13 +149,20 @@ const WorldChoirDonate = (() => {
   function renderList() {
     const result = CreatorFoundationsStore.listActive({ page, pageSize: CreatorFoundationsStore.PAGE_SIZE });
     const root = document.getElementById('donate-content');
+    const demoBanner = CreatorFoundationsStore.usingDemoCatalog()
+      ? `<p class="cf-demo-banner" role="status">Development demo catalog — not real production data.</p>`
+      : '';
 
     if (!result.total) {
       root.innerHTML = `
         ${renderHero()}
+        ${demoBanner}
         <div class="donate-state glass-card">
           <p class="donate-state__title">No Creator Foundations yet</p>
-          <p class="donate-state__copy">Verified creators will appear here as the ecosystem grows.</p>
+          <p class="donate-state__copy">
+            Verified creators will appear here as the ecosystem grows.
+            We only show real foundations — never placeholders.
+          </p>
         </div>
       `;
       return;
@@ -158,6 +170,7 @@ const WorldChoirDonate = (() => {
 
     root.innerHTML = `
       ${renderHero()}
+      ${demoBanner}
       <section class="donate-section" aria-labelledby="cf-featured-title">
         <h2 class="donate-section__title" id="cf-featured-title">Featured Creator Foundations</h2>
         <p class="donate-section__subtitle">A carefully curated circle of verified people creating lasting impact.</p>
@@ -196,22 +209,39 @@ const WorldChoirDonate = (() => {
   }
 
   function renderProjectCard(project, foundation) {
-    const pct = progressPercent(project.raisedAmount, project.goalAmount);
     const currency = project.currency || CreatorFoundationsStore.getCurrency();
+    const showProgress = project.raisedKnown
+      && project.goalAmount != null
+      && project.raisedAmount != null
+      && project.goalAmount > 0;
+    const pct = showProgress
+      ? Math.min(100, Math.round((project.raisedAmount / project.goalAmount) * 1000) / 10)
+      : null;
+
     return `
       <article class="cf-project">
         <div class="cf-project__head">
           <h3 class="cf-project__title">${esc(project.title)}</h3>
-          <p class="cf-project__location">${esc(project.location)}</p>
+          ${project.location ? `<p class="cf-project__location">${esc(project.location)}</p>` : ''}
         </div>
-        <p class="cf-project__desc">${esc(project.description)}</p>
-        <div class="cf-progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Project funding progress">
-          <div class="cf-progress__bar" style="width:${pct}%"></div>
-        </div>
-        <div class="cf-project__meta">
-          <span>${formatMoney(project.raisedAmount, currency)} raised</span>
-          <span>Goal ${formatMoney(project.goalAmount, currency)}</span>
-        </div>
+        ${project.description
+          ? `<p class="cf-project__desc">${esc(project.description)}</p>`
+          : `<p class="cf-project__desc cf-muted">This information has not yet been published.</p>`}
+        ${showProgress ? `
+          <div class="cf-progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Project funding progress">
+            <div class="cf-progress__bar" style="width:${pct}%"></div>
+          </div>
+          <div class="cf-project__meta">
+            <span>${formatMoney(project.raisedAmount, currency)} raised</span>
+            <span>Goal ${formatMoney(project.goalAmount, currency)}</span>
+          </div>
+        ` : `
+          <div class="cf-project__meta">
+            ${project.goalAmount != null
+              ? `<span>Goal ${formatMoney(project.goalAmount, currency)}</span>`
+              : '<span class="cf-muted">Funding progress will appear when verified donations are recorded.</span>'}
+          </div>
+        `}
         ${project.impactSummary ? `<p class="cf-project__impact">${esc(project.impactSummary)}</p>` : ''}
         <button
           class="btn btn-primary"
@@ -224,6 +254,22 @@ const WorldChoirDonate = (() => {
           Donate directly
         </button>
       </article>
+    `;
+  }
+
+  function renderImpactMetrics(metrics) {
+    if (!metrics.length) {
+      return `<p class="cf-muted">Impact data will appear here as this mission grows.</p>`;
+    }
+    return `
+      <div class="donate-metrics">
+        ${metrics.map((m) => `
+          <div class="donate-metric">
+            <span class="donate-metric__value">${esc(String(m.value))}</span>
+            <span class="donate-metric__label">${esc(m.label)}</span>
+          </div>
+        `).join('')}
+      </div>
     `;
   }
 
@@ -243,6 +289,11 @@ const WorldChoirDonate = (() => {
       .join('');
 
     const activeProjects = foundation.projects.filter((p) => p.status === 'active');
+    const supportersCopy = foundation.uniqueSupporters === 0
+      ? 'Be among the first to support this mission.'
+      : foundation.uniqueSupporters === 1
+        ? '1 supporter'
+        : `${formatCount(foundation.uniqueSupporters)} supporters`;
 
     return `
       <div class="cf-profile fade-in">
@@ -256,11 +307,14 @@ const WorldChoirDonate = (() => {
               ${verifiedBadge(foundation.verificationStatus)}
             </div>
             <p class="cf-profile__creator">by ${esc(foundation.creatorName)}</p>
-            <p class="cf-profile__mission">${esc(foundation.mission)}</p>
+            ${foundation.mission
+              ? `<p class="cf-profile__mission">${esc(foundation.mission)}</p>`
+              : `<p class="cf-profile__mission cf-muted">This information has not yet been published.</p>`}
             <div class="cf-profile__facts">
-              <span>${esc(foundation.country)}</span>
+              ${foundation.country ? `<span>${esc(foundation.country)}</span>` : ''}
               ${foundation.yearsActive != null ? `<span>${foundation.yearsActive} years active</span>` : ''}
               ${foundation.primaryCategory ? `<span>${esc(foundation.primaryCategory)}</span>` : ''}
+              <span>${esc(supportersCopy)}</span>
             </div>
             <button
               class="btn btn-primary cf-profile__donate"
@@ -275,7 +329,9 @@ const WorldChoirDonate = (() => {
 
         <section class="cf-section">
           <h2>About</h2>
-          <p>${esc(foundation.biography)}</p>
+          ${foundation.biography
+            ? `<p>${esc(foundation.biography)}</p>`
+            : `<p class="cf-muted">This information has not yet been published.</p>`}
           ${foundation.whyStarted ? `
             <h3>Why this began</h3>
             <p>${esc(foundation.whyStarted)}</p>
@@ -285,6 +341,11 @@ const WorldChoirDonate = (() => {
             <p>${esc(foundation.howItWorks)}</p>
           ` : ''}
           ${values ? `<div class="cf-card__chips" style="margin-top:16px">${values}</div>` : ''}
+        </section>
+
+        <section class="cf-section" aria-labelledby="cf-impact-title">
+          <h2 id="cf-impact-title">Impact</h2>
+          ${renderImpactMetrics(foundation.impactMetrics)}
         </section>
 
         <section class="cf-section" aria-labelledby="cf-projects-title">
@@ -299,7 +360,10 @@ const WorldChoirDonate = (() => {
           ${foundation.howDonationsAreUsed ? `
             <h3>How donations are used</h3>
             <p>${esc(foundation.howDonationsAreUsed)}</p>
-          ` : ''}
+          ` : `
+            <h3>How donations are used</h3>
+            <p class="cf-muted">This information has not yet been published.</p>
+          `}
 
           ${allocation ? `
             <h3>Financial allocation</h3>
@@ -308,14 +372,19 @@ const WorldChoirDonate = (() => {
               Platform fee: ${esc(String(platform.feePercent || 5))}% —
               ${esc(platform.feePurpose || 'Operational costs that keep World Choir and Creator Foundations running.')}
             </p>
-          ` : ''}
+          ` : `
+            <h3>Financial allocation</h3>
+            <p class="cf-muted">This information has not yet been published.</p>
+          `}
 
           <h3>Verification</h3>
           <p>
             Status:
-            <strong>${foundation.verificationStatus === 'verified' ? 'Verified' : esc(foundation.verificationStatus)}</strong>
+            <strong>${foundation.verificationStatus === 'verified' ? 'Verified' : esc(foundation.verificationStatus || 'Pending')}</strong>
           </p>
-          ${foundation.verificationNotes ? `<p class="cf-muted">${esc(foundation.verificationNotes)}</p>` : ''}
+          ${foundation.verificationNotes
+            ? `<p class="cf-muted">${esc(foundation.verificationNotes)}</p>`
+            : ''}
 
           ${foundation.legalOrganization ? `
             <h3>Legal organization</h3>
@@ -324,7 +393,10 @@ const WorldChoirDonate = (() => {
               ${foundation.legalOrganization.type ? ` · ${esc(foundation.legalOrganization.type)}` : ''}
               ${foundation.legalOrganization.registrationId ? `<br><span class="cf-muted">${esc(foundation.legalOrganization.registrationId)}</span>` : ''}
             </p>
-          ` : ''}
+          ` : `
+            <h3>Legal organization</h3>
+            <p class="cf-muted">This information has not yet been published.</p>
+          `}
         </section>
       </div>
     `;
@@ -423,7 +495,7 @@ const WorldChoirDonate = (() => {
 
       <p class="donate-modal__note">
         A ${CreatorFoundationsStore.getPlatform().feePercent || 5}% platform fee helps keep World Choir and Creator Foundations working.
-        Payment providers will be connected soon — confirmation is simulated for now.
+        Payments are not live yet — this flow is a preview only. Simulated gifts never appear as real supporter totals or funding progress.
       </p>
 
       <div class="actions-row donate-modal__actions">
@@ -564,6 +636,9 @@ const WorldChoirDonate = (() => {
           You'll be able to follow the progress of the projects you helped make possible.
         </p>
         <p class="donate-confirm__meta">${formatMoney(amount)} · ${esc(foundation.foundationName)}</p>
+        <p class="cf-muted donate-confirm__note">
+          Preview only — this gift was not charged and is not counted in public totals until real payments are connected.
+        </p>
         <button class="btn btn-primary" type="button" id="donate-confirm-return">
           Return to Foundation
         </button>

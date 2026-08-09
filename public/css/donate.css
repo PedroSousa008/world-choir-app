@@ -675,6 +675,34 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.cf-card__stat-empty {
+  display: block;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.cf-demo-banner {
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin: -12px 0 28px;
+}
+
+.donate-confirm__note {
+  max-width: 26em;
+  margin: 0 auto 24px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.cf-card__mission--pending {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .cf-card__stat-value {
   display: block;
   font-size: 1.05rem;
