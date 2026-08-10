@@ -1027,6 +1027,15 @@ const OwnerControl = (() => {
           <div class="owner-field"><label>Display name</label><input name="displayName" value="${esc(f.creator)}" required></div>
           <div class="owner-field"><label>Foundation name</label><input name="foundationName" value="${esc(f.foundation || '')}"></div>
           <div class="owner-field"><label>Country</label><input name="country" value="${esc(f.country || '')}"></div>
+          <div class="owner-field">
+            <label>Primary cause</label>
+            <select name="primaryCategory">
+              <option value="">Select a cause</option>
+              ${['Food & Hunger', 'Health', 'Education', 'Humanitarian Aid', 'Environment'].map((c) => `
+                <option value="${esc(c)}" ${(f.primaryCategory || '') === c ? 'selected' : ''}>${esc(c)}</option>
+              `).join('')}
+            </select>
+          </div>
           <div class="owner-field"><label>Mission</label><textarea name="mission">${esc(f.mission || '')}</textarea></div>
           <div class="owner-field"><label>Biography</label><textarea name="biography">${esc(f.biography || '')}</textarea></div>
           <button class="owner-btn" type="submit">Save profile</button>
@@ -1480,6 +1489,17 @@ const OwnerControl = (() => {
           <div class="owner-field"><label>Display name</label><input name="displayName" required></div>
           <div class="owner-field"><label>Foundation name</label><input name="foundationName"></div>
           <div class="owner-field"><label>Country</label><input name="country"></div>
+          <div class="owner-field">
+            <label>Primary cause</label>
+            <select name="primaryCategory" required>
+              <option value="">Select a cause</option>
+              <option value="Food &amp; Hunger">Food &amp; Hunger</option>
+              <option value="Health">Health</option>
+              <option value="Education">Education</option>
+              <option value="Humanitarian Aid">Humanitarian Aid</option>
+              <option value="Environment">Environment</option>
+            </select>
+          </div>
           <div class="owner-field"><label>Mission</label><textarea name="mission"></textarea></div>
           <div class="owner-actions">
             <button class="owner-btn" type="submit">Create &amp; publish</button>

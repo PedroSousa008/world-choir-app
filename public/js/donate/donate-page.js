@@ -20,7 +20,17 @@ const WorldChoirDonate = (() => {
   let isSubmitting = false;
   let searchOpen = false;
   let searchQuery = '';
+  let selectedCause = 'all';
   let lastFocusEl = null;
+
+  const CAUSE_FILTERS = [
+    { id: 'all', label: 'All' },
+    { id: 'Food & Hunger', label: 'Food & Hunger' },
+    { id: 'Health', label: 'Health' },
+    { id: 'Education', label: 'Education' },
+    { id: 'Humanitarian Aid', label: 'Humanitarian Aid' },
+    { id: 'Environment', label: 'Environment' },
+  ];
 
   function esc(str) {
     const d = document.createElement('div');
@@ -64,6 +74,19 @@ const WorldChoirDonate = (() => {
       return (words[0][0] + words[words.length - 1][0]).toUpperCase();
     }
     return initials(foundation.foundationName || foundation.creatorName).slice(0, 2);
+  }
+
+  function getFilteredFoundations() {
+    const category = selectedCause === 'all' ? null : selectedCause;
+    const query = searchOpen ? searchQuery : '';
+    const result = CreatorFoundationsStore.listActive({
+      page: 1,
+      pageSize: 500,
+      sort: 'featured',
+      category,
+      query,
+    });
+    return result.items || [];
   }
 
   function getAllFoundations() {
@@ -121,10 +144,27 @@ const WorldChoirDonate = (() => {
     return `
       <div class="df-topbar df-rise">
         <p class="df-kicker">Donate</p>
-        <button type="button" class="df-search-trigger" id="df-search-open" aria-label="Search foundations">
-          ${searchIconSvg()}
-        </button>
+        ${searchOpen ? '' : `
+          <button type="button" class="df-search-trigger" id="df-search-open" aria-label="Search foundations">
+            ${searchIconSvg()}
+          </button>
+        `}
       </div>
+      ${searchOpen ? `
+        <div class="df-search-inline df-rise" role="search">
+          <input
+            class="df-search-inline__input"
+            id="df-search-input"
+            type="search"
+            placeholder="Search by foundation or creator"
+            value="${esc(searchQuery)}"
+            autocomplete="off"
+            enterkeyhint="search"
+            aria-label="Search by foundation or creator"
+          >
+          <button type="button" class="df-search-inline__close" id="df-search-close">Close</button>
+        </div>
+      ` : ''}
     `;
   }
 
@@ -137,7 +177,24 @@ const WorldChoirDonate = (() => {
     `;
   }
 
-  function renderDiscoverRow(foundation) {
+  function renderCauseFilters() {
+    return `
+      <div class="df-causes" role="toolbar" aria-label="Filter by cause">
+        <div class="df-causes__scroller">
+          ${CAUSE_FILTERS.map((f) => `
+            <button
+              type="button"
+              class="df-cause ${selectedCause === f.id ? 'is-active' : ''}"
+              data-cause="${esc(f.id)}"
+              aria-pressed="${selectedCause === f.id ? 'true' : 'false'}"
+            >${esc(f.label)}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderFoundationRow(foundation) {
     const currency = CreatorFoundationsStore.getCurrency();
     const mark = foundation.coverImage
       ? `<img src="${esc(foundation.coverImage)}" alt="">`
@@ -166,11 +223,32 @@ const WorldChoirDonate = (() => {
     `;
   }
 
-  function renderDiscover(items) {
-    if (!items.length) {
+  function renderEmptyResults() {
+    const searching = searchOpen && searchQuery.trim();
+    const copy = searching
+      ? 'No Creator Foundations match this search in the selected cause.'
+      : selectedCause === 'all'
+        ? 'Verified Creator Foundations will appear here as the circle grows.'
+        : 'There are currently no Creator Foundations in this cause.';
+
+    return `
+      <div class="df-empty">
+        <p class="df-empty__title">No foundations found</p>
+        <p class="df-empty__copy">${esc(copy)}</p>
+        ${selectedCause !== 'all' || searching ? `
+          <button type="button" class="df-empty__action" id="df-view-all">View all foundations</button>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  function renderExplore(items) {
+    const totalActive = getAllFoundations().length;
+    if (!totalActive && selectedCause === 'all' && !(searchOpen && searchQuery.trim())) {
       return `
-        <section class="df-discover df-rise df-rise-delay-3">
-          <p class="df-discover__label">Discover Foundations</p>
+        <section class="df-explore df-rise df-rise-delay-3" aria-labelledby="df-explore-label">
+          <p class="df-explore__label" id="df-explore-label">Explore by cause</p>
+          ${renderCauseFilters()}
           <div class="df-empty">
             <p class="df-empty__title">A carefully curated beginning</p>
             <p class="df-empty__copy">
@@ -183,118 +261,70 @@ const WorldChoirDonate = (() => {
     }
 
     return `
-      <section class="df-discover df-rise df-rise-delay-3" aria-labelledby="df-discover-label">
-        <p class="df-discover__label" id="df-discover-label">Discover Foundations</p>
-        <p class="df-discover__note">A growing collection of people committed to creating meaningful change.</p>
-        <ul class="df-list">
-          ${items.map(renderDiscoverRow).join('')}
-        </ul>
+      <section class="df-explore df-rise df-rise-delay-3" aria-labelledby="df-explore-label">
+        <p class="df-explore__label" id="df-explore-label">Explore by cause</p>
+        ${renderCauseFilters()}
+        ${items.length
+          ? `<ul class="df-list">${items.map(renderFoundationRow).join('')}</ul>`
+          : renderEmptyResults()}
       </section>
     `;
   }
 
-  function ensureSearchShell() {
-    if (document.getElementById('df-search')) return;
-    document.body.insertAdjacentHTML('beforeend', `
-      <div class="df-search" id="df-search" aria-hidden="true">
-        <div class="df-search__backdrop" id="df-search-backdrop"></div>
-        <div class="df-search__panel" role="dialog" aria-modal="true" aria-label="Search Creator Foundations">
-          <div class="df-search__bar">
-            <input
-              class="df-search__input"
-              id="df-search-input"
-              type="search"
-              placeholder="Search by foundation or creator"
-              autocomplete="off"
-              enterkeyhint="search"
-            >
-            <button type="button" class="df-search__close" id="df-search-close">Close</button>
-          </div>
-          <p class="df-search__hint" id="df-search-hint">Type a name to begin.</p>
-          <div class="df-search__results" id="df-search-results"></div>
-        </div>
-      </div>
-    `);
-
-    document.getElementById('df-search-backdrop')?.addEventListener('click', closeSearch);
-    document.getElementById('df-search-close')?.addEventListener('click', closeSearch);
-    document.getElementById('df-search-input')?.addEventListener('input', (e) => {
-      searchQuery = e.target.value || '';
-      renderSearchResults();
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && searchOpen) closeSearch();
-    });
-  }
-
-  function renderSearchResults() {
-    const resultsEl = document.getElementById('df-search-results');
-    const hintEl = document.getElementById('df-search-hint');
-    if (!resultsEl) return;
-
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) {
-      if (hintEl) hintEl.textContent = 'Type a name to begin.';
-      resultsEl.innerHTML = '';
-      return;
-    }
-
-    const matches = getAllFoundations().filter((f) =>
-      f.creatorName.toLowerCase().includes(q)
-      || f.foundationName.toLowerCase().includes(q)
-      || (f.mission || '').toLowerCase().includes(q)
-      || (f.country || '').toLowerCase().includes(q)
-    );
-
-    if (hintEl) {
-      hintEl.textContent = matches.length
-        ? `${matches.length} result${matches.length === 1 ? '' : 's'}`
-        : 'No matching foundations.';
-    }
-
-    if (!matches.length) {
-      resultsEl.innerHTML = `<p class="df-search__empty">No foundations match “${esc(searchQuery.trim())}”.</p>`;
-      return;
-    }
-
-    resultsEl.innerHTML = `<ul class="df-list">${matches.map(renderDiscoverRow).join('')}</ul>`;
-    resultsEl.querySelectorAll('[data-open-foundation]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const foundation = CreatorFoundationsStore.getById(btn.getAttribute('data-open-foundation'));
-        closeSearch();
-        if (foundation) openProfile(foundation);
-      });
-    });
-  }
-
   function openSearch() {
-    ensureSearchShell();
     lastFocusEl = document.activeElement;
     searchOpen = true;
     searchQuery = '';
-    const shell = document.getElementById('df-search');
-    const input = document.getElementById('df-search-input');
-    shell?.classList.add('is-open');
-    shell?.setAttribute('aria-hidden', 'false');
-    if (input) {
-      input.value = '';
-      requestAnimationFrame(() => input.focus());
-    }
-    renderSearchResults();
+    renderHome({ focusSearch: true });
   }
 
   function closeSearch() {
     searchOpen = false;
-    const shell = document.getElementById('df-search');
-    shell?.classList.remove('is-open');
-    shell?.setAttribute('aria-hidden', 'true');
+    searchQuery = '';
+    renderHome();
     if (lastFocusEl && typeof lastFocusEl.focus === 'function') {
       lastFocusEl.focus();
     }
   }
 
-  function bindHomeEvents() {
+  function resetExplore() {
+    selectedCause = 'all';
+    searchOpen = false;
+    searchQuery = '';
+    renderHome();
+  }
+
+  function bindHomeEvents(opts = {}) {
     document.getElementById('df-search-open')?.addEventListener('click', openSearch);
+    document.getElementById('df-search-close')?.addEventListener('click', closeSearch);
+    document.getElementById('df-view-all')?.addEventListener('click', resetExplore);
+
+    const searchInput = document.getElementById('df-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value || '';
+        renderHome({ keepSearchFocus: true, caret: e.target.selectionStart });
+      });
+      if (opts.focusSearch || opts.keepSearchFocus) {
+        const caret = opts.caret != null ? opts.caret : searchInput.value.length;
+        requestAnimationFrame(() => {
+          searchInput.focus();
+          try {
+            searchInput.setSelectionRange(caret, caret);
+          } catch {
+            /* ignore */
+          }
+        });
+      }
+    }
+
+    document.querySelectorAll('[data-cause]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectedCause = btn.getAttribute('data-cause') || 'all';
+        renderHome({ keepSearchFocus: searchOpen });
+      });
+    });
+
     document.querySelectorAll('[data-open-foundation]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const foundation = CreatorFoundationsStore.getById(btn.getAttribute('data-open-foundation'));
@@ -303,8 +333,8 @@ const WorldChoirDonate = (() => {
     });
   }
 
-  function renderHome() {
-    const items = getAllFoundations();
+  function renderHome(opts = {}) {
+    const items = getFilteredFoundations();
     const root = document.getElementById('donate-content');
     const demoBanner = CreatorFoundationsStore.usingDemoCatalog()
       ? `<p class="df-demo-banner" role="status">Development demo catalog — not production data.</p>`
@@ -314,9 +344,9 @@ const WorldChoirDonate = (() => {
       ${renderTopbar()}
       ${demoBanner}
       ${renderIntro()}
-      ${renderDiscover(items)}
+      ${renderExplore(items)}
     `;
-    bindHomeEvents();
+    bindHomeEvents(opts);
   }
 
   function renderProjectCard(project, foundation) {
@@ -784,7 +814,9 @@ const WorldChoirDonate = (() => {
   async function init() {
     WorldChoirNav.startWatcher('donate');
     ensureModal();
-    ensureSearchShell();
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && searchOpen) closeSearch();
+    });
     renderLoading();
 
     try {

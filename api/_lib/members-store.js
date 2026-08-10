@@ -2,6 +2,12 @@ const { randomUUID } = require('crypto');
 const bcrypt = require('bcryptjs');
 const { readBlobJson, writeJson, assertBlobConfigured } = require('./store');
 const { MIN_PASSWORD_LENGTH } = require('./auth');
+const {
+  FOUNDATION_CAUSES,
+  normalizePrimaryCategory,
+  resolveFoundationCause,
+  isApprovedCause,
+} = require('./foundation-causes');
 
 const ROOT = 'wc-data/members';
 const INFLUENCERS_PATH = `${ROOT}/influencers.json`;
@@ -119,6 +125,16 @@ async function createInfluencer({
 
   const now = new Date().toISOString();
   const passwordHash = await bcrypt.hash(String(password), 12);
+  const resolved = resolveFoundationCause({
+    primaryCategory,
+    categories: Array.isArray(categories)
+      ? categories
+      : (primaryCategory ? [primaryCategory] : []),
+  });
+  if (primaryCategory && !resolved.primaryCategory) {
+    return { ok: false, error: `Category must be one of: ${FOUNDATION_CAUSES.join(', ')}` };
+  }
+
   const row = {
     id: randomUUID(),
     email: normalizedEmail,
@@ -132,12 +148,8 @@ async function createInfluencer({
     whyStarted: String(whyStarted || '').trim(),
     howItWorks: String(howItWorks || '').trim(),
     country: String(country || '').trim(),
-    primaryCategory: String(primaryCategory || '').trim(),
-    categories: Array.isArray(categories)
-      ? categories.map((c) => String(c).trim()).filter(Boolean)
-      : String(primaryCategory || '').trim()
-        ? [String(primaryCategory).trim()]
-        : [],
+    primaryCategory: resolved.primaryCategory,
+    categories: resolved.categories,
     active: active !== false,
     // Owner-created influencers appear on Donate immediately.
     published: true,
@@ -195,6 +207,15 @@ async function updateInfluencer(id, updates = {}, { allowEmailChange = false } =
     next.categories = Array.isArray(updates.categories)
       ? updates.categories.map((c) => String(c).trim()).filter(Boolean)
       : [];
+  }
+
+  if (updates.primaryCategory !== undefined || updates.categories !== undefined) {
+    const resolved = resolveFoundationCause(next);
+    next.primaryCategory = resolved.primaryCategory;
+    next.categories = resolved.categories;
+    if (updates.primaryCategory !== undefined && updates.primaryCategory && !resolved.primaryCategory) {
+      return { ok: false, error: `Category must be one of: ${FOUNDATION_CAUSES.join(', ')}` };
+    }
   }
 
   if (updates.active !== undefined) next.active = updates.active === true;
@@ -367,10 +388,9 @@ function influencerToFoundation(row, projects = []) {
   const displayName = String(row.displayName || '').trim();
   const foundationName = String(row.foundationName || '').trim()
     || (displayName ? `${displayName}'s Foundation` : 'Creator Foundation');
-  const categories = Array.isArray(row.categories)
-    ? row.categories.map((c) => String(c).trim()).filter(Boolean)
-    : [];
-  const primaryCategory = String(row.primaryCategory || '').trim() || categories[0] || '';
+  const resolved = resolveFoundationCause(row);
+  const primaryCategory = resolved.primaryCategory;
+  const categories = resolved.categories;
   const publicProjects = (projects || [])
     .filter((p) => p && p.status === 'active')
     .map((p) => ({
@@ -398,9 +418,7 @@ function influencerToFoundation(row, projects = []) {
     coreValues: [],
     country: String(row.country || '').trim(),
     languages: [],
-    categories: primaryCategory && !categories.includes(primaryCategory)
-      ? [primaryCategory, ...categories]
-      : categories,
+    categories,
     primaryCategory,
     profileImage: String(row.profileImage || '').trim(),
     coverImage: String(row.coverImage || '').trim(),
@@ -435,11 +453,18 @@ async function getPublicCreatorFoundationsCatalog() {
   const doc = await readInfluencersDoc();
 
   // Active Owner-created influencers appear on Donate.
-  // Backfill publish flag for profiles created before auto-publish.
+  // Backfill publish flag + approved primary cause for profiles missing them.
   let mutated = false;
   doc.influencers.forEach((row) => {
     if (row.active !== false && row.published !== true) {
       row.published = true;
+      mutated = true;
+    }
+    const resolved = resolveFoundationCause(row);
+    if (resolved.changed) {
+      row.primaryCategory = resolved.primaryCategory;
+      row.categories = resolved.categories;
+      row.updatedAt = new Date().toISOString();
       mutated = true;
     }
   });
@@ -493,6 +518,9 @@ async function getPublicCreatorFoundationsCatalog() {
 
 module.exports = {
   PLATFORM_FEE_PERCENT,
+  FOUNDATION_CAUSES,
+  normalizePrimaryCategory,
+  isApprovedCause,
   listInfluencers,
   listInfluencersOwnerView,
   findInfluencerByEmail,

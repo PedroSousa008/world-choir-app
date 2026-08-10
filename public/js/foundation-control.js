@@ -141,7 +141,21 @@ const FoundationControl = (() => {
       foundationName: page.foundationName ?? f.name ?? '',
       creatorName: page.creatorName ?? f.creatorName ?? '',
       country: page.country ?? f.country ?? '',
-      category: page.category ?? f.category ?? '',
+      category: (() => {
+        const raw = page.category ?? f.category ?? '';
+        const aliases = {
+          'humanity help': 'Humanitarian Aid',
+          humanitarian: 'Humanitarian Aid',
+          food: 'Food & Hunger',
+          hunger: 'Food & Hunger',
+          climate: 'Environment',
+          nature: 'Environment',
+        };
+        const lower = String(raw).trim().toLowerCase();
+        if (aliases[lower]) return aliases[lower];
+        const causes = ['Food & Hunger', 'Health', 'Education', 'Humanitarian Aid', 'Environment'];
+        return causes.find((c) => c.toLowerCase() === lower) || raw;
+      })(),
       mission: page.mission ?? f.mission ?? '',
       biography: page.biography ?? f.biography ?? '',
       whyStarted: page.whyStarted ?? f.whyStarted ?? '',
@@ -571,8 +585,13 @@ const FoundationControl = (() => {
             <input id="ff-country" name="country" value="${esc(form.country)}" ${can('editFoundation') ? '' : 'readonly'}>
           </div>
           <div class="fcc-field">
-            <label for="ff-category">Category</label>
-            <input id="ff-category" name="category" value="${esc(form.category)}" ${can('editFoundation') ? '' : 'readonly'}>
+            <label for="ff-category">Primary cause</label>
+            <select id="ff-category" name="category" ${can('editFoundation') ? '' : 'disabled'}>
+              <option value="">Select a cause</option>
+              ${['Food & Hunger', 'Health', 'Education', 'Humanitarian Aid', 'Environment'].map((c) => `
+                <option value="${esc(c)}" ${form.category === c ? 'selected' : ''}>${esc(c)}</option>
+              `).join('')}
+            </select>
           </div>
         </div>
         <div class="fcc-field">

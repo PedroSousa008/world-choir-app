@@ -14,6 +14,31 @@ const CreatorFoundationsStore = (() => {
   const FALLBACK_URL = 'data/creator-foundations.json';
   const DEMO_URL = 'data/creator-foundations.demo.json';
   const PAGE_SIZE = 24;
+  const FOUNDATION_CAUSES = [
+    'Food & Hunger',
+    'Health',
+    'Education',
+    'Humanitarian Aid',
+    'Environment',
+  ];
+  const CAUSE_ALIASES = {
+    'humanity help': 'Humanitarian Aid',
+    humanitarian: 'Humanitarian Aid',
+    'humanitarian aid': 'Humanitarian Aid',
+    food: 'Food & Hunger',
+    hunger: 'Food & Hunger',
+    'food & hunger': 'Food & Hunger',
+    'food and hunger': 'Food & Hunger',
+    health: 'Health',
+    education: 'Education',
+    environment: 'Environment',
+    climate: 'Environment',
+    nature: 'Environment',
+  };
+  const KNOWN_CAUSE_BY_ID = {
+    '689fa965-53cd-4c00-be66-36668962e852': 'Humanitarian Aid',
+    '1857e734-e1f9-444b-ade9-be550009019e': 'Education',
+  };
   const SUCCESS_STATUSES = new Set(['succeeded', 'completed', 'paid']);
   const EXCLUDED_STATUSES = new Set([
     'failed',
@@ -31,6 +56,18 @@ const CreatorFoundationsStore = (() => {
   let loadPromise = null;
   let loadError = null;
   let isDemoCatalog = false;
+
+  function normalizeCause(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const lower = raw.toLowerCase();
+    if (CAUSE_ALIASES[lower]) return CAUSE_ALIASES[lower];
+    return FOUNDATION_CAUSES.find((c) => c.toLowerCase() === lower) || '';
+  }
+
+  function getCauses() {
+    return FOUNDATION_CAUSES.slice();
+  }
 
   function isDemoMode() {
     try {
@@ -196,6 +233,10 @@ const CreatorFoundationsStore = (() => {
     const uniqueSupporters = getUniqueSupporterCount(foundation.id);
     const totalRaised = getRaisedAmount({ foundationId: foundation.id });
     const raisedKnown = hasVerifiedRaisedData({ foundationId: foundation.id });
+    const primaryCategory = normalizeCause(foundation.primaryCategory)
+      || normalizeCause((foundation.categories || [])[0])
+      || KNOWN_CAUSE_BY_ID[foundation.id]
+      || '';
 
     return {
       id: foundation.id,
@@ -210,7 +251,7 @@ const CreatorFoundationsStore = (() => {
       country: foundation.country || '',
       languages: foundation.languages || [],
       categories: foundation.categories || [],
-      primaryCategory: foundation.primaryCategory || (foundation.categories && foundation.categories[0]) || '',
+      primaryCategory,
       profileImage: foundation.profileImage || '',
       coverImage: foundation.coverImage || '',
       verificationStatus: foundation.verificationStatus || 'unverified',
@@ -271,11 +312,9 @@ const CreatorFoundationsStore = (() => {
 
     if (featuredOnly) items = items.filter((f) => f.featured);
     if (category) {
-      const needle = String(category).toLowerCase();
-      items = items.filter((f) =>
-        f.primaryCategory.toLowerCase() === needle
-        || f.categories.some((c) => c.toLowerCase() === needle)
-      );
+      const needle = normalizeCause(category) || String(category).trim();
+      const needleLower = needle.toLowerCase();
+      items = items.filter((f) => f.primaryCategory.toLowerCase() === needleLower);
     }
     if (country) {
       const needle = String(country).toLowerCase();
@@ -286,9 +325,6 @@ const CreatorFoundationsStore = (() => {
       items = items.filter((f) =>
         f.creatorName.toLowerCase().includes(q)
         || f.foundationName.toLowerCase().includes(q)
-        || f.mission.toLowerCase().includes(q)
-        || f.country.toLowerCase().includes(q)
-        || f.categories.some((c) => c.toLowerCase().includes(q))
       );
     }
 
@@ -427,6 +463,8 @@ const CreatorFoundationsStore = (() => {
     getSuggestedAmounts,
     getUniqueSupporterCount,
     getRaisedAmount,
+    getCauses,
+    normalizeCause,
     listActive,
     getById,
     getBySlug,
@@ -434,6 +472,7 @@ const CreatorFoundationsStore = (() => {
     Admin,
     UserSupport,
     PAGE_SIZE,
+    FOUNDATION_CAUSES,
   };
 })();
 
