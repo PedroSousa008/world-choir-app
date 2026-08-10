@@ -425,6 +425,7 @@ function influencerToFoundation(row, projects = []) {
     verificationStatus: row.verificationStatus || 'unverified',
     verificationNotes: '',
     foundedDate: row.createdAt || null,
+    updatedAt: row.updatedAt || row.createdAt || null,
     website: String(row.website || '').trim(),
     socialLinks: row.socialLinks && typeof row.socialLinks === 'object' ? row.socialLinks : {},
     impactMetrics: [],

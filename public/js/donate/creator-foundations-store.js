@@ -257,6 +257,7 @@ const CreatorFoundationsStore = (() => {
       verificationStatus: foundation.verificationStatus || 'unverified',
       verificationNotes: foundation.verificationNotes || '',
       foundedDate: foundation.foundedDate || null,
+      updatedAt: foundation.updatedAt || foundation.foundedDate || null,
       yearsActive: yearsActiveFrom(foundation),
       website: foundation.website || '',
       socialLinks: foundation.socialLinks || {},
@@ -318,7 +319,10 @@ const CreatorFoundationsStore = (() => {
     }
     if (country) {
       const needle = String(country).toLowerCase();
-      items = items.filter((f) => f.country.toLowerCase() === needle);
+      items = items.filter((f) => {
+        const c = f.country.toLowerCase();
+        return c === needle || c.includes(needle) || needle.includes(c);
+      });
     }
     if (query) {
       const q = String(query).trim().toLowerCase();
@@ -330,9 +334,28 @@ const CreatorFoundationsStore = (() => {
 
     items.sort((a, b) => {
       if (sort === 'mostActive') {
-        return b.activeProjectCount - a.activeProjectCount || b.uniqueSupporters - a.uniqueSupporters;
+        return b.activeProjectCount - a.activeProjectCount
+          || b.uniqueSupporters - a.uniqueSupporters
+          || String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''));
       }
-      if (sort === 'trending') return b.uniqueSupporters - a.uniqueSupporters;
+      if (sort === 'trending') {
+        return b.uniqueSupporters - a.uniqueSupporters
+          || b.activeProjectCount - a.activeProjectCount
+          || String(b.foundedDate || '').localeCompare(String(a.foundedDate || ''));
+      }
+      if (sort === 'new') {
+        return String(b.foundedDate || '').localeCompare(String(a.foundedDate || ''))
+          || a.creatorName.localeCompare(b.creatorName);
+      }
+      if (sort === 'recent') {
+        return String(b.updatedAt || b.foundedDate || '').localeCompare(String(a.updatedAt || a.foundedDate || ''))
+          || a.creatorName.localeCompare(b.creatorName);
+      }
+      if (sort === 'near') {
+        // Caller pre-filters by country when known; keep featured/name order.
+        if (a.featured !== b.featured) return a.featured ? -1 : 1;
+        return a.creatorName.localeCompare(b.creatorName);
+      }
       if (a.featured !== b.featured) return a.featured ? -1 : 1;
       if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
       return a.creatorName.localeCompare(b.creatorName);
@@ -343,6 +366,38 @@ const CreatorFoundationsStore = (() => {
     const paged = items.slice(start, start + pageSize);
 
     return { items: paged, total, page, pageSize, hasMore: start + pageSize < total };
+  }
+
+  function getFeaturedFoundation(items) {
+    const list = Array.isArray(items) ? items : listActive({ page: 1, pageSize: 500 }).items;
+    if (!list.length) return null;
+    const withVisual = list.filter((f) => f.coverImage || f.profileImage);
+    const pool = withVisual.length ? withVisual : list;
+    return pool.find((f) => f.featured)
+      || [...pool].sort((a, b) =>
+        b.uniqueSupporters - a.uniqueSupporters
+        || b.activeProjectCount - a.activeProjectCount
+        || String(b.foundedDate || '').localeCompare(String(a.foundedDate || ''))
+      )[0]
+      || null;
+  }
+
+  function listActiveProjects(limit = 12) {
+    if (!catalog) return [];
+    const out = [];
+    catalog.foundations.map(normalize).filter((f) => f.active).forEach((f) => {
+      (f.projects || []).filter((p) => p.status === 'active').forEach((p) => {
+        out.push({
+          ...p,
+          foundationId: f.id,
+          foundationName: f.foundationName,
+          foundationCategory: f.primaryCategory,
+          foundationCover: f.coverImage || f.profileImage || '',
+        });
+      });
+    });
+    out.sort((a, b) => String(b.startDate || b.id || '').localeCompare(String(a.startDate || a.id || '')));
+    return out.slice(0, limit);
   }
 
   function getById(id) {
@@ -466,6 +521,8 @@ const CreatorFoundationsStore = (() => {
     getCauses,
     normalizeCause,
     listActive,
+    getFeaturedFoundation,
+    listActiveProjects,
     getById,
     getBySlug,
     getProject,

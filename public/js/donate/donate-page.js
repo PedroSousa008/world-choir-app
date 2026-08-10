@@ -21,15 +21,25 @@ const WorldChoirDonate = (() => {
   let searchOpen = false;
   let searchQuery = '';
   let selectedCause = 'all';
+  let selectedExplore = 'trending';
+  let moreCausesOpen = false;
   let lastFocusEl = null;
 
   const CAUSE_FILTERS = [
-    { id: 'all', label: 'All' },
-    { id: 'Food & Hunger', label: 'Food & Hunger' },
-    { id: 'Health', label: 'Health' },
-    { id: 'Education', label: 'Education' },
-    { id: 'Humanitarian Aid', label: 'Humanitarian Aid' },
-    { id: 'Environment', label: 'Environment' },
+    { id: 'all', label: 'All Causes', icon: 'all' },
+    { id: 'Food & Hunger', label: 'Food & Hunger', icon: 'food' },
+    { id: 'Health', label: 'Health', icon: 'health' },
+    { id: 'Education', label: 'Education', icon: 'education' },
+    { id: 'Humanitarian Aid', label: 'Humanitarian Aid', icon: 'aid' },
+    { id: 'Environment', label: 'Environment', icon: 'env' },
+  ];
+
+  const EXPLORE_FILTERS = [
+    { id: 'trending', label: 'Trending' },
+    { id: 'new', label: 'New' },
+    { id: 'mostActive', label: 'Most Active' },
+    { id: 'near', label: 'Near You' },
+    { id: 'recent', label: 'Recently Updated' },
   ];
 
   function esc(str) {
@@ -76,15 +86,28 @@ const WorldChoirDonate = (() => {
     return initials(foundation.foundationName || foundation.creatorName).slice(0, 2);
   }
 
+  function getUserCountry() {
+    try {
+      if (typeof WorldChoirDB === 'undefined') return '';
+      const user = WorldChoirDB.getCurrentUser?.() || WorldChoirDB.getOrCreateUser?.();
+      return String(user?.country || '').trim();
+    } catch {
+      return '';
+    }
+  }
+
   function getFilteredFoundations() {
     const category = selectedCause === 'all' ? null : selectedCause;
     const query = searchOpen ? searchQuery : '';
+    const userCountry = getUserCountry();
+    const nearCountry = selectedExplore === 'near' && userCountry ? userCountry : null;
     const result = CreatorFoundationsStore.listActive({
       page: 1,
       pageSize: 500,
-      sort: 'featured',
+      sort: selectedExplore === 'near' ? 'near' : selectedExplore,
       category,
       query,
+      country: nearCountry,
     });
     return result.items || [];
   }
@@ -96,6 +119,38 @@ const WorldChoirDonate = (() => {
       sort: 'featured',
     });
     return result.items || [];
+  }
+
+  function shortMission(foundation, maxLen = 140) {
+    const text = String(foundation.mission || '').trim();
+    if (!text) return '';
+    const match = text.match(/^[\s\S]{1,200}?[.!?](?=\s|$)/);
+    const sentence = (match && match[0]) || text;
+    if (sentence.length <= maxLen) return sentence.trim();
+    return `${sentence.slice(0, maxLen - 1).trim()}…`;
+  }
+
+  function isNewFoundation(foundation) {
+    return !(foundation.activeProjectCount > 0)
+      && !(foundation.totalRaised > 0)
+      && !(foundation.uniqueSupporters > 0);
+  }
+
+  function causeTags(foundation) {
+    const tags = [];
+    const primary = foundation.primaryCategory;
+    if (primary) tags.push(primary);
+    (foundation.categories || []).forEach((c) => {
+      const n = CreatorFoundationsStore.normalizeCause(c) || c;
+      if (n && !tags.includes(n) && CreatorFoundationsStore.FOUNDATION_CAUSES.includes(n)) {
+        tags.push(n);
+      }
+    });
+    return tags.slice(0, 3);
+  }
+
+  function visualUrl(foundation) {
+    return foundation.coverImage || foundation.profileImage || '';
   }
 
   function searchIconSvg() {
@@ -113,6 +168,20 @@ const WorldChoirDonate = (() => {
         <path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"></path>
       </svg>
     `;
+  }
+
+  function causeIconSvg(kind) {
+    const common = 'viewBox="0 0 24 24" aria-hidden="true"';
+    const icons = {
+      all: `<svg ${common}><circle cx="12" cy="12" r="7.5"/><path d="M12 4.5v15M4.5 12h15" stroke-linecap="round"/></svg>`,
+      food: `<svg ${common}><path d="M8 3v8a4 4 0 008 0V3"/><path d="M12 11v10" stroke-linecap="round"/></svg>`,
+      health: `<svg ${common}><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 11c0 5.5-7 10-7 10z"/></svg>`,
+      education: `<svg ${common}><path d="M3 9l9-5 9 5-9 5-9-5z"/><path d="M7 12v5c0 1.5 2.5 3 5 3s5-1.5 5-3v-5"/></svg>`,
+      aid: `<svg ${common}><path d="M12 3v18M3 12h18" stroke-linecap="round"/><circle cx="12" cy="12" r="8"/></svg>`,
+      env: `<svg ${common}><path d="M12 21c4-4 6-7.5 6-11a6 6 0 10-12 0c0 3.5 2 7 6 11z"/><path d="M12 10v4" stroke-linecap="round"/></svg>`,
+      projects: `<svg ${common}><rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M8 9h8M8 13h5" stroke-linecap="round"/></svg>`,
+    };
+    return icons[kind] || icons.all;
   }
 
   function verifiedMark(status) {
@@ -171,8 +240,9 @@ const WorldChoirDonate = (() => {
   function renderIntro() {
     return `
       <header class="df-intro df-rise df-rise-delay-1">
-        <h1 class="df-intro__title">Creator Foundations</h1>
-        <p class="df-intro__copy">Support verified people turning influence into meaningful action.</p>
+        <h1 class="df-intro__title">Discover Impact</h1>
+        <p class="df-intro__lead">People you trust.<br>Causes you can change.</p>
+        <p class="df-intro__copy">Support verified creators turning their influence into real, meaningful and measurable action.</p>
       </header>
     `;
   }
@@ -187,6 +257,38 @@ const WorldChoirDonate = (() => {
               class="df-cause ${selectedCause === f.id ? 'is-active' : ''}"
               data-cause="${esc(f.id)}"
               aria-pressed="${selectedCause === f.id ? 'true' : 'false'}"
+            >
+              <span class="df-cause__icon">${causeIconSvg(f.icon)}</span>
+              <span>${esc(f.label)}</span>
+            </button>
+          `).join('')}
+          <button
+            type="button"
+            class="df-cause df-cause--more ${moreCausesOpen ? 'is-active' : ''}"
+            id="df-causes-more"
+            aria-expanded="${moreCausesOpen ? 'true' : 'false'}"
+          >
+            <span>More</span>
+          </button>
+        </div>
+        ${moreCausesOpen ? `
+          <p class="df-causes__note">These are the primary World Choir causes. More focused filters may arrive as Foundations join.</p>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  function renderExploreSorts() {
+    return `
+      <div class="df-sort" aria-labelledby="df-sort-label">
+        <p class="df-sort__label" id="df-sort-label">Explore</p>
+        <div class="df-sort__scroller" role="toolbar" aria-label="Explore sorting">
+          ${EXPLORE_FILTERS.map((f) => `
+            <button
+              type="button"
+              class="df-sort__btn ${selectedExplore === f.id ? 'is-active' : ''}"
+              data-explore="${esc(f.id)}"
+              aria-pressed="${selectedExplore === f.id ? 'true' : 'false'}"
             >${esc(f.label)}</button>
           `).join('')}
         </div>
@@ -194,30 +296,86 @@ const WorldChoirDonate = (() => {
     `;
   }
 
-  function renderFoundationRow(foundation) {
-    const currency = CreatorFoundationsStore.getCurrency();
-    const mark = foundation.coverImage
-      ? `<img src="${esc(foundation.coverImage)}" alt="">`
-      : esc(identityGlyph(foundation));
+  function renderFeatured(foundation) {
+    if (!foundation) return '';
+    const img = visualUrl(foundation);
+    const mission = shortMission(foundation, 120);
+    const activity = foundation.activeProjectCount > 0
+      ? `<p class="df-spotlight__stat">
+          <span class="df-spotlight__stat-icon">${causeIconSvg('projects')}</span>
+          ${esc(formatCount(foundation.activeProjectCount))} active project${foundation.activeProjectCount === 1 ? '' : 's'}
+        </p>`
+      : `<p class="df-spotlight__note">${isNewFoundation(foundation) ? 'New to World Choir' : 'Be among the first to support this foundation.'}</p>`;
+
+    return `
+      <section class="df-spotlight df-rise df-rise-delay-2" aria-labelledby="df-spotlight-label">
+        <p class="df-section-label" id="df-spotlight-label">Featured this week</p>
+        <button type="button" class="df-spotlight__card" data-open-foundation="${esc(foundation.id)}">
+          <div class="df-spotlight__copy">
+            ${foundation.profileImage
+              ? `<img class="df-spotlight__avatar" src="${esc(foundation.profileImage)}" alt="">`
+              : `<span class="df-spotlight__avatar df-spotlight__avatar--glyph">${esc(identityGlyph(foundation))}</span>`}
+            <h2 class="df-spotlight__name">${esc(foundation.foundationName)}</h2>
+            ${mission ? `<p class="df-spotlight__mission">${esc(mission)}</p>` : ''}
+            <p class="df-spotlight__meta">
+              ${esc(foundation.creatorName)}${foundation.country ? ` · ${esc(foundation.country)}` : ''}
+            </p>
+            ${activity}
+            <span class="df-spotlight__cta">Explore Foundation <span aria-hidden="true">→</span></span>
+          </div>
+          <div class="df-spotlight__media ${img ? 'has-image' : ''}" aria-hidden="true">
+            ${img
+              ? `<img src="${esc(img)}" alt="">`
+              : `<span class="df-spotlight__fallback">${esc(identityGlyph(foundation))}</span>`}
+          </div>
+        </button>
+      </section>
+    `;
+  }
+
+  function renderFoundationCard(foundation) {
+    const img = visualUrl(foundation);
+    const tags = causeTags(foundation);
+    const mission = shortMission(foundation, 160);
+    let statusLine = '';
+    if (foundation.activeProjectCount > 0) {
+      statusLine = `${formatCount(foundation.activeProjectCount)} active project${foundation.activeProjectCount === 1 ? '' : 's'}`;
+      if (foundation.raisedKnown && foundation.totalRaised > 0) {
+        statusLine += ` · ${formatMoney(foundation.totalRaised, CreatorFoundationsStore.getCurrency())} raised`;
+      }
+    } else if (isNewFoundation(foundation)) {
+      statusLine = 'First project coming soon.';
+    } else {
+      statusLine = 'Be among the first to support this foundation.';
+    }
 
     return `
       <li>
-        <button type="button" class="df-row" data-open-foundation="${esc(foundation.id)}">
-          <span class="df-row__mark df-row__mark--cover">${mark}</span>
-          <span class="df-row__body">
-            <h3 class="df-row__name">${esc(foundation.foundationName)}</h3>
-            <p class="df-row__meta">
+        <button type="button" class="df-fcard" data-open-foundation="${esc(foundation.id)}">
+          <span class="df-fcard__media ${img ? 'has-image' : ''}" aria-hidden="true">
+            ${img
+              ? `<img src="${esc(img)}" alt="">`
+              : `<span class="df-fcard__glyph">${esc(identityGlyph(foundation))}</span>`}
+          </span>
+          <span class="df-fcard__body">
+            ${isNewFoundation(foundation)
+              ? `<span class="df-fcard__badge">New to World Choir</span>`
+              : ''}
+            <h3 class="df-fcard__name">${esc(foundation.foundationName)}</h3>
+            <p class="df-fcard__meta">
               ${esc(foundation.creatorName)}${foundation.country ? ` · ${esc(foundation.country)}` : ''}
             </p>
-            ${foundation.mission
-              ? `<p class="df-row__mission">${esc(foundation.mission)}</p>`
-              : ''}
-            <div class="df-row__stats">
-              <span><strong>${esc(formatMoney(foundation.totalRaised || 0, currency))}</strong> raised</span>
-              <span><strong>${esc(formatCount(foundation.activeProjectCount || 0))}</strong> active projects</span>
-            </div>
+            ${mission ? `<p class="df-fcard__mission">${esc(mission)}</p>` : ''}
+            ${tags.length ? `
+              <span class="df-fcard__tags">
+                ${tags.map((t) => `<span class="df-fcard__tag">${esc(t)}</span>`).join('')}
+              </span>
+            ` : ''}
+            <span class="df-fcard__foot">
+              <span class="df-fcard__status">${esc(statusLine)}</span>
+              <span class="df-fcard__arrow" aria-hidden="true">${arrowSvg()}</span>
+            </span>
           </span>
-          <span class="df-row__arrow" aria-hidden="true">${arrowSvg()}</span>
         </button>
       </li>
     `;
@@ -225,48 +383,82 @@ const WorldChoirDonate = (() => {
 
   function renderEmptyResults() {
     const searching = searchOpen && searchQuery.trim();
-    const copy = searching
-      ? 'No Creator Foundations match this search in the selected cause.'
-      : selectedCause === 'all'
-        ? 'Verified Creator Foundations will appear here as the circle grows.'
-        : 'There are currently no Creator Foundations in this cause.';
+    const nearNoCountry = selectedExplore === 'near' && !getUserCountry();
+    const copy = nearNoCountry
+      ? 'Share your place when you Join to discover Foundations near you.'
+      : searching
+        ? 'No Creator Foundations match this search in the selected cause.'
+        : selectedCause === 'all'
+          ? 'Verified Creator Foundations will appear here as the circle grows.'
+          : 'There are currently no Creator Foundations in this cause.';
 
     return `
       <div class="df-empty">
         <p class="df-empty__title">No foundations found</p>
         <p class="df-empty__copy">${esc(copy)}</p>
-        ${selectedCause !== 'all' || searching ? `
+        ${selectedCause !== 'all' || searching || selectedExplore === 'near' ? `
           <button type="button" class="df-empty__action" id="df-view-all">View all foundations</button>
         ` : ''}
       </div>
     `;
   }
 
-  function renderExplore(items) {
-    const totalActive = getAllFoundations().length;
-    if (!totalActive && selectedCause === 'all' && !(searchOpen && searchQuery.trim())) {
-      return `
-        <section class="df-explore df-rise df-rise-delay-3" aria-labelledby="df-explore-label">
-          <p class="df-explore__label" id="df-explore-label">Explore by cause</p>
-          ${renderCauseFilters()}
-          <div class="df-empty">
-            <p class="df-empty__title">A carefully curated beginning</p>
-            <p class="df-empty__copy">
-              Verified Creator Foundations will appear here as the circle grows.
-              We only show real people and real missions.
-            </p>
-          </div>
-        </section>
-      `;
-    }
+  function renderFoundationsSection(items) {
+    return `
+      <section class="df-foundations df-rise df-rise-delay-3" aria-labelledby="df-foundations-label">
+        <p class="df-section-label" id="df-foundations-label">Foundations</p>
+        ${items.length
+          ? `<ul class="df-fcards">${items.map(renderFoundationCard).join('')}</ul>`
+          : renderEmptyResults()}
+      </section>
+    `;
+  }
+
+  function renderHappeningNow() {
+    const projects = CreatorFoundationsStore.listActiveProjects(12);
+    if (!projects.length) return '';
 
     return `
-      <section class="df-explore df-rise df-rise-delay-3" aria-labelledby="df-explore-label">
-        <p class="df-explore__label" id="df-explore-label">Explore by cause</p>
+      <section class="df-now df-rise df-rise-delay-3" aria-labelledby="df-now-label">
+        <div class="df-now__head">
+          <div>
+            <p class="df-section-label" id="df-now-label">Happening now</p>
+            <p class="df-now__copy">Discover the projects currently creating change.</p>
+          </div>
+          <button type="button" class="df-now__link" id="df-see-projects">See all projects <span aria-hidden="true">→</span></button>
+        </div>
+        <div class="df-now__rail">
+          ${projects.map((p) => {
+            const img = p.coverImage || p.foundationCover || '';
+            const cat = CreatorFoundationsStore.normalizeCause(p.category)
+              || p.foundationCategory
+              || '';
+            return `
+              <button type="button" class="df-pcard" data-open-foundation="${esc(p.foundationId)}" data-project-id="${esc(p.id)}">
+                <span class="df-pcard__media ${img ? 'has-image' : ''}" aria-hidden="true">
+                  ${img
+                    ? `<img src="${esc(img)}" alt="">`
+                    : `<span class="df-pcard__glyph">${esc(initials(p.foundationName))}</span>`}
+                </span>
+                <span class="df-pcard__body">
+                  <span class="df-pcard__foundation">${esc(p.foundationName)}</span>
+                  <span class="df-pcard__title">${esc(p.title)}</span>
+                  ${cat ? `<span class="df-pcard__cat">${esc(cat)}</span>` : ''}
+                </span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderDiscoveryChrome() {
+    return `
+      <section class="df-explore df-rise df-rise-delay-2" aria-labelledby="df-explore-label">
+        <p class="df-section-label" id="df-explore-label">Explore by cause</p>
         ${renderCauseFilters()}
-        ${items.length
-          ? `<ul class="df-list">${items.map(renderFoundationRow).join('')}</ul>`
-          : renderEmptyResults()}
+        ${renderExploreSorts()}
       </section>
     `;
   }
@@ -289,6 +481,8 @@ const WorldChoirDonate = (() => {
 
   function resetExplore() {
     selectedCause = 'all';
+    selectedExplore = 'trending';
+    moreCausesOpen = false;
     searchOpen = false;
     searchQuery = '';
     renderHome();
@@ -298,6 +492,14 @@ const WorldChoirDonate = (() => {
     document.getElementById('df-search-open')?.addEventListener('click', openSearch);
     document.getElementById('df-search-close')?.addEventListener('click', closeSearch);
     document.getElementById('df-view-all')?.addEventListener('click', resetExplore);
+    document.getElementById('df-causes-more')?.addEventListener('click', () => {
+      moreCausesOpen = !moreCausesOpen;
+      renderHome({ keepSearchFocus: searchOpen });
+    });
+    document.getElementById('df-see-projects')?.addEventListener('click', () => {
+      const el = document.getElementById('df-now-label');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 
     const searchInput = document.getElementById('df-search-input');
     if (searchInput) {
@@ -321,6 +523,14 @@ const WorldChoirDonate = (() => {
     document.querySelectorAll('[data-cause]').forEach((btn) => {
       btn.addEventListener('click', () => {
         selectedCause = btn.getAttribute('data-cause') || 'all';
+        moreCausesOpen = false;
+        renderHome({ keepSearchFocus: searchOpen });
+      });
+    });
+
+    document.querySelectorAll('[data-explore]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectedExplore = btn.getAttribute('data-explore') || 'trending';
         renderHome({ keepSearchFocus: searchOpen });
       });
     });
@@ -335,16 +545,52 @@ const WorldChoirDonate = (() => {
 
   function renderHome(opts = {}) {
     const items = getFilteredFoundations();
+    const all = getAllFoundations();
+    const featured = CreatorFoundationsStore.getFeaturedFoundation(
+      selectedCause === 'all' && !(searchOpen && searchQuery.trim())
+        ? all
+        : items
+    );
+    const listItems = featured
+      ? items.filter((f) => f.id !== featured.id)
+      : items;
+    // Keep featured in list when filtering — still show it in Foundations if it's the only match
+    const foundationsForList = (items.length === 1 && featured && items[0].id === featured.id)
+      ? items
+      : (featured && selectedCause === 'all' && !(searchOpen && searchQuery.trim())
+        ? listItems
+        : items);
+
     const root = document.getElementById('donate-content');
     const demoBanner = CreatorFoundationsStore.usingDemoCatalog()
       ? `<p class="df-demo-banner" role="status">Development demo catalog — not production data.</p>`
       : '';
 
+    const showFeatured = featured
+      && selectedCause === 'all'
+      && selectedExplore === 'trending'
+      && !(searchOpen && searchQuery.trim());
+
     root.innerHTML = `
       ${renderTopbar()}
       ${demoBanner}
       ${renderIntro()}
-      ${renderExplore(items)}
+      ${renderDiscoveryChrome()}
+      ${showFeatured ? renderFeatured(featured) : ''}
+      ${!all.length && selectedCause === 'all' && !(searchOpen && searchQuery.trim())
+        ? `
+          <section class="df-foundations df-rise df-rise-delay-3">
+            <div class="df-empty">
+              <p class="df-empty__title">A carefully curated beginning</p>
+              <p class="df-empty__copy">
+                Verified Creator Foundations will appear here as the circle grows.
+                We only show real people and real missions.
+              </p>
+            </div>
+          </section>
+        `
+        : renderFoundationsSection(foundationsForList)}
+      ${renderHappeningNow()}
     `;
     bindHomeEvents(opts);
   }
