@@ -546,8 +546,14 @@ const DailyActsPage = (() => {
     document.getElementById('dap-save-reflection')?.addEventListener('click', async (e) => {
       if (busy) return;
       busy = true;
-      const assignmentDate = e.currentTarget.getAttribute('data-assignment-date');
+      const btn = e.currentTarget;
+      const assignmentDate = btn.getAttribute('data-assignment-date')
+        || view.item?.userDailyAct?.date
+        || localDateString();
       const reflection = document.getElementById('dap-reflection-input')?.value || '';
+      btn.disabled = true;
+      const prevLabel = btn.textContent;
+      btn.textContent = 'Saving…';
       try {
         await apiFetch('/api/daily-peace', {
           method: 'POST',
@@ -566,7 +572,13 @@ const DailyActsPage = (() => {
         paint();
         if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
       } catch (err) {
-        alert(err.message || 'Could not save reflection.');
+        btn.disabled = false;
+        btn.textContent = prevLabel || 'SAVE MY REFLECTION';
+        const note = document.createElement('p');
+        note.className = 'dap-error';
+        note.style.marginTop = '12px';
+        note.textContent = err.message || 'Could not save reflection. Please try again.';
+        btn.parentElement?.appendChild(note);
       } finally {
         busy = false;
       }

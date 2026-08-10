@@ -461,17 +461,31 @@ async function saveReflection(deviceId, assignmentDateInput, todayInput, reflect
 
   const row = await readUserDailyAct(user.id, assignmentDate);
   if (!row) throw new Error('no daily act found');
-  if (!row.completed) throw new Error('complete the act before saving a reflection');
 
   const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
   const act = actsById.get(row.act_id);
   if (!act) throw new Error('assigned act not found in catalog');
 
   const text = String(reflectionText || '').trim().slice(0, 4000);
+  const now = new Date().toISOString();
+  const alreadyCompleted = !!row.completed;
+  const completedOnAssignedDay = alreadyCompleted
+    ? !!row.completed_on_assigned_day
+    : todayDate === assignmentDate;
+
+  // Reflection UI only appears after the user completes an act.
+  // If the completion write has not propagated yet, complete + save in one write.
   const updated = normalizeRow({
     ...row,
+    completed: true,
+    completed_at: row.completed_at || now,
+    completed_on_assigned_day: completedOnAssignedDay,
+    completion_source: row.completion_source
+      || (completedOnAssignedDay ? 'daily' : 'still_open'),
+    notification_dismissed: true,
+    notification_dismissed_at: row.notification_dismissed_at || now,
     reflection: text || null,
-    reflection_at: text ? new Date().toISOString() : null,
+    reflection_at: text ? now : null,
   });
 
   await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
