@@ -1,6 +1,10 @@
 /**
  * Owner Control Center — private headquarters for World Choir.
  * All metrics come from /api/admin?action=control-center (real data only).
+ *
+ * Cross-tab rule: shared facts (map, metrics, activity, foundations, etc.) must
+ * use one data path. Never ship a one-off preview that can drift from its
+ * dedicated tab — e.g. Overview / Event / Map all mount OwnerMap + getFilteredMapCities().
  */
 const OwnerControl = (() => {
   const SECTIONS = [
@@ -399,8 +403,18 @@ const OwnerControl = (() => {
         </div>
         <div>
           <p class="owner-section__label">Global map</p>
-          ${renderMiniMap(d.map.points)}
-          <p class="owner-muted" style="margin-top:10px">${esc(d.map.note || `${d.map.points.length} geolocated Voices.`)}</p>
+          ${renderOwnerLeafletMap({ compact: true })}
+          ${(() => {
+            const filtered = getFilteredMapCities();
+            const filtersActive = hasActiveMapFilters();
+            return `
+              <p class="owner-muted" style="margin-top:10px">
+                ${esc(num(filtered.stats.voices))} geolocated Voices · ${esc(num(filtered.stats.cities))} cities · ${esc(num(filtered.stats.countries))} countries
+                ${filtersActive ? ' · matching Map filters' : ''}
+              </p>
+              ${filtered.note ? `<p class="owner-muted">${esc(filtered.note)}</p>` : ''}
+            `;
+          })()}
           <div style="margin-top:12px">
             <button type="button" class="owner-btn-ghost" data-section-jump="map">Open Global Map</button>
           </div>
@@ -454,26 +468,22 @@ const OwnerControl = (() => {
     `;
   }
 
-  function renderMiniMap(points = []) {
-    // Lightweight overview preview only — full Map section uses Leaflet (OwnerMap).
-    const w = 800;
-    const h = 400;
-    const dots = points.slice(0, 400).map((p) => {
-      const x = ((Number(p.longitude) + 180) / 360) * w;
-      const y = ((90 - Number(p.latitude)) / 180) * h;
-      return `<circle class="owner-map__point" cx="${x}" cy="${y}" r="2.2"></circle>`;
-    }).join('');
-
+  /** Shared Leaflet shell — Overview, Map, Event all mount the same OwnerMap instance. */
+  function renderOwnerLeafletMap({ compact = false } = {}) {
     return `
-      <div class="owner-map-preview">
-        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-          <rect width="${w}" height="${h}" fill="#080809"></rect>
-          <path d="M40 80 H760 M40 160 H760 M40 240 H760 M40 320 H760 M120 20 V380 M240 20 V380 M360 20 V380 M480 20 V380 M600 20 V380 M720 20 V380"
-            stroke="rgba(255,255,255,0.04)" stroke-width="1" fill="none"></path>
-          ${dots}
-        </svg>
+      <div class="owner-leaflet-shell ${compact ? 'owner-leaflet-shell--compact' : ''}">
+        <div id="owner-world-map"></div>
+        <div class="city-card" id="owner-city-card">
+          <p class="city-card__place" id="owner-city-card-place">—</p>
+          <p class="city-card__voices" id="owner-city-card-voices">—</p>
+        </div>
       </div>
     `;
+  }
+
+  function hasActiveMapFilters() {
+    const f = state.mapFilters || {};
+    return f.mode !== 'voices' || !!f.country || f.range !== 'all' || !!f.foundationId;
   }
 
   function getMapRangeBounds(range) {
@@ -628,13 +638,7 @@ const OwnerControl = (() => {
         <div><strong>${esc(num(filtered.stats.countries))}</strong><span>Countries</span></div>
       </div>
 
-      <div class="owner-leaflet-shell">
-        <div id="owner-world-map"></div>
-        <div class="city-card" id="owner-city-card">
-          <p class="city-card__place" id="owner-city-card-place">—</p>
-          <p class="city-card__voices" id="owner-city-card-voices">—</p>
-        </div>
-      </div>
+      ${renderOwnerLeafletMap()}
       ${filtered.note ? `<p class="owner-muted" style="margin-top:12px">${esc(filtered.note)}</p>` : ''}
       ${f.foundationId && f.mode === 'voices'
         ? `<p class="owner-muted">Foundation filter currently narrows Voices by that foundation’s country. Voices are not yet linked to individual foundations.</p>`
@@ -1025,7 +1029,14 @@ const OwnerControl = (() => {
           <p class="owner-muted">${(e.unavailable || []).map(esc).join(' · ')}</p>
         </div>
       </section>
-      ${renderMiniMap(state.data.map.points)}
+      <section class="owner-section">
+        <p class="owner-section__label">Geographic readiness</p>
+        ${renderOwnerLeafletMap({ compact: true })}
+        ${(() => {
+          const filtered = getFilteredMapCities();
+          return `<p class="owner-muted" style="margin-top:10px">${esc(num(filtered.stats.voices))} mapped Voices · same live map as Overview &amp; Global Map${hasActiveMapFilters() ? ' · matching Map filters' : ''}</p>`;
+        })()}
+      </section>
     `;
   }
 
@@ -1431,7 +1442,9 @@ const OwnerControl = (() => {
 
   function mountOwnerMapIfNeeded() {
     if (typeof OwnerMap === 'undefined') return;
-    if (state.section !== 'map') {
+    const mapHost = document.getElementById('owner-world-map');
+    // Any tab that embeds the shared map shell stays wired to the same filtered data.
+    if (!mapHost) {
       OwnerMap.destroy();
       return;
     }

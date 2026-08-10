@@ -476,28 +476,6 @@
   white-space: nowrap;
 }
 
-.owner-map-preview {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 2 / 1;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background:
-    radial-gradient(ellipse at 30% 40%, rgba(78, 197, 232, 0.05), transparent 50%),
-    #080809;
-  overflow: hidden;
-}
-
-.owner-map-preview svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.owner-map__point {
-  fill: var(--accent-aurora);
-  opacity: 0.85;
-}
-
 .owner-map-filters {
   display: grid;
   gap: 12px;
@@ -546,6 +524,11 @@
   background: #000;
 }
 
+.owner-leaflet-shell--compact {
+  height: min(42vh, 320px);
+  min-height: 220px;
+}
+
 #owner-world-map {
   width: 100%;
   height: 100%;
@@ -559,22 +542,6 @@
 .owner-leaflet-shell .leaflet-container {
   background: #000 !important;
   font-family: var(--font-sans);
-}
-
-.owner-map {
-  /* legacy alias kept for safety */
-  position: relative;
-  width: 100%;
-  aspect-ratio: 2 / 1;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #080809;
-  overflow: hidden;
-}
-
-.owner-map svg {
-  width: 100%;
-  height: 100%;
-  display: block;
 }
 
 .owner-chart {
