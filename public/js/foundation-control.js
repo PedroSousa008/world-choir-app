@@ -37,7 +37,6 @@ const FoundationControl = (() => {
     searchOpen: false,
     searchQuery: '',
     searchResults: null,
-    notifOpen: false,
     mapOpen: false,
     navOpen: false,
     activityFilter: 'all',
@@ -131,10 +130,6 @@ const FoundationControl = (() => {
 
   function can(perm) {
     return !!(state.data?.permissions && state.data.permissions[perm]);
-  }
-
-  function unreadCount() {
-    return (state.data?.notifications || []).filter((n) => !n.read).length;
   }
 
   function syncFoundationForm(from) {
@@ -275,7 +270,6 @@ const FoundationControl = (() => {
       foundationForm: null,
       foundationDirty: false,
       searchOpen: false,
-      notifOpen: false,
       mapOpen: false,
       flash: null,
       error: null,
@@ -288,7 +282,6 @@ const FoundationControl = (() => {
 
   function renderShell(content) {
     const f = state.data?.foundation || {};
-    const unread = unreadCount();
     const navOpen = state.navOpen;
     return `
       <div class="fcc-shell ${navOpen ? 'is-nav-open' : ''}">
@@ -329,10 +322,6 @@ const FoundationControl = (() => {
               <button type="button" class="fcc-icon-btn" data-action="open-search" aria-label="Search">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
               </button>
-              <button type="button" class="fcc-icon-btn" data-action="open-notif" aria-label="Notifications">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 7H3s3 0 3-7"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
-                ${unread ? '<span class="fcc-icon-btn__badge"></span>' : ''}
-              </button>
             </div>
           </header>
           <div class="fcc-top">
@@ -350,10 +339,6 @@ const FoundationControl = (() => {
               <button type="button" class="fcc-icon-btn fcc-desk-only" data-action="open-search" aria-label="Search" title="Search (⌘K)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
               </button>
-              <button type="button" class="fcc-icon-btn fcc-desk-only" data-action="open-notif" aria-label="Notifications">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 7H3s3 0 3-7"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
-                ${unread ? '<span class="fcc-icon-btn__badge"></span>' : ''}
-              </button>
             </div>
           </div>
           ${flashHtml()}
@@ -362,7 +347,6 @@ const FoundationControl = (() => {
         </div>
       </div>
       ${renderSearchOverlay()}
-      ${renderNotifDrawer()}
       ${renderMapDrawer()}
     `;
   }
@@ -381,7 +365,7 @@ const FoundationControl = (() => {
       community: 'Supporters and where they gather.',
       insights: 'Growth and location leaders from real data.',
       updates: 'Publish updates to your supporters.',
-      settings: 'Foundation, team, verification, and security.',
+      settings: 'Foundation, team, financial, and security.',
     };
     return map[state.section] || '';
   }
@@ -441,7 +425,6 @@ const FoundationControl = (() => {
       state.activityFilter === 'all' || a.type === state.activityFilter
     );
     const cmp = growth.comparison || {};
-    const status = String(f.verificationStatus || 'unverified').replace(/_/g, ' ');
 
     return `
       <section class="fcc-section">
@@ -450,7 +433,6 @@ const FoundationControl = (() => {
         <p class="fcc-foundation-byline">
           Founded by ${esc(f.creatorName || '—')}
           ${f.country ? ` · ${esc(f.country)}` : ''}
-          <span class="fcc-status">${esc(status)}</span>
         </p>
 
         <div class="fcc-hero" style="margin-top:28px">
@@ -1309,17 +1291,17 @@ const FoundationControl = (() => {
   function renderSettings() {
     const f = state.data?.foundation || {};
     const team = state.data?.team || [];
-    const ver = state.data?.verification || {};
     const fin = state.data?.financial || {};
     const sec = state.data?.security || {};
     const tabs = [
       { id: 'foundation', label: 'Foundation' },
       { id: 'team', label: 'Team' },
-      { id: 'verification', label: 'Verification' },
       { id: 'financial', label: 'Financial' },
-      { id: 'notifications', label: 'Notifications' },
       { id: 'security', label: 'Security' },
     ];
+    if (!tabs.some((t) => t.id === state.settingsTab)) {
+      state.settingsTab = 'foundation';
+    }
     const tab = state.settingsTab;
 
     return `
@@ -1385,34 +1367,12 @@ const FoundationControl = (() => {
           </div>
         ` : ''}
 
-        ${tab === 'verification' ? `
-          <div class="fcc-block">
-            <h3>Verification</h3>
-            <div class="fcc-status-line">
-              <span class="fcc-status-dot ${ver.status === 'verified' ? 'is-verified' : ''}"></span>
-              ${esc(ver.status || 'unverified')}
-            </div>
-            <p class="fcc-muted" style="margin-top:12px">${esc(ver.note || 'Verification is managed by World Choir.')}</p>
-            <p class="fcc-note">Status is read-only. World Choir reviews verification — Foundations cannot self-verify.</p>
-          </div>
-        ` : ''}
-
         ${tab === 'financial' ? `
           <div class="fcc-block">
             <h3>Financial</h3>
             ${fin.available
               ? ''
               : emptyNote(fin.note || 'Payout accounts and balances are not connected yet.')}
-          </div>
-        ` : ''}
-
-        ${tab === 'notifications' ? `
-          <div class="fcc-block">
-            <h3>Notification preferences</h3>
-            <p class="fcc-note">Granular notification preferences are not configurable yet. You receive workspace alerts in the notifications drawer. Mark items read there.</p>
-            <div class="fcc-form-actions">
-              <button type="button" class="fcc-btn-ghost" data-action="open-notif">Open notifications</button>
-            </div>
           </div>
         ` : ''}
 
@@ -1517,30 +1477,6 @@ const FoundationControl = (() => {
     `;
   }
 
-  function renderNotifDrawer() {
-    const list = state.data?.notifications || [];
-    return `
-      <div class="fcc-overlay ${state.notifOpen ? 'is-open' : ''}" id="fcc-notif">
-        <div class="fcc-overlay__backdrop" data-action="close-notif"></div>
-        <div class="fcc-notif-panel" role="dialog" aria-label="Notifications">
-          <div class="fcc-section__head">
-            <h2>Notifications</h2>
-            <button type="button" class="fcc-btn-ghost" data-action="notif-read-all">Mark all read</button>
-          </div>
-          ${!list.length
-            ? emptyNote('No notifications yet.')
-            : list.map((n) => `
-              <div class="fcc-notif-item ${n.read ? '' : 'is-unread'}">
-                <p class="fcc-notif-item__title">${esc(n.title)}</p>
-                <p class="fcc-notif-item__body">${esc(n.body || '')}<br>${esc(when(n.createdAt))}</p>
-                ${!n.read ? `<button type="button" class="fcc-btn-ghost" style="margin-top:8px" data-action="notif-read" data-id="${esc(n.id)}">Mark read</button>` : ''}
-              </div>
-            `).join('')}
-        </div>
-      </div>
-    `;
-  }
-
   function renderMapDrawer() {
     const note = state.data?.map?.note;
     return `
@@ -1605,7 +1541,7 @@ const FoundationControl = (() => {
   function render() {
     document.body.classList.add('fcc-body');
     document.body.classList.toggle('is-fcc-nav-open', !!(state.authenticated && state.navOpen));
-    document.body.classList.toggle('is-fcc-drawer-open', !!(state.mapOpen || state.notifOpen || state.searchOpen || state.navOpen));
+    document.body.classList.toggle('is-fcc-drawer-open', !!(state.mapOpen || state.searchOpen || state.navOpen));
     if (!state.authenticated) {
       document.body.classList.remove('is-fcc-nav-open', 'is-fcc-drawer-open');
       renderLogin();
@@ -1813,16 +1749,6 @@ const FoundationControl = (() => {
       render();
       return;
     }
-    if (action === 'open-notif') {
-      state.notifOpen = true;
-      render();
-      return;
-    }
-    if (action === 'close-notif') {
-      state.notifOpen = false;
-      render();
-      return;
-    }
     if (action === 'open-map') {
       state.mapOpen = true;
       render();
@@ -1916,30 +1842,6 @@ const FoundationControl = (() => {
       }
       return;
     }
-    if (action === 'notif-read') {
-      try {
-        await api('notifications-read', { method: 'POST', body: { id: t.getAttribute('data-id') } });
-        await loadCenter();
-        state.notifOpen = true;
-        render();
-      } catch (err) {
-        setFlash(err.message || 'Failed', 'err');
-        render();
-      }
-      return;
-    }
-    if (action === 'notif-read-all') {
-      try {
-        await api('notifications-read', { method: 'POST', body: { all: true } });
-        await loadCenter();
-        state.notifOpen = true;
-        render();
-      } catch (err) {
-        setFlash(err.message || 'Failed', 'err');
-        render();
-      }
-      return;
-    }
     if (action === 'drill-country') {
       state.drill = { type: 'country', country: t.getAttribute('data-country') };
       if (state.section !== 'donations' && state.section !== 'community') state.section = 'donations';
@@ -2008,9 +1910,6 @@ const FoundationControl = (() => {
     if (e.key === 'Escape') {
       if (state.searchOpen) {
         state.searchOpen = false;
-        render();
-      } else if (state.notifOpen) {
-        state.notifOpen = false;
         render();
       } else if (state.mapOpen) {
         state.mapOpen = false;
