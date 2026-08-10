@@ -1,5 +1,5 @@
 /**
- * Daily Acts of Peace — one small act per day from the official 350-act catalog
+ * Daily Acts of Peace — one small act per day from the official 403-act catalog
  */
 const DailyActsPeace = (() => {
   let saving = false;
@@ -39,6 +39,15 @@ const DailyActsPeace = (() => {
     return data;
   }
 
+  function renderNavButton(nav) {
+    if (!nav?.type || !nav?.label) return '';
+    return `
+      <button class="btn btn-primary daily-peace-nav" id="daily-peace-nav" type="button" data-nav-type="${escapeHtml(nav.type)}" data-nav-cause="${escapeHtml(nav.cause || '')}">
+        ${escapeHtml(nav.label)}
+      </button>
+    `;
+  }
+
   function renderContent({ act, userDailyAct }) {
     const completed = !!userDailyAct?.completed;
     return `
@@ -48,6 +57,8 @@ const DailyActsPeace = (() => {
       <div class="daily-peace-card glass-card">
         <p class="daily-peace-act">“${escapeHtml(act.text)}”</p>
       </div>
+
+      ${renderNavButton(act.nav)}
 
       <label class="daily-peace-check${completed ? ' daily-peace-check--done' : ''}">
         <input type="checkbox" id="daily-peace-complete" ${completed ? 'checked disabled' : ''}>
@@ -67,9 +78,49 @@ const DailyActsPeace = (() => {
     `;
   }
 
+  function handleNav(type, cause) {
+    if (type === 'practice') {
+      close();
+      if (typeof PracticeMode !== 'undefined') {
+        PracticeMode.open({ onExit: () => {} });
+      }
+      return;
+    }
+
+    if (type === 'map') {
+      window.location.href = 'map.html';
+      return;
+    }
+
+    if (type === 'donate') {
+      const params = new URLSearchParams();
+      if (cause) params.set('cause', cause);
+      const qs = params.toString();
+      window.location.href = qs ? `donate.html?${qs}` : 'donate.html';
+      return;
+    }
+
+    if (type === 'invite') {
+      close();
+      if (typeof InviteButton !== 'undefined' && typeof InviteButton.share === 'function') {
+        InviteButton.share();
+      }
+      return;
+    }
+
+    if (type === 'profile') {
+      close();
+      document.getElementById('profile-identity-root')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
   function bindContentHandlers() {
     document.getElementById('daily-peace-back')?.addEventListener('click', close);
     document.getElementById('daily-peace-complete')?.addEventListener('change', onCompleteChange);
+    document.getElementById('daily-peace-nav')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      handleNav(btn.getAttribute('data-nav-type'), btn.getAttribute('data-nav-cause') || '');
+    });
   }
 
   async function onCompleteChange(e) {

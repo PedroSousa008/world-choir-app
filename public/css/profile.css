@@ -368,6 +368,12 @@
   font-weight: 500;
 }
 
+.daily-peace-nav {
+  width: 100%;
+  max-width: none;
+  margin: 0 0 20px;
+}
+
 .daily-peace-check {
   display: inline-flex;
   align-items: center;

@@ -1145,6 +1145,20 @@ const WorldChoirDonate = (() => {
     document.getElementById('donate-retry')?.addEventListener('click', init);
   }
 
+  function applyDeepLinkCause() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const raw = String(params.get('cause') || '').trim();
+      if (!raw) return;
+      const match = CAUSE_FILTERS.find((f) => f.id.toLowerCase() === raw.toLowerCase());
+      if (match && match.id !== 'all') {
+        selectedCause = match.id;
+      }
+    } catch {
+      /* ignore malformed query */
+    }
+  }
+
   async function init() {
     WorldChoirNav.startWatcher('donate');
     ensureModal();
@@ -1155,6 +1169,7 @@ const WorldChoirDonate = (() => {
 
     try {
       await CreatorFoundationsStore.ready();
+      applyDeepLinkCause();
       renderHome();
     } catch (err) {
       console.error('Creator Foundations init failed:', err);

@@ -80,6 +80,23 @@ function pickActForUser(userId, date, recentActIds) {
   return pool[index];
 }
 
+function mapAct(act) {
+  if (!act) return null;
+  const mapped = {
+    id: act.id,
+    text: act.text,
+    category: act.category || null,
+  };
+  if (act.nav && typeof act.nav === 'object') {
+    mapped.nav = {
+      type: act.nav.type || null,
+      label: act.nav.label || null,
+      cause: act.nav.cause || null,
+    };
+  }
+  return mapped;
+}
+
 function mapUserDailyAct(row, act) {
   return {
     userDailyAct: {
@@ -91,31 +108,15 @@ function mapUserDailyAct(row, act) {
       completedAt: row.completed_at,
       assignedAt: row.assigned_at,
     },
-    act: act
-      ? {
-          id: act.id,
-          text: act.text,
-          category: act.category || null,
-        }
-      : null,
+    act: mapAct(act),
   };
 }
 
-async function getOrAssignDailyAct(deviceId, date = getUtcDateString()) {
-  assertBlobConfigured();
-  const user = await findUserByDevice(deviceId);
-  if (!user) throw new Error('user not found');
-
-  const existing = await readUserDailyAct(user.id, date);
-  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
-
-  if (existing) {
-    const act = actsById.get(existing.act_id);
-    if (!act) throw new Error('assigned act not found in catalog');
-    return mapUserDailyAct(existing, act);
-  }
-
-  const recentActIds = await listRecentUserActIds(user.id, date);
+async function assignFreshDailyAct(user, date, actsById, recentExtraIds = []) {
+  const recentActIds = [
+    ...recentExtraIds,
+    ...(await listRecentUserActIds(user.id, date)),
+  ];
   const chosen = pickActForUser(user.id, date, recentActIds);
   const now = new Date().toISOString();
 
@@ -130,14 +131,37 @@ async function getOrAssignDailyAct(deviceId, date = getUtcDateString()) {
   };
 
   try {
-    await writeJson(userDailyActPath(user.id, date), row, { overwrite: false });
+    await writeJson(userDailyActPath(user.id, date), row, { overwrite: true });
   } catch {
     const raced = await readUserDailyAct(user.id, date);
-    if (raced) return mapUserDailyAct(raced, actsById.get(raced.act_id));
+    if (raced) {
+      const racedAct = actsById.get(raced.act_id);
+      if (racedAct) return mapUserDailyAct(raced, racedAct);
+    }
     throw new Error('Could not assign daily act. Please try again.');
   }
 
   return mapUserDailyAct(row, chosen);
+}
+
+async function getOrAssignDailyAct(deviceId, date = getUtcDateString()) {
+  assertBlobConfigured();
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const existing = await readUserDailyAct(user.id, date);
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+
+  if (existing) {
+    const act = actsById.get(existing.act_id);
+    // Catalog was replaced — drop obsolete assignments and pick from the new list.
+    if (!act) {
+      return assignFreshDailyAct(user, date, actsById, [existing.act_id]);
+    }
+    return mapUserDailyAct(existing, act);
+  }
+
+  return assignFreshDailyAct(user, date, actsById);
 }
 
 async function completeDailyAct(deviceId, date = getUtcDateString()) {
@@ -148,8 +172,16 @@ async function completeDailyAct(deviceId, date = getUtcDateString()) {
   const row = await readUserDailyAct(user.id, date);
   if (!row) throw new Error('no daily act assigned for today');
 
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const act = actsById.get(row.act_id);
+
+  // Obsolete catalog entry — reassign and ask the client to reload the new act.
+  if (!act) {
+    await assignFreshDailyAct(user, date, actsById, [row.act_id]);
+    throw new Error('Today’s act was updated. Please open it again.');
+  }
+
   if (row.completed) {
-    const act = loadCatalog().find((item) => item.id === row.act_id);
     return mapUserDailyAct(row, act);
   }
 
@@ -160,7 +192,6 @@ async function completeDailyAct(deviceId, date = getUtcDateString()) {
   };
 
   await writeJson(userDailyActPath(user.id, date), updated, { overwrite: true });
-  const act = loadCatalog().find((item) => item.id === updated.act_id);
   return mapUserDailyAct(updated, act);
 }
 
