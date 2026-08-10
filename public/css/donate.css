@@ -643,7 +643,7 @@
   outline: none;
 }
 
-/* X-style cover + circular profile — sized for mobile */
+/* X-style cover + circular profile — full horizontal cover, no crop */
 .df-profile-hero {
   position: relative;
   margin: 0 0 12px;
@@ -651,23 +651,24 @@
 
 .df-profile-hero__cover {
   width: 100%;
-  height: 118px;
+  min-height: 96px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
     #0c0c0e;
   border: 1px solid var(--df-line);
   overflow: hidden;
+  line-height: 0;
 }
 
 .df-profile-hero__cover.has-image {
   border-color: transparent;
+  min-height: 0;
 }
 
 .df-profile-hero__cover-img {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
 }
 
 .df-profile-hero__avatar {
