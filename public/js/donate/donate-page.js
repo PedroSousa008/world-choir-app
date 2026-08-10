@@ -189,6 +189,63 @@ const WorldChoirDonate = (() => {
     return `<span class="df-verified">Verified</span>`;
   }
 
+  function normalizeExternalUrl(raw) {
+    const value = String(raw || '').trim();
+    if (!value) return '';
+    if (/^https?:\/\//i.test(value)) return value;
+    if (value.startsWith('//')) return `https:${value}`;
+    return `https://${value.replace(/^\/+/, '')}`;
+  }
+
+  function socialIconSvg(kind) {
+    const common = 'viewBox="0 0 24 24" aria-hidden="true"';
+    const icons = {
+      website: `<svg ${common}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" stroke-linecap="round"/></svg>`,
+      instagram: `<svg ${common}><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="17.2" cy="6.8" r="0.9" fill="currentColor" stroke="none"/></svg>`,
+      youtube: `<svg ${common}><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M10 9.5l5 2.5-5 2.5V9.5z" fill="currentColor" stroke="none"/></svg>`,
+      x: `<svg ${common}><path d="M5 5l14 14M19 5L5 19" stroke-linecap="round"/></svg>`,
+      tiktok: `<svg ${common}><path d="M14 4v10.2a3.8 3.8 0 11-2.6-3.6V8.2A6 6 0 0014 8V4h2.2A4.8 4.8 0 0019.5 7V9A6.8 6.8 0 0116.2 8v6.2A5.8 5.8 0 118 8.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    };
+    return icons[kind] || icons.website;
+  }
+
+  function renderSocialLinks(foundation) {
+    const links = foundation.socialLinks && typeof foundation.socialLinks === 'object'
+      ? foundation.socialLinks
+      : {};
+    const entries = [
+      { id: 'website', label: 'Website', url: foundation.website },
+      { id: 'instagram', label: 'Instagram', url: links.instagram },
+      { id: 'youtube', label: 'YouTube', url: links.youtube },
+      { id: 'x', label: 'X', url: links.x || links.twitter },
+      { id: 'tiktok', label: 'TikTok', url: links.tiktok },
+    ]
+      .map((item) => ({ ...item, href: normalizeExternalUrl(item.url) }))
+      .filter((item) => item.href);
+
+    if (!entries.length) return '';
+
+    return `
+      <section class="df-section df-social">
+        <h2>Connect</h2>
+        <div class="df-social__row">
+          ${entries.map((item) => `
+            <a
+              class="df-social__link"
+              href="${esc(item.href)}"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="${esc(item.label)}"
+              title="${esc(item.label)}"
+            >
+              ${socialIconSvg(item.id)}
+            </a>
+          `).join('')}
+        </div>
+      </section>
+    `;
+  }
+
   function metricsRow(foundation) {
     const currency = CreatorFoundationsStore.getCurrency();
     return `
@@ -816,18 +873,9 @@ const WorldChoirDonate = (() => {
               </p>
             `
             : `<p class="df-muted">This information has not yet been published.</p>`}
-
-          <h3>Legal organization</h3>
-          ${foundation.legalOrganization
-            ? `<p>
-                ${esc(foundation.legalOrganization.name)}
-                ${foundation.legalOrganization.type ? ` · ${esc(foundation.legalOrganization.type)}` : ''}
-                ${foundation.legalOrganization.registrationId
-                  ? `<br><span class="df-muted">${esc(foundation.legalOrganization.registrationId)}</span>`
-                  : ''}
-              </p>`
-            : `<p class="df-muted">This information has not yet been published.</p>`}
         </section>
+
+        ${renderSocialLinks(foundation)}
       </div>
     `;
   }

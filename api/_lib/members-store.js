@@ -194,11 +194,13 @@ async function updateInfluencer(id, updates = {}, { allowEmailChange = false } =
   });
 
   if (updates.socialLinks !== undefined && typeof updates.socialLinks === 'object') {
-    const links = {};
+    const links = { ...(current.socialLinks && typeof current.socialLinks === 'object' ? current.socialLinks : {}) };
     Object.entries(updates.socialLinks).forEach(([k, v]) => {
       const key = String(k).trim().slice(0, 40);
+      if (!key) return;
       const val = String(v || '').trim().slice(0, 300);
-      if (key && val) links[key] = val;
+      if (val) links[key] = val;
+      else delete links[key];
     });
     next.socialLinks = links;
   }

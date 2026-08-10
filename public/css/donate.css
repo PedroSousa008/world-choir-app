@@ -1684,6 +1684,46 @@
   color: var(--df-muted) !important;
 }
 
+.df-social {
+  margin-top: 8px;
+}
+
+.df-social__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.df-social__link {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--df-line);
+  border-radius: 6px;
+  color: var(--df-warm-soft);
+  background: transparent;
+  text-decoration: none;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.df-social__link svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.df-social__link:hover,
+.df-social__link:focus-visible {
+  color: var(--df-accent);
+  border-color: color-mix(in srgb, var(--df-accent) 45%, var(--df-line));
+  background: color-mix(in srgb, var(--df-accent) 8%, transparent);
+  outline: none;
+}
+
 .df-impact-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

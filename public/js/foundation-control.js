@@ -132,17 +132,28 @@ const FoundationControl = (() => {
     return !!(state.data?.permissions && state.data.permissions[perm]);
   }
 
+  function pickFilled(...values) {
+    for (const value of values) {
+      if (value == null) continue;
+      const text = String(value).trim();
+      if (text) return text;
+    }
+    return '';
+  }
+
   function syncFoundationForm(from) {
     const f = from || state.data?.foundation || {};
     const drafts = state.data?.drafts || {};
     const page = drafts.page || {};
     const card = drafts.card || {};
+    const liveSocial = f.socialLinks && typeof f.socialLinks === 'object' ? f.socialLinks : {};
+    const draftSocial = page.socialLinks && typeof page.socialLinks === 'object' ? page.socialLinks : {};
     state.foundationForm = {
-      foundationName: page.foundationName ?? f.name ?? '',
-      creatorName: page.creatorName ?? f.creatorName ?? '',
-      country: page.country ?? f.country ?? '',
+      foundationName: pickFilled(page.foundationName, f.name, f.foundationName),
+      creatorName: pickFilled(page.creatorName, f.creatorName),
+      country: pickFilled(page.country, f.country),
       category: (() => {
-        const raw = page.category ?? f.category ?? '';
+        const raw = pickFilled(page.category, f.category, f.primaryCategory);
         const aliases = {
           'humanity help': 'Humanitarian Aid',
           humanitarian: 'Humanitarian Aid',
@@ -156,22 +167,21 @@ const FoundationControl = (() => {
         const causes = ['Food & Hunger', 'Health', 'Education', 'Humanitarian Aid', 'Environment'];
         return causes.find((c) => c.toLowerCase() === lower) || raw;
       })(),
-      mission: page.mission ?? f.mission ?? '',
-      biography: page.biography ?? f.biography ?? '',
-      whyStarted: page.whyStarted ?? f.whyStarted ?? '',
-      howItWorks: page.howItWorks ?? f.howItWorks ?? '',
-      shortDescription: page.shortDescription ?? f.shortDescription ?? '',
-      story: page.story ?? f.story ?? '',
-      website: page.website ?? f.website ?? '',
-      profileImage: page.profileImage ?? f.profileImage ?? '',
-      coverImage: page.coverImage ?? f.coverImage ?? '',
-      cardShortMission: card.cardShortMission ?? f.cardShortMission ?? f.mission ?? '',
+      mission: pickFilled(page.mission, f.mission),
+      biography: pickFilled(page.biography, f.biography),
+      whyStarted: pickFilled(page.whyStarted, f.whyStarted),
+      howItWorks: pickFilled(page.howItWorks, f.howItWorks),
+      shortDescription: pickFilled(page.shortDescription, f.shortDescription),
+      story: pickFilled(page.story, f.story),
+      website: pickFilled(page.website, f.website),
+      profileImage: pickFilled(page.profileImage, f.profileImage),
+      coverImage: pickFilled(page.coverImage, f.coverImage),
+      cardShortMission: pickFilled(card.cardShortMission, f.cardShortMission, f.mission),
       socialLinks: {
-        instagram: (f.socialLinks && f.socialLinks.instagram) || '',
-        youtube: (f.socialLinks && f.socialLinks.youtube) || '',
-        x: (f.socialLinks && f.socialLinks.x) || '',
-        tiktok: (f.socialLinks && f.socialLinks.tiktok) || '',
-        ...(page.socialLinks || {}),
+        instagram: pickFilled(draftSocial.instagram, liveSocial.instagram),
+        youtube: pickFilled(draftSocial.youtube, liveSocial.youtube),
+        x: pickFilled(draftSocial.x, liveSocial.x, liveSocial.twitter),
+        tiktok: pickFilled(draftSocial.tiktok, liveSocial.tiktok),
       },
     };
     state.foundationDirty = false;
@@ -787,25 +797,78 @@ const FoundationControl = (() => {
   }
 
   function readFoundationFormIntoState() {
-    const el = document.getElementById('fcc-foundation-form');
-    if (!el || !state.foundationForm) return;
-    const fd = new FormData(el);
+    if (!state.foundationForm) return;
     const f = state.foundationForm;
-    for (const [k, v] of fd.entries()) {
-      if (['instagram', 'youtube', 'x', 'tiktok'].includes(k)) {
-        f.socialLinks = f.socialLinks || {};
-        f.socialLinks[k] = String(v);
-      } else {
-        f[k] = String(v);
-      }
-    }
+
+    const readValue = (id) => {
+      const el = document.getElementById(id);
+      if (!el || el.disabled) return null;
+      return String(el.value || '');
+    };
+
+    const textMap = {
+      foundationName: 'ff-name',
+      creatorName: 'ff-creator',
+      country: 'ff-country',
+      category: 'ff-category',
+      mission: 'ff-mission',
+      biography: 'ff-bio',
+      whyStarted: 'ff-why',
+      howItWorks: 'ff-how',
+      story: 'ff-story',
+      cardShortMission: 'ff-card-mission',
+      shortDescription: 'ff-short',
+      website: 'ff-web',
+    };
+
+    Object.entries(textMap).forEach(([key, id]) => {
+      const value = readValue(id);
+      if (value !== null) f[key] = value;
+    });
+
+    // Hidden image fields live in whichever tab is open.
+    ['profileImage', 'coverImage'].forEach((field) => {
+      const hidden = document.querySelector(`input[type="hidden"][name="${field}"]`);
+      if (hidden) f[field] = String(hidden.value || '');
+    });
+
+    const social = { ...(f.socialLinks || {}) };
+    [
+      ['instagram', 'ff-ig'],
+      ['youtube', 'ff-yt'],
+      ['x', 'ff-x'],
+      ['tiktok', 'ff-tt'],
+    ].forEach(([key, id]) => {
+      const value = readValue(id);
+      if (value !== null) social[key] = value.trim();
+    });
+    f.socialLinks = {
+      instagram: String(social.instagram || '').trim(),
+      youtube: String(social.youtube || '').trim(),
+      x: String(social.x || '').trim(),
+      tiktok: String(social.tiktok || '').trim(),
+    };
+
     state.foundationDirty = true;
   }
 
   async function saveFoundation() {
     if (!can('editFoundation')) return;
     readFoundationFormIntoState();
+    if (!state.foundationForm) syncFoundationForm();
     const f = state.foundationForm;
+    if (!f) return;
+
+    const socialLinks = {
+      instagram: String(f.socialLinks?.instagram || '').trim(),
+      youtube: String(f.socialLinks?.youtube || '').trim(),
+      x: String(f.socialLinks?.x || '').trim(),
+      tiktok: String(f.socialLinks?.tiktok || '').trim(),
+    };
+    const website = String(f.website || '').trim();
+    f.website = website;
+    f.socialLinks = socialLinks;
+
     state.busy = true;
     render();
     try {
@@ -820,13 +883,13 @@ const FoundationControl = (() => {
           howItWorks: f.howItWorks,
           shortDescription: f.shortDescription,
           story: f.story,
-          website: f.website,
+          website,
           profileImage: f.profileImage,
           coverImage: f.coverImage,
           cardShortMission: f.cardShortMission,
           country: f.country,
           primaryCategory: f.category,
-          socialLinks: f.socialLinks,
+          socialLinks,
         },
       });
       await api('save-drafts', {
@@ -843,10 +906,10 @@ const FoundationControl = (() => {
             howItWorks: f.howItWorks,
             shortDescription: f.shortDescription,
             story: f.story,
-            website: f.website,
+            website,
             profileImage: f.profileImage,
             coverImage: f.coverImage,
-            socialLinks: f.socialLinks,
+            socialLinks,
           },
           card: {
             cardShortMission: f.cardShortMission,
@@ -857,7 +920,11 @@ const FoundationControl = (() => {
       });
       setFlash('Foundation saved');
       state.foundationForm = null;
+      state.foundationDirty = false;
       await loadCenter();
+      syncFoundationForm();
+      state.section = 'foundation';
+      render();
     } catch (err) {
       setFlash(err.message || 'Save failed', 'err');
       state.busy = false;
