@@ -366,6 +366,57 @@ const WorldChoirDonate = (() => {
     `;
   }
 
+  function renderSearchResultRow(foundation) {
+    const avatar = foundation.profileImage || '';
+    return `
+      <li>
+        <button type="button" class="df-srow" data-open-foundation="${esc(foundation.id)}">
+          <span class="df-srow__avatar ${avatar ? 'has-image' : ''}" aria-hidden="true">
+            ${avatar
+              ? `<img src="${esc(avatar)}" alt="">`
+              : `<span>${esc(identityGlyph(foundation))}</span>`}
+          </span>
+          <span class="df-srow__text">
+            <span class="df-srow__creator">${esc(foundation.creatorName || '—')}</span>
+            <span class="df-srow__foundation">${esc(foundation.foundationName || '—')}</span>
+          </span>
+          <span class="df-srow__arrow" aria-hidden="true">${arrowSvg()}</span>
+        </button>
+      </li>
+    `;
+  }
+
+  function renderSearchResultsSection(items) {
+    const q = searchQuery.trim();
+    if (!q) {
+      return `
+        <section class="df-search-results" aria-live="polite">
+          <p class="df-search-results__hint">Type a creator or foundation name.</p>
+        </section>
+      `;
+    }
+
+    if (!items.length) {
+      return `
+        <section class="df-search-results" aria-live="polite">
+          <div class="df-empty">
+            <p class="df-empty__title">No foundations found</p>
+            <p class="df-empty__copy">No Creator Foundations match “${esc(q)}”.</p>
+            <button type="button" class="df-empty__action" id="df-view-all">View all foundations</button>
+          </div>
+        </section>
+      `;
+    }
+
+    return `
+      <section class="df-search-results" aria-live="polite" aria-label="Search results">
+        <ul class="df-srows">
+          ${items.map(renderSearchResultRow).join('')}
+        </ul>
+      </section>
+    `;
+  }
+
   function renderFoundationsSection(items) {
     return `
       <section class="df-foundations" aria-labelledby="df-foundations-label">
@@ -378,9 +429,13 @@ const WorldChoirDonate = (() => {
   }
 
   function renderFoundationsMountHtml() {
+    if (searchOpen) {
+      return renderSearchResultsSection(getFilteredFoundations());
+    }
+
     const items = getFilteredFoundations();
     const all = getAllFoundations();
-    if (!all.length && selectedCause === 'all' && !(searchOpen && searchQuery.trim())) {
+    if (!all.length && selectedCause === 'all' && !searchQuery.trim()) {
       return `
         <section class="df-foundations">
           <div class="df-empty">
@@ -557,6 +612,17 @@ const WorldChoirDonate = (() => {
     const demoBanner = CreatorFoundationsStore.usingDemoCatalog()
       ? `<p class="df-demo-banner" role="status">Development demo catalog — not production data.</p>`
       : '';
+
+    // Search mode: keep the field + compact people results only.
+    if (searchOpen) {
+      root.innerHTML = `
+        ${renderTopbar()}
+        ${demoBanner}
+        <div id="df-foundations-mount">${renderFoundationsMountHtml()}</div>
+      `;
+      bindHomeEvents(opts);
+      return;
+    }
 
     root.innerHTML = `
       ${renderTopbar()}
