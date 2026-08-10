@@ -358,11 +358,11 @@
 
 .df-row {
   display: grid;
-  grid-template-columns: 40px 1fr auto;
-  gap: 12px;
-  align-items: center;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: 14px 16px;
+  align-items: start;
   width: 100%;
-  padding: 12px 0;
+  padding: 16px 0;
   border: 0;
   border-bottom: 1px solid var(--df-line);
   background: transparent;
@@ -393,11 +393,12 @@
   background: #080809;
   overflow: hidden;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .df-row__mark--cover {
-  width: 56px;
-  height: 40px;
+  width: 64px;
+  height: 44px;
 }
 
 .df-row__mark img {
@@ -409,6 +410,7 @@
 
 .df-row__body {
   min-width: 0;
+  padding-right: 4px;
 }
 
 .df-row__name {
@@ -695,7 +697,7 @@
 }
 
 .df-profile__identity {
-  padding: 36px 0 0;
+  padding: 40px 0 0;
 }
 
 .df-profile__title {
