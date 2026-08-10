@@ -501,15 +501,6 @@ const WorldChoirDonate = (() => {
             `
             : `<p class="df-muted">This information has not yet been published.</p>`}
 
-          <h3>Verification</h3>
-          <p>
-            Status:
-            <strong>${foundation.verificationStatus === 'verified' ? 'Verified' : esc(foundation.verificationStatus || 'Pending')}</strong>
-          </p>
-          ${foundation.verificationNotes
-            ? `<p class="df-muted" style="margin-top:8px">${esc(foundation.verificationNotes)}</p>`
-            : ''}
-
           <h3>Legal organization</h3>
           ${foundation.legalOrganization
             ? `<p>
