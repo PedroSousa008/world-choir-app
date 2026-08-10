@@ -590,6 +590,22 @@
 
 .owner-field textarea { min-height: 88px; resize: vertical; }
 
+.owner-password-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.owner-password-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.owner-password-row .owner-btn-ghost {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .owner-search {
   position: fixed;
   inset: 0;

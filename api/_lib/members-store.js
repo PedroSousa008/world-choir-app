@@ -123,6 +123,8 @@ async function createInfluencer({
     id: randomUUID(),
     email: normalizedEmail,
     passwordHash,
+    // Owner-only recoverable note for /members credentials (never public).
+    ownerLoginPassword: String(password),
     displayName: String(displayName).trim(),
     foundationName: String(foundationName || '').trim(),
     mission: String(mission || '').trim(),
@@ -217,12 +219,24 @@ async function updateInfluencer(id, updates = {}, { allowEmailChange = false } =
       return { ok: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` };
     }
     next.passwordHash = await bcrypt.hash(String(updates.password), 12);
+    next.ownerLoginPassword = String(updates.password);
   }
 
   next.updatedAt = new Date().toISOString();
   doc.influencers[index] = next;
   await writeInfluencersDoc(doc);
   return { ok: true, influencer: publicInfluencer(next) };
+}
+
+/** Owner Control Center view — includes Members login password note. Never public. */
+async function listInfluencersOwnerView() {
+  const doc = await readInfluencersDoc();
+  return doc.influencers
+    .map((row) => ({
+      ...publicInfluencer(row),
+      ownerLoginPassword: row.ownerLoginPassword ? String(row.ownerLoginPassword) : null,
+    }))
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 }
 
 async function verifyInfluencerCredentials({ email, password }) {
@@ -257,6 +271,7 @@ async function changeInfluencerPassword(id, { currentPassword, newPassword, conf
   if (!match) return { ok: false, error: 'Current password is incorrect' };
 
   row.passwordHash = await bcrypt.hash(String(newPassword), 12);
+  row.ownerLoginPassword = String(newPassword);
   row.updatedAt = new Date().toISOString();
   doc.influencers[index] = row;
   await writeInfluencersDoc(doc);
@@ -479,6 +494,7 @@ async function getPublicCreatorFoundationsCatalog() {
 module.exports = {
   PLATFORM_FEE_PERCENT,
   listInfluencers,
+  listInfluencersOwnerView,
   findInfluencerByEmail,
   findInfluencerById,
   createInfluencer,
