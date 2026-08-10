@@ -53,17 +53,38 @@ async function writeJson(pathname, data, { overwrite = true } = {}) {
 }
 
 /**
- * Public media upload (foundation images). Returns the public CDN URL.
+ * Binary upload for private Blob stores. Returns the blob pathname (not a public CDN URL).
  */
-async function putPublicBinary(pathname, body, contentType, { overwrite = true } = {}) {
+async function putPrivateBinary(pathname, body, contentType, { overwrite = true } = {}) {
   assertBlobConfigured();
-  const result = await put(pathname, body, {
-    access: 'public',
+  await put(pathname, body, {
+    access: 'private',
     addRandomSuffix: false,
     allowOverwrite: overwrite,
     contentType,
   });
-  return result.url;
+  return pathname;
+}
+
+async function readPrivateBinary(pathname) {
+  assertBlobConfigured();
+  const result = await get(pathname, { access: 'private' });
+  if (!result || result.statusCode === 304 || !result.stream) {
+    throw new Error(`Blob not found: ${pathname}`);
+  }
+  const chunks = [];
+  for await (const chunk of result.stream) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return {
+    buffer: Buffer.concat(chunks),
+    contentType: result.contentType || 'application/octet-stream',
+  };
+}
+
+/** Build a stable app URL that proxies private foundation media. */
+function mediaProxyUrl(pathname) {
+  return `/api/media?path=${encodeURIComponent(pathname)}`;
 }
 
 const OWNER_AUTH_PATH = `${ROOT}/admin/owner-auth.json`;
@@ -456,6 +477,8 @@ module.exports = {
   saveOwnerEmail,
   readBlobJson,
   writeJson,
-  putPublicBinary,
+  putPrivateBinary,
+  readPrivateBinary,
+  mediaProxyUrl,
   assertBlobConfigured,
 };

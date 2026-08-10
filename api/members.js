@@ -15,8 +15,30 @@ const {
   changeInfluencerEmail,
   publicInfluencer,
 } = require('./_lib/members-store');
-const { putPublicBinary, assertBlobConfigured } = require('./_lib/store');
+const { putPrivateBinary, mediaProxyUrl, assertBlobConfigured } = require('./_lib/store');
 const { randomUUID } = require('crypto');
+
+const IMAGE_MIME_RE = /^image\/[a-z0-9.+-]+$/i;
+const IMAGE_EXT_MAP = {
+  jpeg: 'jpg',
+  jpg: 'jpg',
+  png: 'png',
+  webp: 'webp',
+  gif: 'gif',
+  avif: 'avif',
+  bmp: 'bmp',
+  tiff: 'tiff',
+  tif: 'tiff',
+  heic: 'heic',
+  heif: 'heif',
+  svg: 'svg',
+  'svg+xml': 'svg',
+  ico: 'ico',
+  'x-icon': 'ico',
+  jfif: 'jpg',
+  pjpeg: 'jpg',
+  pjp: 'jpg',
+};
 const {
   buildFoundationControlCenter,
   searchFoundationControlCenter,
@@ -167,30 +189,48 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ error: 'Your role cannot upload Foundation media' });
       }
 
-      const { dataUrl, kind } = req.body || {};
+      const { dataUrl, kind, fileName } = req.body || {};
       const field = kind === 'cover' ? 'cover' : (kind === 'project' ? 'project' : 'profile');
-      if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
         return res.status(400).json({ error: 'Choose an image from your device' });
       }
 
-      const match = /^data:(image\/(jpeg|jpg|png|webp|gif));base64,(.+)$/i.exec(dataUrl);
+      const match = /^data:([^;]+);base64,(.+)$/i.exec(dataUrl);
       if (!match) {
-        return res.status(400).json({ error: 'Use a JPG, PNG, WebP, or GIF image' });
+        return res.status(400).json({ error: 'Could not read that image file' });
       }
 
-      const contentType = match[1].toLowerCase().replace('image/jpg', 'image/jpeg');
-      const ext = contentType.split('/')[1] === 'jpeg' ? 'jpg' : contentType.split('/')[1];
-      const buffer = Buffer.from(match[3], 'base64');
-      const maxBytes = 2.5 * 1024 * 1024;
+      let contentType = String(match[1] || '').trim().toLowerCase();
+      if (contentType === 'image/jpg') contentType = 'image/jpeg';
+      if (contentType === 'application/octet-stream' || !contentType) {
+        const name = String(fileName || '').toLowerCase();
+        const extGuess = name.split('.').pop();
+        if (extGuess && IMAGE_EXT_MAP[extGuess]) {
+          contentType = extGuess === 'svg' ? 'image/svg+xml' : `image/${extGuess === 'jpg' ? 'jpeg' : extGuess}`;
+        }
+      }
+
+      if (!IMAGE_MIME_RE.test(contentType)) {
+        return res.status(400).json({ error: 'That file is not a supported image' });
+      }
+
+      const subtype = contentType.replace(/^image\//, '');
+      const ext = IMAGE_EXT_MAP[subtype] || subtype.replace(/[^a-z0-9]/gi, '') || 'img';
+      const buffer = Buffer.from(match[2], 'base64');
+      const maxBytes = 4 * 1024 * 1024;
+      if (!buffer.length) {
+        return res.status(400).json({ error: 'Image file was empty' });
+      }
       if (buffer.length > maxBytes) {
-        return res.status(400).json({ error: 'Image must be under 2.5 MB' });
+        return res.status(400).json({ error: 'Image must be under 4 MB' });
       }
 
       assertBlobConfigured();
       const pathname = `wc-data/members/media/${session.influencerId}/${field}-${randomUUID()}.${ext}`;
-      const url = await putPublicBinary(pathname, buffer, contentType, { overwrite: true });
+      await putPrivateBinary(pathname, buffer, contentType, { overwrite: true });
+      const url = mediaProxyUrl(pathname);
 
-      return res.status(200).json({ ok: true, url, kind: field });
+      return res.status(200).json({ ok: true, url, path: pathname, kind: field });
     }
 
     if (action === 'influencer-update-profile' && req.method === 'POST') {

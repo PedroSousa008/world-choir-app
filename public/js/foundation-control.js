@@ -631,12 +631,12 @@ const FoundationControl = (() => {
             ${disabled ? '' : `
               <label class="fcc-btn fcc-upload__pick">
                 ${has ? 'Replace from device' : 'Choose from device'}
-                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden data-image-input="${esc(field)}">
+                <input type="file" accept="image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.svg,.ico,.jfif" hidden data-image-input="${esc(field)}">
               </label>
               ${has ? `<button type="button" class="fcc-btn-ghost" data-action="clear-image" data-field="${esc(field)}">Remove</button>` : ''}
             `}
           </div>
-          <p class="fcc-upload__hint">JPG, PNG, WebP or GIF · max 2.5 MB</p>
+          <p class="fcc-upload__hint">Any image from your device · max 4 MB</p>
         </div>
       </div>
     `;
@@ -727,15 +727,23 @@ const FoundationControl = (() => {
     });
   }
 
+  function isLikelyImageFile(file) {
+    if (!file) return false;
+    const type = String(file.type || '').toLowerCase();
+    if (type.startsWith('image/')) return true;
+    // Some devices (esp. HEIC) omit MIME — fall back to extension.
+    return /\.(jpe?g|png|gif|webp|avif|bmp|tiff?|heic|heif|svg|ico|jfif|jp2)$/i.test(file.name || '');
+  }
+
   async function uploadImageFromDevice(field, file) {
     if (!file) return;
-    if (!String(file.type || '').startsWith('image/')) {
+    if (!isLikelyImageFile(file)) {
       setFlash('Please choose an image file.', 'err');
       render();
       return;
     }
-    if (file.size > 2.5 * 1024 * 1024) {
-      setFlash('Image must be under 2.5 MB.', 'err');
+    if (file.size > 4 * 1024 * 1024) {
+      setFlash('Image must be under 4 MB.', 'err');
       render();
       return;
     }
@@ -753,7 +761,7 @@ const FoundationControl = (() => {
       const dataUrl = await readFileAsDataUrl(file);
       const data = await api('upload-image', {
         method: 'POST',
-        body: { dataUrl, kind },
+        body: { dataUrl, kind, fileName: file.name || '' },
       });
       state.foundationForm[field] = data.url;
       state.foundationDirty = true;
