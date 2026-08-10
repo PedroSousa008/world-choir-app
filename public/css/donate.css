@@ -713,7 +713,8 @@
 
 .df-fcard {
   display: grid;
-  grid-template-columns: 108px minmax(0, 1fr);
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto;
   gap: 0;
   width: 100%;
   padding: 0;
@@ -728,10 +729,25 @@
   transition: border-color 0.25s ease, transform 0.25s ease, background 0.25s ease;
 }
 
-@media (min-width: 560px) {
-  .df-fcard {
-    grid-template-columns: 148px minmax(0, 1fr);
-  }
+/* Mobile: full-width cover on top so landscape images stay readable */
+.df-fcard__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  background: #0c0c0e;
+  overflow: hidden;
+}
+
+.df-fcard__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 28%;
+  display: block;
+  position: absolute;
+  inset: 0;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .df-fcard:hover,
@@ -742,26 +758,29 @@
   outline: none;
 }
 
-.df-fcard__media {
-  position: relative;
-  min-height: 128px;
-  background: #0c0c0e;
-  overflow: hidden;
-}
-
-.df-fcard__media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  position: absolute;
-  inset: 0;
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
 .df-fcard:hover .df-fcard__media img,
 .df-fcard:focus-visible .df-fcard__media img {
-  transform: scale(1.04);
+  transform: scale(1.03);
+}
+
+/* Wider screens: side-by-side with a generous image column */
+@media (min-width: 640px) {
+  .df-fcard {
+    grid-template-columns: minmax(200px, 0.42fr) minmax(0, 1fr);
+    grid-template-rows: auto;
+    min-height: 188px;
+  }
+
+  .df-fcard__media {
+    aspect-ratio: auto;
+    min-height: 100%;
+    height: 100%;
+    align-self: stretch;
+  }
+
+  .df-fcard__media img {
+    object-position: center center;
+  }
 }
 
 .df-fcard__glyph {
@@ -813,9 +832,15 @@
   line-height: 1.45;
   color: var(--df-warm-soft);
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .df-fcard__mission {
+    -webkit-line-clamp: 3;
+  }
 }
 
 .df-fcard__tags {
