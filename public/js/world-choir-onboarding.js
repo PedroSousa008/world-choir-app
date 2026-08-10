@@ -52,7 +52,7 @@ const WorldChoirOnboarding = (() => {
   ];
 
   const TOTAL = CARDS.length;
-  const TRANSITION_MS = 480;
+  const TRANSITION_MS = 220;
 
   let open = false;
   let index = 0;
@@ -84,7 +84,7 @@ const WorldChoirOnboarding = (() => {
     return `${current} — ${total}`;
   }
 
-  function renderCard(i, direction = 'none') {
+  function renderCardInner(i) {
     const card = CARDS[i];
     const bodyHtml = String(card.body || '')
       .split(/\n\n+/)
@@ -92,17 +92,15 @@ const WorldChoirOnboarding = (() => {
       .join('');
 
     return `
-      <div class="wc-onboarding__card is-${direction}" data-card-index="${i}" role="group" aria-label="Introduction ${i + 1} of ${TOTAL}">
-        <p class="wc-onboarding__progress">${escapeHtml(formatProgress(i))}</p>
-        <div class="wc-onboarding__content">
-          <h1 class="wc-onboarding__title">${escapeHtml(card.title)}</h1>
-          ${bodyHtml}
-          ${card.closing ? `<p class="wc-onboarding__closing">${escapeHtml(card.closing)}</p>` : ''}
-          ${card.hint ? `<p class="wc-onboarding__hint">${escapeHtml(card.hint)}</p>` : ''}
-        </div>
-        <div class="wc-onboarding__logo-wrap">
-          <img class="wc-onboarding__logo" src="${escapeHtml(logoSrc())}" alt="World Choir" width="1024" height="1024" decoding="async">
-        </div>
+      <p class="wc-onboarding__progress">${escapeHtml(formatProgress(i))}</p>
+      <div class="wc-onboarding__content">
+        <h1 class="wc-onboarding__title">${escapeHtml(card.title)}</h1>
+        ${bodyHtml}
+        ${card.closing ? `<p class="wc-onboarding__closing">${escapeHtml(card.closing)}</p>` : ''}
+        ${card.hint ? `<p class="wc-onboarding__hint">${escapeHtml(card.hint)}</p>` : ''}
+      </div>
+      <div class="wc-onboarding__logo-wrap">
+        <img class="wc-onboarding__logo" src="${escapeHtml(logoSrc())}" alt="World Choir" width="1024" height="1024" decoding="async">
       </div>
     `;
   }
@@ -113,17 +111,37 @@ const WorldChoirOnboarding = (() => {
     return d.innerHTML;
   }
 
+  function syncChrome() {
+    const shell = ensureShell();
+    let back = shell.querySelector('#wc-onboarding-back');
+    if (index > 0) {
+      if (!back) {
+        back = document.createElement('button');
+        back.type = 'button';
+        back.className = 'wc-onboarding__back';
+        back.id = 'wc-onboarding-back';
+        back.setAttribute('aria-label', 'Previous');
+        back.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        shell.querySelector('.wc-onboarding__stage')?.appendChild(back);
+        back.addEventListener('click', (e) => {
+          e.stopPropagation();
+          goBack();
+        });
+      }
+      back.hidden = false;
+    } else if (back) {
+      back.hidden = true;
+    }
+  }
+
   function renderFrame() {
     const shell = ensureShell();
     shell.innerHTML = `
       <div class="wc-onboarding__stage" id="wc-onboarding-stage">
-        ${index > 0 ? `
-          <button type="button" class="wc-onboarding__back" id="wc-onboarding-back" aria-label="Previous">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        ` : ''}
         <button type="button" class="wc-onboarding__tap" id="wc-onboarding-tap" aria-label="Continue">
-          ${renderCard(index, 'in')}
+          <div class="wc-onboarding__card is-active" data-card-index="${index}" role="group" aria-label="Introduction ${index + 1} of ${TOTAL}">
+            ${renderCardInner(index)}
+          </div>
         </button>
         ${mode === 'replay' ? `
           <button type="button" class="wc-onboarding__close" id="wc-onboarding-close" aria-label="Close">Close</button>
@@ -131,6 +149,7 @@ const WorldChoirOnboarding = (() => {
       </div>
     `;
     bindFrame();
+    syncChrome();
   }
 
   function bindFrame() {
@@ -138,14 +157,48 @@ const WorldChoirOnboarding = (() => {
       if (e.target.closest('#wc-onboarding-back') || e.target.closest('#wc-onboarding-close')) return;
       advance();
     });
-    document.getElementById('wc-onboarding-back')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      goBack();
-    });
     document.getElementById('wc-onboarding-close')?.addEventListener('click', (e) => {
       e.stopPropagation();
       finish(false);
     });
+  }
+
+  function transitionTo(nextIndex, direction) {
+    if (!open || locked) return;
+    locked = true;
+
+    const tap = document.getElementById('wc-onboarding-tap');
+    const current = tap?.querySelector('.wc-onboarding__card.is-active');
+    if (!tap || !current) {
+      index = nextIndex;
+      renderFrame();
+      locked = false;
+      return;
+    }
+
+    const incoming = document.createElement('div');
+    incoming.className = `wc-onboarding__card is-enter is-enter-${direction}`;
+    incoming.dataset.cardIndex = String(nextIndex);
+    incoming.setAttribute('role', 'group');
+    incoming.setAttribute('aria-label', `Introduction ${nextIndex + 1} of ${TOTAL}`);
+    incoming.innerHTML = renderCardInner(nextIndex);
+
+    // Keep both cards stacked so the stage never flashes to empty black.
+    current.classList.remove('is-active');
+    current.classList.add(direction === 'forward' ? 'is-exit-left' : 'is-exit-right');
+    tap.appendChild(incoming);
+
+    // Force reflow so enter transition starts cleanly.
+    void incoming.offsetWidth;
+    incoming.classList.add('is-active');
+    incoming.classList.remove('is-enter', `is-enter-${direction}`);
+
+    window.setTimeout(() => {
+      current.remove();
+      index = nextIndex;
+      syncChrome();
+      locked = false;
+    }, TRANSITION_MS);
   }
 
   function advance() {
@@ -154,36 +207,12 @@ const WorldChoirOnboarding = (() => {
       finish(true);
       return;
     }
-    locked = true;
-    const stage = document.getElementById('wc-onboarding-stage');
-    const current = stage?.querySelector('.wc-onboarding__card');
-    if (current) current.classList.add('is-out');
-
-    window.setTimeout(() => {
-      index += 1;
-      renderFrame();
-      window.setTimeout(() => {
-        locked = false;
-      }, 40);
-    }, TRANSITION_MS);
+    transitionTo(index + 1, 'forward');
   }
 
   function goBack() {
     if (!open || locked || index <= 0) return;
-    locked = true;
-    const stage = document.getElementById('wc-onboarding-stage');
-    const current = stage?.querySelector('.wc-onboarding__card');
-    if (current) {
-      current.classList.remove('is-in');
-      current.classList.add('is-back-out');
-    }
-    window.setTimeout(() => {
-      index -= 1;
-      renderFrame();
-      window.setTimeout(() => {
-        locked = false;
-      }, 40);
-    }, TRANSITION_MS);
+    transitionTo(index - 1, 'back');
   }
 
   async function finish(reachedEnd) {
