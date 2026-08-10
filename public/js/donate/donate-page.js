@@ -296,43 +296,6 @@ const WorldChoirDonate = (() => {
     `;
   }
 
-  function renderFeatured(foundation) {
-    if (!foundation) return '';
-    const img = visualUrl(foundation);
-    const mission = shortMission(foundation, 120);
-    const activity = foundation.activeProjectCount > 0
-      ? `<p class="df-spotlight__stat">
-          <span class="df-spotlight__stat-icon">${causeIconSvg('projects')}</span>
-          ${esc(formatCount(foundation.activeProjectCount))} active project${foundation.activeProjectCount === 1 ? '' : 's'}
-        </p>`
-      : `<p class="df-spotlight__note">${isNewFoundation(foundation) ? 'New to World Choir' : 'Be among the first to support this foundation.'}</p>`;
-
-    return `
-      <section class="df-spotlight df-rise df-rise-delay-2" aria-labelledby="df-spotlight-label">
-        <p class="df-section-label" id="df-spotlight-label">Featured this week</p>
-        <button type="button" class="df-spotlight__card" data-open-foundation="${esc(foundation.id)}">
-          <div class="df-spotlight__copy">
-            ${foundation.profileImage
-              ? `<img class="df-spotlight__avatar" src="${esc(foundation.profileImage)}" alt="">`
-              : `<span class="df-spotlight__avatar df-spotlight__avatar--glyph">${esc(identityGlyph(foundation))}</span>`}
-            <h2 class="df-spotlight__name">${esc(foundation.foundationName)}</h2>
-            ${mission ? `<p class="df-spotlight__mission">${esc(mission)}</p>` : ''}
-            <p class="df-spotlight__meta">
-              ${esc(foundation.creatorName)}${foundation.country ? ` · ${esc(foundation.country)}` : ''}
-            </p>
-            ${activity}
-            <span class="df-spotlight__cta">Explore Foundation <span aria-hidden="true">→</span></span>
-          </div>
-          <div class="df-spotlight__media ${img ? 'has-image' : ''}" aria-hidden="true">
-            ${img
-              ? `<img src="${esc(img)}" alt="">`
-              : `<span class="df-spotlight__fallback">${esc(identityGlyph(foundation))}</span>`}
-          </div>
-        </button>
-      </section>
-    `;
-  }
-
   function renderFoundationCard(foundation) {
     const img = visualUrl(foundation);
     const tags = causeTags(foundation);
@@ -546,37 +509,16 @@ const WorldChoirDonate = (() => {
   function renderHome(opts = {}) {
     const items = getFilteredFoundations();
     const all = getAllFoundations();
-    const featured = CreatorFoundationsStore.getFeaturedFoundation(
-      selectedCause === 'all' && !(searchOpen && searchQuery.trim())
-        ? all
-        : items
-    );
-    const listItems = featured
-      ? items.filter((f) => f.id !== featured.id)
-      : items;
-    // Keep featured in list when filtering — still show it in Foundations if it's the only match
-    const foundationsForList = (items.length === 1 && featured && items[0].id === featured.id)
-      ? items
-      : (featured && selectedCause === 'all' && !(searchOpen && searchQuery.trim())
-        ? listItems
-        : items);
-
     const root = document.getElementById('donate-content');
     const demoBanner = CreatorFoundationsStore.usingDemoCatalog()
       ? `<p class="df-demo-banner" role="status">Development demo catalog — not production data.</p>`
       : '';
-
-    const showFeatured = featured
-      && selectedCause === 'all'
-      && selectedExplore === 'trending'
-      && !(searchOpen && searchQuery.trim());
 
     root.innerHTML = `
       ${renderTopbar()}
       ${demoBanner}
       ${renderIntro()}
       ${renderDiscoveryChrome()}
-      ${showFeatured ? renderFeatured(featured) : ''}
       ${!all.length && selectedCause === 'all' && !(searchOpen && searchQuery.trim())
         ? `
           <section class="df-foundations df-rise df-rise-delay-3">
@@ -589,7 +531,7 @@ const WorldChoirDonate = (() => {
             </div>
           </section>
         `
-        : renderFoundationsSection(foundationsForList)}
+        : renderFoundationsSection(items)}
       ${renderHappeningNow()}
     `;
     bindHomeEvents(opts);
