@@ -1,25 +1,18 @@
 const {
   corsHeaders,
   isOwnerAuthConfigured,
-  verifyOwnerCredentials,
   setMembersSessionCookie,
   clearMembersSessionCookie,
   getMembersSessionFromRequest,
-  requireMembersOwner,
   requireMembersSession,
-  changeOwnerPassword,
-  changeOwnerEmail,
   getEffectiveOwnerEmail,
 } = require('./_lib/auth');
 const {
-  listInfluencers,
-  createInfluencer,
   updateInfluencer,
   verifyInfluencerCredentials,
   findInfluencerById,
   changeInfluencerPassword,
   changeInfluencerEmail,
-  getOperationsOverview,
   publicInfluencer,
 } = require('./_lib/members-store');
 
@@ -34,31 +27,21 @@ module.exports = async function handler(req, res) {
 
   try {
     if (action === 'login' && req.method === 'POST') {
-      if (!isOwnerAuthConfigured()) {
-        return res.status(503).json({ error: 'Members authentication is not configured' });
-      }
-
-      const { email, password, roleHint } = req.body || {};
+      // /members is Influencer-only. Owner Control Center is /owner.
+      const { email, password } = req.body || {};
       const normalizedEmail = String(email || '').trim().toLowerCase();
 
       if (!normalizedEmail || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
       }
 
-      const ownerEmail = await getEffectiveOwnerEmail();
-      const tryingOwner = roleHint === 'owner' || normalizedEmail === ownerEmail;
-
-      if (tryingOwner) {
-        const result = await verifyOwnerCredentials({ email, password });
-        if (!result.ok) {
-          return res.status(401).json({ error: result.error || 'Invalid credentials' });
+      if (isOwnerAuthConfigured()) {
+        const ownerEmail = await getEffectiveOwnerEmail();
+        if (ownerEmail && normalizedEmail === ownerEmail) {
+          return res.status(401).json({
+            error: 'Owner access is at /owner — this page is for Influencer login only.',
+          });
         }
-        setMembersSessionCookie(res, { role: 'owner' });
-        return res.status(200).json({
-          ok: true,
-          role: 'owner',
-          email: ownerEmail,
-        });
       }
 
       const influencerResult = await verifyInfluencerCredentials({ email, password });
@@ -88,9 +71,13 @@ module.exports = async function handler(req, res) {
       const session = getMembersSessionFromRequest(req);
       if (!session) return res.status(401).json({ authenticated: false });
 
+      // Legacy Owner cookies on /members are cleared — Owner uses /owner only.
       if (session.role === 'owner') {
-        const email = await getEffectiveOwnerEmail();
-        return res.status(200).json({ authenticated: true, role: 'owner', email });
+        clearMembersSessionCookie(res);
+        return res.status(401).json({
+          authenticated: false,
+          error: 'Owner sessions use /owner. This page is for Influencers.',
+        });
       }
 
       const influencer = await findInfluencerById(session.influencerId);
@@ -107,42 +94,27 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'overview' && req.method === 'GET') {
-      if (!requireMembersOwner(req, res)) return;
-      const [overview, influencers] = await Promise.all([
-        getOperationsOverview(),
-        listInfluencers(),
-      ]);
-      return res.status(200).json({ overview, influencers });
+      return res.status(410).json({ error: 'Owner overview moved to /owner (Control Center).' });
     }
 
     if (action === 'create-influencer' && req.method === 'POST') {
-      if (!requireMembersOwner(req, res)) return;
-      const result = await createInfluencer(req.body || {});
-      if (!result.ok) return res.status(400).json({ error: result.error });
-      return res.status(200).json(result);
+      return res.status(410).json({
+        error: 'Create Influencer Foundations from Owner Control Center (/owner).',
+      });
     }
 
     if (action === 'update-influencer' && req.method === 'POST') {
-      if (!requireMembersOwner(req, res)) return;
-      const { id, ...updates } = req.body || {};
-      if (!id) return res.status(400).json({ error: 'Influencer id is required' });
-      const result = await updateInfluencer(id, updates, { allowEmailChange: true });
-      if (!result.ok) return res.status(400).json({ error: result.error });
-      return res.status(200).json(result);
+      return res.status(410).json({
+        error: 'Owner influencer management moved to /owner (Control Center).',
+      });
     }
 
     if (action === 'owner-change-password' && req.method === 'POST') {
-      if (!requireMembersOwner(req, res)) return;
-      const result = await changeOwnerPassword(req.body || {});
-      if (!result.ok) return res.status(400).json({ error: result.error });
-      return res.status(200).json({ ok: true });
+      return res.status(410).json({ error: 'Owner account settings are at /owner.' });
     }
 
     if (action === 'owner-change-email' && req.method === 'POST') {
-      if (!requireMembersOwner(req, res)) return;
-      const result = await changeOwnerEmail(req.body || {});
-      if (!result.ok) return res.status(400).json({ error: result.error });
-      return res.status(200).json(result);
+      return res.status(410).json({ error: 'Owner account settings are at /owner.' });
     }
 
     if (action === 'influencer-profile' && req.method === 'GET') {

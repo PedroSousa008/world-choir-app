@@ -1396,15 +1396,19 @@ const OwnerControl = (() => {
     slot.innerHTML = `
       <div class="owner-detail">
         <h3>Create Creator Foundation</h3>
+        <p class="owner-muted" style="margin-bottom:14px">
+          Email and temporary password become their Influencer login at <strong>/members</strong>.
+          The foundation is published to Donate immediately.
+        </p>
         <form class="owner-form" id="owner-foundation-create" style="max-width:560px">
-          <div class="owner-field"><label>Email</label><input name="email" type="email" required></div>
-          <div class="owner-field"><label>Temporary password</label><input name="password" type="text" required minlength="8"></div>
+          <div class="owner-field"><label>Email (Members login)</label><input name="email" type="email" required autocomplete="off"></div>
+          <div class="owner-field"><label>Temporary password (Members login)</label><input name="password" type="text" required minlength="8" autocomplete="off"></div>
           <div class="owner-field"><label>Display name</label><input name="displayName" required></div>
           <div class="owner-field"><label>Foundation name</label><input name="foundationName"></div>
           <div class="owner-field"><label>Country</label><input name="country"></div>
           <div class="owner-field"><label>Mission</label><textarea name="mission"></textarea></div>
           <div class="owner-actions">
-            <button class="owner-btn" type="submit">Create & publish</button>
+            <button class="owner-btn" type="submit">Create &amp; publish</button>
             <button class="owner-btn-ghost" type="button" id="owner-create-cancel">Cancel</button>
           </div>
         </form>
@@ -1416,7 +1420,7 @@ const OwnerControl = (() => {
       const fd = new FormData(e.target);
       try {
         await api('create-influencer', { method: 'POST', body: Object.fromEntries(fd.entries()) });
-        setFlash('Creator Foundation created and published to Donate.');
+        setFlash('Creator Foundation created. They can sign in at /members with the email and password you set.');
         await loadCenter();
       } catch (err) {
         setFlash(err.message, 'err');
