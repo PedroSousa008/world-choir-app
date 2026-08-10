@@ -37,6 +37,12 @@ const OwnerControl = (() => {
     foundationDetail: null,
     cityDetail: null,
     countryDetail: null,
+    mapFilters: {
+      mode: 'voices',
+      country: '',
+      range: 'all',
+      foundationId: '',
+    },
   };
 
   const root = () => document.getElementById('owner-root');
@@ -449,6 +455,7 @@ const OwnerControl = (() => {
   }
 
   function renderMiniMap(points = []) {
+    // Lightweight overview preview only — full Map section uses Leaflet (OwnerMap).
     const w = 800;
     const h = 400;
     const dots = points.slice(0, 400).map((p) => {
@@ -458,7 +465,7 @@ const OwnerControl = (() => {
     }).join('');
 
     return `
-      <div class="owner-map">
+      <div class="owner-map-preview">
         <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
           <rect width="${w}" height="${h}" fill="#080809"></rect>
           <path d="M40 80 H760 M40 160 H760 M40 240 H760 M40 320 H760 M120 20 V380 M240 20 V380 M360 20 V380 M480 20 V380 M600 20 V380 M720 20 V380"
@@ -469,31 +476,169 @@ const OwnerControl = (() => {
     `;
   }
 
-  function renderActivity(items = [], compact = false) {
-    const filtered = state.activityFilter === 'all'
-      ? items
-      : items.filter((i) => i.type === state.activityFilter);
-    const list = (compact ? filtered.slice(0, 8) : filtered.slice(0, 40));
+  function getMapRangeBounds(range) {
+    const now = Date.now();
+    if (range === 'today') {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return { from: start.getTime(), to: now };
+    }
+    const days = { '7d': 7, '30d': 30, '90d': 90 }[range];
+    if (!days) return { from: null, to: null };
+    return { from: now - days * 86400000, to: now };
+  }
+
+  function getFilteredMapCities() {
+    const f = state.mapFilters;
+    const points = state.data?.map?.points || [];
+    const { from, to } = getMapRangeBounds(f.range);
+    const foundation = (state.data.foundations || []).find((x) => x.id === f.foundationId);
+
+    if (f.mode === 'donations' || f.mode === 'combined') {
+      return {
+        cities: [],
+        stats: { voices: 0, cities: 0, countries: 0 },
+        note: f.mode === 'donations'
+          ? 'Donation locations are not available yet. The donations ledger does not include geography.'
+          : 'Combined mode needs donation geography. Showing no invented markers — use Voices until donation locations exist.',
+        modeBlocked: true,
+      };
+    }
+
+    let filtered = points.filter((p) =>
+      Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude))
+    );
+
+    if (f.country) {
+      filtered = filtered.filter(
+        (p) => String(p.country || '').toLowerCase() === f.country.toLowerCase()
+      );
+    }
+
+    if (from != null) {
+      filtered = filtered.filter((p) => {
+        const t = p.pledgedAt ? new Date(p.pledgedAt).getTime() : NaN;
+        if (!Number.isFinite(t)) return false;
+        if (t < from) return false;
+        if (to != null && t > to) return false;
+        return true;
+      });
+    }
+
+    if (foundation?.country) {
+      filtered = filtered.filter(
+        (p) => String(p.country || '').toLowerCase() === String(foundation.country).toLowerCase()
+      );
+    }
+
+    const byCity = new Map();
+    filtered.forEach((p) => {
+      const city = p.city || 'Unknown city';
+      const country = p.country || 'Unknown country';
+      const key = `${city}|${country}`;
+      if (!byCity.has(key)) {
+        byCity.set(key, {
+          city,
+          country,
+          latitude: Number(p.latitude),
+          longitude: Number(p.longitude),
+          count: 0,
+          voices: 0,
+          donors: 0,
+          raised: 0,
+          currency: state.data.currency || 'EUR',
+        });
+      }
+      const row = byCity.get(key);
+      row.count += 1;
+      row.voices += 1;
+    });
+
+    const cities = Array.from(byCity.values());
+    const countries = new Set(cities.map((c) => c.country));
+    return {
+      cities,
+      stats: {
+        voices: filtered.length,
+        cities: cities.length,
+        countries: countries.size,
+      },
+      note: cities.length ? null : 'No geolocated Voices match these filters.',
+      modeBlocked: false,
+    };
+  }
+
+  function renderMap() {
+    const countries = (state.data.countries || []).map((c) => c.country).filter(Boolean);
+    const foundations = state.data.foundations || [];
+    const f = state.mapFilters;
+    const filtered = getFilteredMapCities();
 
     return `
-      <div class="owner-chips">
-        ${['all', 'community', 'donations', 'foundations', 'system'].map((f) => `
-          <button type="button" class="owner-chip ${state.activityFilter === f ? 'is-active' : ''}" data-activity-filter="${f}">${esc(f)}</button>
-        `).join('')}
-      </div>
-      ${!list.length
-        ? `<p class="owner-empty">No activity recorded yet.</p>`
-        : `<ul class="owner-activity">
-            ${list.map((i) => `
-              <li>
-                <div>
-                  <div class="owner-activity__label">${esc(i.label)}</div>
-                  <div class="owner-activity__detail">${esc(i.detail || '')}</div>
-                </div>
-                <div class="owner-activity__time">${esc(when(i.at))}</div>
-              </li>
+      <section class="owner-section">
+        <p class="owner-section__label">Geographic intelligence</p>
+        <h2 class="owner-h1" style="font-size:1.35rem;margin-bottom:8px">Global Map</h2>
+        <p class="owner-sub">Same live map as the public Map tab — with Owner-only filters.</p>
+      </section>
+
+      <section class="owner-map-filters">
+        <div class="owner-field">
+          <label>Mode</label>
+          <select id="owner-map-mode">
+            <option value="voices" ${f.mode === 'voices' ? 'selected' : ''}>Voices</option>
+            <option value="donations" ${f.mode === 'donations' ? 'selected' : ''}>Donations</option>
+            <option value="combined" ${f.mode === 'combined' ? 'selected' : ''}>Combined</option>
+          </select>
+        </div>
+        <div class="owner-field">
+          <label>Country</label>
+          <select id="owner-map-country">
+            <option value="">All countries</option>
+            ${countries.map((c) => `
+              <option value="${esc(c)}" ${f.country === c ? 'selected' : ''}>${esc(c)}</option>
             `).join('')}
-          </ul>`}
+          </select>
+        </div>
+        <div class="owner-field">
+          <label>Date range</label>
+          <select id="owner-map-range">
+            <option value="all" ${f.range === 'all' ? 'selected' : ''}>All time</option>
+            <option value="today" ${f.range === 'today' ? 'selected' : ''}>Today</option>
+            <option value="7d" ${f.range === '7d' ? 'selected' : ''}>7 days</option>
+            <option value="30d" ${f.range === '30d' ? 'selected' : ''}>30 days</option>
+            <option value="90d" ${f.range === '90d' ? 'selected' : ''}>90 days</option>
+          </select>
+        </div>
+        <div class="owner-field">
+          <label>Creator Foundation</label>
+          <select id="owner-map-foundation">
+            <option value="">All foundations</option>
+            ${foundations.map((x) => `
+              <option value="${esc(x.id)}" ${f.foundationId === x.id ? 'selected' : ''}>
+                ${esc(x.foundation || x.creator)}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+      </section>
+
+      <div class="owner-map-stats">
+        <div><strong>${esc(num(filtered.stats.voices))}</strong><span>Voices</span></div>
+        <div><strong>${esc(num(filtered.stats.cities))}</strong><span>Cities</span></div>
+        <div><strong>${esc(num(filtered.stats.countries))}</strong><span>Countries</span></div>
+      </div>
+
+      <div class="owner-leaflet-shell">
+        <div id="owner-world-map"></div>
+        <div class="city-card" id="owner-city-card">
+          <p class="city-card__place" id="owner-city-card-place">—</p>
+          <p class="city-card__voices" id="owner-city-card-voices">—</p>
+        </div>
+      </div>
+      ${filtered.note ? `<p class="owner-muted" style="margin-top:12px">${esc(filtered.note)}</p>` : ''}
+      ${f.foundationId && f.mode === 'voices'
+        ? `<p class="owner-muted">Foundation filter currently narrows Voices by that foundation’s country. Voices are not yet linked to individual foundations.</p>`
+        : ''}
     `;
   }
 
@@ -666,22 +811,31 @@ const OwnerControl = (() => {
 
   /* ─── Map / Donations / Foundations / etc. ─── */
 
-  function renderMap() {
-    const map = state.data.map;
+  function renderActivity(items = [], compact = false) {
+    const filtered = state.activityFilter === 'all'
+      ? items
+      : items.filter((i) => i.type === state.activityFilter);
+    const list = (compact ? filtered.slice(0, 8) : filtered.slice(0, 40));
+
     return `
-      <section class="owner-section">
-        <p class="owner-section__label">Geographic intelligence</p>
-        <h2 class="owner-h1" style="font-size:1.35rem;margin-bottom:8px">Global Map</h2>
-        <p class="owner-sub">Voice locations from real participant coordinates. Donation map modes appear when donation geography is available.</p>
-        <div class="owner-chips" style="margin-top:14px">
-          <button type="button" class="owner-chip is-active">Voices</button>
-          <button type="button" class="owner-chip" disabled title="Not available yet">Donations</button>
-          <button type="button" class="owner-chip" disabled title="Not available yet">Combined</button>
-        </div>
-        ${renderMiniMap(map.points)}
-        <p class="owner-muted" style="margin-top:12px">${esc(map.note || '')}</p>
-        ${map.unavailableNote ? `<p class="owner-muted">${esc(map.unavailableNote)}</p>` : ''}
-      </section>
+      <div class="owner-chips">
+        ${['all', 'community', 'donations', 'foundations', 'system'].map((f) => `
+          <button type="button" class="owner-chip ${state.activityFilter === f ? 'is-active' : ''}" data-activity-filter="${f}">${esc(f)}</button>
+        `).join('')}
+      </div>
+      ${!list.length
+        ? `<p class="owner-empty">No activity recorded yet.</p>`
+        : `<ul class="owner-activity">
+            ${list.map((i) => `
+              <li>
+                <div>
+                  <div class="owner-activity__label">${esc(i.label)}</div>
+                  <div class="owner-activity__detail">${esc(i.detail || '')}</div>
+                </div>
+                <div class="owner-activity__time">${esc(when(i.at))}</div>
+              </li>
+            `).join('')}
+          </ul>`}
     `;
   }
 
@@ -1272,6 +1426,26 @@ const OwnerControl = (() => {
     root().innerHTML = renderShell(sectionContent());
     bindShell();
     bindSectionEvents();
+    mountOwnerMapIfNeeded();
+  }
+
+  function mountOwnerMapIfNeeded() {
+    if (typeof OwnerMap === 'undefined') return;
+    if (state.section !== 'map') {
+      OwnerMap.destroy();
+      return;
+    }
+    const filtered = getFilteredMapCities();
+    OwnerMap.mount('owner-world-map', filtered.cities);
+
+    const sync = (key, value) => {
+      state.mapFilters[key] = value;
+      render();
+    };
+    document.getElementById('owner-map-mode')?.addEventListener('change', (e) => sync('mode', e.target.value));
+    document.getElementById('owner-map-country')?.addEventListener('change', (e) => sync('country', e.target.value));
+    document.getElementById('owner-map-range')?.addEventListener('change', (e) => sync('range', e.target.value));
+    document.getElementById('owner-map-foundation')?.addEventListener('change', (e) => sync('foundationId', e.target.value));
   }
 
   async function init() {

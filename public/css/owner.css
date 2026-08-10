@@ -476,7 +476,7 @@
   white-space: nowrap;
 }
 
-.owner-map {
+.owner-map-preview {
   position: relative;
   width: 100%;
   aspect-ratio: 2 / 1;
@@ -487,7 +487,7 @@
   overflow: hidden;
 }
 
-.owner-map svg {
+.owner-map-preview svg {
   width: 100%;
   height: 100%;
   display: block;
@@ -496,6 +496,85 @@
 .owner-map__point {
   fill: var(--accent-aurora);
   opacity: 0.85;
+}
+
+.owner-map-filters {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+@media (min-width: 720px) {
+  .owner-map-filters {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.owner-map-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.owner-map-stats strong {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.owner-map-stats span {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a8d97;
+}
+
+.owner-leaflet-shell {
+  position: relative;
+  width: 100%;
+  height: min(62vh, 560px);
+  min-height: 320px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  background: #000;
+}
+
+#owner-world-map {
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.owner-leaflet-shell .city-card {
+  z-index: 500;
+}
+
+.owner-leaflet-shell .leaflet-container {
+  background: #000 !important;
+  font-family: var(--font-sans);
+}
+
+.owner-map {
+  /* legacy alias kept for safety */
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #080809;
+  overflow: hidden;
+}
+
+.owner-map svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .owner-chart {
