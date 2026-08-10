@@ -39,6 +39,7 @@ const FoundationControl = (() => {
     searchResults: null,
     notifOpen: false,
     mapOpen: false,
+    navOpen: false,
     activityFilter: 'all',
     growthMetric: 'amount',
     foundationTab: 'page',
@@ -288,10 +289,18 @@ const FoundationControl = (() => {
   function renderShell(content) {
     const f = state.data?.foundation || {};
     const unread = unreadCount();
+    const navOpen = state.navOpen;
     return `
-      <div class="fcc-shell">
-        <aside class="fcc-nav">
-          <p class="fcc-nav__brand">World Choir</p>
+      <div class="fcc-shell ${navOpen ? 'is-nav-open' : ''}">
+        <div class="fcc-nav-backdrop" data-action="close-nav" aria-hidden="${navOpen ? 'false' : 'true'}"></div>
+        <aside class="fcc-nav" id="fcc-nav" aria-label="Foundation sections">
+          <div class="fcc-nav__mobile-head">
+            <p class="fcc-nav__brand">World Choir</p>
+            <button type="button" class="fcc-icon-btn" data-action="close-nav" aria-label="Close menu">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <p class="fcc-nav__brand fcc-nav__brand--desk">World Choir</p>
           <p class="fcc-nav__title">Foundation Control Center</p>
           <p class="fcc-nav__foundation">${esc(f.name || 'Your Foundation')}</p>
           <ul class="fcc-nav__list">
@@ -303,11 +312,29 @@ const FoundationControl = (() => {
             `).join('')}
           </ul>
           <div class="fcc-nav__foot">
-            <button type="button" class="fcc-btn-ghost" data-action="open-search">Search ⌘K</button>
+            <button type="button" class="fcc-btn-ghost" data-action="open-search">Search</button>
             <button type="button" class="fcc-btn-ghost" data-action="logout">Sign out</button>
           </div>
         </aside>
         <div class="fcc-main">
+          <header class="fcc-mobile-bar">
+            <button type="button" class="fcc-icon-btn" data-action="open-nav" aria-label="Open menu" aria-expanded="${navOpen}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            </button>
+            <div class="fcc-mobile-bar__identity">
+              <p class="fcc-mobile-bar__kicker">Foundation Control Center</p>
+              <p class="fcc-mobile-bar__name">${esc(f.name || 'Your Foundation')}</p>
+            </div>
+            <div class="fcc-mobile-bar__actions">
+              <button type="button" class="fcc-icon-btn" data-action="open-search" aria-label="Search">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              </button>
+              <button type="button" class="fcc-icon-btn" data-action="open-notif" aria-label="Notifications">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 7H3s3 0 3-7"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+                ${unread ? '<span class="fcc-icon-btn__badge"></span>' : ''}
+              </button>
+            </div>
+          </header>
           <div class="fcc-top">
             <div>
               <p class="fcc-kicker">Foundation</p>
@@ -320,10 +347,10 @@ const FoundationControl = (() => {
                   <option value="${esc(r.id)}" ${state.range === r.id ? 'selected' : ''}>${esc(r.label)}</option>
                 `).join('')}
               </select>
-              <button type="button" class="fcc-icon-btn" data-action="open-search" aria-label="Search" title="Search (⌘K)">
+              <button type="button" class="fcc-icon-btn fcc-desk-only" data-action="open-search" aria-label="Search" title="Search (⌘K)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
               </button>
-              <button type="button" class="fcc-icon-btn" data-action="open-notif" aria-label="Notifications">
+              <button type="button" class="fcc-icon-btn fcc-desk-only" data-action="open-notif" aria-label="Notifications">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 9a6 6 0 1 1 12 0c0 7 3 7 3 7H3s3 0 3-7"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
                 ${unread ? '<span class="fcc-icon-btn__badge"></span>' : ''}
               </button>
@@ -361,6 +388,7 @@ const FoundationControl = (() => {
 
   function go(section, opts = {}) {
     state.section = section;
+    state.navOpen = false;
     if (opts.drill !== undefined) state.drill = opts.drill;
     if (opts.foundationTab) state.foundationTab = opts.foundationTab;
     if (opts.settingsTab) state.settingsTab = opts.settingsTab;
@@ -1489,7 +1517,10 @@ const FoundationControl = (() => {
 
   function render() {
     document.body.classList.add('fcc-body');
+    document.body.classList.toggle('is-fcc-nav-open', !!(state.authenticated && state.navOpen));
+    document.body.classList.toggle('is-fcc-drawer-open', !!(state.mapOpen || state.notifOpen || state.searchOpen || state.navOpen));
     if (!state.authenticated) {
+      document.body.classList.remove('is-fcc-nav-open', 'is-fcc-drawer-open');
       renderLogin();
       return;
     }
@@ -1671,8 +1702,19 @@ const FoundationControl = (() => {
     const action = t.getAttribute('data-action');
 
     if (action === 'logout') return logout();
+    if (action === 'open-nav') {
+      state.navOpen = true;
+      render();
+      return;
+    }
+    if (action === 'close-nav') {
+      state.navOpen = false;
+      render();
+      return;
+    }
     if (action === 'open-search') {
       state.searchOpen = true;
+      state.navOpen = false;
       render();
       document.getElementById('fcc-search-input')?.focus();
       return;

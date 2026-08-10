@@ -2,9 +2,27 @@
 
 .fcc-body {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #000;
   color: #f2efe8;
   font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+.fcc-body.is-fcc-drawer-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
+.fcc-page {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .fcc-boot {
@@ -21,10 +39,12 @@
 .fcc-login {
   position: relative;
   z-index: 1;
+  width: 100%;
   max-width: 420px;
   margin: 0 auto;
-  padding: 64px 20px 80px;
+  padding: max(48px, env(safe-area-inset-top)) 20px max(64px, env(safe-area-inset-bottom));
   text-align: center;
+  box-sizing: border-box;
 }
 
 .fcc-login__logo {
@@ -66,12 +86,22 @@
   display: grid;
   grid-template-columns: 228px 1fr;
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   z-index: 1;
+  width: 100%;
 }
 
-@media (max-width: 900px) {
-  .fcc-shell { grid-template-columns: 1fr; }
+.fcc-nav-backdrop {
+  display: none;
+}
+
+.fcc-nav__mobile-head {
+  display: none;
+}
+
+.fcc-mobile-bar {
+  display: none;
 }
 
 .fcc-nav {
@@ -81,19 +111,10 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh;
   overflow: auto;
   display: flex;
   flex-direction: column;
-}
-
-@media (max-width: 900px) {
-  .fcc-nav {
-    height: auto;
-    z-index: 40;
-    border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 12px 14px;
-  }
 }
 
 .fcc-nav__brand {
@@ -126,20 +147,6 @@
   gap: 2px;
 }
 
-@media (max-width: 900px) {
-  .fcc-nav__title,
-  .fcc-nav__foundation { display: none; }
-  .fcc-nav__list {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .fcc-nav__list::-webkit-scrollbar { display: none; }
-}
-
 .fcc-nav__btn {
   width: 100%;
   appearance: none;
@@ -167,13 +174,6 @@
   box-shadow: inset 2px 0 0 var(--accent-aurora);
 }
 
-@media (max-width: 900px) {
-  .fcc-nav__btn.is-active {
-    box-shadow: none;
-    border: 1px solid rgba(78, 197, 232, 0.35);
-  }
-}
-
 .fcc-nav__foot {
   margin-top: auto;
   padding-top: 24px;
@@ -181,17 +181,185 @@
   gap: 8px;
 }
 
-@media (max-width: 900px) {
-  .fcc-nav__foot { display: none; }
-}
-
 .fcc-main {
   padding: 28px 28px 72px;
   max-width: 1120px;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
+/* ── Mobile full-bleed shell ── */
+
 @media (max-width: 900px) {
-  .fcc-main { padding: 18px 16px 56px; }
+  .fcc-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .fcc-desk-only {
+    display: none !important;
+  }
+
+  .fcc-nav__brand--desk {
+    display: none;
+  }
+
+  .fcc-mobile-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    margin: 0 -16px 18px;
+    padding: max(10px, env(safe-area-inset-top)) 12px 12px;
+    background: rgba(0, 0, 0, 0.92);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .fcc-mobile-bar__identity {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fcc-mobile-bar__kicker {
+    margin: 0;
+    font-size: 0.58rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-aurora);
+  }
+
+  .fcc-mobile-bar__name {
+    margin: 2px 0 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fcc-mobile-bar__actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .fcc-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(0, 0, 0, 0.72);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .fcc-shell.is-nav-open .fcc-nav-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .fcc-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(86vw, 320px);
+    height: 100vh;
+    height: 100dvh;
+    z-index: 100;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    transform: translateX(-105%);
+    transition: transform 0.28s ease;
+    box-shadow: none;
+  }
+
+  .fcc-shell.is-nav-open .fcc-nav {
+    transform: translateX(0);
+    box-shadow: 24px 0 60px rgba(0, 0, 0, 0.55);
+  }
+
+  .fcc-nav__mobile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .fcc-nav__mobile-head .fcc-nav__brand {
+    margin: 0;
+  }
+
+  .fcc-nav__title,
+  .fcc-nav__foundation {
+    display: block;
+  }
+
+  .fcc-nav__list {
+    display: grid;
+    gap: 2px;
+    overflow: visible;
+  }
+
+  .fcc-nav__btn {
+    padding: 14px 12px;
+    font-size: 0.95rem;
+  }
+
+  .fcc-nav__btn.is-active {
+    box-shadow: inset 2px 0 0 var(--accent-aurora);
+    border: 0;
+  }
+
+  .fcc-nav__foot {
+    display: grid;
+  }
+
+  .fcc-main {
+    padding: 0 16px max(56px, env(safe-area-inset-bottom));
+    max-width: none;
+  }
+
+  .fcc-top {
+    margin-bottom: 20px;
+  }
+
+  .fcc-actions {
+    width: 100%;
+  }
+
+  .fcc-range {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fcc-map-drawer__panel {
+    inset: 0;
+    border: 0;
+    border-radius: 0;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .fcc-leaflet-shell--drawer {
+    height: auto;
+    flex: 1;
+    min-height: 50vh;
+  }
+
+  .fcc-search__panel,
+  .fcc-notif-panel {
+    width: 100%;
+    max-width: none;
+    border-radius: 0;
+    height: 100%;
+    max-height: none;
+  }
 }
 
 /* ── Top bar ── */
@@ -690,6 +858,12 @@
   font-size: 0.88rem;
 }
 
+.fcc-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .fcc-rank th {
   text-align: left;
   font-size: 0.62rem;
@@ -1007,8 +1181,9 @@
 
 @media (max-width: 640px) {
   .fcc-map-drawer__panel {
-    inset: 4vh 2vw 2vh;
-    padding: 12px;
+    inset: 0;
+    border: 0;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
   }
 }
 
