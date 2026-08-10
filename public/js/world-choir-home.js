@@ -67,8 +67,8 @@ const WorldChoirHome = (() => {
 
   function actionIcon(type) {
     const icons = {
-      remind:
-        '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>',
+      peace:
+        '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2.25"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="9.25" opacity="0.55"/><path d="M12 2.75v2.5M12 18.75v2.5M2.75 12h2.5M18.75 12h2.5" opacity="0.7"/></svg>',
       calendar:
         '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
       share:
@@ -154,7 +154,7 @@ const WorldChoirHome = (() => {
       ${renderPledgeButton()}
 
       <div class="secondary-actions">
-        <button class="btn-icon" type="button" id="remind-btn" aria-label="Remind Me">${actionIcon('remind')}</button>
+        <button class="btn-icon" type="button" id="daily-peace-btn" aria-label="Daily Acts of Peace">${actionIcon('peace')}</button>
         <button class="btn-icon" type="button" id="calendar-btn" aria-label="Add to Calendar">${actionIcon('calendar')}</button>
         <button class="btn-icon" type="button" id="share-btn" aria-label="Share Countdown">${actionIcon('share')}</button>
       </div>
@@ -221,7 +221,9 @@ const WorldChoirHome = (() => {
   function bindActions() {
     document.getElementById('pledge-btn')?.addEventListener('click', () => WorldChoirParticipation.open());
     document.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
-    document.getElementById('remind-btn')?.addEventListener('click', () => WorldChoirReminders.open());
+    document.getElementById('daily-peace-btn')?.addEventListener('click', () => {
+      if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.open();
+    });
     document.getElementById('share-btn')?.addEventListener('click', shareCountdown);
   }
 
