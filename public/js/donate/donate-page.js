@@ -66,13 +66,6 @@ const WorldChoirDonate = (() => {
     return initials(foundation.foundationName || foundation.creatorName).slice(0, 2);
   }
 
-  function isFirstFoundation(foundation) {
-    if (!foundation) return false;
-    const creator = String(foundation.creatorName || '').toLowerCase();
-    const name = String(foundation.foundationName || '').toLowerCase();
-    return creator.includes('josh liljenquist') || name.includes('live to love');
-  }
-
   function getAllFoundations() {
     const result = CreatorFoundationsStore.listActive({
       page: 1,
@@ -80,13 +73,6 @@ const WorldChoirDonate = (() => {
       sort: 'featured',
     });
     return result.items || [];
-  }
-
-  function getFeaturedFoundation(items) {
-    if (!items.length) return null;
-    const josh = items.find(isFirstFoundation);
-    if (josh) return josh;
-    return items.find((f) => f.featured) || items[0];
   }
 
   function searchIconSvg() {
@@ -151,77 +137,16 @@ const WorldChoirDonate = (() => {
     `;
   }
 
-  function renderIdentityPanel(foundation) {
-    if (foundation.coverImage || foundation.profileImage) {
-      const src = foundation.coverImage || foundation.profileImage;
-      return `
-        <aside class="df-identity" aria-hidden="true">
-          <div class="df-identity__mark">
-            <img src="${esc(src)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0.35;">
-            <span class="df-identity__glyph">${esc(identityGlyph(foundation))}</span>
-          </div>
-          <div class="df-identity__rule"></div>
-          <p class="df-identity__word">${esc(foundation.foundationName)}</p>
-          <p class="df-identity__caption">${esc(foundation.creatorName)}</p>
-        </aside>
-      `;
-    }
-
-    return `
-      <aside class="df-identity" aria-hidden="true">
-        <div class="df-identity__mark">
-          <span class="df-identity__glyph">${esc(identityGlyph(foundation))}</span>
-        </div>
-        <div class="df-identity__rule"></div>
-        <p class="df-identity__word">${esc(foundation.foundationName)}</p>
-        <p class="df-identity__caption">${esc(foundation.creatorName)}</p>
-      </aside>
-    `;
-  }
-
-  function renderFeatured(foundation) {
-    if (!foundation) return '';
-    const firstNote = isFirstFoundation(foundation)
-      ? `<p class="df-featured__note">First Creator Foundation</p>`
-      : '';
-    const invite = (foundation.uniqueSupporters || 0) === 0
-      ? `<p class="df-featured__invite">Be among the first to support this mission.</p>`
-      : '';
-
-    return `
-      <section class="df-featured df-rise df-rise-delay-2" aria-labelledby="df-featured-title">
-        <p class="df-featured__label">Featured Foundation</p>
-        <div class="df-featured__layout">
-          <div class="df-featured__content">
-            <h2 class="df-featured__title" id="df-featured-title">${esc(foundation.foundationName)}</h2>
-            <p class="df-featured__byline">Founded by ${esc(foundation.creatorName)}</p>
-            ${foundation.country ? `<p class="df-featured__place">${esc(foundation.country)}</p>` : ''}
-            ${firstNote}
-            ${foundation.mission
-              ? `<p class="df-featured__mission">${esc(foundation.mission)}</p>`
-              : `<p class="df-featured__mission df-muted">Mission details will appear as they are published.</p>`}
-            <button type="button" class="df-featured__cta" data-open-foundation="${esc(foundation.id)}">
-              Explore Foundation
-            </button>
-            ${metricsRow(foundation)}
-            ${invite}
-          </div>
-          ${renderIdentityPanel(foundation)}
-        </div>
-      </section>
-    `;
-  }
-
   function renderDiscoverRow(foundation) {
     const currency = CreatorFoundationsStore.getCurrency();
-    const mark = foundation.profileImage
-      ? `<img src="${esc(foundation.profileImage)}" alt="">`
+    const mark = foundation.coverImage
+      ? `<img src="${esc(foundation.coverImage)}" alt="">`
       : esc(identityGlyph(foundation));
 
     return `
       <li>
         <button type="button" class="df-row" data-open-foundation="${esc(foundation.id)}">
-          <span class="df-row__mark">${mark}</span>
+          <span class="df-row__mark df-row__mark--cover">${mark}</span>
           <span class="df-row__body">
             <h3 class="df-row__name">${esc(foundation.foundationName)}</h3>
             <p class="df-row__meta">
@@ -380,7 +305,6 @@ const WorldChoirDonate = (() => {
 
   function renderHome() {
     const items = getAllFoundations();
-    const featured = getFeaturedFoundation(items);
     const root = document.getElementById('donate-content');
     const demoBanner = CreatorFoundationsStore.usingDemoCatalog()
       ? `<p class="df-demo-banner" role="status">Development demo catalog — not production data.</p>`
@@ -390,7 +314,6 @@ const WorldChoirDonate = (() => {
       ${renderTopbar()}
       ${demoBanner}
       ${renderIntro()}
-      ${renderFeatured(featured)}
       ${renderDiscover(items)}
     `;
     bindHomeEvents();
@@ -459,6 +382,26 @@ const WorldChoirDonate = (() => {
     `;
   }
 
+  function renderProfileHero(foundation) {
+    const cover = foundation.coverImage
+      ? `<img class="df-profile-hero__cover-img" src="${esc(foundation.coverImage)}" alt="">`
+      : '';
+    const avatar = foundation.profileImage
+      ? `<img src="${esc(foundation.profileImage)}" alt="">`
+      : `<span>${esc(identityGlyph(foundation))}</span>`;
+
+    return `
+      <div class="df-profile-hero">
+        <div class="df-profile-hero__cover ${foundation.coverImage ? 'has-image' : ''}">
+          ${cover}
+        </div>
+        <div class="df-profile-hero__avatar" aria-hidden="true">
+          ${avatar}
+        </div>
+      </div>
+    `;
+  }
+
   function renderProfile(foundation) {
     const platform = CreatorFoundationsStore.getPlatform();
     const allocation = (foundation.financialAllocation || [])
@@ -483,12 +426,16 @@ const WorldChoirDonate = (() => {
       <div class="df-profile df-rise">
         <button class="df-back" type="button" id="donate-back">← Back</button>
 
-        <h1 class="df-profile__title">
-          ${esc(foundation.foundationName)}
-          ${verifiedMark(foundation.verificationStatus)}
-        </h1>
-        <p class="df-profile__byline">Founded by ${esc(foundation.creatorName)}</p>
-        ${foundation.country ? `<p class="df-profile__place">${esc(foundation.country)}</p>` : ''}
+        ${renderProfileHero(foundation)}
+
+        <div class="df-profile__identity">
+          <h1 class="df-profile__title">
+            ${esc(foundation.foundationName)}
+            ${verifiedMark(foundation.verificationStatus)}
+          </h1>
+          <p class="df-profile__byline">Founded by ${esc(foundation.creatorName)}</p>
+          ${foundation.country ? `<p class="df-profile__place">${esc(foundation.country)}</p>` : ''}
+        </div>
 
         ${foundation.mission
           ? `<p class="df-profile__mission">${esc(foundation.mission)}</p>`

@@ -391,12 +391,20 @@
   letter-spacing: 0.04em;
   color: var(--df-warm-soft);
   background: #080809;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.df-row__mark--cover {
+  width: 56px;
+  height: 40px;
 }
 
 .df-row__mark img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .df-row__body {
@@ -622,7 +630,7 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   padding: 8px 0;
-  margin: 0 0 22px;
+  margin: 0 0 14px;
   cursor: pointer;
   transition: color 0.25s ease;
 }
@@ -631,6 +639,63 @@
 .df-back:focus-visible {
   color: var(--df-accent);
   outline: none;
+}
+
+/* X-style cover + circular profile — sized for mobile */
+.df-profile-hero {
+  position: relative;
+  margin: 0 0 12px;
+}
+
+.df-profile-hero__cover {
+  width: 100%;
+  height: 118px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+    #0c0c0e;
+  border: 1px solid var(--df-line);
+  overflow: hidden;
+}
+
+.df-profile-hero__cover.has-image {
+  border-color: transparent;
+}
+
+.df-profile-hero__cover-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.df-profile-hero__avatar {
+  position: absolute;
+  left: 14px;
+  bottom: -28px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid #000;
+  background: #121214;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--df-warm-soft);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.df-profile-hero__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.df-profile__identity {
+  padding: 36px 0 0;
 }
 
 .df-profile__title {
