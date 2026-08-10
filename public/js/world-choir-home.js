@@ -280,7 +280,18 @@ const WorldChoirHome = (() => {
 
     LiveEventMode.init();
     render();
-    LiveEventMode.launch();
+
+    const startedOnboarding = typeof WorldChoirOnboarding !== 'undefined'
+      && WorldChoirOnboarding.maybeStartFirstTime({
+        onDone: () => {
+          LiveEventMode.launch();
+        },
+      });
+
+    if (!startedOnboarding) {
+      LiveEventMode.launch();
+    }
+
     countdownTimer = setInterval(updateCountdown, 1000);
   }
 

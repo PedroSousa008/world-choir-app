@@ -1,0 +1,229 @@
+/* World Choir — First-time / replay onboarding */
+
+.wc-onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: none;
+  background: #000000;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.wc-onboarding.is-open {
+  display: block;
+}
+
+body.is-onboarding-open {
+  overflow: hidden;
+}
+
+.wc-onboarding__stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+}
+
+.wc-onboarding__tap {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+  display: block;
+}
+
+.wc-onboarding__card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  padding:
+    max(28px, env(safe-area-inset-top))
+    28px
+    max(28px, env(safe-area-inset-bottom))
+    28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    radial-gradient(90% 60% at 50% 0%, rgba(78, 197, 232, 0.08), transparent 58%),
+    #000000;
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.wc-onboarding__card.is-in {
+  animation: wc-onboard-in 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.wc-onboarding__card.is-out {
+  opacity: 0;
+  transform: translateX(-28px);
+}
+
+.wc-onboarding__card.is-back-out {
+  opacity: 0;
+  transform: translateX(28px);
+}
+
+@keyframes wc-onboard-in {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wc-onboarding__card,
+  .wc-onboarding__card.is-in,
+  .wc-onboarding__card.is-out,
+  .wc-onboarding__card.is-back-out {
+    animation: none !important;
+    transition: opacity 0.2s ease !important;
+    transform: none !important;
+  }
+}
+
+.wc-onboarding__progress {
+  margin: 8px 0 0;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.wc-onboarding__content {
+  max-width: 26rem;
+  margin: 0 auto;
+  padding: 24px 0 32px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.wc-onboarding__title {
+  margin: 0 0 18px;
+  font-family: var(--font-sans);
+  font-size: clamp(1.55rem, 6vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.wc-onboarding__copy {
+  margin: 0 0 14px;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  font-weight: 400;
+  max-width: 28em;
+}
+
+.wc-onboarding__copy:last-of-type {
+  margin-bottom: 0;
+}
+
+.wc-onboarding__closing {
+  margin: 22px 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-aurora);
+}
+
+.wc-onboarding__hint {
+  margin: 28px 0 0;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.wc-onboarding__logo-wrap {
+  display: flex;
+  justify-content: center;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.wc-onboarding__logo {
+  width: 72px;
+  height: auto;
+  opacity: 0.92;
+  display: block;
+}
+
+.wc-onboarding__back {
+  appearance: none;
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  left: 12px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.wc-onboarding__back svg {
+  width: 20px;
+  height: 20px;
+}
+
+.wc-onboarding__back:hover,
+.wc-onboarding__back:focus-visible {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+  outline: none;
+}
+
+.wc-onboarding__close {
+  appearance: none;
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  right: 18px;
+  z-index: 2;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 10px 4px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.wc-onboarding__close:hover,
+.wc-onboarding__close:focus-visible {
+  color: var(--text-primary);
+  outline: none;
+}

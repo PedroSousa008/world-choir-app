@@ -212,7 +212,33 @@ const WorldChoirDB = (() => {
       latitude: myPledgeCache?.latitude ?? null,
       longitude: myPledgeCache?.longitude ?? null,
       created_at: remoteUser.created_at,
+      hasCompletedWorldChoirOnboarding: remoteUser.hasCompletedWorldChoirOnboarding === true,
     };
+  }
+
+  function needsWorldChoirOnboarding() {
+    if (!remoteUser) return false;
+    return remoteUser.hasCompletedWorldChoirOnboarding !== true;
+  }
+
+  async function completeWorldChoirOnboarding() {
+    const data = await apiFetch('/api/user', {
+      method: 'POST',
+      body: JSON.stringify({
+        deviceId: getDeviceId(),
+        action: 'complete-onboarding',
+      }),
+    });
+    remoteUser = data.user;
+    try {
+      localStorage.setItem(
+        `wc_onboarding_complete_${remoteUser.id}`,
+        '1'
+      );
+    } catch {
+      /* ignore */
+    }
+    return remoteUser;
   }
 
   function updateUser(updates) {
@@ -527,6 +553,8 @@ const WorldChoirDB = (() => {
     getOrCreateUser,
     updateUser,
     getCurrentUser,
+    needsWorldChoirOnboarding,
+    completeWorldChoirOnboarding,
     createPledgeWithGeocode,
     updateParticipationLocation,
     geocodeCityCountry,

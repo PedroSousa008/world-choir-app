@@ -182,12 +182,28 @@ async function ensureUser(deviceId) {
 
   const probePath = `${ROOT}/users-by-device/${encodeURIComponent(trimmed)}.json`;
   try {
-    return await readBlobJson(probePath);
+    const existing = await readBlobJson(probePath);
+    // Grandfather accounts that predate onboarding so they never see it unexpectedly.
+    if (existing.hasCompletedWorldChoirOnboarding === undefined) {
+      const upgraded = {
+        ...existing,
+        hasCompletedWorldChoirOnboarding: true,
+        updated_at: new Date().toISOString(),
+      };
+      try {
+        await writeJson(probePath, upgraded, { overwrite: true });
+        return upgraded;
+      } catch {
+        return { ...existing, hasCompletedWorldChoirOnboarding: true };
+      }
+    }
+    return existing;
   } catch {
     const user = {
       id: randomUUID(),
       anonymous_device_id: trimmed,
       created_at: new Date().toISOString(),
+      hasCompletedWorldChoirOnboarding: false,
     };
     try {
       await writeJson(probePath, user, { overwrite: false });
@@ -196,6 +212,22 @@ async function ensureUser(deviceId) {
       return readBlobJson(probePath);
     }
   }
+}
+
+async function setUserOnboardingCompleted(deviceId, completed = true) {
+  assertBlobConfigured();
+  const trimmed = String(deviceId).trim();
+  if (!trimmed) throw new Error('deviceId required');
+
+  const probePath = `${ROOT}/users-by-device/${encodeURIComponent(trimmed)}.json`;
+  const existing = await ensureUser(trimmed);
+  const next = {
+    ...existing,
+    hasCompletedWorldChoirOnboarding: completed === true,
+    updated_at: new Date().toISOString(),
+  };
+  await writeJson(probePath, next, { overwrite: true });
+  return next;
 }
 
 async function findUserByDevice(deviceId) {
@@ -461,6 +493,7 @@ async function buildOwnerDatabaseRows() {
 module.exports = {
   mapPledgeRow,
   ensureUser,
+  setUserOnboardingCompleted,
   joinWorldChoir,
   updatePledgeLocation,
   listPledges,

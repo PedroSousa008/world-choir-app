@@ -315,6 +315,28 @@
   color: var(--accent-aurora);
 }
 
+.btn-how-choir {
+  margin-top: 10px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 0;
+  border-bottom: 1px solid transparent;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 10px 4px;
+  max-width: none;
+  width: auto;
+  border-radius: 0;
+}
+
+.btn-how-choir:hover {
+  color: var(--accent-aurora);
+  border-bottom-color: color-mix(in srgb, var(--accent-aurora) 45%, transparent);
+}
+
 .daily-peace-overlay .daily-peace-screen {
   width: min(100%, 420px);
   max-height: calc(100vh - 48px);

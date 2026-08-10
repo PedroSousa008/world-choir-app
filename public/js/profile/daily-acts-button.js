@@ -1,5 +1,5 @@
 /**
- * DailyActsButton — opens Daily Acts of Peace
+ * DailyActsButton — opens Daily Acts of Peace + How World Choir Works
  */
 const DailyActsButton = (() => {
   function render() {
@@ -7,6 +7,9 @@ const DailyActsButton = (() => {
       <div class="daily-acts-section profile-section" id="daily-acts-section">
         <button class="btn btn-daily-acts" id="daily-acts-btn" type="button">
           Daily Acts of Peace
+        </button>
+        <button class="btn btn-how-choir" id="how-world-choir-works-btn" type="button">
+          How World Choir works
         </button>
       </div>
     `;
@@ -16,6 +19,14 @@ const DailyActsButton = (() => {
     container.innerHTML = render();
     document.getElementById('daily-acts-btn')?.addEventListener('click', () => {
       DailyActsPeace.open();
+    });
+    document.getElementById('how-world-choir-works-btn')?.addEventListener('click', () => {
+      if (typeof WorldChoirOnboarding === 'undefined') return;
+      WorldChoirOnboarding.openReplay({
+        onDone: () => {
+          /* Stay on Profile — do not alter onboarding completion. */
+        },
+      });
     });
   }
 
