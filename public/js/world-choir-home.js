@@ -284,6 +284,7 @@ const WorldChoirHome = (() => {
     const startedOnboarding = typeof WorldChoirOnboarding !== 'undefined'
       && WorldChoirOnboarding.maybeStartFirstTime({
         onDone: () => {
+          if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
           LiveEventMode.launch();
         },
       });

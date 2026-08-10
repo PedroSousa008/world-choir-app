@@ -3,7 +3,7 @@ const { randomUUID } = require('crypto');
 const { readBlobJson, writeJson, findUserByDevice, assertBlobConfigured } = require('./store');
 
 const ROOT = 'wc-data/daily-peace';
-const RECENT_ACT_LIMIT = 30;
+const RECENT_ACT_LIMIT = 90;
 
 let catalogCache = null;
 
@@ -16,6 +16,21 @@ function loadCatalog() {
 
 function getUtcDateString(date = new Date()) {
   return date.toISOString().slice(0, 10);
+}
+
+/** Accept YYYY-MM-DD client local dates within a safe window of UTC. */
+function resolveDate(input) {
+  const fallback = getUtcDateString();
+  const raw = String(input || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return fallback;
+
+  const utcToday = new Date(`${fallback}T12:00:00.000Z`).getTime();
+  const chosen = new Date(`${raw}T12:00:00.000Z`).getTime();
+  if (!Number.isFinite(chosen)) return fallback;
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (Math.abs(chosen - utcToday) > 2 * dayMs) return fallback;
+  return raw;
 }
 
 function hashString(input) {
@@ -47,7 +62,7 @@ async function listRecentUserActIds(userId, beforeDate, limit = RECENT_ACT_LIMIT
   const { list } = require('@vercel/blob');
   assertBlobConfigured();
   const prefix = userHistoryPrefix(userId);
-  const { blobs } = await list({ prefix, limit: 120 });
+  const { blobs } = await list({ prefix, limit: 200 });
   const entries = await Promise.all(
     blobs
       .filter((b) => b.pathname.endsWith('.json'))
@@ -76,7 +91,9 @@ function pickActForUser(userId, date, recentActIds) {
   let pool = acts.filter((act) => !recent.has(act.id));
   if (!pool.length) pool = acts;
 
-  const index = hashString(`${userId}:${date}`) % pool.length;
+  // Deterministic per user+day, but different users land on different acts.
+  const seed = hashString(`${userId}:${date}:peace-v3`);
+  const index = seed % pool.length;
   return pool[index];
 }
 
@@ -85,6 +102,7 @@ function mapAct(act) {
   const mapped = {
     id: act.id,
     text: act.text,
+    explanation: act.explanation || null,
     category: act.category || null,
   };
   if (act.nav && typeof act.nav === 'object') {
@@ -98,17 +116,22 @@ function mapAct(act) {
 }
 
 function mapUserDailyAct(row, act) {
+  const completed = !!row.completed;
+  const notificationDismissed = !!row.notification_dismissed;
   return {
     userDailyAct: {
       id: row.id,
       userId: row.user_id,
       actId: row.act_id,
       date: row.date,
-      completed: row.completed,
-      completedAt: row.completed_at,
+      completed,
+      completedAt: row.completed_at || null,
       assignedAt: row.assigned_at,
+      notificationDismissed,
+      notificationDismissedAt: row.notification_dismissed_at || null,
     },
     act: mapAct(act),
+    showNotification: !completed && !notificationDismissed,
   };
 }
 
@@ -128,6 +151,8 @@ async function assignFreshDailyAct(user, date, actsById, recentExtraIds = []) {
     completed: false,
     completed_at: null,
     assigned_at: now,
+    notification_dismissed: false,
+    notification_dismissed_at: null,
   };
 
   try {
@@ -144,8 +169,9 @@ async function assignFreshDailyAct(user, date, actsById, recentExtraIds = []) {
   return mapUserDailyAct(row, chosen);
 }
 
-async function getOrAssignDailyAct(deviceId, date = getUtcDateString()) {
+async function getOrAssignDailyAct(deviceId, dateInput) {
   assertBlobConfigured();
+  const date = resolveDate(dateInput);
   const user = await findUserByDevice(deviceId);
   if (!user) throw new Error('user not found');
 
@@ -154,9 +180,18 @@ async function getOrAssignDailyAct(deviceId, date = getUtcDateString()) {
 
   if (existing) {
     const act = actsById.get(existing.act_id);
-    // Catalog was replaced — drop obsolete assignments and pick from the new list.
     if (!act) {
       return assignFreshDailyAct(user, date, actsById, [existing.act_id]);
+    }
+    // Backfill notification fields for older assignment rows.
+    if (typeof existing.notification_dismissed !== 'boolean') {
+      const patched = {
+        ...existing,
+        notification_dismissed: false,
+        notification_dismissed_at: null,
+      };
+      await writeJson(userDailyActPath(user.id, date), patched, { overwrite: true });
+      return mapUserDailyAct(patched, act);
     }
     return mapUserDailyAct(existing, act);
   }
@@ -164,8 +199,9 @@ async function getOrAssignDailyAct(deviceId, date = getUtcDateString()) {
   return assignFreshDailyAct(user, date, actsById);
 }
 
-async function completeDailyAct(deviceId, date = getUtcDateString()) {
+async function completeDailyAct(deviceId, dateInput) {
   assertBlobConfigured();
+  const date = resolveDate(dateInput);
   const user = await findUserByDevice(deviceId);
   if (!user) throw new Error('user not found');
 
@@ -175,7 +211,6 @@ async function completeDailyAct(deviceId, date = getUtcDateString()) {
   const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
   const act = actsById.get(row.act_id);
 
-  // Obsolete catalog entry — reassign and ask the client to reload the new act.
   if (!act) {
     await assignFreshDailyAct(user, date, actsById, [row.act_id]);
     throw new Error('Today’s act was updated. Please open it again.');
@@ -189,6 +224,38 @@ async function completeDailyAct(deviceId, date = getUtcDateString()) {
     ...row,
     completed: true,
     completed_at: new Date().toISOString(),
+    notification_dismissed: true,
+    notification_dismissed_at: row.notification_dismissed_at || new Date().toISOString(),
+  };
+
+  await writeJson(userDailyActPath(user.id, date), updated, { overwrite: true });
+  return mapUserDailyAct(updated, act);
+}
+
+async function dismissDailyActNotification(deviceId, dateInput) {
+  assertBlobConfigured();
+  const date = resolveDate(dateInput);
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const row = await readUserDailyAct(user.id, date);
+  if (!row) throw new Error('no daily act assigned for today');
+
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const act = actsById.get(row.act_id);
+  if (!act) {
+    await assignFreshDailyAct(user, date, actsById, [row.act_id]);
+    throw new Error('Today’s act was updated. Please open it again.');
+  }
+
+  if (row.notification_dismissed || row.completed) {
+    return mapUserDailyAct(row, act);
+  }
+
+  const updated = {
+    ...row,
+    notification_dismissed: true,
+    notification_dismissed_at: new Date().toISOString(),
   };
 
   await writeJson(userDailyActPath(user.id, date), updated, { overwrite: true });
@@ -197,7 +264,9 @@ async function completeDailyAct(deviceId, date = getUtcDateString()) {
 
 module.exports = {
   getUtcDateString,
+  resolveDate,
   getOrAssignDailyAct,
   completeDailyAct,
+  dismissDailyActNotification,
   loadCatalog,
 };

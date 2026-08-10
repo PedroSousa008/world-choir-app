@@ -1,0 +1,224 @@
+/* Daily Acts of Peace — banner + full-screen experience */
+
+.daily-peace-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 220;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding:
+    calc(10px + env(safe-area-inset-top, 0px))
+    12px
+    12px
+    8px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 10, 16, 0.94) 0%,
+      rgba(10, 12, 20, 0.9) 100%
+    );
+  border-bottom: 1px solid rgba(78, 197, 232, 0.18);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  transform: translateY(-110%);
+  opacity: 0;
+  transition: transform 0.32s ease, opacity 0.28s ease;
+  pointer-events: none;
+}
+
+.daily-peace-banner.is-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.daily-peace-banner__close {
+  flex: 0 0 auto;
+  width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.65));
+  font-size: 1.55rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.daily-peace-banner__close:hover,
+.daily-peace-banner__close:focus-visible {
+  color: var(--text-primary, #fff);
+  background: rgba(255, 255, 255, 0.05);
+  outline: none;
+}
+
+.daily-peace-banner__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 6px 8px 6px 2px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.daily-peace-banner__label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-aurora, #4ec5e8);
+  margin-bottom: 4px;
+}
+
+.daily-peace-banner__title {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text-primary, #fff);
+  letter-spacing: -0.01em;
+}
+
+body.has-daily-peace-banner {
+  padding-top: calc(76px + env(safe-area-inset-top, 0px));
+}
+
+body.has-daily-peace-banner .bottom-nav {
+  /* keep bottom nav usable; banner only occupies the top */
+}
+
+.daily-peace-overlay .daily-peace-screen {
+  width: min(100%, 420px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  margin: auto;
+  padding: 8px;
+}
+
+.daily-peace-overlay {
+  z-index: 240;
+}
+
+.daily-peace-screen__inner {
+  text-align: center;
+  padding: 12px 4px 8px;
+}
+
+.daily-peace-kicker {
+  margin: 0 0 14px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-aurora, #4ec5e8);
+}
+
+.daily-peace-title {
+  font-size: clamp(1.35rem, 4.5vw, 1.7rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #fff);
+  margin: 0 0 18px;
+  line-height: 1.35;
+}
+
+.daily-peace-explain {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  margin: 0 0 28px;
+}
+
+.daily-peace-nav {
+  width: 100%;
+  max-width: none;
+  margin: 0 0 12px;
+  letter-spacing: 0.04em;
+}
+
+.daily-peace-complete-btn {
+  width: 100%;
+  max-width: none;
+  margin: 0 0 12px;
+  letter-spacing: 0.04em;
+}
+
+.daily-peace-back {
+  width: 100%;
+  max-width: none;
+  margin-top: 4px;
+}
+
+.daily-peace-done-badge {
+  display: inline-block;
+  margin: 0 auto 24px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(78, 197, 232, 0.28);
+  color: var(--accent-aurora, #4ec5e8);
+  font-size: 0.85rem;
+}
+
+.daily-peace-loading,
+.daily-peace-error {
+  font-size: 0.95rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  line-height: 1.6;
+  margin: 24px 0;
+}
+
+.daily-peace-loading {
+  animation: dailyPeacePulse 1.6s ease-in-out infinite;
+}
+
+.daily-peace-complete-moment {
+  padding: 28px 8px 8px;
+}
+
+.daily-peace-complete-moment__eyebrow {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-aurora, #4ec5e8);
+}
+
+.daily-peace-complete-moment__heart {
+  margin: 0 0 14px;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.daily-peace-complete-moment__copy {
+  margin: 0 0 28px;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+}
+
+@keyframes dailyPeacePulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.85; }
+}
+
+@media (min-width: 720px) {
+  .daily-peace-banner {
+    left: 50%;
+    right: auto;
+    width: min(520px, calc(100% - 32px));
+    transform: translate(-50%, -110%);
+    border-radius: 0 0 18px 18px;
+  }
+
+  .daily-peace-banner.is-visible {
+    transform: translate(-50%, 0);
+  }
+}

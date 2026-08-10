@@ -211,6 +211,7 @@ const WorldChoirOnboarding = (() => {
     const cb = onDone;
     onDone = null;
     if (typeof cb === 'function') cb({ mode, reachedEnd });
+    if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
   }
 
   function openOnboarding(options = {}) {

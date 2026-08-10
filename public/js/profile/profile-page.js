@@ -47,6 +47,19 @@ const ProfilePage = (() => {
     render();
   }
 
+  function maybeOpenPracticeFromQuery() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      if (params.get('practice') !== '1') return;
+      PracticeMode.open({ onExit: () => {} });
+      const url = new URL(window.location.href);
+      url.searchParams.delete('practice');
+      window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+    } catch {
+      /* ignore */
+    }
+  }
+
   function init() {
     WorldChoirPledgeState.init()
       .then(() => {
@@ -57,6 +70,7 @@ const ProfilePage = (() => {
         WorldChoirNav.startWatcher('profile');
         render();
         WorldChoirPledgeState.subscribe(() => refresh());
+        maybeOpenPracticeFromQuery();
       })
       .catch((err) => {
         console.error('Failed to connect to World Choir database:', err);

@@ -1,7 +1,8 @@
 const {
   getOrAssignDailyAct,
   completeDailyAct,
-  getUtcDateString,
+  dismissDailyActNotification,
+  resolveDate,
 } = require('./_lib/daily-peace');
 
 module.exports = async function handler(req, res) {
@@ -14,9 +15,10 @@ module.exports = async function handler(req, res) {
 
   try {
     const deviceId = req.method === 'GET' ? req.query.deviceId : req.body?.deviceId;
-    const date = req.method === 'GET'
-      ? req.query.date || getUtcDateString()
-      : req.body?.date || getUtcDateString();
+    const date = resolveDate(
+      req.method === 'GET' ? req.query.date : req.body?.date
+    );
+    const action = req.method === 'POST' ? (req.body?.action || 'complete') : null;
 
     if (!deviceId) {
       return res.status(400).json({ error: 'deviceId required' });
@@ -28,6 +30,11 @@ module.exports = async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
+      if (action === 'dismiss-notification') {
+        const result = await dismissDailyActNotification(deviceId, date);
+        return res.status(200).json(result);
+      }
+
       const result = await completeDailyAct(deviceId, date);
       return res.status(200).json(result);
     }

@@ -1,2652 +1,3055 @@
 {
-  "version": 2,
+  "version": 3,
   "total": 403,
   "acts": [
     {
       "id": "dap-001",
       "text": "Send a message to someone you have been meaning to check on.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Send a message to someone you have been meaning to check on.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-002",
       "text": "Tell someone one thing you genuinely appreciate about them.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Tell someone one thing you genuinely appreciate about them.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-003",
       "text": "Hold the door for someone.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Hold the door for someone.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-004",
       "text": "Let someone go ahead of you.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Let someone go ahead of you.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-005",
       "text": "Give a sincere compliment to a stranger.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Give a sincere compliment to a stranger.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-006",
       "text": "Thank someone whose work often goes unnoticed.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Thank someone whose work often goes unnoticed.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-007",
       "text": "Smile at three people today.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Smile at three people today.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-008",
       "text": "Send a voice message instead of a quick text.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Send a voice message instead of a quick text.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-009",
       "text": "Ask someone how they are — and really listen.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone how they are — and really listen.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-010",
       "text": "Leave a kind comment on someone’s work.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Leave a kind comment on someone’s work.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-011",
       "text": "Help someone without telling anyone about it.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Help someone without telling anyone about it.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-012",
       "text": "Say “thank you” with real intention.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Say “thank you” with real intention.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-013",
       "text": "Tell a family member you love them.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Tell a family member you love them.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-014",
       "text": "Send an old photo to someone who would appreciate the memory.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Send an old photo to someone who would appreciate the memory.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-015",
       "text": "Make someone laugh today.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Make someone laugh today.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-016",
       "text": "Ask someone if they need help.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone if they need help.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-017",
       "text": "Offer your seat to someone.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Offer your seat to someone.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-018",
       "text": "Let someone merge in front of you in traffic.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Let someone merge in front of you in traffic.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-019",
       "text": "Call someone you normally only text.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Call someone you normally only text.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-020",
       "text": "Remember someone’s name and use it.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Remember someone’s name and use it.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-021",
       "text": "Send encouragement to someone going through a difficult time.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Send encouragement to someone going through a difficult time.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-022",
       "text": "Tell someone you are proud of them.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Tell someone you are proud of them.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-023",
       "text": "Give someone your full attention for five minutes.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Give someone your full attention for five minutes.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-024",
       "text": "Leave a positive review for a small business you love.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Leave a positive review for a small business you love.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-025",
       "text": "Thank a teacher who helped you.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Thank a teacher who helped you.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-026",
       "text": "Thank someone from your past who made a difference.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Thank someone from your past who made a difference.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-027",
       "text": "Ask someone about something they care deeply about.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone about something they care deeply about.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-028",
       "text": "Let someone finish speaking without interrupting.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Let someone finish speaking without interrupting.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-029",
       "text": "Say something kind about someone when they are not there.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Say something kind about someone when they are not there.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-030",
       "text": "Forgive a small mistake without making a big deal out of it.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Forgive a small mistake without making a big deal out of it.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-031",
       "text": "Share something useful with someone who might need it.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Share something useful with someone who might need it.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-032",
       "text": "Ask an older person to tell you a story from their life.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Ask an older person to tell you a story from their life.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-033",
       "text": "Help someone carry something.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Help someone carry something.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-034",
       "text": "Tell a friend what makes them special.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Tell a friend what makes them special.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-035",
       "text": "Send someone a song that reminds you of them.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Send someone a song that reminds you of them.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-036",
       "text": "Welcome someone who seems left out.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Welcome someone who seems left out.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-037",
       "text": "Give someone the benefit of the doubt.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Give someone the benefit of the doubt.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-038",
       "text": "Make eye contact and say hello.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Make eye contact and say hello.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-039",
       "text": "Thank someone by name.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Thank someone by name.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-040",
       "text": "Write a short note of appreciation.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Write a short note of appreciation.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-041",
       "text": "Offer to help someone before they ask.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Offer to help someone before they ask.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-042",
       "text": "Celebrate someone else’s success.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Celebrate someone else’s success.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-043",
       "text": "Send a message saying, “I’m thinking about you.”",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Send a message saying, “I’m thinking about you.”.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-044",
       "text": "Ask someone what they need today.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone what they need today.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-045",
       "text": "Give a genuine apology if you owe one.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Give a genuine apology if you owe one.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-046",
       "text": "Reply kindly, even when you are busy.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Reply kindly, even when you are busy.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-047",
       "text": "Let someone else choose today.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Let someone else choose today.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-048",
       "text": "Tell someone about a positive impact they had on you.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Tell someone about a positive impact they had on you.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-049",
       "text": "Make space for someone’s opinion.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Make space for someone’s opinion.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-050",
       "text": "Do one small thing that makes someone’s day easier.",
+      "explanation": "A small opportunity to make the world around you better today. One gentle action can shift someone’s whole afternoon.",
       "category": "connection-kindness",
       "active": true
     },
     {
       "id": "dap-051",
       "text": "Call a family member just to talk.",
+      "explanation": "Family bonds deepen in ordinary moments. Call just to talk — no agenda needed.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-052",
       "text": "Eat a meal with someone without looking at your phone.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Eat a meal with someone without looking at your phone.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-053",
       "text": "Ask a parent or grandparent about their childhood.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Ask a parent or grandparent about their childhood.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-054",
       "text": "Help with a household task without being asked.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Help with a household task without being asked.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-055",
       "text": "Cook something for someone you love.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Cook something for someone you love.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-056",
       "text": "Tell a sibling or close friend a favorite memory you have with them.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Tell a sibling or close friend a favorite memory you have with them.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-057",
       "text": "Put your phone away during a conversation.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Put your phone away during a conversation.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-058",
       "text": "Ask someone, “How can I support you today?”",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Ask someone, “How can I support you today?”.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-059",
       "text": "Do something thoughtful for someone at home.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Do something thoughtful for someone at home.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-060",
       "text": "Send a “good morning” message to someone who matters to you.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Send a “good morning” message to someone who matters to you.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-061",
       "text": "End the day by thanking someone you live with.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: End the day by thanking someone you live with.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-062",
       "text": "Ask someone about a dream they still have.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Ask someone about a dream they still have.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-063",
       "text": "Recreate a happy memory with someone.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Recreate a happy memory with someone.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-064",
       "text": "Tell someone why you are grateful they are in your life.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Tell someone why you are grateful they are in your life.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-065",
       "text": "Give someone a long, real hug.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Give someone a long, real hug.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-066",
       "text": "Let a loved one talk without trying to fix everything.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Let a loved one talk without trying to fix everything.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-067",
       "text": "Plan something simple for someone you care about.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Plan something simple for someone you care about.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-068",
       "text": "Help an older family member with technology.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Help an older family member with technology.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-069",
       "text": "Ask someone to teach you something they know.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Ask someone to teach you something they know.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-070",
       "text": "Say “I’m sorry” without adding an excuse.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Say “I’m sorry” without adding an excuse.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-071",
       "text": "Put away something that someone else usually has to deal with.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Put away something that someone else usually has to deal with.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-072",
       "text": "Make someone at home a drink or snack.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Make someone at home a drink or snack.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-073",
       "text": "Look through old photos with someone.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Look through old photos with someone.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-074",
       "text": "Ask someone how they are feeling today.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Ask someone how they are feeling today.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-075",
       "text": "Surprise someone with their favorite small thing.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Surprise someone with their favorite small thing.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-076",
       "text": "Tell someone you notice their effort.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Tell someone you notice their effort.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-077",
       "text": "Give someone a break from a responsibility.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Give someone a break from a responsibility.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-078",
       "text": "Write down five things you love about someone.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Write down five things you love about someone.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-079",
       "text": "Listen to a family member tell the same story again.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Listen to a family member tell the same story again.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-080",
       "text": "Spend an hour with someone you love without multitasking.",
+      "explanation": "The people closest to you feel peace through presence. Today, try this: Spend an hour with someone you love without multitasking.",
       "category": "family",
       "active": true
     },
     {
       "id": "dap-081",
       "text": "Reach out to someone you lost touch with.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Reach out to someone you lost touch with.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-082",
       "text": "Send a message to an old friend.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Send a message to an old friend.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-083",
       "text": "Ask someone you miss how life has been.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Ask someone you miss how life has been.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-084",
       "text": "Thank someone from your past.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Thank someone from your past.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-085",
       "text": "Reconnect with someone you once cared about.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Reconnect with someone you once cared about.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-086",
       "text": "Apologize to someone if you know you hurt them.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Apologize to someone if you know you hurt them.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-087",
       "text": "Let go of one old grudge.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Let go of one old grudge.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-088",
       "text": "Write a message you have been afraid to send.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Write a message you have been afraid to send.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-089",
       "text": "Check on someone you have not spoken to in over a year.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Check on someone you have not spoken to in over a year.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-090",
       "text": "Invite someone for a coffee or a walk.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Invite someone for a coffee or a walk.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-091",
       "text": "Tell someone you miss them.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Tell someone you miss them.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-092",
       "text": "Send someone an unexpected memory.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Send someone an unexpected memory.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-093",
       "text": "Ask an old friend to catch up.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Ask an old friend to catch up.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-094",
       "text": "Thank someone for a lesson they taught you.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Thank someone for a lesson they taught you.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-095",
       "text": "Reconnect without expecting anything in return.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Reconnect without expecting anything in return.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-096",
       "text": "Make peace with someone over a small disagreement.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Make peace with someone over a small disagreement.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-097",
       "text": "Stop avoiding a conversation that could bring peace.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Stop avoiding a conversation that could bring peace.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-098",
       "text": "Send forgiveness, even if only privately.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Send forgiveness, even if only privately.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-099",
       "text": "Tell someone from your past that you hope they are doing well.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Tell someone from your past that you hope they are doing well.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-100",
       "text": "Reach out to someone who might be feeling alone.",
+      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Reach out to someone who might be feeling alone.",
       "category": "reconnecting",
       "active": true
     },
     {
       "id": "dap-101",
       "text": "Pick up five pieces of litter.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Pick up five pieces of litter.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-102",
       "text": "Return something you borrowed.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Return something you borrowed.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-103",
       "text": "Donate something you no longer use.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Donate something you no longer use.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-104",
       "text": "Give food or useful items to someone in need.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Give food or useful items to someone in need.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-105",
       "text": "Support a local small business.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Support a local small business.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-106",
       "text": "Leave a generous review for a good local business.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Leave a generous review for a good local business.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-107",
       "text": "Learn the name of someone who works in your building or neighborhood.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Learn the name of someone who works in your building or neighborhood.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-108",
       "text": "Help a neighbor with something small.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Help a neighbor with something small.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-109",
       "text": "Offer directions to someone who looks lost.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Offer directions to someone who looks lost.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-110",
       "text": "Return a shopping cart.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Return a shopping cart.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-111",
       "text": "Leave a place cleaner than you found it.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Leave a place cleaner than you found it.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-112",
       "text": "Donate clothes you no longer wear.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Donate clothes you no longer wear.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-113",
       "text": "Bring food to someone who needs support.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Bring food to someone who needs support.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-114",
       "text": "Give away something useful instead of throwing it away.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Give away something useful instead of throwing it away.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-115",
       "text": "Offer to help a neighbor.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Offer to help a neighbor.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-116",
       "text": "Say hello to someone in your neighborhood.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Say hello to someone in your neighborhood.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-117",
       "text": "Support a local cause.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Support a local cause.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-118",
       "text": "Volunteer one hour of your time.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Volunteer one hour of your time.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-119",
       "text": "Help someone who is new to your community.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Help someone who is new to your community.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-120",
       "text": "Donate books you no longer read.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Donate books you no longer read.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-121",
       "text": "Leave water out for animals on a hot day.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Leave water out for animals on a hot day.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-122",
       "text": "Thank someone working a difficult job.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Thank someone working a difficult job.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-123",
       "text": "Pick up litter somewhere you did not create.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Pick up litter somewhere you did not create.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-124",
       "text": "Share information about a local cause you believe in.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Share information about a local cause you believe in.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-125",
       "text": "Give blood if you are able and eligible.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Give blood if you are able and eligible.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-126",
       "text": "Donate to a cause you genuinely trust, if you can.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Donate to a cause you genuinely trust, if you can.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-127",
       "text": "Help someone carry their shopping.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Help someone carry their shopping.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-128",
       "text": "Check whether an elderly neighbor needs anything.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Check whether an elderly neighbor needs anything.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-129",
       "text": "Let someone know about an opportunity they might benefit from.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Let someone know about an opportunity they might benefit from.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-130",
       "text": "Give useful items directly to someone who needs them.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Give useful items directly to someone who needs them.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-131",
       "text": "Buy something from a small local business instead of a large chain.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Buy something from a small local business instead of a large chain.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-132",
       "text": "Leave a kind note for someone to find.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Leave a kind note for someone to find.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-133",
       "text": "Support someone’s small project.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Support someone’s small project.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-134",
       "text": "Recommend someone’s work.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Recommend someone’s work.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-135",
       "text": "Share a job or opportunity with someone who could benefit.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Share a job or opportunity with someone who could benefit.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-136",
       "text": "Thank a cleaner, delivery worker, or service worker.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Thank a cleaner, delivery worker, or service worker.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-137",
       "text": "Help someone who seems confused.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Help someone who seems confused.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-138",
       "text": "Give directions patiently.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Give directions patiently.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-139",
       "text": "Make your neighborhood slightly better today.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Make your neighborhood slightly better today.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-140",
       "text": "Do something helpful without being asked.",
+      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Do something helpful without being asked.",
       "category": "community",
       "active": true
     },
     {
       "id": "dap-141",
       "text": "Take a walk and pick up litter along the way.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take a walk and pick up litter along the way.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-142",
       "text": "Use a reusable bottle today.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Use a reusable bottle today.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-143",
       "text": "Walk somewhere instead of driving, if possible.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Walk somewhere instead of driving, if possible.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-144",
       "text": "Turn off lights you do not need.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Turn off lights you do not need.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-145",
       "text": "Take a shorter shower.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take a shorter shower.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-146",
       "text": "Avoid buying something you do not really need.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Avoid buying something you do not really need.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-147",
       "text": "Repair something instead of replacing it.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Repair something instead of replacing it.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-148",
       "text": "Recycle properly today.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Recycle properly today.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-149",
       "text": "Plant something.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Plant something.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-150",
       "text": "Water a plant.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Water a plant.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-151",
       "text": "Spend ten minutes outside.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Spend ten minutes outside.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-152",
       "text": "Learn the name of a tree, plant, or bird near you.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Learn the name of a tree, plant, or bird near you.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-153",
       "text": "Take your own bag when shopping.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take your own bag when shopping.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-154",
       "text": "Avoid single-use plastic for one day.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Avoid single-use plastic for one day.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-155",
       "text": "Eat one meal with less waste.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Eat one meal with less waste.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-156",
       "text": "Save food that would otherwise be thrown away.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Save food that would otherwise be thrown away.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-157",
       "text": "Give an unwanted item a second life.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Give an unwanted item a second life.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-158",
       "text": "Turn off unnecessary devices.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Turn off unnecessary devices.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-159",
       "text": "Spend time in nature without your phone.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Spend time in nature without your phone.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-160",
       "text": "Notice five beautiful things in the natural world.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Notice five beautiful things in the natural world.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-161",
       "text": "Feed birds safely and responsibly.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Feed birds safely and responsibly.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-162",
       "text": "Support a project that protects nature.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Support a project that protects nature.",
       "category": "planet",
       "active": true,
       "nav": {
         "type": "donate",
         "cause": "Environment",
-        "label": "Explore Foundations"
+        "label": "EXPLORE ENVIRONMENT FOUNDATIONS"
       }
     },
     {
       "id": "dap-163",
       "text": "Choose to reuse something today.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Choose to reuse something today.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-164",
       "text": "Take care of a public space.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take care of a public space.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-165",
       "text": "Do not leave anything behind when you visit nature.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Do not leave anything behind when you visit nature.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-166",
       "text": "Learn one thing about your local environment.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Learn one thing about your local environment.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-167",
       "text": "Reduce waste in one part of your daily routine.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Reduce waste in one part of your daily routine.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-168",
       "text": "Walk somewhere slowly enough to notice your surroundings.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Walk somewhere slowly enough to notice your surroundings.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-169",
       "text": "Take care of an animal today.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take care of an animal today.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-170",
       "text": "Leave the world a little cleaner than you found it.",
+      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Leave the world a little cleaner than you found it.",
       "category": "planet",
       "active": true
     },
     {
       "id": "dap-171",
       "text": "Take ten minutes without your phone.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Take ten minutes without your phone.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-172",
       "text": "Go for a walk without listening to anything.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Go for a walk without listening to anything.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-173",
       "text": "Write down three things that went well today.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Write down three things that went well today.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-174",
       "text": "Forgive yourself for one past mistake.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Forgive yourself for one past mistake.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-175",
       "text": "Stop working when you genuinely need rest.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Stop working when you genuinely need rest.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-176",
       "text": "Get enough sleep tonight.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Get enough sleep tonight.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-177",
       "text": "Take a slow breath before reacting to something.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Take a slow breath before reacting to something.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-178",
       "text": "Do something just because you enjoy it.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Do something just because you enjoy it.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-179",
       "text": "Write down one thing you are grateful for.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Write down one thing you are grateful for.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-180",
       "text": "Spend time alone without distracting yourself.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Spend time alone without distracting yourself.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-181",
       "text": "Let yourself change your mind.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Let yourself change your mind.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-182",
       "text": "Take a break without feeling guilty.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Take a break without feeling guilty.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-183",
       "text": "Say no to something you do not have the energy for.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Say no to something you do not have the energy for.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-184",
       "text": "Spend one hour away from social media.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Spend one hour away from social media.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-185",
       "text": "Stop comparing yourself to someone today.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Stop comparing yourself to someone today.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-186",
       "text": "Write down something you are proud of.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Write down something you are proud of.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-187",
       "text": "Take care of your body.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Take care of your body.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-188",
       "text": "Do something you have been putting off that will make you feel better.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Do something you have been putting off that will make you feel better.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-189",
       "text": "Clean a space that has been bothering you.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Clean a space that has been bothering you.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-190",
       "text": "Finish one small task.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Finish one small task.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-191",
       "text": "Listen to your favorite song with no distractions.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Listen to your favorite song with no distractions.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-192",
       "text": "Sit quietly for five minutes.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Sit quietly for five minutes.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-193",
       "text": "Watch the sunrise or sunset.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Watch the sunrise or sunset.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-194",
       "text": "Write a letter to your future self.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Write a letter to your future self.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-195",
       "text": "Remember a moment you overcame something difficult.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Remember a moment you overcame something difficult.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-196",
       "text": "Replace one negative thought with a fairer one.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Replace one negative thought with a fairer one.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-197",
       "text": "Spend time doing something creative.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Spend time doing something creative.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-198",
       "text": "Put your phone in another room for an hour.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Put your phone in another room for an hour.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-199",
       "text": "Take a proper lunch break.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Take a proper lunch break.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-200",
       "text": "Give yourself permission to have an imperfect day.",
+      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Give yourself permission to have an imperfect day.",
       "category": "self",
       "active": true
     },
     {
       "id": "dap-201",
       "text": "Pause before responding when you are angry.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Pause before responding when you are angry.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-202",
       "text": "Listen to understand, not just to reply.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Listen to understand, not just to reply.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-203",
       "text": "Ask a question instead of making an assumption.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Ask a question instead of making an assumption.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-204",
       "text": "Admit when you do not know something.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Admit when you do not know something.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-205",
       "text": "Say “I was wrong” when you were.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Say “I was wrong” when you were.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-206",
       "text": "Have a difficult conversation calmly.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Have a difficult conversation calmly.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-207",
       "text": "Let someone disagree with you.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Let someone disagree with you.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-208",
       "text": "Avoid gossip for one day.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Avoid gossip for one day.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-209",
       "text": "Stop yourself from spreading a negative rumor.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Stop yourself from spreading a negative rumor.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-210",
       "text": "Ask someone what they meant before assuming the worst.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Ask someone what they meant before assuming the worst.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-211",
       "text": "Speak about someone with the same respect you would use in front of them.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Speak about someone with the same respect you would use in front of them.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-212",
       "text": "Do not interrupt someone today.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Do not interrupt someone today.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-213",
       "text": "Let someone finish their point.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Let someone finish their point.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-214",
       "text": "Disagree without attacking.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Disagree without attacking.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-215",
       "text": "Say what you mean clearly and kindly.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Say what you mean clearly and kindly.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-216",
       "text": "Avoid responding immediately when emotional.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Avoid responding immediately when emotional.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-217",
       "text": "Thank someone for being honest with you.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Thank someone for being honest with you.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-218",
       "text": "Ask for feedback and listen without defending yourself.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Ask for feedback and listen without defending yourself.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-219",
       "text": "Say something kind in a conversation where negativity would be easier.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Say something kind in a conversation where negativity would be easier.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-220",
       "text": "Choose curiosity over judgment.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Choose curiosity over judgment.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-221",
       "text": "Avoid complaining about someone who cannot respond.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Avoid complaining about someone who cannot respond.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-222",
       "text": "Ask someone to explain their perspective.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Ask someone to explain their perspective.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-223",
       "text": "Apologize for interrupting someone.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Apologize for interrupting someone.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-224",
       "text": "Give someone space to speak.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Give someone space to speak.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-225",
       "text": "End one unnecessary argument.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: End one unnecessary argument.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-226",
       "text": "Replace criticism with a useful suggestion.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Replace criticism with a useful suggestion.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-227",
       "text": "Tell the truth kindly.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Tell the truth kindly.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-228",
       "text": "Refuse to join in making fun of someone.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Refuse to join in making fun of someone.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-229",
       "text": "Let a minor disagreement go.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Let a minor disagreement go.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-230",
       "text": "Respond with patience when someone is difficult.",
+      "explanation": "How we speak can either harden or heal a moment. Today, try this: Respond with patience when someone is difficult.",
       "category": "communication",
       "active": true
     },
     {
       "id": "dap-231",
       "text": "Help someone with something they find difficult.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone with something they find difficult.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-232",
       "text": "Teach someone something you know.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Teach someone something you know.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-233",
       "text": "Offer your skills to someone who could benefit.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Offer your skills to someone who could benefit.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-234",
       "text": "Help someone prepare for an important moment.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone prepare for an important moment.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-235",
       "text": "Share useful advice when someone asks for it.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Share useful advice when someone asks for it.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-236",
       "text": "Help someone understand something without making them feel stupid.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone understand something without making them feel stupid.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-237",
       "text": "Offer to proofread or review someone’s work.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Offer to proofread or review someone’s work.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-238",
       "text": "Help someone move something heavy.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone move something heavy.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-239",
       "text": "Help a child learn something.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help a child learn something.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-240",
       "text": "Teach an older person how to use a piece of technology.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Teach an older person how to use a piece of technology.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-241",
       "text": "Offer someone a ride if they need one.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Offer someone a ride if they need one.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-242",
       "text": "Help someone organize something overwhelming.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone organize something overwhelming.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-243",
       "text": "Introduce two people who could help each other.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Introduce two people who could help each other.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-244",
       "text": "Recommend someone for an opportunity.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Recommend someone for an opportunity.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-245",
       "text": "Share knowledge instead of keeping it to yourself.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Share knowledge instead of keeping it to yourself.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-246",
       "text": "Help someone feel more confident.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone feel more confident.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-247",
       "text": "Give someone time when that is what they need.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Give someone time when that is what they need.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-248",
       "text": "Ask someone, “What would make this easier?”",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Ask someone, “What would make this easier?”.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-249",
       "text": "Help someone without expecting credit.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone without expecting credit.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-250",
       "text": "Do something kind anonymously.",
+      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Do something kind anonymously.",
       "category": "helping",
       "active": true
     },
     {
       "id": "dap-251",
       "text": "Say sorry first.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Say sorry first.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-252",
       "text": "Tell someone how you really feel.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Tell someone how you really feel.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-253",
       "text": "Reach out even if you are afraid they might not reply.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Reach out even if you are afraid they might not reply.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-254",
       "text": "Defend someone being treated unfairly.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Defend someone being treated unfairly.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-255",
       "text": "Include someone others are excluding.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Include someone others are excluding.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-256",
       "text": "Speak up when a joke is cruel.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Speak up when a joke is cruel.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-257",
       "text": "Admit a mistake publicly.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Admit a mistake publicly.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-258",
       "text": "Tell someone you appreciate them before it is too late.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Tell someone you appreciate them before it is too late.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-259",
       "text": "Start a conversation with someone you normally would not approach.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Start a conversation with someone you normally would not approach.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-260",
       "text": "Forgive someone for a small hurt.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Forgive someone for a small hurt.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-261",
       "text": "Ask for forgiveness.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Ask for forgiveness.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-262",
       "text": "Thank someone face-to-face.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Thank someone face-to-face.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-263",
       "text": "Tell someone you love them.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Tell someone you love them.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-264",
       "text": "Say no when you need to protect your peace.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Say no when you need to protect your peace.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-265",
       "text": "Walk away from an argument you do not need to win.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Walk away from an argument you do not need to win.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-266",
       "text": "Ask for help when you need it.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Ask for help when you need it.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-267",
       "text": "Be honest about something small instead of avoiding it.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Be honest about something small instead of avoiding it.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-268",
       "text": "Give someone another chance.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Give someone another chance.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-269",
       "text": "Stand beside someone who is alone.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Stand beside someone who is alone.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-270",
       "text": "Take responsibility without blaming someone else.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Take responsibility without blaming someone else.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-271",
       "text": "Reach out to someone you had an argument with.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Reach out to someone you had an argument with.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-272",
       "text": "Admit when someone else had a better idea.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Admit when someone else had a better idea.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-273",
       "text": "Say something positive about someone you usually compete with.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Say something positive about someone you usually compete with.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-274",
       "text": "Ask someone for their perspective when you disagree.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Ask someone for their perspective when you disagree.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-275",
       "text": "Start repairing a relationship that matters to you.",
+      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Start repairing a relationship that matters to you.",
       "category": "courage",
       "active": true
     },
     {
       "id": "dap-276",
       "text": "Send someone a funny video you know they will love.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Send someone a funny video you know they will love.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-277",
       "text": "Bring someone their favorite snack.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Bring someone their favorite snack.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-278",
       "text": "Play a song that makes someone smile.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Play a song that makes someone smile.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-279",
       "text": "Make someone laugh.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Make someone laugh.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-280",
       "text": "Share a happy memory.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Share a happy memory.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-281",
       "text": "Surprise someone with a small gesture.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Surprise someone with a small gesture.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-282",
       "text": "Give someone flowers — picked, bought, or homemade.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Give someone flowers — picked, bought, or homemade.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-283",
       "text": "Make a playlist for someone.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Make a playlist for someone.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-284",
       "text": "Send someone a photo that will make them smile.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Send someone a photo that will make them smile.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-285",
       "text": "Tell someone your favorite thing about them.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Tell someone your favorite thing about them.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-286",
       "text": "Invite someone to do something fun.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Invite someone to do something fun.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-287",
       "text": "Share good news with someone who will celebrate it with you.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Share good news with someone who will celebrate it with you.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-288",
       "text": "Celebrate a small achievement.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Celebrate a small achievement.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-289",
       "text": "Write a note that makes someone smile.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Write a note that makes someone smile.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-290",
       "text": "Make someone feel included.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Make someone feel included.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-291",
       "text": "Ask someone to join you instead of doing something alone.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Ask someone to join you instead of doing something alone.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-292",
       "text": "Bring energy to a room instead of negativity.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Bring energy to a room instead of negativity.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-293",
       "text": "Tell a joke.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Tell a joke.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-294",
       "text": "Share something beautiful you discovered today.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Share something beautiful you discovered today.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-295",
       "text": "Surprise someone with coffee, tea, or something they enjoy.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Surprise someone with coffee, tea, or something they enjoy.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-296",
       "text": "Create a small moment worth remembering.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Create a small moment worth remembering.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-297",
       "text": "Dance or sing with someone.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Dance or sing with someone.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-298",
       "text": "Tell someone a happy memory you share.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Tell someone a happy memory you share.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-299",
       "text": "Make someone feel seen.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Make someone feel seen.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-300",
       "text": "Give someone a reason to smile today.",
+      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Give someone a reason to smile today.",
       "category": "joy",
       "active": true
     },
     {
       "id": "dap-301",
       "text": "Learn something about another culture.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Learn something about another culture.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-302",
       "text": "Listen to music from a country you know little about.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Listen to music from a country you know little about.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-303",
       "text": "Learn how to say “thank you” in a new language.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Learn how to say “thank you” in a new language.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-304",
       "text": "Try food from a different culture.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Try food from a different culture.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-305",
       "text": "Read about a place you have never visited.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Read about a place you have never visited.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-306",
       "text": "Have a conversation with someone whose life experience differs from yours.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Have a conversation with someone whose life experience differs from yours.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-307",
       "text": "Ask someone about a tradition that matters to them.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Ask someone about a tradition that matters to them.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-308",
       "text": "Learn one fact that changes how you see another part of the world.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Learn one fact that changes how you see another part of the world.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-309",
       "text": "Follow a creator who teaches you something outside your usual perspective.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Follow a creator who teaches you something outside your usual perspective.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-310",
       "text": "Listen to a story from someone older or younger than you.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Listen to a story from someone older or younger than you.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-311",
       "text": "Learn about a community you know little about.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Learn about a community you know little about.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-312",
       "text": "Find something you have in common with someone different from you.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Find something you have in common with someone different from you.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-313",
       "text": "Ask before judging something you do not understand.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Ask before judging something you do not understand.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-314",
       "text": "Read an article from a country outside your own.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Read an article from a country outside your own.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-315",
       "text": "Listen to music in a language you do not speak.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Listen to music in a language you do not speak.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-316",
       "text": "Learn the history behind a place near you.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Learn the history behind a place near you.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-317",
       "text": "Ask someone where they feel most at home.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Ask someone where they feel most at home.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-318",
       "text": "Share something positive from your culture with someone.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Share something positive from your culture with someone.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-319",
       "text": "Celebrate a tradition that is not your own by learning about it respectfully.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Celebrate a tradition that is not your own by learning about it respectfully.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-320",
       "text": "Remember that everyone you meet has a story you do not know.",
+      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Remember that everyone you meet has a story you do not know.",
       "category": "beyond",
       "active": true
     },
     {
       "id": "dap-321",
       "text": "Volunteer your time for a cause.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Volunteer your time for a cause.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-322",
       "text": "Organize a small act of kindness with friends.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Organize a small act of kindness with friends.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-323",
       "text": "Donate something meaningful.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Donate something meaningful.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-324",
       "text": "Spend an afternoon helping someone.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Spend an afternoon helping someone.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-325",
       "text": "Clean up a public area.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Clean up a public area.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-326",
       "text": "Visit someone who may be lonely.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Visit someone who may be lonely.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-327",
       "text": "Help someone prepare for a job or interview.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Help someone prepare for a job or interview.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-328",
       "text": "Mentor someone younger than you.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Mentor someone younger than you.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-329",
       "text": "Support someone going through a difficult period.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Support someone going through a difficult period.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-330",
       "text": "Organize a small gathering that brings people together.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Organize a small gathering that brings people together.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-331",
       "text": "Help someone solve a problem they have been avoiding.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Help someone solve a problem they have been avoiding.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-332",
       "text": "Share a useful opportunity with multiple people.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Share a useful opportunity with multiple people.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-333",
       "text": "Donate your skills to a community project.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Donate your skills to a community project.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-334",
       "text": "Organize a collection of clothes, food, or books.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Organize a collection of clothes, food, or books.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-335",
       "text": "Help someone who cannot easily help themselves.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Help someone who cannot easily help themselves.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-336",
       "text": "Spend an hour doing something entirely for someone else.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Spend an hour doing something entirely for someone else.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-337",
       "text": "Support a friend’s dream in a practical way.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Support a friend’s dream in a practical way.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-338",
       "text": "Introduce people who could create something good together.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Introduce people who could create something good together.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-339",
       "text": "Start a conversation that brings understanding instead of division.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Start a conversation that brings understanding instead of division.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-340",
       "text": "Do one thing today that makes your community stronger.",
+      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Do one thing today that makes your community stronger.",
       "category": "bigger",
       "active": true
     },
     {
       "id": "dap-341",
       "text": "Sing a song with someone.",
+      "explanation": "Music has always been a language of togetherness. Today, try this: Sing a song with someone.",
       "category": "special-choir",
       "active": true,
       "nav": {
         "type": "practice",
-        "label": "Open Song Practice"
+        "label": "PRACTICE THE SONG"
       }
     },
     {
       "id": "dap-342",
       "text": "Teach someone a song you love.",
+      "explanation": "Music has always been a language of togetherness. Today, try this: Teach someone a song you love.",
       "category": "special-choir",
       "active": true
     },
     {
       "id": "dap-343",
       "text": "Ask someone what song reminds them of home.",
+      "explanation": "Music has always been a language of togetherness. Today, try this: Ask someone what song reminds them of home.",
       "category": "special-choir",
       "active": true
     },
     {
       "id": "dap-344",
       "text": "Share a song that helped you through a difficult time.",
+      "explanation": "Music has always been a language of togetherness. Today, try this: Share a song that helped you through a difficult time.",
       "category": "special-choir",
       "active": true
     },
     {
       "id": "dap-345",
       "text": "Listen to a song from another country.",
+      "explanation": "Music has always been a language of togetherness. Today, try this: Listen to a song from another country.",
       "category": "special-choir",
       "active": true
     },
     {
       "id": "dap-346",
       "text": "Sing for someone who needs a smile.",
+      "explanation": "Music has always been a language of togetherness. Today, try this: Sing for someone who needs a smile.",
       "category": "special-choir",
       "active": true
     },
     {
       "id": "dap-347",
       "text": "Make a playlist called “Peace.”",
+      "explanation": "Music has always been a language of togetherness. Today, try this: Make a playlist called “Peace.”.",
       "category": "special-choir",
       "active": true
     },
     {
       "id": "dap-348",
       "text": "Invite someone to sing with you.",
+      "explanation": "Music has always been a language of togetherness. Today, try this: Invite someone to sing with you.",
       "category": "special-choir",
       "active": true,
       "nav": {
         "type": "practice",
-        "label": "Open Song Practice"
+        "label": "PRACTICE THE SONG"
       }
     },
     {
       "id": "dap-349",
       "text": "Take one minute today to imagine the entire world singing together.",
+      "explanation": "Music has always been a language of togetherness. Today, try this: Take one minute today to imagine the entire world singing together.",
       "category": "special-choir",
       "active": true
     },
     {
       "id": "dap-350",
       "text": "Do one thing today that brings two people closer together.",
+      "explanation": "Music has always been a language of togetherness. Today, try this: Do one thing today that brings two people closer together.",
       "category": "special-choir",
       "active": true
     },
     {
       "id": "dap-351",
       "text": "Practice the song.",
+      "explanation": "Every voice matters. Take a moment today to prepare yours for the moment we sing together.",
       "category": "practice",
       "active": true,
       "nav": {
         "type": "practice",
-        "label": "Open Song Practice"
+        "label": "PRACTICE THE SONG"
       }
     },
     {
       "id": "dap-352",
       "text": "Sing the song without looking at the lyrics.",
+      "explanation": "Singing from memory deepens the song. Let the words live in you for a moment.",
       "category": "practice",
       "active": true,
       "nav": {
         "type": "practice",
-        "label": "Open Song Practice"
+        "label": "PRACTICE THE SONG"
       }
     },
     {
       "id": "dap-353",
       "text": "Learn the meaning behind one line of the song.",
+      "explanation": "Understanding a single line can change how the whole song feels when you sing it.",
       "category": "practice",
       "active": true,
       "nav": {
         "type": "practice",
-        "label": "Open Song Practice"
+        "label": "PRACTICE THE SONG"
       }
     },
     {
       "id": "dap-354",
       "text": "Sing the song with someone else.",
+      "explanation": "Harmony begins when two voices meet. Invite someone into the song with you.",
       "category": "practice",
       "active": true,
       "nav": {
         "type": "practice",
-        "label": "Open Song Practice"
+        "label": "PRACTICE THE SONG"
       }
     },
     {
       "id": "dap-355",
       "text": "Invite someone to practice the song with you.",
+      "explanation": "Sharing practice multiplies courage. Ask someone to prepare beside you.",
       "category": "practice",
       "active": true,
       "nav": {
         "type": "practice",
-        "label": "Open Song Practice"
+        "label": "PRACTICE THE SONG"
       }
     },
     {
       "id": "dap-356",
       "text": "Record yourself singing a small part of the song.",
+      "explanation": "Hearing your own voice can be surprisingly grounding. Capture a small moment of honesty.",
       "category": "practice",
       "active": true,
       "nav": {
         "type": "practice",
-        "label": "Open Song Practice"
+        "label": "PRACTICE THE SONG"
       }
     },
     {
       "id": "dap-357",
       "text": "Practice the song somewhere you feel completely free.",
+      "explanation": "Find a place where your voice feels free — even a quiet corner is enough.",
       "category": "practice",
       "active": true,
       "nav": {
         "type": "practice",
-        "label": "Open Song Practice"
+        "label": "PRACTICE THE SONG"
       }
     },
     {
       "id": "dap-358",
       "text": "Imagine where you will be when the world sings as one.",
+      "explanation": "Picture the day ahead. Imagine yourself among millions, singing as one.",
       "category": "practice",
       "active": true,
       "nav": {
         "type": "practice",
-        "label": "Open Song Practice"
+        "label": "PRACTICE THE SONG"
       }
     },
     {
       "id": "dap-359",
       "text": "Discover a Foundation created by someone you admire.",
+      "explanation": "Someone you admire may already be turning influence into care. Discover their Foundation.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-360",
       "text": "Read the story behind a Foundation.",
+      "explanation": "Behind every Foundation is a story. Take a few minutes to read one with an open heart.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-361",
       "text": "Learn about a cause you knew little about.",
+      "explanation": "Curiosity is peaceful. Learn about a cause you have never paused to understand.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-362",
       "text": "Explore a Foundation working to fight hunger.",
+      "explanation": "Hunger is a problem real people are working on. Explore Foundations fighting it today.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
         "cause": "Food & Hunger",
-        "label": "Explore Food & Hunger"
+        "label": "EXPLORE FOOD FOUNDATIONS"
       }
     },
     {
       "id": "dap-363",
       "text": "Discover a project helping improve access to healthcare.",
+      "explanation": "Healthcare access changes lives. Discover a project working to make care more reachable.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
         "cause": "Health",
-        "label": "Explore Health Foundations"
+        "label": "EXPLORE HEALTH FOUNDATIONS"
       }
     },
     {
       "id": "dap-364",
       "text": "Learn about a Foundation supporting education.",
+      "explanation": "Education unlocks possibility. Learn how a Foundation is supporting learning.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
         "cause": "Education",
-        "label": "Explore Education Foundations"
+        "label": "EXPLORE EDUCATION FOUNDATIONS"
       }
     },
     {
       "id": "dap-365",
       "text": "Read about a project working to protect the environment.",
+      "explanation": "Protecting the environment is protecting our shared home. Read about a project that cares for it.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
         "cause": "Environment",
-        "label": "Explore Environment Foundations"
+        "label": "EXPLORE ENVIRONMENT FOUNDATIONS"
       }
     },
     {
       "id": "dap-366",
       "text": "Explore a cause dedicated to helping children.",
+      "explanation": "Children deserve safety, care, and hope. Explore Foundations working where that need is real.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-367",
       "text": "Find a Foundation whose mission genuinely moves you.",
+      "explanation": "Let your values lead. Find a Foundation whose mission genuinely moves you.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-368",
       "text": "Read how one community is being helped through a Foundation.",
+      "explanation": "Impact becomes real when you see a community being helped. Read one story today.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-369",
       "text": "Discover one real problem a Foundation is working to solve.",
+      "explanation": "Every Foundation is answering a real problem. Discover one clearly and carefully.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-370",
       "text": "Learn how a small donation can create real change.",
+      "explanation": "Even small support can matter — first understand how change happens through a Foundation.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-371",
       "text": "Read an update from a Foundation you support.",
+      "explanation": "Stay close to the work. Read an update and notice what has changed.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-372",
       "text": "Discover a new creator who is using their influence to help others.",
+      "explanation": "Influence can become service. Discover a creator using their platform to help others.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-373",
       "text": "Find one project you would like to see succeed.",
+      "explanation": "Hope needs witnesses. Find one project you would love to see succeed.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-374",
       "text": "Spend time learning about a cause before deciding whether to support it.",
+      "explanation": "Wisdom before action. Learn about a cause before deciding whether to support it.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-375",
       "text": "Compare two causes and discover which one speaks to you most.",
+      "explanation": "Your heart knows what resonates. Compare two causes and notice which one speaks to you.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-376",
       "text": "Read about the people behind a project.",
+      "explanation": "Projects are people. Read about those carrying the work forward.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-377",
       "text": "Learn exactly how support is being used in one Foundation.",
+      "explanation": "Transparency builds trust. Learn exactly how support is being used in one Foundation.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-378",
       "text": "Discover a project outside the cause you usually care about.",
+      "explanation": "Stretch your compassion. Discover a project outside the cause you usually care about.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-379",
       "text": "Support a Foundation with your time, voice, skills, or donation.",
+      "explanation": "Support can mean time, voice, skills, or a gift — choose what feels right for you.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-380",
       "text": "Donate to an Influencer Foundation you genuinely believe in, if you can.",
+      "explanation": "If you can and want to, support a Foundation you genuinely believe in. Exploring first is enough.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-381",
       "text": "Share a Foundation's mission with someone who might care about it.",
+      "explanation": "Awareness is a form of care. Share a Foundation’s mission with someone who might care too.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-382",
       "text": "Follow the journey of one project you want to see succeed.",
+      "explanation": "Stay with one journey. Follow a project you want to see succeed.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-383",
       "text": "Choose one cause you would stand behind.",
+      "explanation": "Clarity creates commitment. Choose one cause you would stand behind.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-384",
       "text": "Make your first contribution to a cause that matters to you, if you can.",
+      "explanation": "If you are ready, make a first contribution to a cause that matters — only if it feels right.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-385",
       "text": "Support a project helping people in a part of the world you have never visited.",
+      "explanation": "Compassion has no borders. Support a project helping people somewhere new to you.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-386",
       "text": "Help spread awareness about a cause you believe deserves more attention.",
+      "explanation": "Some causes need more eyes. Help spread awareness about one you believe deserves attention.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-387",
       "text": "Return to a Foundation you previously discovered and see what has changed.",
+      "explanation": "Return with curiosity. See how a Foundation you discovered before has grown.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-388",
       "text": "Find out how many people are already supporting a project you care about.",
+      "explanation": "Community is already gathering. Learn how many people are supporting a project you care about.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-389",
       "text": "Read about the real-world impact created by a Foundation.",
+      "explanation": "Real impact deserves attention. Read about the change a Foundation has already created.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-390",
       "text": "Choose a cause and learn one practical way you could help beyond donating.",
+      "explanation": "Giving is only one path. Learn one practical way you could help beyond donating.",
       "category": "supporting-change",
       "active": true,
       "nav": {
         "type": "donate",
-        "label": "Explore Foundations"
+        "label": "DISCOVER FOUNDATIONS"
       }
     },
     {
       "id": "dap-391",
       "text": "Explore the map and see where voices are joining from today.",
+      "explanation": "The map is alive with voices. Explore where people are joining from today.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "map",
-        "label": "Open World Map"
+        "label": "EXPLORE THE MAP"
       }
     },
     {
       "id": "dap-392",
       "text": "Find a country where you would love to have a new World Choir friend.",
+      "explanation": "Friendship can begin with curiosity. Find a country where you would love a new choir friend.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "map",
-        "label": "Open World Map"
+        "label": "EXPLORE THE MAP"
       }
     },
     {
       "id": "dap-393",
       "text": "Discover how many voices have joined the world so far.",
+      "explanation": "Each voice is a person. Discover how many have already joined the world.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "map",
-        "label": "Open World Map"
+        "label": "EXPLORE THE MAP"
       }
     },
     {
       "id": "dap-394",
       "text": "Look at the map and find a part of the world farthest from you.",
+      "explanation": "Distance reminds us how large the choir can be. Find the farthest place from you on the map.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "map",
-        "label": "Open World Map"
+        "label": "EXPLORE THE MAP"
       }
     },
     {
       "id": "dap-395",
       "text": "Think about the fact that every Voice Number represents a real person.",
+      "explanation": "A Voice Number is not a statistic — it belongs to a real human being.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "profile",
-        "label": "View Your Profile"
+        "label": "VIEW YOUR PROFILE"
       }
     },
     {
       "id": "dap-396",
       "text": "Find three countries you hope will be represented in World Choir.",
+      "explanation": "Hold hope for the world. Find three countries you hope will be represented in World Choir.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "map",
-        "label": "Open World Map"
+        "label": "EXPLORE THE MAP"
       }
     },
     {
       "id": "dap-397",
       "text": "Explore the map and discover a country you know little about.",
+      "explanation": "Wonder is peaceful. Discover a country on the map you know little about.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "map",
-        "label": "Open World Map"
+        "label": "EXPLORE THE MAP"
       }
     },
     {
       "id": "dap-398",
       "text": "See how far World Choir has grown since you joined.",
+      "explanation": "Growth is a shared story. See how far World Choir has come since you joined.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "map",
-        "label": "Open World Map"
+        "label": "EXPLORE THE MAP"
       }
     },
     {
       "id": "dap-399",
       "text": "Share World Choir with one person who would understand its mission.",
+      "explanation": "Some missions are meant to be shared. Tell one person who would understand World Choir.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "invite",
-        "label": "Invite Someone to Sing"
+        "label": "SHARE WORLD CHOIR"
       }
     },
     {
       "id": "dap-400",
       "text": "Invite one person to add their voice to the world.",
+      "explanation": "One invitation can change everything. Invite someone to add their voice to the world.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "invite",
-        "label": "Invite Someone to Sing"
+        "label": "INVITE SOMEONE TO SING"
       }
     },
     {
       "id": "dap-401",
       "text": "Read why another person decided to join World Choir.",
+      "explanation": "Stories bring us closer. Read why another person decided to join World Choir.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "map",
-        "label": "Open World Map"
+        "label": "EXPLORE THE MAP"
       }
     },
     {
       "id": "dap-402",
       "text": "Take a moment to imagine thousands of voices preparing together.",
+      "explanation": "Pause and feel it: thousands of voices preparing to sing as one.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "map",
-        "label": "Open World Map"
+        "label": "EXPLORE THE MAP"
       }
     },
     {
       "id": "dap-403",
       "text": "Find your Voice Number and remember that nobody else in the world has it.",
+      "explanation": "Your Voice Number is uniquely yours. Hold that for a moment — nobody else in the world has it.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
         "type": "profile",
-        "label": "View Your Profile"
+        "label": "VIEW YOUR PROFILE"
       }
     }
   ]

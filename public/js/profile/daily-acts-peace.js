@@ -1,8 +1,12 @@
 /**
- * Daily Acts of Peace — one small act per day from the official 403-act catalog
+ * Daily Acts of Peace — personal daily ritual
+ * Banner entry point + full act screen (also opened from Profile)
  */
 const DailyActsPeace = (() => {
   let saving = false;
+  let state = null;
+  let bannerVisible = false;
+  let started = false;
 
   function escapeHtml(str) {
     const div = document.createElement('div');
@@ -10,23 +14,16 @@ const DailyActsPeace = (() => {
     return div.innerHTML;
   }
 
-  function ensureOverlay() {
-    if (document.getElementById('daily-peace-overlay')) return;
+  function localDateString() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
 
-    const html = `
-      <div class="overlay daily-peace-overlay" id="daily-peace-overlay" aria-hidden="true">
-        <div class="daily-peace-screen" role="dialog" aria-labelledby="daily-peace-title">
-          <div class="daily-peace-screen__inner" id="daily-peace-content">
-            <p class="daily-peace-loading" id="daily-peace-loading">Loading today’s act…</p>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', html);
-    document.getElementById('daily-peace-overlay')?.addEventListener('click', (e) => {
-      if (e.target.id === 'daily-peace-overlay') close();
-    });
+  function deviceId() {
+    return WorldChoirDB.getDeviceId();
   }
 
   async function apiFetch(path, options = {}) {
@@ -39,6 +36,120 @@ const DailyActsPeace = (() => {
     return data;
   }
 
+  async function fetchToday() {
+    await WorldChoirDB.ready();
+    const date = localDateString();
+    const data = await apiFetch(
+      `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&date=${encodeURIComponent(date)}`
+    );
+    state = data;
+    return data;
+  }
+
+  function ensureStylesheet() {
+    if (document.getElementById('daily-peace-css')) return;
+    const link = document.createElement('link');
+    link.id = 'daily-peace-css';
+    link.rel = 'stylesheet';
+    link.href = 'css/daily-peace.css?v=20260810e';
+    document.head.appendChild(link);
+  }
+
+  function ensureOverlay() {
+    if (document.getElementById('daily-peace-overlay')) return;
+
+    const html = `
+      <div class="overlay daily-peace-overlay" id="daily-peace-overlay" aria-hidden="true">
+        <div class="daily-peace-screen" role="dialog" aria-labelledby="daily-peace-title">
+          <div class="daily-peace-screen__inner" id="daily-peace-content">
+            <p class="daily-peace-loading">Loading today’s act…</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    document.getElementById('daily-peace-overlay')?.addEventListener('click', (e) => {
+      if (e.target.id === 'daily-peace-overlay') close();
+    });
+  }
+
+  function ensureBanner() {
+    if (document.getElementById('daily-peace-banner')) return;
+    const el = document.createElement('div');
+    el.id = 'daily-peace-banner';
+    el.className = 'daily-peace-banner';
+    el.setAttribute('aria-live', 'polite');
+    el.hidden = true;
+    el.innerHTML = `
+      <button type="button" class="daily-peace-banner__close" id="daily-peace-banner-close" aria-label="Dismiss today’s act notification">×</button>
+      <button type="button" class="daily-peace-banner__body" id="daily-peace-banner-open">
+        <span class="daily-peace-banner__label">TODAY'S ACT OF PEACE</span>
+        <span class="daily-peace-banner__title" id="daily-peace-banner-title"></span>
+      </button>
+    `;
+    document.body.prepend(el);
+
+    document.getElementById('daily-peace-banner-close')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dismissBanner();
+    });
+    document.getElementById('daily-peace-banner-open')?.addEventListener('click', () => {
+      open();
+    });
+  }
+
+  function setBannerVisible(visible) {
+    const banner = document.getElementById('daily-peace-banner');
+    if (!banner) return;
+    bannerVisible = !!visible;
+    if (visible) {
+      banner.hidden = false;
+      requestAnimationFrame(() => banner.classList.add('is-visible'));
+      document.body.classList.add('has-daily-peace-banner');
+    } else {
+      banner.classList.remove('is-visible');
+      document.body.classList.remove('has-daily-peace-banner');
+      window.setTimeout(() => {
+        if (!bannerVisible) banner.hidden = true;
+      }, 280);
+    }
+  }
+
+  function syncBannerFromState() {
+    const titleEl = document.getElementById('daily-peace-banner-title');
+    if (titleEl && state?.act?.text) {
+      titleEl.textContent = state.act.text;
+    }
+    const onboardingOpen = typeof WorldChoirOnboarding !== 'undefined'
+      && typeof WorldChoirOnboarding.isOpen === 'function'
+      && WorldChoirOnboarding.isOpen();
+    setBannerVisible(!!state?.showNotification && !onboardingOpen);
+  }
+
+  async function dismissBanner() {
+    setBannerVisible(false);
+    try {
+      const data = await apiFetch('/api/daily-peace', {
+        method: 'POST',
+        body: JSON.stringify({
+          deviceId: deviceId(),
+          date: localDateString(),
+          action: 'dismiss-notification',
+        }),
+      });
+      state = data;
+    } catch (err) {
+      console.warn('Could not dismiss daily act notification:', err);
+      // Keep dismissed locally for this session even if sync fails.
+      if (state) {
+        state.showNotification = false;
+        if (state.userDailyAct) state.userDailyAct.notificationDismissed = true;
+      }
+    }
+  }
+
   function renderNavButton(nav) {
     if (!nav?.type || !nav?.label) return '';
     return `
@@ -48,34 +159,73 @@ const DailyActsPeace = (() => {
     `;
   }
 
-  function renderContent({ act, userDailyAct }) {
-    const completed = !!userDailyAct?.completed;
+  function renderCompletedMoment() {
     return `
-      <h2 class="daily-peace-title" id="daily-peace-title">Daily Act of Peace</h2>
-      <p class="daily-peace-subtitle">One small action for today.</p>
-
-      <div class="daily-peace-card glass-card">
-        <p class="daily-peace-act">“${escapeHtml(act.text)}”</p>
+      <div class="daily-peace-complete-moment">
+        <p class="daily-peace-complete-moment__eyebrow">ACT OF PEACE COMPLETED</p>
+        <p class="daily-peace-complete-moment__heart" aria-hidden="true">🤍</p>
+        <p class="daily-peace-complete-moment__copy">One small action can create a bigger ripple.</p>
+        <button class="btn btn-secondary daily-peace-back" id="daily-peace-back" type="button">Continue</button>
       </div>
+    `;
+  }
+
+  function renderContent({ act, userDailyAct }, { justCompleted = false } = {}) {
+    if (justCompleted || userDailyAct?.completed) {
+      if (justCompleted) return renderCompletedMoment();
+      return `
+        <p class="daily-peace-kicker">TODAY'S ACT OF PEACE</p>
+        <h2 class="daily-peace-title" id="daily-peace-title">${escapeHtml(act.text)}</h2>
+        <p class="daily-peace-explain">${escapeHtml(act.explanation || 'A small opportunity to make the world around you better today.')}</p>
+        <div class="daily-peace-done-badge">Completed today</div>
+        <button class="btn btn-secondary daily-peace-back" id="daily-peace-back" type="button">Close</button>
+      `;
+    }
+
+    return `
+      <p class="daily-peace-kicker">TODAY'S ACT OF PEACE</p>
+      <h2 class="daily-peace-title" id="daily-peace-title">${escapeHtml(act.text)}</h2>
+      <p class="daily-peace-explain">${escapeHtml(act.explanation || 'A small opportunity to make the world around you better today.')}</p>
 
       ${renderNavButton(act.nav)}
 
-      <label class="daily-peace-check${completed ? ' daily-peace-check--done' : ''}">
-        <input type="checkbox" id="daily-peace-complete" ${completed ? 'checked disabled' : ''}>
-        <span class="daily-peace-check__box" aria-hidden="true"></span>
-        <span class="daily-peace-check__label">I did this today</span>
-      </label>
+      <button class="btn ${act.nav ? 'btn-secondary' : 'btn-primary'} daily-peace-complete-btn" id="daily-peace-complete-btn" type="button">
+        I COMPLETED THIS ACT
+      </button>
 
-      <button class="btn btn-secondary daily-peace-back" id="daily-peace-back" type="button">Back to Profile</button>
+      <button class="btn btn-ghost daily-peace-back" id="daily-peace-back" type="button">Not now</button>
     `;
   }
 
   function renderError(message) {
     return `
+      <p class="daily-peace-kicker">TODAY'S ACT OF PEACE</p>
       <h2 class="daily-peace-title" id="daily-peace-title">Daily Act of Peace</h2>
       <p class="daily-peace-error">${escapeHtml(message)}</p>
-      <button class="btn btn-secondary daily-peace-back" id="daily-peace-back" type="button">Back to Profile</button>
+      <button class="btn btn-secondary daily-peace-back" id="daily-peace-back" type="button">Close</button>
     `;
+  }
+
+  function shareInvite() {
+    const text =
+      "I'm joining World Choir 2027. On July 1, 2027 at 16:00 UTC, the world sings together. Add your voice.";
+    if (typeof InviteButton !== 'undefined' && typeof InviteButton.share === 'function') {
+      InviteButton.share();
+      return;
+    }
+    if (navigator.share) {
+      navigator.share({ text }).catch(() => {});
+      return;
+    }
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Invite message copied to clipboard.');
+      }).catch(() => {
+        prompt('Copy this message to invite someone:', text);
+      });
+      return;
+    }
+    prompt('Copy this message to invite someone:', text);
   }
 
   function handleNav(type, cause) {
@@ -83,7 +233,9 @@ const DailyActsPeace = (() => {
       close();
       if (typeof PracticeMode !== 'undefined') {
         PracticeMode.open({ onExit: () => {} });
+        return;
       }
+      window.location.href = 'profile.html?practice=1';
       return;
     }
 
@@ -102,46 +254,60 @@ const DailyActsPeace = (() => {
 
     if (type === 'invite') {
       close();
-      if (typeof InviteButton !== 'undefined' && typeof InviteButton.share === 'function') {
-        InviteButton.share();
-      }
+      shareInvite();
       return;
     }
 
     if (type === 'profile') {
       close();
-      document.getElementById('profile-identity-root')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (document.getElementById('profile-identity-root')) {
+        document.getElementById('profile-identity-root').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.location.href = 'profile.html';
+      }
     }
   }
 
-  function bindContentHandlers() {
+  function bindContentHandlers({ justCompleted = false } = {}) {
     document.getElementById('daily-peace-back')?.addEventListener('click', close);
-    document.getElementById('daily-peace-complete')?.addEventListener('change', onCompleteChange);
+    document.getElementById('daily-peace-complete-btn')?.addEventListener('click', onComplete);
     document.getElementById('daily-peace-nav')?.addEventListener('click', (e) => {
       const btn = e.currentTarget;
       handleNav(btn.getAttribute('data-nav-type'), btn.getAttribute('data-nav-cause') || '');
     });
+    if (justCompleted) {
+      // celebration already bound via back button
+    }
   }
 
-  async function onCompleteChange(e) {
-    if (saving || !e.target.checked) return;
+  async function onComplete() {
+    if (saving) return;
     saving = true;
+    const btn = document.getElementById('daily-peace-complete-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+    }
 
     try {
-      await apiFetch('/api/daily-peace', {
+      const data = await apiFetch('/api/daily-peace', {
         method: 'POST',
-        body: JSON.stringify({ deviceId: WorldChoirDB.getDeviceId() }),
+        body: JSON.stringify({
+          deviceId: deviceId(),
+          date: localDateString(),
+          action: 'complete',
+        }),
       });
-
-      const checkbox = document.getElementById('daily-peace-complete');
-      const label = checkbox?.closest('.daily-peace-check');
-      if (checkbox) {
-        checkbox.disabled = true;
-        checkbox.checked = true;
-      }
-      label?.classList.add('daily-peace-check--done');
+      state = data;
+      setBannerVisible(false);
+      const content = document.getElementById('daily-peace-content');
+      content.innerHTML = renderContent(data, { justCompleted: true });
+      bindContentHandlers({ justCompleted: true });
     } catch (err) {
-      e.target.checked = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'I COMPLETED THIS ACT';
+      }
       alert(err.message || 'Could not save completion. Please try again.');
     } finally {
       saving = false;
@@ -150,15 +316,13 @@ const DailyActsPeace = (() => {
 
   async function loadTodayAct() {
     const content = document.getElementById('daily-peace-content');
-    content.innerHTML = '<p class="daily-peace-loading" id="daily-peace-loading">Loading today’s act…</p>';
+    content.innerHTML = '<p class="daily-peace-loading">Loading today’s act…</p>';
 
     try {
-      await WorldChoirDB.ready();
-      const data = await apiFetch(
-        `/api/daily-peace?deviceId=${encodeURIComponent(WorldChoirDB.getDeviceId())}`
-      );
+      const data = await fetchToday();
       content.innerHTML = renderContent(data);
       bindContentHandlers();
+      syncBannerFromState();
     } catch (err) {
       content.innerHTML = renderError(err.message || 'Could not load today’s act. Please try again.');
       document.getElementById('daily-peace-back')?.addEventListener('click', close);
@@ -177,11 +341,53 @@ const DailyActsPeace = (() => {
     const overlay = document.getElementById('daily-peace-overlay');
     overlay?.classList.remove('active');
     overlay?.setAttribute('aria-hidden', 'true');
+    // Opening does not dismiss the banner — re-sync from state.
+    syncBannerFromState();
+  }
+
+  async function refreshBanner() {
+    try {
+      await fetchToday();
+      syncBannerFromState();
+    } catch (err) {
+      console.warn('Daily Act banner unavailable:', err);
+      setBannerVisible(false);
+    }
+  }
+
+  async function start() {
+    if (started) return;
+    started = true;
+    ensureStylesheet();
+    ensureBanner();
+    ensureOverlay();
+
+    try {
+      await WorldChoirDB.ready();
+      await refreshBanner();
+    } catch (err) {
+      console.warn('Daily Acts of Peace init skipped:', err);
+    }
   }
 
   function init() {
+    ensureStylesheet();
     ensureOverlay();
+    start();
   }
 
-  return { init, open, close };
+  return { init, open, close, start, refreshBanner };
 })();
+
+// Auto-start on main app pages once DOM + DB scripts are present.
+if (typeof document !== 'undefined') {
+  const boot = () => {
+    if (typeof WorldChoirDB === 'undefined') return;
+    DailyActsPeace.start();
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 0));
+  } else {
+    setTimeout(boot, 0);
+  }
+}
