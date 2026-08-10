@@ -220,7 +220,7 @@ const WorldChoirDonate = (() => {
         `}
       </div>
       ${searchOpen ? `
-        <div class="df-search-inline df-rise" role="search">
+        <div class="df-search-inline" role="search">
           <input
             class="df-search-inline__input"
             id="df-search-input"
@@ -368,13 +368,54 @@ const WorldChoirDonate = (() => {
 
   function renderFoundationsSection(items) {
     return `
-      <section class="df-foundations df-rise df-rise-delay-3" aria-labelledby="df-foundations-label">
+      <section class="df-foundations" aria-labelledby="df-foundations-label">
         <p class="df-section-label" id="df-foundations-label">Foundations</p>
         ${items.length
           ? `<ul class="df-fcards">${items.map(renderFoundationCard).join('')}</ul>`
           : renderEmptyResults()}
       </section>
     `;
+  }
+
+  function renderFoundationsMountHtml() {
+    const items = getFilteredFoundations();
+    const all = getAllFoundations();
+    if (!all.length && selectedCause === 'all' && !(searchOpen && searchQuery.trim())) {
+      return `
+        <section class="df-foundations">
+          <div class="df-empty">
+            <p class="df-empty__title">A carefully curated beginning</p>
+            <p class="df-empty__copy">
+              Verified Creator Foundations will appear here as the circle grows.
+              We only show real people and real missions.
+            </p>
+          </div>
+        </section>
+      `;
+    }
+    return renderFoundationsSection(items);
+  }
+
+  function bindFoundationCardEvents(scope) {
+    const root = scope || document;
+    root.querySelectorAll('[data-open-foundation]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const foundation = CreatorFoundationsStore.getById(btn.getAttribute('data-open-foundation'));
+        if (foundation) openProfile(foundation);
+      });
+    });
+    root.querySelector('#df-view-all')?.addEventListener('click', resetExplore);
+  }
+
+  /** Update results only — never remount the search input while typing. */
+  function updateFoundationsList() {
+    const mount = document.getElementById('df-foundations-mount');
+    if (!mount) {
+      renderHome({ focusSearch: searchOpen });
+      return;
+    }
+    mount.innerHTML = renderFoundationsMountHtml();
+    bindFoundationCardEvents(mount);
   }
 
   function renderHappeningNow() {
@@ -454,10 +495,9 @@ const WorldChoirDonate = (() => {
   function bindHomeEvents(opts = {}) {
     document.getElementById('df-search-open')?.addEventListener('click', openSearch);
     document.getElementById('df-search-close')?.addEventListener('click', closeSearch);
-    document.getElementById('df-view-all')?.addEventListener('click', resetExplore);
     document.getElementById('df-causes-more')?.addEventListener('click', () => {
       moreCausesOpen = !moreCausesOpen;
-      renderHome({ keepSearchFocus: searchOpen });
+      renderHome({ focusSearch: searchOpen });
     });
     document.getElementById('df-see-projects')?.addEventListener('click', () => {
       const el = document.getElementById('df-now-label');
@@ -468,14 +508,14 @@ const WorldChoirDonate = (() => {
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
         searchQuery = e.target.value || '';
-        renderHome({ keepSearchFocus: true, caret: e.target.selectionStart });
+        updateFoundationsList();
       });
-      if (opts.focusSearch || opts.keepSearchFocus) {
-        const caret = opts.caret != null ? opts.caret : searchInput.value.length;
+      if (opts.focusSearch) {
         requestAnimationFrame(() => {
           searchInput.focus();
+          const len = searchInput.value.length;
           try {
-            searchInput.setSelectionRange(caret, caret);
+            searchInput.setSelectionRange(len, len);
           } catch {
             /* ignore */
           }
@@ -487,28 +527,32 @@ const WorldChoirDonate = (() => {
       btn.addEventListener('click', () => {
         selectedCause = btn.getAttribute('data-cause') || 'all';
         moreCausesOpen = false;
-        renderHome({ keepSearchFocus: searchOpen });
+        // Keep the search field mounted; only refresh results + active styles.
+        document.querySelectorAll('[data-cause]').forEach((b) => {
+          const active = b.getAttribute('data-cause') === selectedCause;
+          b.classList.toggle('is-active', active);
+          b.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        updateFoundationsList();
       });
     });
 
     document.querySelectorAll('[data-explore]').forEach((btn) => {
       btn.addEventListener('click', () => {
         selectedExplore = btn.getAttribute('data-explore') || 'trending';
-        renderHome({ keepSearchFocus: searchOpen });
+        document.querySelectorAll('[data-explore]').forEach((b) => {
+          const active = b.getAttribute('data-explore') === selectedExplore;
+          b.classList.toggle('is-active', active);
+          b.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        updateFoundationsList();
       });
     });
 
-    document.querySelectorAll('[data-open-foundation]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const foundation = CreatorFoundationsStore.getById(btn.getAttribute('data-open-foundation'));
-        if (foundation) openProfile(foundation);
-      });
-    });
+    bindFoundationCardEvents(document.getElementById('df-foundations-mount') || document);
   }
 
   function renderHome(opts = {}) {
-    const items = getFilteredFoundations();
-    const all = getAllFoundations();
     const root = document.getElementById('donate-content');
     const demoBanner = CreatorFoundationsStore.usingDemoCatalog()
       ? `<p class="df-demo-banner" role="status">Development demo catalog — not production data.</p>`
@@ -519,19 +563,7 @@ const WorldChoirDonate = (() => {
       ${demoBanner}
       ${renderIntro()}
       ${renderDiscoveryChrome()}
-      ${!all.length && selectedCause === 'all' && !(searchOpen && searchQuery.trim())
-        ? `
-          <section class="df-foundations df-rise df-rise-delay-3">
-            <div class="df-empty">
-              <p class="df-empty__title">A carefully curated beginning</p>
-              <p class="df-empty__copy">
-                Verified Creator Foundations will appear here as the circle grows.
-                We only show real people and real missions.
-              </p>
-            </div>
-          </section>
-        `
-        : renderFoundationsSection(items)}
+      <div id="df-foundations-mount">${renderFoundationsMountHtml()}</div>
       ${renderHappeningNow()}
     `;
     bindHomeEvents(opts);
