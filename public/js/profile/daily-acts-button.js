@@ -8,8 +8,8 @@ const DailyActsButton = (() => {
         <button class="btn btn-daily-acts" id="daily-acts-btn" type="button">
           Daily Acts of Peace
         </button>
-        <button class="btn btn-how-choir" id="how-world-choir-works-btn" type="button">
-          How World Choir works
+        <button class="btn btn-daily-acts" id="how-world-choir-works-btn" type="button">
+          How World Choir Works
         </button>
       </div>
     `;

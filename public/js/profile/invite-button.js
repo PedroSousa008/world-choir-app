@@ -9,7 +9,7 @@ const InviteButton = (() => {
     return `
       <div class="invite-section profile-section" id="invite-section">
         <button class="btn btn-invite" id="invite-btn" type="button">
-          Invite someone to sing
+          Invite Someone to Sing
         </button>
       </div>
     `;
