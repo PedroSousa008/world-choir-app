@@ -928,14 +928,31 @@ const OwnerControl = (() => {
         ? `<p class="owner-empty">No Creator Foundations yet. Create the first profile to publish it to Donate.</p>`
         : state.foundationView === 'curated'
           ? `<div class="owner-foundation-grid">
-              ${list.map((f) => `
+              ${list.map((f) => {
+                const avatar = f.profileImage || '';
+                const glyph = String(f.foundation || f.creator || '?')
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((w) => w[0])
+                  .join('')
+                  .toUpperCase();
+                return `
                 <button type="button" class="owner-foundation-card" data-foundation-id="${esc(f.id)}">
-                  <h3>${esc(f.foundation || f.creator)} <span class="owner-badge ${f.status === 'active' ? 'is-on' : ''}">${esc(f.status)}</span></h3>
-                  <p class="owner-muted">${esc(f.creator)}${f.country ? ` · ${esc(f.country)}` : ''}</p>
-                  <p class="owner-muted" style="margin-top:8px">Login: ${esc(f.email || '—')}</p>
-                  <p class="owner-muted" style="margin-top:10px">${esc(money(f.totalRaised, currency))} raised · ${esc(num(f.uniqueDonors))} donors · ${esc(num(f.activeProjects))} projects</p>
+                  <span class="owner-foundation-card__body">
+                    <h3>${esc(f.foundation || f.creator)} <span class="owner-badge ${f.status === 'active' ? 'is-on' : ''}">${esc(f.status)}</span></h3>
+                    <p class="owner-muted">${esc(f.creator)}${f.country ? ` · ${esc(f.country)}` : ''}</p>
+                    <p class="owner-muted" style="margin-top:8px">Login: ${esc(f.email || '—')}</p>
+                    <p class="owner-muted" style="margin-top:10px">${esc(money(f.totalRaised, currency))} raised · ${esc(num(f.uniqueDonors))} donors · ${esc(num(f.activeProjects))} projects</p>
+                  </span>
+                  <span class="owner-foundation-card__media ${avatar ? 'has-image' : ''}" aria-hidden="true">
+                    ${avatar
+                      ? `<img src="${esc(avatar)}" alt="">`
+                      : `<span class="owner-foundation-card__glyph">${esc(glyph || '?')}</span>`}
+                  </span>
                 </button>
-              `).join('')}
+              `;
+              }).join('')}
             </div>`
           : `<div class="owner-table-wrap"><table class="owner-table">
               <thead><tr>

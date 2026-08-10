@@ -487,6 +487,8 @@ async function buildOwnerControlCenter() {
       howItWorks: f.howItWorks || '',
       primaryCategory: f.primaryCategory || '',
       categories: f.categories || [],
+      profileImage: f.profileImage || '',
+      coverImage: f.coverImage || '',
       status: f.active === false ? 'paused' : (f.published ? 'active' : 'draft'),
       active: f.active !== false,
       published: f.published === true,
