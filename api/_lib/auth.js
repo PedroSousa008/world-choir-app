@@ -128,7 +128,11 @@ function setOwnerSessionCookie(res) {
     iat: Date.now(),
     exp: Date.now() + SESSION_TTL_MS,
   });
-  res.setHeader('Set-Cookie', buildSessionCookie(SESSION_COOKIE, token, Math.floor(SESSION_TTL_MS / 1000)));
+  const maxAge = Math.floor(SESSION_TTL_MS / 1000);
+  res.setHeader('Set-Cookie', [
+    buildSessionCookie(SESSION_COOKIE, token, maxAge),
+    buildSessionCookie(MEMBERS_SESSION_COOKIE, token, maxAge),
+  ]);
 }
 
 function setMembersSessionCookie(res, payload) {
@@ -137,14 +141,25 @@ function setMembersSessionCookie(res, payload) {
     iat: Date.now(),
     exp: Date.now() + SESSION_TTL_MS,
   });
+  const maxAge = Math.floor(SESSION_TTL_MS / 1000);
+  if (payload.role === 'owner') {
+    res.setHeader('Set-Cookie', [
+      buildSessionCookie(SESSION_COOKIE, token, maxAge),
+      buildSessionCookie(MEMBERS_SESSION_COOKIE, token, maxAge),
+    ]);
+    return;
+  }
   res.setHeader(
     'Set-Cookie',
-    buildSessionCookie(MEMBERS_SESSION_COOKIE, token, Math.floor(SESSION_TTL_MS / 1000))
+    buildSessionCookie(MEMBERS_SESSION_COOKIE, token, maxAge)
   );
 }
 
 function clearOwnerSessionCookie(res) {
-  res.setHeader('Set-Cookie', buildSessionCookie(SESSION_COOKIE, '', 0));
+  res.setHeader('Set-Cookie', [
+    buildSessionCookie(SESSION_COOKIE, '', 0),
+    buildSessionCookie(MEMBERS_SESSION_COOKIE, '', 0),
+  ]);
 }
 
 function clearMembersSessionCookie(res) {

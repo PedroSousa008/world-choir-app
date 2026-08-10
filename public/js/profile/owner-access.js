@@ -102,7 +102,7 @@ const OwnerAccess = (() => {
       }
 
       close();
-      window.location.href = '/owner-database';
+      window.location.href = '/owner';
     } catch (err) {
       console.error(err);
       showError('Could not sign in. Please try again.');
