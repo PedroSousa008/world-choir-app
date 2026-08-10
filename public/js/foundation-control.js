@@ -405,6 +405,7 @@ const FoundationControl = (() => {
   function renderOverview() {
     const d = state.data;
     const o = d.overview || {};
+    const f = d.foundation || {};
     const today = d.today || {};
     const growth = d.growth || {};
     const series = (growth.series && growth.series[state.growthMetric]) || [];
@@ -412,18 +413,27 @@ const FoundationControl = (() => {
       state.activityFilter === 'all' || a.type === state.activityFilter
     );
     const cmp = growth.comparison || {};
+    const status = String(f.verificationStatus || 'unverified').replace(/_/g, ' ');
 
     return `
       <section class="fcc-section">
-        <div class="fcc-hero">
+        <p class="fcc-kicker">Foundation Control Center</p>
+        <h2 class="fcc-foundation-name">${esc(f.name || 'Your Foundation')}</h2>
+        <p class="fcc-foundation-byline">
+          Founded by ${esc(f.creatorName || '—')}
+          ${f.country ? ` · ${esc(f.country)}` : ''}
+          <span class="fcc-status">${esc(status)}</span>
+        </p>
+
+        <div class="fcc-hero" style="margin-top:28px">
           <button type="button" class="fcc-hero__primary" data-nav="donations">
             <span class="fcc-hero__value">${esc(money(o.totalRaised || 0, currency()))}</span>
-            <span class="fcc-hero__label">Raised · all time</span>
+            <span class="fcc-hero__label">Total raised</span>
           </button>
           <div class="fcc-hero__secondary">
             ${metricBtn(num(o.totalSupporters || 0), 'Supporters', 'community')}
             ${metricBtn(num(o.countriesReached || 0), 'Countries', 'donations')}
-            ${metricBtn(num(o.citiesReached || 0), 'Cities', 'community')}
+            ${metricBtn(num(o.citiesReached || 0), 'Cities', 'donations')}
             ${metricBtn(num(o.activeProjects || 0), 'Active projects', 'projects')}
           </div>
         </div>
