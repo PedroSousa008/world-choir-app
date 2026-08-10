@@ -1116,6 +1116,62 @@
   line-height: 1.5;
 }
 
+.fcc-upload__box {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.fcc-upload__preview {
+  min-height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.fcc-upload__preview img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+}
+
+.fcc-upload__placeholder {
+  color: #6b6f7d;
+  font-size: 0.85rem;
+}
+
+.fcc-upload__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.fcc-upload__pick {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.fcc-upload__pick input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.fcc-upload__hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #6b6f7d;
+}
+
 .fcc-form-actions {
   display: flex;
   flex-wrap: wrap;

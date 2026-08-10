@@ -617,25 +617,45 @@ const FoundationControl = (() => {
     `;
   }
 
+  function renderImageUpload(field, label, value, disabled) {
+    const has = !!value;
+    return `
+      <div class="fcc-field fcc-upload" data-image-field="${esc(field)}">
+        <label>${esc(label)}</label>
+        <input type="hidden" name="${esc(field)}" value="${esc(value || '')}">
+        <div class="fcc-upload__box ${has ? 'has-image' : ''}">
+          <div class="fcc-upload__preview" aria-hidden="${has ? 'false' : 'true'}">
+            ${has ? `<img src="${esc(value)}" alt="">` : '<span class="fcc-upload__placeholder">No image yet</span>'}
+          </div>
+          <div class="fcc-upload__actions">
+            ${disabled ? '' : `
+              <label class="fcc-btn fcc-upload__pick">
+                ${has ? 'Replace from device' : 'Choose from device'}
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden data-image-input="${esc(field)}">
+              </label>
+              ${has ? `<button type="button" class="fcc-btn-ghost" data-action="clear-image" data-field="${esc(field)}">Remove</button>` : ''}
+            `}
+          </div>
+          <p class="fcc-upload__hint">JPG, PNG, WebP or GIF · max 2.5 MB</p>
+        </div>
+      </div>
+    `;
+  }
+
   function renderFoundationCardFields(form) {
+    const locked = !can('editFoundation');
     return `
       <form class="fcc-form wide" id="fcc-foundation-form" data-part="card">
         <div class="fcc-field">
           <label for="ff-card-mission">Short mission (card)</label>
-          <textarea id="ff-card-mission" name="cardShortMission" ${can('editFoundation') ? '' : 'readonly'}>${esc(form.cardShortMission)}</textarea>
+          <textarea id="ff-card-mission" name="cardShortMission" ${locked ? 'readonly' : ''}>${esc(form.cardShortMission)}</textarea>
         </div>
         <div class="fcc-field">
           <label for="ff-short">Short description</label>
-          <textarea id="ff-short" name="shortDescription" ${can('editFoundation') ? '' : 'readonly'}>${esc(form.shortDescription)}</textarea>
+          <textarea id="ff-short" name="shortDescription" ${locked ? 'readonly' : ''}>${esc(form.shortDescription)}</textarea>
         </div>
-        <div class="fcc-field">
-          <label for="ff-profile">Profile image URL</label>
-          <input id="ff-profile" name="profileImage" value="${esc(form.profileImage)}" ${can('editFoundation') ? '' : 'readonly'}>
-        </div>
-        <div class="fcc-field">
-          <label for="ff-cover">Cover image URL</label>
-          <input id="ff-cover" name="coverImage" value="${esc(form.coverImage)}" ${can('editFoundation') ? '' : 'readonly'}>
-        </div>
+        ${renderImageUpload('profileImage', 'Profile image', form.profileImage, locked)}
+        ${renderImageUpload('coverImage', 'Cover image', form.coverImage, locked)}
       </form>
     `;
   }
@@ -696,6 +716,65 @@ const FoundationControl = (() => {
         </div>
       </div>
     `;
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Could not read that image'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadImageFromDevice(field, file) {
+    if (!file) return;
+    if (!String(file.type || '').startsWith('image/')) {
+      setFlash('Please choose an image file.', 'err');
+      render();
+      return;
+    }
+    if (file.size > 2.5 * 1024 * 1024) {
+      setFlash('Image must be under 2.5 MB.', 'err');
+      render();
+      return;
+    }
+
+    readFoundationFormIntoState();
+    if (!state.foundationForm) syncFoundationForm();
+
+    const kind = field === 'coverImage' ? 'cover' : 'profile';
+    state.busy = true;
+    state.error = null;
+    setFlash(`Uploading ${kind} image…`);
+    render();
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const data = await api('upload-image', {
+        method: 'POST',
+        body: { dataUrl, kind },
+      });
+      state.foundationForm[field] = data.url;
+      state.foundationDirty = true;
+      setFlash(`${kind === 'cover' ? 'Cover' : 'Profile'} image added — save to publish.`);
+    } catch (err) {
+      setFlash(err.message || 'Upload failed', 'err');
+    } finally {
+      state.busy = false;
+      render();
+    }
+  }
+
+  function bindImageUploads() {
+    root().querySelectorAll('[data-image-input]').forEach((input) => {
+      input.addEventListener('change', async () => {
+        const field = input.getAttribute('data-image-input');
+        const file = input.files && input.files[0];
+        input.value = '';
+        await uploadImageFromDevice(field, file);
+      });
+    });
   }
 
   function readFoundationFormIntoState() {
@@ -1532,6 +1611,7 @@ const FoundationControl = (() => {
   }
 
   function bindApp() {
+    bindImageUploads();
     root().querySelectorAll('[data-nav]').forEach((btn) => {
       btn.addEventListener('click', () => go(btn.getAttribute('data-nav')));
     });
@@ -1743,6 +1823,16 @@ const FoundationControl = (() => {
     if (action === 'close-map') {
       state.mapOpen = false;
       destroyMap();
+      render();
+      return;
+    }
+    if (action === 'clear-image') {
+      const field = t.getAttribute('data-field');
+      readFoundationFormIntoState();
+      if (state.foundationForm && field) {
+        state.foundationForm[field] = '';
+        state.foundationDirty = true;
+      }
       render();
       return;
     }

@@ -52,6 +52,20 @@ async function writeJson(pathname, data, { overwrite = true } = {}) {
   });
 }
 
+/**
+ * Public media upload (foundation images). Returns the public CDN URL.
+ */
+async function putPublicBinary(pathname, body, contentType, { overwrite = true } = {}) {
+  assertBlobConfigured();
+  const result = await put(pathname, body, {
+    access: 'public',
+    addRandomSuffix: false,
+    allowOverwrite: overwrite,
+    contentType,
+  });
+  return result.url;
+}
+
 const OWNER_AUTH_PATH = `${ROOT}/admin/owner-auth.json`;
 
 async function getOwnerAuthData() {
@@ -442,5 +456,6 @@ module.exports = {
   saveOwnerEmail,
   readBlobJson,
   writeJson,
+  putPublicBinary,
   assertBlobConfigured,
 };

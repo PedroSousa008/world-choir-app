@@ -15,6 +15,8 @@ const {
   changeInfluencerEmail,
   publicInfluencer,
 } = require('./_lib/members-store');
+const { putPublicBinary, assertBlobConfigured } = require('./_lib/store');
+const { randomUUID } = require('crypto');
 const {
   buildFoundationControlCenter,
   searchFoundationControlCenter,
@@ -156,6 +158,39 @@ module.exports = async function handler(req, res) {
       const influencer = await findInfluencerById(session.influencerId);
       if (!influencer) return res.status(404).json({ error: 'Profile not found' });
       return res.status(200).json({ influencer: publicInfluencer(influencer) });
+    }
+
+    if (action === 'upload-image' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (!can(session, 'editFoundation')) {
+        return res.status(403).json({ error: 'Your role cannot upload Foundation media' });
+      }
+
+      const { dataUrl, kind } = req.body || {};
+      const field = kind === 'cover' ? 'cover' : (kind === 'project' ? 'project' : 'profile');
+      if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+        return res.status(400).json({ error: 'Choose an image from your device' });
+      }
+
+      const match = /^data:(image\/(jpeg|jpg|png|webp|gif));base64,(.+)$/i.exec(dataUrl);
+      if (!match) {
+        return res.status(400).json({ error: 'Use a JPG, PNG, WebP, or GIF image' });
+      }
+
+      const contentType = match[1].toLowerCase().replace('image/jpg', 'image/jpeg');
+      const ext = contentType.split('/')[1] === 'jpeg' ? 'jpg' : contentType.split('/')[1];
+      const buffer = Buffer.from(match[3], 'base64');
+      const maxBytes = 2.5 * 1024 * 1024;
+      if (buffer.length > maxBytes) {
+        return res.status(400).json({ error: 'Image must be under 2.5 MB' });
+      }
+
+      assertBlobConfigured();
+      const pathname = `wc-data/members/media/${session.influencerId}/${field}-${randomUUID()}.${ext}`;
+      const url = await putPublicBinary(pathname, buffer, contentType, { overwrite: true });
+
+      return res.status(200).json({ ok: true, url, kind: field });
     }
 
     if (action === 'influencer-update-profile' && req.method === 'POST') {
