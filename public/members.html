@@ -6,25 +6,29 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#000000">
   <meta name="description" content="World Choir Influencer login for Creator Foundations.">
-  <title>World Choir — Influencer Login</title>
+  <title>World Choir — Foundation Control Center</title>
   <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
   <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20270706">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/map.css?v=20270707g">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20270809a">
-  <link rel="stylesheet" href="css/members.css?v=20270810f">
+  <link rel="stylesheet" href="css/foundation-control.css?v=20270810g">
 </head>
-<body>
+<body class="fcc-body">
   <div class="ambient-bg"></div>
 
-  <main class="page members-page" id="members-page">
+  <main class="page" id="members-page">
     <div id="members-root" aria-live="polite">
-      <p class="members-loading">Loading…</p>
+      <p class="fcc-boot">Loading…</p>
     </div>
   </main>
 
-  <script src="js/members.js?v=20270810f"></script>
-  <script>WorldChoirMembers.init();</script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/owner-map.js?v=20270810f"></script>
+  <script src="js/foundation-control.js?v=20270810g"></script>
+  <script>FoundationControl.init();</script>
 </body>
 </html>

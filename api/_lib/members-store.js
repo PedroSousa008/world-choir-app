@@ -50,11 +50,19 @@ function publicInfluencer(row) {
     biography: row.biography || '',
     whyStarted: row.whyStarted || '',
     howItWorks: row.howItWorks || '',
+    shortDescription: row.shortDescription || '',
+    story: row.story || '',
+    website: row.website || '',
+    socialLinks: row.socialLinks && typeof row.socialLinks === 'object' ? row.socialLinks : {},
+    profileImage: row.profileImage || '',
+    coverImage: row.coverImage || '',
+    cardShortMission: row.cardShortMission || '',
     country: row.country || '',
     primaryCategory: row.primaryCategory || '',
     categories: row.categories || [],
     active: row.active !== false,
     published: row.published === true,
+    verificationStatus: row.verificationStatus || 'unverified',
     createdAt: row.createdAt || null,
     updatedAt: row.updatedAt || null,
   };
@@ -155,6 +163,12 @@ async function updateInfluencer(id, updates = {}, { allowEmailChange = false } =
     'biography',
     'whyStarted',
     'howItWorks',
+    'shortDescription',
+    'story',
+    'website',
+    'profileImage',
+    'coverImage',
+    'cardShortMission',
     'country',
     'primaryCategory',
   ];
@@ -164,6 +178,16 @@ async function updateInfluencer(id, updates = {}, { allowEmailChange = false } =
       next[field] = String(updates[field] || '').trim();
     }
   });
+
+  if (updates.socialLinks !== undefined && typeof updates.socialLinks === 'object') {
+    const links = {};
+    Object.entries(updates.socialLinks).forEach(([k, v]) => {
+      const key = String(k).trim().slice(0, 40);
+      const val = String(v || '').trim().slice(0, 300);
+      if (key && val) links[key] = val;
+    });
+    next.socialLinks = links;
+  }
 
   if (updates.categories !== undefined) {
     next.categories = Array.isArray(updates.categories)
@@ -324,7 +348,7 @@ function slugify(text) {
   return slug || 'foundation';
 }
 
-function influencerToFoundation(row) {
+function influencerToFoundation(row, projects = []) {
   const displayName = String(row.displayName || '').trim();
   const foundationName = String(row.foundationName || '').trim()
     || (displayName ? `${displayName}'s Foundation` : 'Creator Foundation');
@@ -332,14 +356,28 @@ function influencerToFoundation(row) {
     ? row.categories.map((c) => String(c).trim()).filter(Boolean)
     : [];
   const primaryCategory = String(row.primaryCategory || '').trim() || categories[0] || '';
+  const publicProjects = (projects || [])
+    .filter((p) => p && p.status === 'active')
+    .map((p) => ({
+      id: p.id,
+      title: p.title || '',
+      description: p.shortDescription || p.description || '',
+      country: p.country || '',
+      location: p.location || '',
+      category: p.category || '',
+      coverImage: p.coverImage || '',
+      status: 'active',
+      goal: p.fundingGoal,
+      raised: p.fundingRaised || 0,
+    }));
 
   return {
     id: row.id,
     slug: slugify(foundationName),
     creatorName: displayName,
     foundationName,
-    mission: String(row.mission || '').trim(),
-    biography: String(row.biography || '').trim(),
+    mission: String(row.mission || row.cardShortMission || '').trim(),
+    biography: String(row.biography || row.story || '').trim(),
     whyStarted: String(row.whyStarted || '').trim(),
     howItWorks: String(row.howItWorks || '').trim(),
     coreValues: [],
@@ -349,13 +387,13 @@ function influencerToFoundation(row) {
       ? [primaryCategory, ...categories]
       : categories,
     primaryCategory,
-    profileImage: '',
-    coverImage: '',
-    verificationStatus: 'unverified',
+    profileImage: String(row.profileImage || '').trim(),
+    coverImage: String(row.coverImage || '').trim(),
+    verificationStatus: row.verificationStatus || 'unverified',
     verificationNotes: '',
     foundedDate: row.createdAt || null,
-    website: '',
-    socialLinks: {},
+    website: String(row.website || '').trim(),
+    socialLinks: row.socialLinks && typeof row.socialLinks === 'object' ? row.socialLinks : {},
     impactMetrics: [],
     legalOrganization: null,
     financialAllocation: [
@@ -369,7 +407,7 @@ function influencerToFoundation(row) {
     active: row.active !== false,
     donationsEnabled: true,
     sortOrder: 100,
-    projects: [],
+    projects: publicProjects,
   };
 }
 
@@ -398,9 +436,19 @@ async function getPublicCreatorFoundationsCatalog() {
     (row) => row.active !== false && row.published === true
   );
 
-  const foundations = influencers
-    .map(influencerToFoundation)
-    .sort((a, b) => String(b.foundedDate || '').localeCompare(String(a.foundedDate || '')));
+  const foundations = await Promise.all(
+    influencers.map(async (row) => {
+      try {
+        const { readWorkspace, publicProject } = require('./foundation-workspace');
+        const ws = await readWorkspace(row.id);
+        const projects = (ws.projects || []).map(publicProject);
+        return influencerToFoundation(row, projects);
+      } catch {
+        return influencerToFoundation(row, []);
+      }
+    })
+  );
+  foundations.sort((a, b) => String(b.foundedDate || '').localeCompare(String(a.foundedDate || '')));
 
   const foundationIds = new Set(foundations.map((f) => f.id));
   const ledger = await readDonationsLedger();
@@ -441,4 +489,5 @@ module.exports = {
   getOperationsOverview,
   getPublicCreatorFoundationsCatalog,
   publicInfluencer,
+  readDonationsLedger,
 };

@@ -15,6 +15,41 @@ const {
   changeInfluencerEmail,
   publicInfluencer,
 } = require('./_lib/members-store');
+const {
+  buildFoundationControlCenter,
+  searchFoundationControlCenter,
+} = require('./_lib/foundation-intel');
+const {
+  upsertProject,
+  setProjectStatus,
+  upsertUpdate,
+  upsertTeamMember,
+  removeTeamMember,
+  markNotificationRead,
+  markAllNotificationsRead,
+  saveDrafts,
+  appendActivity,
+  rolePermissions,
+} = require('./_lib/foundation-workspace');
+
+function requireFoundationSession(req, res) {
+  const session = requireMembersSession(req, res);
+  if (!session) return null;
+  if (session.role !== 'influencer' || !session.influencerId) {
+    res.status(403).json({ error: 'Foundation access only' });
+    return null;
+  }
+  return session;
+}
+
+function actorLabel(session) {
+  return session.teamRole ? `Team · ${session.teamRole}` : 'Foundation Owner';
+}
+
+function can(session, permission) {
+  const role = session.teamRole || 'owner';
+  return !!rolePermissions(role)[permission];
+}
 
 module.exports = async function handler(req, res) {
   corsHeaders(res);
@@ -27,7 +62,6 @@ module.exports = async function handler(req, res) {
 
   try {
     if (action === 'login' && req.method === 'POST') {
-      // /members is Influencer-only. Owner Control Center is /owner.
       const { email, password } = req.body || {};
       const normalizedEmail = String(email || '').trim().toLowerCase();
 
@@ -71,7 +105,6 @@ module.exports = async function handler(req, res) {
       const session = getMembersSessionFromRequest(req);
       if (!session) return res.status(401).json({ authenticated: false });
 
-      // Legacy Owner cookies on /members are cleared — Owner uses /owner only.
       if (session.role === 'owner') {
         clearMembersSessionCookie(res);
         return res.status(401).json({
@@ -93,46 +126,43 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    if (action === 'overview' && req.method === 'GET') {
-      return res.status(410).json({ error: 'Owner overview moved to /owner (Control Center).' });
+    /* ─── Foundation Control Center (scoped) ─── */
+
+    if (action === 'control-center' && req.method === 'GET') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      const range = String(req.query.range || 'all');
+      const role = session.teamRole || 'owner';
+      const data = await buildFoundationControlCenter(session.influencerId, { range, role });
+      if (!data.ok) return res.status(404).json({ error: data.error || 'Not found' });
+      return res.status(200).json(data);
     }
 
-    if (action === 'create-influencer' && req.method === 'POST') {
-      return res.status(410).json({
-        error: 'Create Influencer Foundations from Owner Control Center (/owner).',
+    if (action === 'search' && req.method === 'GET') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      const data = await buildFoundationControlCenter(session.influencerId, {
+        range: 'all',
+        role: session.teamRole || 'owner',
       });
-    }
-
-    if (action === 'update-influencer' && req.method === 'POST') {
-      return res.status(410).json({
-        error: 'Owner influencer management moved to /owner (Control Center).',
-      });
-    }
-
-    if (action === 'owner-change-password' && req.method === 'POST') {
-      return res.status(410).json({ error: 'Owner account settings are at /owner.' });
-    }
-
-    if (action === 'owner-change-email' && req.method === 'POST') {
-      return res.status(410).json({ error: 'Owner account settings are at /owner.' });
+      if (!data.ok) return res.status(404).json({ error: data.error || 'Not found' });
+      const results = searchFoundationControlCenter(data, req.query.q || '');
+      return res.status(200).json({ query: req.query.q || '', results });
     }
 
     if (action === 'influencer-profile' && req.method === 'GET') {
-      const session = requireMembersSession(req, res);
+      const session = requireFoundationSession(req, res);
       if (!session) return;
-      if (session.role !== 'influencer') {
-        return res.status(403).json({ error: 'Influencer access only' });
-      }
       const influencer = await findInfluencerById(session.influencerId);
       if (!influencer) return res.status(404).json({ error: 'Profile not found' });
       return res.status(200).json({ influencer: publicInfluencer(influencer) });
     }
 
     if (action === 'influencer-update-profile' && req.method === 'POST') {
-      const session = requireMembersSession(req, res);
+      const session = requireFoundationSession(req, res);
       if (!session) return;
-      if (session.role !== 'influencer') {
-        return res.status(403).json({ error: 'Influencer access only' });
+      if (!can(session, 'editFoundation')) {
+        return res.status(403).json({ error: 'Your role cannot edit Foundation content' });
       }
 
       const allowed = {
@@ -142,36 +172,149 @@ module.exports = async function handler(req, res) {
         biography: req.body?.biography,
         whyStarted: req.body?.whyStarted,
         howItWorks: req.body?.howItWorks,
+        shortDescription: req.body?.shortDescription,
+        story: req.body?.story,
+        website: req.body?.website,
+        profileImage: req.body?.profileImage,
+        coverImage: req.body?.coverImage,
+        cardShortMission: req.body?.cardShortMission,
         country: req.body?.country,
         primaryCategory: req.body?.primaryCategory,
         categories: req.body?.categories,
+        socialLinks: req.body?.socialLinks,
       };
 
       const result = await updateInfluencer(session.influencerId, allowed);
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      await appendActivity(session.influencerId, {
+        action: 'foundation_updated',
+        label: 'Foundation profile updated',
+        detail: result.influencer.foundationName || result.influencer.displayName,
+        actor: actorLabel(session),
+        relatedType: 'foundation',
+        relatedId: session.influencerId,
+      });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'save-drafts' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (!can(session, 'editFoundation')) {
+        return res.status(403).json({ error: 'Your role cannot edit drafts' });
+      }
+      const result = await saveDrafts(session.influencerId, req.body || {});
+      return res.status(200).json(result);
+    }
+
+    if (action === 'project-upsert' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (!can(session, 'createProjects')) {
+        return res.status(403).json({ error: 'Your role cannot manage projects' });
+      }
+      const result = await upsertProject(session.influencerId, req.body || {}, actorLabel(session));
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'project-status' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (!can(session, 'createProjects')) {
+        return res.status(403).json({ error: 'Your role cannot manage projects' });
+      }
+      const { id, status } = req.body || {};
+      if (!id || !status) return res.status(400).json({ error: 'Project id and status required' });
+      const result = await setProjectStatus(session.influencerId, id, status, actorLabel(session));
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'update-upsert' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (!can(session, 'publishUpdates')) {
+        return res.status(403).json({ error: 'Your role cannot manage updates' });
+      }
+      const result = await upsertUpdate(session.influencerId, req.body || {}, actorLabel(session));
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'team-upsert' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (!can(session, 'manageTeam')) {
+        return res.status(403).json({ error: 'Your role cannot manage the team' });
+      }
+      const result = await upsertTeamMember(session.influencerId, req.body || {}, actorLabel(session));
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'team-remove' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (!can(session, 'manageTeam')) {
+        return res.status(403).json({ error: 'Your role cannot manage the team' });
+      }
+      const result = await removeTeamMember(session.influencerId, req.body?.id, actorLabel(session));
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'notifications-read' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (req.body?.all) {
+        await markAllNotificationsRead(session.influencerId);
+        return res.status(200).json({ ok: true });
+      }
+      const result = await markNotificationRead(session.influencerId, req.body?.id);
       if (!result.ok) return res.status(400).json({ error: result.error });
       return res.status(200).json(result);
     }
 
     if (action === 'influencer-change-password' && req.method === 'POST') {
-      const session = requireMembersSession(req, res);
+      const session = requireFoundationSession(req, res);
       if (!session) return;
-      if (session.role !== 'influencer') {
-        return res.status(403).json({ error: 'Influencer access only' });
+      if (session.teamRole) {
+        return res.status(403).json({ error: 'Team members cannot change the Foundation owner password' });
       }
       const result = await changeInfluencerPassword(session.influencerId, req.body || {});
       if (!result.ok) return res.status(400).json({ error: result.error });
+      await appendActivity(session.influencerId, {
+        action: 'security_password',
+        label: 'Password changed',
+        actor: actorLabel(session),
+      });
       return res.status(200).json({ ok: true });
     }
 
     if (action === 'influencer-change-email' && req.method === 'POST') {
-      const session = requireMembersSession(req, res);
+      const session = requireFoundationSession(req, res);
       if (!session) return;
-      if (session.role !== 'influencer') {
-        return res.status(403).json({ error: 'Influencer access only' });
+      if (session.teamRole) {
+        return res.status(403).json({ error: 'Team members cannot change the Foundation owner email' });
       }
       const result = await changeInfluencerEmail(session.influencerId, req.body || {});
       if (!result.ok) return res.status(400).json({ error: result.error });
+      await appendActivity(session.influencerId, {
+        action: 'security_email',
+        label: 'Email changed',
+        detail: result.email,
+        actor: actorLabel(session),
+      });
       return res.status(200).json(result);
+    }
+
+    // Legacy owner routes — moved to /owner
+    if ([
+      'overview', 'create-influencer', 'update-influencer',
+      'owner-change-password', 'owner-change-email',
+    ].includes(action)) {
+      return res.status(410).json({ error: 'Owner tools moved to /owner (Control Center).' });
     }
 
     return res.status(404).json({ error: 'Unknown members action' });
