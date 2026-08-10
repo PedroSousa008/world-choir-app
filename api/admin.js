@@ -15,6 +15,7 @@ const {
   buildOwnerControlCenter,
   searchOwnerControlCenter,
 } = require('./_lib/owner-intel');
+const { buildDailyPeaceOwnerIntel } = require('./_lib/daily-peace');
 const {
   listInfluencers,
   createInfluencer,
@@ -68,6 +69,13 @@ module.exports = async function handler(req, res) {
       res.setHeader('Cache-Control', 'no-store');
       if (!requireOwner(req, res)) return;
       const data = await buildOwnerControlCenter();
+      return res.status(200).json(data);
+    }
+
+    if (action === 'daily-peace' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await buildDailyPeaceOwnerIntel();
       return res.status(200).json(data);
     }
 

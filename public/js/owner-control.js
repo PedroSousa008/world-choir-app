@@ -14,6 +14,7 @@ const OwnerControl = (() => {
     { id: 'donations', label: 'Donations' },
     { id: 'foundations', label: 'Creator Foundations' },
     { id: 'event', label: 'Event' },
+    { id: 'daily-acts', label: 'Daily Acts' },
     { id: 'growth', label: 'Growth' },
     { id: 'applications', label: 'Applications' },
     { id: 'operations', label: 'Operations' },
@@ -41,6 +42,13 @@ const OwnerControl = (() => {
     foundationDetail: null,
     cityDetail: null,
     countryDetail: null,
+    dailyPeace: null,
+    dailyPeaceView: 'users',
+    dailyPeaceUserId: null,
+    dailyPeaceQuery: '',
+    dailyPeaceFilter: 'all',
+    dailyPeaceBusy: false,
+    dailyPeaceError: null,
     mapFilters: {
       mode: 'voices',
       country: '',
@@ -1125,6 +1133,231 @@ const OwnerControl = (() => {
     `;
   }
 
+  async function ensureDailyPeaceLoaded() {
+    if (state.dailyPeace || state.dailyPeaceBusy) return;
+    state.dailyPeaceBusy = true;
+    state.dailyPeaceError = null;
+    try {
+      state.dailyPeace = await api('daily-peace');
+    } catch (err) {
+      state.dailyPeaceError = err.message || 'Could not load Daily Acts data.';
+      state.dailyPeace = { totals: {}, users: [], acts: [] };
+    } finally {
+      state.dailyPeaceBusy = false;
+    }
+  }
+
+  function renderDailyActs() {
+    if (!state.dailyPeace && !state.dailyPeaceError) {
+      if (!state.dailyPeaceBusy) {
+        ensureDailyPeaceLoaded().then(() => render());
+      }
+      return `
+        <section class="owner-section">
+          <p class="owner-section__label">Daily Acts</p>
+          <p class="owner-muted">Loading real Daily Acts engagement…</p>
+        </section>
+      `;
+    }
+
+    const data = state.dailyPeace || { totals: {}, users: [], acts: [] };
+    const totals = data.totals || {};
+    const q = String(state.dailyPeaceQuery || '').trim().toLowerCase();
+    const filter = state.dailyPeaceFilter || 'all';
+
+    if (state.dailyPeaceUserId) {
+      const user = (data.users || []).find((u) => u.userId === state.dailyPeaceUserId);
+      if (!user) {
+        return `
+          <section class="owner-section">
+            <button type="button" class="owner-btn-ghost" data-dap-back>← Back to users</button>
+            <p class="owner-empty" style="margin-top:16px">User not found in Daily Acts data.</p>
+          </section>
+        `;
+      }
+      let history = user.history || [];
+      if (q) {
+        history = history.filter((h) =>
+          `${h.actText || ''} ${h.category || ''} ${h.reflection || ''} ${h.assignmentDate || ''}`.toLowerCase().includes(q)
+        );
+      }
+      if (filter === 'completed') history = history.filter((h) => h.status === 'completed');
+      if (filter === 'still_open') history = history.filter((h) => h.status === 'still_open');
+      if (filter === 'on_time') history = history.filter((h) => h.completedOnAssignedDay);
+      if (filter === 'later') history = history.filter((h) => h.status === 'completed' && !h.completedOnAssignedDay);
+      if (filter === 'has_reflection') history = history.filter((h) => !!h.reflection);
+      if (filter === 'no_reflection') history = history.filter((h) => h.status === 'completed' && !h.reflection);
+
+      return `
+        <section class="owner-section">
+          <button type="button" class="owner-btn-ghost" data-dap-back>← Back to users</button>
+          <p class="owner-section__label" style="margin-top:16px">User Daily Act Summary</p>
+          <h2 class="owner-h1" style="font-size:1.25rem;margin-bottom:6px">${esc(user.voiceName || user.userId)}</h2>
+          <p class="owner-muted">${esc(user.city || '—')}${user.country ? `, ${esc(user.country)}` : ''} · Voice #${esc(user.voiceNumber ?? '—')} · ${esc(user.userId)}</p>
+          <div class="owner-groups" style="margin-top:16px">
+            <div class="owner-group">${metricBtn(user.totalCompleted, 'Completed', 'daily-acts')}</div>
+            <div class="owner-group">${metricBtn(user.onTimeCompleted, 'On time', 'daily-acts')}</div>
+            <div class="owner-group">${metricBtn(user.completedLater, 'Completed later', 'daily-acts')}</div>
+            <div class="owner-group">${metricBtn(user.currentStreak, 'Current streak', 'daily-acts')}</div>
+            <div class="owner-group">${metricBtn(user.longestStreak, 'Longest streak', 'daily-acts')}</div>
+            <div class="owner-group">${metricBtn(user.reflections, 'Reflections', 'daily-acts')}</div>
+          </div>
+        </section>
+        <section class="owner-section">
+          <p class="owner-section__label">Daily Act History</p>
+          <input class="owner-input" type="search" placeholder="Search acts, categories, reflections…" value="${esc(state.dailyPeaceQuery)}" data-dap-query style="margin-bottom:12px">
+          <div class="owner-chips" style="margin-bottom:14px">
+            ${[
+              ['all', 'All'],
+              ['completed', 'Completed'],
+              ['still_open', 'Still Open'],
+              ['on_time', 'On assigned day'],
+              ['later', 'Completed later'],
+              ['has_reflection', 'Has reflection'],
+              ['no_reflection', 'No reflection'],
+            ].map(([id, label]) => `
+              <button type="button" class="owner-chip ${filter === id ? 'is-active' : ''}" data-dap-filter="${id}">${esc(label)}</button>
+            `).join('')}
+          </div>
+          <div class="owner-table-wrap">
+            <table class="owner-table">
+              <thead>
+                <tr>
+                  <th>Assignment</th>
+                  <th>Act</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Completed</th>
+                  <th>On day</th>
+                  <th>Reflection</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${history.length ? history.map((h) => `
+                  <tr>
+                    <td>${esc(h.assignmentDate || '—')}</td>
+                    <td>${esc(h.actText || h.actId)}</td>
+                    <td>${esc(h.category || '—')}</td>
+                    <td>${esc(h.status === 'completed' ? 'Completed' : 'Still Open')}</td>
+                    <td>${esc(h.completedAt ? when(h.completedAt) : '—')}</td>
+                    <td>${h.status === 'completed' ? (h.completedOnAssignedDay ? 'Yes' : 'No') : '—'}</td>
+                    <td>${h.reflection ? `<button type="button" class="owner-btn-ghost" data-dap-reflection="${esc(h.reflection)}">${esc(h.reflection.slice(0, 48))}${h.reflection.length > 48 ? '…' : ''}</button>` : '—'}</td>
+                  </tr>
+                `).join('') : `<tr><td colspan="7">No matching history.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    if (state.dailyPeaceView === 'acts') {
+      let acts = data.acts || [];
+      if (q) {
+        acts = acts.filter((a) => `${a.text || ''} ${a.category || ''} ${a.actId || ''}`.toLowerCase().includes(q));
+      }
+      return `
+        <section class="owner-section">
+          <p class="owner-section__label">Daily Acts</p>
+          <h2 class="owner-h1" style="font-size:1.35rem;margin-bottom:8px">Act performance</h2>
+          <p class="owner-sub">Real assignment and completion counts from stored Daily Acts records.</p>
+          <div class="owner-chips" style="margin:14px 0">
+            <button type="button" class="owner-chip" data-dap-view="users">Users</button>
+            <button type="button" class="owner-chip is-active" data-dap-view="acts">Act performance</button>
+          </div>
+          <input class="owner-input" type="search" placeholder="Search acts…" value="${esc(state.dailyPeaceQuery)}" data-dap-query style="margin-bottom:12px">
+          <div class="owner-table-wrap">
+            <table class="owner-table">
+              <thead>
+                <tr>
+                  <th>Act</th>
+                  <th>Category</th>
+                  <th>Assigned</th>
+                  <th>Completed</th>
+                  <th>Rate</th>
+                  <th>On time</th>
+                  <th>Later</th>
+                  <th>Reflections</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${acts.length ? acts.map((a) => `
+                  <tr>
+                    <td>${esc(a.text || a.actId)}</td>
+                    <td>${esc(a.category || '—')}</td>
+                    <td>${esc(num(a.assigned))}</td>
+                    <td>${esc(num(a.completed))}</td>
+                    <td>${esc(num(a.completionRate))}%</td>
+                    <td>${esc(num(a.onTime))}</td>
+                    <td>${esc(num(a.later))}</td>
+                    <td>${esc(num(a.reflections))}</td>
+                  </tr>
+                `).join('') : `<tr><td colspan="8">No act performance data yet.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    let users = data.users || [];
+    if (q) {
+      users = users.filter((u) =>
+        `${u.voiceName || ''} ${u.userId || ''} ${u.city || ''} ${u.country || ''} ${u.voiceNumber ?? ''}`.toLowerCase().includes(q)
+      );
+    }
+
+    return `
+      <section class="owner-section">
+        <p class="owner-section__label">Daily Acts</p>
+        <h2 class="owner-h1" style="font-size:1.35rem;margin-bottom:8px">Daily Acts engagement</h2>
+        <p class="owner-sub">Real user participation in Daily Acts of Peace. Reflections remain private to the owner view.</p>
+        ${state.dailyPeaceError ? `<p class="owner-empty">${esc(state.dailyPeaceError)}</p>` : ''}
+        <div class="owner-groups" style="margin-top:16px">
+          <div class="owner-group">${metricBtn(totals.usersEngaged, 'Users engaged', 'daily-acts')}</div>
+          <div class="owner-group">${metricBtn(totals.totalCompletions, 'Completions', 'daily-acts')}</div>
+          <div class="owner-group">${metricBtn(totals.onTimeCompletions, 'On-time', 'daily-acts')}</div>
+          <div class="owner-group">${metricBtn(totals.reflections, 'Reflections', 'daily-acts')}</div>
+          <div class="owner-group">${metricBtn(totals.stillOpen, 'Still open', 'daily-acts')}</div>
+        </div>
+        <div class="owner-chips" style="margin:18px 0 12px">
+          <button type="button" class="owner-chip is-active" data-dap-view="users">Users</button>
+          <button type="button" class="owner-chip" data-dap-view="acts">Act performance</button>
+          <button type="button" class="owner-chip" data-dap-refresh>Refresh</button>
+        </div>
+        <input class="owner-input" type="search" placeholder="Search users…" value="${esc(state.dailyPeaceQuery)}" data-dap-query style="margin-bottom:12px">
+        <div class="owner-table-wrap">
+          <table class="owner-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Identifier</th>
+                <th>Completed</th>
+                <th>On time</th>
+                <th>Streak</th>
+                <th>Last completed</th>
+                <th>Reflections</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${users.length ? users.map((u) => `
+                <tr class="owner-row-click" data-dap-user="${esc(u.userId)}" style="cursor:pointer">
+                  <td>${esc(u.voiceName || '—')}</td>
+                  <td>${esc(u.userId)}</td>
+                  <td>${esc(num(u.totalCompleted))}</td>
+                  <td>${esc(num(u.onTimeCompleted))}</td>
+                  <td>${esc(num(u.currentStreak))}</td>
+                  <td>${esc(u.lastCompletedAt ? when(u.lastCompletedAt) : '—')}</td>
+                  <td>${esc(num(u.reflections))}</td>
+                </tr>
+              `).join('') : `<tr><td colspan="7">No Daily Acts engagement recorded yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+  }
+
   function renderApplications() {
     const a = state.data.applications;
     return `
@@ -1325,6 +1558,7 @@ const OwnerControl = (() => {
       case 'donations': return renderDonations();
       case 'foundations': return renderFoundations();
       case 'event': return renderEvent();
+      case 'daily-acts': return renderDailyActs();
       case 'growth': return renderGrowth();
       case 'applications': return renderApplications();
       case 'operations': return renderOperations();
@@ -1364,6 +1598,59 @@ const OwnerControl = (() => {
       btn.addEventListener('click', () => {
         state.growthMetric = btn.getAttribute('data-growth-metric');
         render();
+      });
+    });
+    root().querySelectorAll('[data-dap-view]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.dailyPeaceView = btn.getAttribute('data-dap-view');
+        state.dailyPeaceUserId = null;
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-user]').forEach((row) => {
+      row.addEventListener('click', () => {
+        state.dailyPeaceUserId = row.getAttribute('data-dap-user');
+        state.dailyPeaceQuery = '';
+        state.dailyPeaceFilter = 'all';
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-back]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.dailyPeaceUserId = null;
+        state.dailyPeaceQuery = '';
+        state.dailyPeaceFilter = 'all';
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-filter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.dailyPeaceFilter = btn.getAttribute('data-dap-filter');
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-query]').forEach((input) => {
+      input.addEventListener('input', () => {
+        state.dailyPeaceQuery = input.value || '';
+        render();
+        const el = root().querySelector('[data-dap-query]');
+        if (el) {
+          el.focus();
+          const len = el.value.length;
+          el.setSelectionRange(len, len);
+        }
+      });
+    });
+    root().querySelectorAll('[data-dap-refresh]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        state.dailyPeace = null;
+        await ensureDailyPeaceLoaded();
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-reflection]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        alert(btn.getAttribute('data-dap-reflection') || '');
       });
     });
     root().querySelectorAll('[data-foundation-view]').forEach((btn) => {

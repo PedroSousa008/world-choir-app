@@ -2,6 +2,7 @@
   "buildCommand": "echo 'Static site - no build needed'",
   "outputDirectory": "public",
   "rewrites": [
+    { "source": "/daily-acts", "destination": "/daily-acts.html" },
     { "source": "/map", "destination": "/map.html" },
     { "source": "/donate", "destination": "/donate.html" },
     { "source": "/memory", "destination": "/memory.html" },

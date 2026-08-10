@@ -222,7 +222,8 @@ const WorldChoirHome = (() => {
     document.getElementById('pledge-btn')?.addEventListener('click', () => WorldChoirParticipation.open());
     document.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
     document.getElementById('daily-peace-btn')?.addEventListener('click', () => {
-      if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.open();
+      if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.open({ tab: 'today' });
+      else window.location.href = 'daily-acts.html?tab=today';
     });
     document.getElementById('share-btn')?.addEventListener('click', shareCountdown);
   }

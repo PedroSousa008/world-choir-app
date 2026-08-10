@@ -4,6 +4,7 @@ const { readBlobJson, writeJson, findUserByDevice, assertBlobConfigured } = requ
 
 const ROOT = 'wc-data/daily-peace';
 const RECENT_ACT_LIMIT = 90;
+const HISTORY_LIST_LIMIT = 400;
 
 let catalogCache = null;
 
@@ -18,11 +19,17 @@ function getUtcDateString(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
-/** Accept YYYY-MM-DD client local dates within a safe window of UTC. */
+function parseDateStrict(input) {
+  const raw = String(input || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  return raw;
+}
+
+/** Accept YYYY-MM-DD client local dates within a safe window of UTC (for "today"). */
 function resolveDate(input) {
   const fallback = getUtcDateString();
-  const raw = String(input || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return fallback;
+  const raw = parseDateStrict(input);
+  if (!raw) return fallback;
 
   const utcToday = new Date(`${fallback}T12:00:00.000Z`).getTime();
   const chosen = new Date(`${raw}T12:00:00.000Z`).getTime();
@@ -58,31 +65,33 @@ async function readUserDailyAct(userId, date) {
   }
 }
 
-async function listRecentUserActIds(userId, beforeDate, limit = RECENT_ACT_LIMIT) {
+async function listUserAssignmentRows(userId, { limit = HISTORY_LIST_LIMIT } = {}) {
   const { list } = require('@vercel/blob');
   assertBlobConfigured();
   const prefix = userHistoryPrefix(userId);
-  const { blobs } = await list({ prefix, limit: 200 });
+  const { blobs } = await list({ prefix, limit });
   const entries = await Promise.all(
     blobs
       .filter((b) => b.pathname.endsWith('.json'))
       .map(async (blob) => {
-        const date = blob.pathname.split('/').pop().replace('.json', '');
-        if (date >= beforeDate) return null;
         try {
-          const row = await readBlobJson(blob.pathname);
-          return { date, actId: row.act_id };
+          return await readBlobJson(blob.pathname);
         } catch {
           return null;
         }
       })
   );
-
   return entries
     .filter(Boolean)
-    .sort((a, b) => b.date.localeCompare(a.date))
+    .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+}
+
+async function listRecentUserActIds(userId, beforeDate, limit = RECENT_ACT_LIMIT) {
+  const rows = await listUserAssignmentRows(userId);
+  return rows
+    .filter((row) => row.date && row.date < beforeDate)
     .slice(0, limit)
-    .map((entry) => entry.actId);
+    .map((row) => row.act_id);
 }
 
 function pickActForUser(userId, date, recentActIds) {
@@ -91,10 +100,8 @@ function pickActForUser(userId, date, recentActIds) {
   let pool = acts.filter((act) => !recent.has(act.id));
   if (!pool.length) pool = acts;
 
-  // Deterministic per user+day, but different users land on different acts.
   const seed = hashString(`${userId}:${date}:peace-v3`);
-  const index = seed % pool.length;
-  return pool[index];
+  return pool[seed % pool.length];
 }
 
 function mapAct(act) {
@@ -104,6 +111,7 @@ function mapAct(act) {
     text: act.text,
     explanation: act.explanation || null,
     category: act.category || null,
+    reflectionPrompt: act.reflectionPrompt || 'What would you like to remember about this act?',
   };
   if (act.nav && typeof act.nav === 'object') {
     mapped.nav = {
@@ -115,24 +123,60 @@ function mapAct(act) {
   return mapped;
 }
 
-function mapUserDailyAct(row, act) {
-  const completed = !!row.completed;
-  const notificationDismissed = !!row.notification_dismissed;
+function normalizeRow(row) {
+  return {
+    ...row,
+    completed: !!row.completed,
+    completed_at: row.completed_at || null,
+    completed_on_assigned_day: !!row.completed_on_assigned_day,
+    completion_source: row.completion_source || null,
+    notification_dismissed: !!row.notification_dismissed,
+    notification_dismissed_at: row.notification_dismissed_at || null,
+    viewed: !!row.viewed,
+    viewed_at: row.viewed_at || null,
+    reflection: typeof row.reflection === 'string' && row.reflection.trim() ? row.reflection.trim() : null,
+    reflection_at: row.reflection_at || null,
+    interactions: row.interactions && typeof row.interactions === 'object' ? row.interactions : {},
+  };
+}
+
+function mapUserDailyAct(row, act, { todayDate = null } = {}) {
+  const n = normalizeRow(row);
+  const completed = n.completed;
+  const notificationDismissed = n.notification_dismissed;
+  const isToday = todayDate ? n.date === todayDate : true;
   return {
     userDailyAct: {
-      id: row.id,
-      userId: row.user_id,
-      actId: row.act_id,
-      date: row.date,
+      id: n.id,
+      userId: n.user_id,
+      actId: n.act_id,
+      date: n.date,
       completed,
-      completedAt: row.completed_at || null,
-      assignedAt: row.assigned_at,
+      completedAt: n.completed_at,
+      completedOnAssignedDay: n.completed_on_assigned_day,
+      completionSource: n.completion_source,
+      assignedAt: n.assigned_at,
       notificationDismissed,
-      notificationDismissedAt: row.notification_dismissed_at || null,
+      notificationDismissedAt: n.notification_dismissed_at,
+      viewed: n.viewed,
+      viewedAt: n.viewed_at,
+      reflection: n.reflection,
+      reflectionAt: n.reflection_at,
+      interactions: n.interactions,
     },
     act: mapAct(act),
-    showNotification: !completed && !notificationDismissed,
+    showNotification: isToday && !completed && !notificationDismissed,
   };
+}
+
+function localDateFromIso(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 async function assignFreshDailyAct(user, date, actsById, recentExtraIds = []) {
@@ -150,9 +194,16 @@ async function assignFreshDailyAct(user, date, actsById, recentExtraIds = []) {
     date,
     completed: false,
     completed_at: null,
+    completed_on_assigned_day: false,
+    completion_source: null,
     assigned_at: now,
     notification_dismissed: false,
     notification_dismissed_at: null,
+    viewed: false,
+    viewed_at: null,
+    reflection: null,
+    reflection_at: null,
+    interactions: {},
   };
 
   try {
@@ -161,12 +212,12 @@ async function assignFreshDailyAct(user, date, actsById, recentExtraIds = []) {
     const raced = await readUserDailyAct(user.id, date);
     if (raced) {
       const racedAct = actsById.get(raced.act_id);
-      if (racedAct) return mapUserDailyAct(raced, racedAct);
+      if (racedAct) return mapUserDailyAct(raced, racedAct, { todayDate: date });
     }
     throw new Error('Could not assign daily act. Please try again.');
   }
 
-  return mapUserDailyAct(row, chosen);
+  return mapUserDailyAct(row, chosen, { todayDate: date });
 }
 
 async function getOrAssignDailyAct(deviceId, dateInput) {
@@ -183,53 +234,192 @@ async function getOrAssignDailyAct(deviceId, dateInput) {
     if (!act) {
       return assignFreshDailyAct(user, date, actsById, [existing.act_id]);
     }
-    // Backfill notification fields for older assignment rows.
-    if (typeof existing.notification_dismissed !== 'boolean') {
-      const patched = {
-        ...existing,
-        notification_dismissed: false,
-        notification_dismissed_at: null,
-      };
+    const patched = normalizeRow({
+      ...existing,
+      notification_dismissed: typeof existing.notification_dismissed === 'boolean'
+        ? existing.notification_dismissed
+        : false,
+    });
+    if (JSON.stringify(patched) !== JSON.stringify(normalizeRow(existing))) {
       await writeJson(userDailyActPath(user.id, date), patched, { overwrite: true });
-      return mapUserDailyAct(patched, act);
     }
-    return mapUserDailyAct(existing, act);
+    return mapUserDailyAct(patched, act, { todayDate: date });
   }
 
   return assignFreshDailyAct(user, date, actsById);
 }
 
-async function completeDailyAct(deviceId, dateInput) {
+function computeStreaks(onTimeDates) {
+  const set = new Set(onTimeDates);
+  const sorted = [...set].sort();
+  let longest = 0;
+  let run = 0;
+  let prev = null;
+  for (const day of sorted) {
+    if (prev) {
+      const prevT = new Date(`${prev}T12:00:00`).getTime();
+      const curT = new Date(`${day}T12:00:00`).getTime();
+      if (curT - prevT === 86400000) run += 1;
+      else run = 1;
+    } else {
+      run = 1;
+    }
+    longest = Math.max(longest, run);
+    prev = day;
+  }
+
+  // Current streak: walk back from today / yesterday
+  const today = getUtcDateString(); // approximate; caller should pass local today via onTime set
+  let current = 0;
+  // Find latest on-time day and walk backwards
+  if (sorted.length) {
+    let cursor = sorted[sorted.length - 1];
+    // If latest isn't today or yesterday relative to max in set, still count consecutive ending at latest
+    while (set.has(cursor)) {
+      current += 1;
+      const t = new Date(`${cursor}T12:00:00`);
+      t.setDate(t.getDate() - 1);
+      cursor = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    }
+  }
+
+  return { currentStreak: current, longestStreak: longest, _todayHint: today };
+}
+
+function computeCurrentStreakFromToday(onTimeDates, todayDate) {
+  const set = new Set(onTimeDates);
+  let current = 0;
+  let cursor = todayDate;
+  // If today not completed on time, start from yesterday
+  if (!set.has(todayDate)) {
+    const t = new Date(`${todayDate}T12:00:00`);
+    t.setDate(t.getDate() - 1);
+    cursor = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  }
+  while (set.has(cursor)) {
+    current += 1;
+    const t = new Date(`${cursor}T12:00:00`);
+    t.setDate(t.getDate() - 1);
+    cursor = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  }
+  return current;
+}
+
+async function getImpact(deviceId, todayInput) {
   assertBlobConfigured();
-  const date = resolveDate(dateInput);
+  const todayDate = resolveDate(todayInput);
   const user = await findUserByDevice(deviceId);
   if (!user) throw new Error('user not found');
 
-  const row = await readUserDailyAct(user.id, date);
-  if (!row) throw new Error('no daily act assigned for today');
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const rows = await listUserAssignmentRows(user.id);
+
+  const completed = [];
+  const stillOpen = [];
+  const onTimeDates = [];
+  const categories = new Set();
+
+  for (const raw of rows) {
+    const row = normalizeRow(raw);
+    const act = actsById.get(row.act_id);
+    if (!act) continue;
+
+    const mapped = mapUserDailyAct(row, act, { todayDate });
+    if (row.completed) {
+      completed.push(mapped);
+      if (row.completed_on_assigned_day) onTimeDates.push(row.date);
+      if (act.category) categories.add(act.category);
+    } else if (row.date < todayDate) {
+      stillOpen.push(mapped);
+    }
+  }
+
+  const { longestStreak } = computeStreaks(onTimeDates);
+  const currentStreak = computeCurrentStreakFromToday(onTimeDates, todayDate);
+  const last = completed[0] || null;
+
+  return {
+    summary: {
+      totalCompleted: completed.length,
+      onTimeCompleted: onTimeDates.length,
+      currentStreak,
+      longestStreak,
+      categoriesExperienced: categories.size,
+      lastCompletedAt: last?.userDailyAct?.completedAt || null,
+      lastActText: last?.act?.text || null,
+      stillOpenCount: stillOpen.length,
+    },
+    completed,
+    stillOpen,
+  };
+}
+
+async function getCalendarMonth(deviceId, monthInput, todayInput) {
+  assertBlobConfigured();
+  const todayDate = resolveDate(todayInput);
+  const month = String(monthInput || todayDate.slice(0, 7));
+  if (!/^\d{4}-\d{2}$/.test(month)) throw new Error('invalid month');
+
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const rows = await listUserAssignmentRows(user.id);
+  const days = {};
+
+  for (const raw of rows) {
+    const row = normalizeRow(raw);
+    if (!row.date || !row.date.startsWith(month)) continue;
+    if (!row.completed || !row.completed_on_assigned_day) continue;
+    const act = actsById.get(row.act_id);
+    days[row.date] = mapUserDailyAct(row, act, { todayDate });
+  }
+
+  return { month, days, todayDate };
+}
+
+async function completeAssignment(deviceId, assignmentDateInput, todayInput, { sourceHint = null } = {}) {
+  assertBlobConfigured();
+  const todayDate = resolveDate(todayInput);
+  const assignmentDate = parseDateStrict(assignmentDateInput) || todayDate;
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const row = await readUserDailyAct(user.id, assignmentDate);
+  if (!row) throw new Error('no daily act assigned for that day');
 
   const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
   const act = actsById.get(row.act_id);
-
-  if (!act) {
-    await assignFreshDailyAct(user, date, actsById, [row.act_id]);
-    throw new Error('Today’s act was updated. Please open it again.');
-  }
+  if (!act) throw new Error('assigned act not found in catalog');
 
   if (row.completed) {
-    return mapUserDailyAct(row, act);
+    return mapUserDailyAct(normalizeRow(row), act, { todayDate });
   }
 
-  const updated = {
+  const now = new Date().toISOString();
+  // Prefer client today date for "on assigned day" check (calendar day consistency).
+  const completedOnAssignedDay = todayDate === assignmentDate;
+  const completionSource = completedOnAssignedDay
+    ? 'daily'
+    : (sourceHint === 'still_open' ? 'still_open' : 'still_open');
+
+  const updated = normalizeRow({
     ...row,
     completed: true,
-    completed_at: new Date().toISOString(),
+    completed_at: now,
+    completed_on_assigned_day: completedOnAssignedDay,
+    completion_source: completionSource,
     notification_dismissed: true,
-    notification_dismissed_at: row.notification_dismissed_at || new Date().toISOString(),
-  };
+    notification_dismissed_at: row.notification_dismissed_at || now,
+  });
 
-  await writeJson(userDailyActPath(user.id, date), updated, { overwrite: true });
-  return mapUserDailyAct(updated, act);
+  await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
+  return mapUserDailyAct(updated, act, { todayDate });
+}
+
+async function completeDailyAct(deviceId, dateInput) {
+  const today = resolveDate(dateInput);
+  return completeAssignment(deviceId, today, today, { sourceHint: 'daily' });
 }
 
 async function dismissDailyActNotification(deviceId, dateInput) {
@@ -249,24 +439,264 @@ async function dismissDailyActNotification(deviceId, dateInput) {
   }
 
   if (row.notification_dismissed || row.completed) {
-    return mapUserDailyAct(row, act);
+    return mapUserDailyAct(normalizeRow(row), act, { todayDate: date });
   }
 
-  const updated = {
+  const updated = normalizeRow({
     ...row,
     notification_dismissed: true,
     notification_dismissed_at: new Date().toISOString(),
-  };
+  });
 
   await writeJson(userDailyActPath(user.id, date), updated, { overwrite: true });
-  return mapUserDailyAct(updated, act);
+  return mapUserDailyAct(updated, act, { todayDate: date });
+}
+
+async function saveReflection(deviceId, assignmentDateInput, todayInput, reflectionText) {
+  assertBlobConfigured();
+  const todayDate = resolveDate(todayInput);
+  const assignmentDate = parseDateStrict(assignmentDateInput) || todayDate;
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const row = await readUserDailyAct(user.id, assignmentDate);
+  if (!row) throw new Error('no daily act found');
+  if (!row.completed) throw new Error('complete the act before saving a reflection');
+
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const act = actsById.get(row.act_id);
+  if (!act) throw new Error('assigned act not found in catalog');
+
+  const text = String(reflectionText || '').trim().slice(0, 4000);
+  const updated = normalizeRow({
+    ...row,
+    reflection: text || null,
+    reflection_at: text ? new Date().toISOString() : null,
+  });
+
+  await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
+  return mapUserDailyAct(updated, act, { todayDate });
+}
+
+async function markViewed(deviceId, assignmentDateInput, todayInput) {
+  assertBlobConfigured();
+  const todayDate = resolveDate(todayInput);
+  const assignmentDate = parseDateStrict(assignmentDateInput) || todayDate;
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const row = await readUserDailyAct(user.id, assignmentDate);
+  if (!row) throw new Error('no daily act found');
+
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const act = actsById.get(row.act_id);
+  if (!act) throw new Error('assigned act not found in catalog');
+
+  if (row.viewed) {
+    return mapUserDailyAct(normalizeRow(row), act, { todayDate });
+  }
+
+  const updated = normalizeRow({
+    ...row,
+    viewed: true,
+    viewed_at: new Date().toISOString(),
+  });
+  await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
+  return mapUserDailyAct(updated, act, { todayDate });
+}
+
+async function trackInteraction(deviceId, assignmentDateInput, todayInput, interactionKey) {
+  assertBlobConfigured();
+  const todayDate = resolveDate(todayInput);
+  const assignmentDate = parseDateStrict(assignmentDateInput) || todayDate;
+  const key = String(interactionKey || '').trim();
+  const allowed = new Set(['openedPractice', 'openedMap', 'openedDonate', 'openedInvite', 'openedProfile']);
+  if (!allowed.has(key)) throw new Error('invalid interaction');
+
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const row = await readUserDailyAct(user.id, assignmentDate);
+  if (!row) throw new Error('no daily act found');
+
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const act = actsById.get(row.act_id);
+  if (!act) throw new Error('assigned act not found in catalog');
+
+  const interactions = {
+    ...(row.interactions && typeof row.interactions === 'object' ? row.interactions : {}),
+    [key]: true,
+    [`${key}At`]: new Date().toISOString(),
+  };
+
+  const updated = normalizeRow({ ...row, interactions });
+  await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
+  return mapUserDailyAct(updated, act, { todayDate });
+}
+
+async function getAssignment(deviceId, assignmentDateInput, todayInput) {
+  assertBlobConfigured();
+  const todayDate = resolveDate(todayInput);
+  const assignmentDate = parseDateStrict(assignmentDateInput);
+  if (!assignmentDate) throw new Error('assignment date required');
+
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const row = await readUserDailyAct(user.id, assignmentDate);
+  if (!row) throw new Error('no daily act found');
+
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const act = actsById.get(row.act_id);
+  if (!act) throw new Error('assigned act not found in catalog');
+
+  return mapUserDailyAct(normalizeRow(row), act, { todayDate });
+}
+
+/** Owner analytics — scans assignment blobs (real data only). */
+async function buildDailyPeaceOwnerIntel() {
+  assertBlobConfigured();
+  const { list } = require('@vercel/blob');
+  const { buildOwnerDatabaseRows } = require('./store');
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const [{ blobs }, choirDb] = await Promise.all([
+    list({ prefix: `${ROOT}/assignments/`, limit: 5000 }),
+    buildOwnerDatabaseRows().catch(() => ({ rows: [] })),
+  ]);
+
+  const identityByUser = new Map(
+    (choirDb.rows || []).map((r) => [r.userId, r])
+  );
+
+  const byUser = new Map();
+  const actStats = new Map();
+
+  for (const blob of blobs) {
+    if (!blob.pathname.endsWith('.json')) continue;
+    let row;
+    try {
+      row = normalizeRow(await readBlobJson(blob.pathname));
+    } catch {
+      continue;
+    }
+    const userId = row.user_id;
+    if (!userId) continue;
+
+    if (!byUser.has(userId)) {
+      byUser.set(userId, {
+        userId,
+        totalCompleted: 0,
+        onTimeCompleted: 0,
+        completedLater: 0,
+        stillOpen: 0,
+        reflections: 0,
+        lastCompletedAt: null,
+        history: [],
+      });
+    }
+    const u = byUser.get(userId);
+    const act = actsById.get(row.act_id);
+    const entry = {
+      assignmentDate: row.date,
+      actId: row.act_id,
+      actText: act?.text || row.act_id,
+      category: act?.category || null,
+      status: row.completed ? 'completed' : 'still_open',
+      completedAt: row.completed_at,
+      completedOnAssignedDay: row.completed_on_assigned_day,
+      reflection: row.reflection,
+      completionSource: row.completion_source,
+    };
+    u.history.push(entry);
+
+    if (row.completed) {
+      u.totalCompleted += 1;
+      if (row.completed_on_assigned_day) u.onTimeCompleted += 1;
+      else u.completedLater += 1;
+      if (row.reflection) u.reflections += 1;
+      if (!u.lastCompletedAt || row.completed_at > u.lastCompletedAt) {
+        u.lastCompletedAt = row.completed_at;
+      }
+    } else {
+      u.stillOpen += 1;
+    }
+
+    if (!actStats.has(row.act_id)) {
+      actStats.set(row.act_id, {
+        actId: row.act_id,
+        text: act?.text || row.act_id,
+        category: act?.category || null,
+        assigned: 0,
+        completed: 0,
+        onTime: 0,
+        later: 0,
+        reflections: 0,
+      });
+    }
+    const a = actStats.get(row.act_id);
+    a.assigned += 1;
+    if (row.completed) {
+      a.completed += 1;
+      if (row.completed_on_assigned_day) a.onTime += 1;
+      else a.later += 1;
+      if (row.reflection) a.reflections += 1;
+    }
+  }
+
+  const users = [...byUser.values()].map((u) => {
+    u.history.sort((a, b) => String(b.assignmentDate).localeCompare(String(a.assignmentDate)));
+    const onTimeDates = u.history
+      .filter((h) => h.completedOnAssignedDay)
+      .map((h) => h.assignmentDate);
+    const { longestStreak } = computeStreaks(onTimeDates);
+    const today = getUtcDateString();
+    return {
+      ...u,
+      voiceName: identityByUser.get(u.userId)?.voiceName || null,
+      voiceNumber: identityByUser.get(u.userId)?.voiceNumber ?? null,
+      city: identityByUser.get(u.userId)?.city || null,
+      country: identityByUser.get(u.userId)?.country || null,
+      currentStreak: computeCurrentStreakFromToday(onTimeDates, today),
+      longestStreak,
+      history: u.history.slice(0, 200),
+    };
+  });
+
+  users.sort((a, b) => (b.lastCompletedAt || '').localeCompare(a.lastCompletedAt || ''));
+
+  const acts = [...actStats.values()].map((a) => ({
+    ...a,
+    completionRate: a.assigned ? Math.round((a.completed / a.assigned) * 1000) / 10 : 0,
+  })).sort((a, b) => b.assigned - a.assigned);
+
+  return {
+    totals: {
+      usersEngaged: users.length,
+      totalCompletions: users.reduce((s, u) => s + u.totalCompleted, 0),
+      onTimeCompletions: users.reduce((s, u) => s + u.onTimeCompleted, 0),
+      reflections: users.reduce((s, u) => s + u.reflections, 0),
+      stillOpen: users.reduce((s, u) => s + u.stillOpen, 0),
+    },
+    users,
+    acts,
+  };
 }
 
 module.exports = {
   getUtcDateString,
   resolveDate,
+  parseDateStrict,
   getOrAssignDailyAct,
   completeDailyAct,
+  completeAssignment,
   dismissDailyActNotification,
+  saveReflection,
+  markViewed,
+  trackInteraction,
+  getImpact,
+  getCalendarMonth,
+  getAssignment,
   loadCatalog,
+  buildDailyPeaceOwnerIntel,
+  localDateFromIso,
 };
