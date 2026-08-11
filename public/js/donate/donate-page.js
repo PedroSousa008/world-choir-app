@@ -1124,12 +1124,39 @@ const WorldChoirDonate = (() => {
     });
   }
 
-  function renderLoading() {
-    document.getElementById('donate-content').innerHTML = `
-      <div class="df-state">
-        <p class="df-state__loading">Loading Creator Foundations…</p>
-      </div>
+  function renderPendingFoundations() {
+    return `
+      <section class="df-foundations" aria-hidden="true">
+        <p class="df-section-label">Foundations</p>
+        <ul class="df-fcards">
+          ${[0, 1, 2].map(() => `
+            <li>
+              <div class="df-fcard df-fcard--pending">
+                <span class="df-fcard__media df-fcard__media--pending" aria-hidden="true"></span>
+                <span class="df-fcard__body">
+                  <span class="df-pending-line df-pending-line--title"></span>
+                  <span class="df-pending-line df-pending-line--meta"></span>
+                  <span class="df-pending-line df-pending-line--copy"></span>
+                </span>
+              </div>
+            </li>
+          `).join('')}
+        </ul>
+      </section>
     `;
+  }
+
+  /** Paint the Donate chrome instantly — never show a loading message. */
+  function renderHomeShell() {
+    const root = document.getElementById('donate-content');
+    if (!root) return;
+    root.innerHTML = `
+      ${renderTopbar()}
+      ${renderIntro()}
+      ${renderDiscoveryChrome()}
+      <div id="df-foundations-mount">${renderPendingFoundations()}</div>
+    `;
+    bindHomeEvents();
   }
 
   function renderError(message) {
@@ -1165,7 +1192,8 @@ const WorldChoirDonate = (() => {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && searchOpen) closeSearch();
     });
-    renderLoading();
+    applyDeepLinkCause();
+    renderHomeShell();
 
     try {
       await CreatorFoundationsStore.ready();

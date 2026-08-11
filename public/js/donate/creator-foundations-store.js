@@ -534,3 +534,10 @@ const CreatorFoundationsStore = (() => {
 })();
 
 const FoundationsStore = CreatorFoundationsStore;
+
+/* Prefetch so Donate opens as quickly as other tabs */
+try {
+  CreatorFoundationsStore.ready();
+} catch {
+  /* ignore */
+}

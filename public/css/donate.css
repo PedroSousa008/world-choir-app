@@ -729,6 +729,50 @@
   transition: border-color 0.25s ease, transform 0.25s ease, background 0.25s ease;
 }
 
+.df-fcard--pending {
+  cursor: default;
+  pointer-events: none;
+}
+
+.df-fcard__media--pending,
+.df-pending-line {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: df-pending-shimmer 1.2s ease-in-out infinite;
+}
+
+.df-fcard__body .df-pending-line {
+  display: block;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.df-pending-line--title {
+  height: 16px;
+  width: 58%;
+}
+
+.df-pending-line--meta {
+  height: 12px;
+  width: 42%;
+}
+
+.df-pending-line--copy {
+  height: 12px;
+  width: 78%;
+  margin-bottom: 0;
+}
+
+@keyframes df-pending-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
 /* Mobile: full-width cover on top so landscape images stay readable */
 .df-fcard__media {
   position: relative;
