@@ -95,9 +95,11 @@ const WorldChoirOnboarding = (() => {
       <p class="wc-onboarding__progress">${escapeHtml(formatProgress(i))}</p>
       <div class="wc-onboarding__content">
         <h1 class="wc-onboarding__title">${escapeHtml(card.title)}</h1>
-        ${bodyHtml}
-        ${card.closing ? `<p class="wc-onboarding__closing">${escapeHtml(card.closing)}</p>` : ''}
-        ${card.hint ? `<p class="wc-onboarding__hint">${escapeHtml(card.hint)}</p>` : ''}
+        <div class="wc-onboarding__body">
+          ${bodyHtml}
+          ${card.closing ? `<p class="wc-onboarding__closing">${escapeHtml(card.closing)}</p>` : ''}
+          ${card.hint ? `<p class="wc-onboarding__hint">${escapeHtml(card.hint)}</p>` : ''}
+        </div>
       </div>
       <div class="wc-onboarding__logo-wrap">
         <img class="wc-onboarding__logo" src="${escapeHtml(logoSrc())}" alt="World Choir" width="1024" height="1024" decoding="async">
