@@ -193,7 +193,7 @@ const CreatorFoundationsStore = (() => {
   }
 
   function normalizeProject(project, foundationId) {
-    const goalAmount = Number(project.goalAmount);
+    const goalAmount = Number(project.goalAmount ?? project.goal);
     const raisedAmount = getRaisedAmount({
       foundationId,
       projectId: project.id,
@@ -203,21 +203,26 @@ const CreatorFoundationsStore = (() => {
       projectId: project.id,
     });
 
+    const gallery = Array.isArray(project.gallery) ? project.gallery : [];
+    const coverImage = String(project.coverImage || gallery[0] || '').trim();
+
     return {
       id: project.id,
       foundationId: project.foundationId || foundationId,
       title: project.title || '',
       description: project.description || '',
+      category: project.category || '',
+      coverImage,
       goalAmount: Number.isFinite(goalAmount) && goalAmount > 0 ? goalAmount : null,
       raisedAmount: raisedKnown ? raisedAmount : null,
       raisedKnown,
       currency: project.currency || catalog?.currency || 'EUR',
-      location: project.location || '',
+      location: project.location || project.country || '',
       startDate: project.startDate || null,
       expectedCompletion: project.expectedCompletion || null,
       completionDate: project.completionDate || null,
       status: project.status || 'draft',
-      gallery: project.gallery || [],
+      gallery,
       videos: project.videos || [],
       beforeImages: project.beforeImages || [],
       afterImages: project.afterImages || [],

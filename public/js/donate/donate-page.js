@@ -692,6 +692,59 @@ const WorldChoirDonate = (() => {
     bindHomeEvents(opts);
   }
 
+  function peopleIconSvg() {
+    return `
+      <svg class="df-fp-supporters__icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="9" cy="8" r="3.2"/>
+        <circle cx="16.5" cy="9" r="2.6"/>
+        <path d="M3.5 18.5c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5" stroke-linecap="round"/>
+        <path d="M13.2 16.2c.9-1.6 2.4-2.5 4.3-2.5 1.7 0 3.1.7 3.9 2.1" stroke-linecap="round"/>
+      </svg>
+    `;
+  }
+
+  function shareIconSvg() {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="18" cy="5" r="2.4"/>
+        <circle cx="6" cy="12" r="2.4"/>
+        <circle cx="18" cy="19" r="2.4"/>
+        <path d="M8.2 10.8l7.6-4.2M8.2 13.2l7.6 4.2" stroke-linecap="round"/>
+      </svg>
+    `;
+  }
+
+  function chevronSvg() {
+    return `
+      <svg class="df-fp-story__chevron" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `;
+  }
+
+  function supportCtaLabel(foundation) {
+    return foundation.donationsEnabled ? 'Support this mission' : 'Temporarily unavailable';
+  }
+
+  function renderSupportCta(foundation, { id, secondary = false } = {}) {
+    const cls = secondary ? 'df-fp-cta df-fp-cta--secondary' : 'df-fp-cta';
+    return `
+      <button
+        class="${cls}"
+        type="button"
+        ${id ? `id="${esc(id)}"` : ''}
+        data-action="support-mission"
+        ${!foundation.donationsEnabled ? 'disabled' : ''}
+      >
+        ${esc(supportCtaLabel(foundation))}
+      </button>
+    `;
+  }
+
+  function projectImage(project) {
+    return String(project.coverImage || '').trim();
+  }
+
   function renderProjectCard(project, foundation) {
     const currency = project.currency || CreatorFoundationsStore.getCurrency();
     const showProgress = project.raisedKnown
@@ -701,162 +754,357 @@ const WorldChoirDonate = (() => {
     const pct = showProgress
       ? Math.min(100, Math.round((project.raisedAmount / project.goalAmount) * 1000) / 10)
       : null;
+    const image = projectImage(project);
+    const metaBits = [];
+    if (project.category) metaBits.push(esc(project.category));
+    if (project.location) metaBits.push(esc(project.location));
+    if (project.status === 'active') metaBits.push('Active');
+
+    const fundingBits = [];
+    if (project.raisedKnown && project.raisedAmount != null) {
+      fundingBits.push(`${formatMoney(project.raisedAmount, currency)} raised`);
+    }
+    if (project.goalAmount != null) {
+      fundingBits.push(`Goal ${formatMoney(project.goalAmount, currency)}`);
+    }
 
     return `
-      <article class="df-project">
-        <h3 class="df-project__title">${esc(project.title)}</h3>
-        ${project.location ? `<p class="df-project__location">${esc(project.location)}</p>` : ''}
-        ${project.description
-          ? `<p class="df-project__desc">${esc(project.description)}</p>`
-          : `<p class="df-project__desc df-muted">Project details will appear as they are published.</p>`}
-        ${showProgress ? `
-          <div class="df-progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
-            <div class="df-progress__bar" style="width:${pct}%"></div>
-          </div>
-          <div class="df-project__meta">
-            <span>${formatMoney(project.raisedAmount, currency)} raised</span>
-            <span>Goal ${formatMoney(project.goalAmount, currency)}</span>
-          </div>
-        ` : `
-          <div class="df-project__meta">
-            ${project.goalAmount != null
-              ? `<span>Goal ${formatMoney(project.goalAmount, currency)}</span>`
-              : '<span>Funding progress appears when verified donations are recorded.</span>'}
-          </div>
-        `}
-        ${project.impactSummary ? `<p class="df-project__desc">${esc(project.impactSummary)}</p>` : ''}
-        <button
-          class="df-featured__cta"
-          type="button"
-          data-action="donate-project"
-          data-foundation="${esc(foundation.id)}"
-          data-project="${esc(project.id)}"
-          ${!foundation.donationsEnabled ? 'disabled' : ''}
-        >
-          Donate to project
-        </button>
+      <article class="df-fp-project">
+        <div class="df-fp-project__media ${image ? 'has-image' : ''}" aria-hidden="true">
+          ${image
+            ? `<img src="${esc(image)}" alt="" loading="lazy">`
+            : `<span class="df-fp-project__glyph">${esc(initials(project.title).slice(0, 2) || 'P')}</span>`}
+        </div>
+        <div class="df-fp-project__body">
+          <h3 class="df-fp-project__title">${esc(project.title)}</h3>
+          ${metaBits.length ? `<p class="df-fp-project__meta">${metaBits.join(' · ')}</p>` : ''}
+          ${project.description
+            ? `<p class="df-fp-project__desc">${esc(project.description)}</p>`
+            : ''}
+          ${showProgress ? `
+            <div class="df-progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+              <div class="df-progress__bar" style="width:${pct}%"></div>
+            </div>
+          ` : ''}
+          ${fundingBits.length ? `
+            <div class="df-fp-project__funding">${fundingBits.map((b) => `<span>${b}</span>`).join('')}</div>
+          ` : ''}
+          ${project.impactSummary ? `<p class="df-fp-project__desc">${esc(project.impactSummary)}</p>` : ''}
+          <button
+            class="df-fp-project__donate"
+            type="button"
+            data-action="donate-project"
+            data-foundation="${esc(foundation.id)}"
+            data-project="${esc(project.id)}"
+            ${!foundation.donationsEnabled ? 'disabled' : ''}
+          >
+            Donate to project
+          </button>
+        </div>
       </article>
     `;
   }
 
-  function renderProfileHero(foundation) {
-    const cover = foundation.coverImage
-      ? `<img class="df-profile-hero__cover-img" src="${esc(foundation.coverImage)}" alt="">`
-      : '';
-    const avatar = foundation.profileImage
-      ? `<img src="${esc(foundation.profileImage)}" alt="">`
-      : `<span>${esc(identityGlyph(foundation))}</span>`;
-
+  function renderStorySection({ num, title, bodyHtml, open = false }) {
+    if (!bodyHtml) return '';
     return `
-      <div class="df-profile-hero">
-        <div class="df-profile-hero__cover ${foundation.coverImage ? 'has-image' : ''}">
-          ${cover}
-        </div>
-        <div class="df-profile-hero__avatar" aria-hidden="true">
-          ${avatar}
+      <div class="df-fp-story ${open ? 'is-open' : ''}">
+        <button class="df-fp-story__trigger" type="button" aria-expanded="${open ? 'true' : 'false'}">
+          <span class="df-fp-story__index">${esc(num)}</span>
+          <span class="df-fp-story__heading">${esc(title)}</span>
+          ${chevronSvg()}
+        </button>
+        <div class="df-fp-story__panel" ${open ? '' : 'hidden'}>
+          ${bodyHtml}
         </div>
       </div>
     `;
   }
 
-  function renderProfile(foundation) {
-    const platform = CreatorFoundationsStore.getPlatform();
-    const allocation = (foundation.financialAllocation || [])
-      .map((row) => `
-        <div class="df-alloc-row">
-          <span>${esc(row.label)}</span>
-          <strong>${esc(String(row.percent))}%</strong>
+  function renderProfileHero(foundation) {
+    const cover = foundation.coverImage || '';
+    const profile = foundation.profileImage || '';
+    const heroSrc = cover || profile;
+    const showAvatar = Boolean(cover && profile);
+    const avatarInner = profile
+      ? `<img src="${esc(profile)}" alt="">`
+      : `<span>${esc(identityGlyph(foundation))}</span>`;
+
+    return `
+      <header class="df-fp-hero">
+        <div class="df-fp-hero__visual ${heroSrc ? 'has-image' : ''}">
+          ${heroSrc
+            ? `<img class="df-fp-hero__img" src="${esc(heroSrc)}" alt="">`
+            : `<div class="df-fp-hero__fallback" aria-hidden="true"><span>${esc(identityGlyph(foundation))}</span></div>`}
+          <div class="df-fp-hero__fade" aria-hidden="true"></div>
         </div>
-      `)
-      .join('');
 
-    const values = (foundation.coreValues || [])
-      .map((v) => `<span class="df-chip">${esc(v)}</span>`)
-      .join('');
+        <div class="df-fp-hero__content">
+          ${showAvatar ? `
+            <div class="df-fp-hero__avatar" aria-hidden="true">${avatarInner}</div>
+          ` : ''}
 
-    const activeProjects = foundation.projects.filter((p) => p.status === 'active');
-    const invite = (foundation.uniqueSupporters || 0) === 0
-      ? `<p class="df-featured__invite">Be among the first to support this mission.</p>`
+          <div class="df-fp-hero__identity">
+            <h1 class="df-fp-hero__title">
+              ${esc(foundation.foundationName)}
+              ${verifiedMark(foundation.verificationStatus)}
+            </h1>
+            ${foundation.creatorName
+              ? `<p class="df-fp-hero__byline">Founded by ${esc(foundation.creatorName)}</p>`
+              : ''}
+            ${foundation.country
+              ? `<p class="df-fp-hero__place">${esc(foundation.country)}</p>`
+              : ''}
+          </div>
+
+          ${foundation.mission
+            ? `<p class="df-fp-hero__mission">${esc(foundation.mission)}</p>`
+            : ''}
+
+          <p class="df-fp-supporters">
+            ${peopleIconSvg()}
+            <span
+              class="df-fp-supporters__count"
+              data-count="${Number(foundation.uniqueSupporters || 0)}"
+            >${esc(formatCount(foundation.uniqueSupporters || 0))}</span>
+            <span class="df-fp-supporters__label">supporters</span>
+          </p>
+
+          <p class="df-fp-raised">
+            <span data-money="${Number(foundation.totalRaised || 0)}">${esc(formatMoney(foundation.totalRaised || 0, CreatorFoundationsStore.getCurrency()))}</span>
+            raised
+          </p>
+
+          ${renderSupportCta(foundation, { id: 'cf-profile-donate' })}
+        </div>
+      </header>
+    `;
+  }
+
+  function renderTransparency(foundation) {
+    const allocation = Array.isArray(foundation.financialAllocation)
+      ? foundation.financialAllocation.filter((row) => row && row.label && row.percent != null)
+      : [];
+    const hasPolicy = Boolean(String(foundation.howDonationsAreUsed || '').trim());
+    const hasAllocation = allocation.length > 0;
+
+    if (!hasPolicy && !hasAllocation) {
+      return `
+        <section class="df-fp-block df-fp-transparency">
+          <p class="df-fp-kicker">Transparency</p>
+          <p class="df-fp-muted">Transparency information coming soon.</p>
+        </section>
+      `;
+    }
+
+    const allocHtml = hasAllocation
+      ? `
+        <div class="df-fp-alloc" aria-label="Financial allocation">
+          ${allocation.map((row) => `
+            <div class="df-fp-alloc__row">
+              <span class="df-fp-alloc__pct">${esc(String(row.percent))}%</span>
+              <span class="df-fp-alloc__label">${esc(row.label)}</span>
+              <span class="df-fp-alloc__track" aria-hidden="true">
+                <span class="df-fp-alloc__fill" style="width:${Math.min(100, Math.max(0, Number(row.percent) || 0))}%"></span>
+              </span>
+            </div>
+          `).join('')}
+        </div>
+      `
       : '';
 
     return `
-      <div class="df-profile df-rise">
-        <button class="df-back" type="button" id="donate-back">← Back</button>
+      <section class="df-fp-block df-fp-transparency">
+        <p class="df-fp-kicker">Transparency</p>
+        <h2 class="df-fp-block__title">How donations are used</h2>
+        ${allocHtml}
+        ${hasAllocation ? `
+          <p class="df-fp-transparency__note">
+            Every donation is allocated according to the Foundation's published funding policy.
+          </p>
+        ` : ''}
+        ${hasPolicy ? `
+          <button class="df-fp-transparency__more" type="button" aria-expanded="false" id="df-fp-transparency-toggle">
+            See how donations are used
+            <span aria-hidden="true">→</span>
+          </button>
+          <div class="df-fp-transparency__detail" id="df-fp-transparency-detail" hidden>
+            <p>${esc(foundation.howDonationsAreUsed)}</p>
+          </div>
+        ` : ''}
+      </section>
+    `;
+  }
+
+  function renderProfile(foundation) {
+    const activeProjects = (foundation.projects || []).filter((p) => p.status === 'active');
+    const values = (foundation.coreValues || []).filter(Boolean);
+    const valuesHtml = values.length
+      ? `<div class="df-chips">${values.map((v) => `<span class="df-chip">${esc(v)}</span>`).join('')}</div>`
+      : '';
+
+    const storySections = [];
+    if (foundation.whyStarted) {
+      storySections.push({
+        num: String(storySections.length + 1).padStart(2, '0'),
+        title: 'Why this began',
+        bodyHtml: `<p>${esc(foundation.whyStarted)}</p>`,
+      });
+    }
+    if (foundation.howItWorks) {
+      storySections.push({
+        num: String(storySections.length + 1).padStart(2, '0'),
+        title: 'How the Foundation works',
+        bodyHtml: `<p>${esc(foundation.howItWorks)}</p>`,
+      });
+    }
+    if (valuesHtml) {
+      storySections.push({
+        num: String(storySections.length + 1).padStart(2, '0'),
+        title: 'Our approach',
+        bodyHtml: valuesHtml,
+      });
+    }
+
+    return `
+      <article class="df-fp df-rise">
+        <nav class="df-fp-nav" aria-label="Foundation">
+          <button class="df-fp-nav__back" type="button" id="donate-back">← Back</button>
+          <button class="df-fp-nav__share" type="button" id="df-fp-share" aria-label="Share foundation">
+            ${shareIconSvg()}
+          </button>
+        </nav>
 
         ${renderProfileHero(foundation)}
 
-        <div class="df-profile__identity">
-          <h1 class="df-profile__title">
-            ${esc(foundation.foundationName)}
-            ${verifiedMark(foundation.verificationStatus)}
-          </h1>
-          <p class="df-profile__byline">Founded by ${esc(foundation.creatorName)}</p>
-          ${foundation.country ? `<p class="df-profile__place">${esc(foundation.country)}</p>` : ''}
-        </div>
+        ${foundation.biography ? `
+          <section class="df-fp-block df-fp-about">
+            <p class="df-fp-kicker">About</p>
+            <p class="df-fp-about__text">${esc(foundation.biography)}</p>
+          </section>
+        ` : ''}
 
-        ${foundation.mission
-          ? `<p class="df-profile__mission">${esc(foundation.mission)}</p>`
-          : `<p class="df-profile__mission df-muted">Mission details will appear as they are published.</p>`}
+        ${storySections.length ? `
+          <section class="df-fp-block df-fp-stories" aria-label="Foundation story">
+            ${storySections.map((s, i) => renderStorySection({ ...s, open: i === 0 })).join('')}
+          </section>
+        ` : ''}
 
-        ${metricsRow(foundation)}
-        ${invite}
+        ${activeProjects.length ? `
+          <section class="df-fp-block df-fp-projects">
+            <p class="df-fp-kicker">Active Projects</p>
+            <div class="df-fp-projects__scroller" role="list">
+              ${activeProjects.map((p) => `
+                <div class="df-fp-projects__item" role="listitem">
+                  ${renderProjectCard(p, foundation)}
+                </div>
+              `).join('')}
+            </div>
+          </section>
+        ` : ''}
 
-        <div class="df-profile__actions">
-          <button
-            class="df-btn-primary"
-            type="button"
-            id="cf-profile-donate"
-            ${!foundation.donationsEnabled ? 'disabled' : ''}
-          >
-            ${foundation.donationsEnabled ? 'Donate' : 'Temporarily unavailable'}
-          </button>
-        </div>
+        ${renderTransparency(foundation)}
 
-        <section class="df-section">
-          <h2>About</h2>
-          ${foundation.biography
-            ? `<p>${esc(foundation.biography)}</p>`
-            : `<p class="df-muted">This information has not yet been published.</p>`}
-          ${foundation.whyStarted ? `
-            <h3>Why this began</h3>
-            <p>${esc(foundation.whyStarted)}</p>
-          ` : ''}
-          ${foundation.howItWorks ? `
-            <h3>How the foundation works</h3>
-            <p>${esc(foundation.howItWorks)}</p>
-          ` : ''}
-          ${values ? `<div class="df-chips">${values}</div>` : ''}
-        </section>
-
-        <section class="df-section">
-          <h2>Active Projects</h2>
-          ${activeProjects.length
-            ? `<div class="df-projects">${activeProjects.map((p) => renderProjectCard(p, foundation)).join('')}</div>`
-            : `<p class="df-muted">0 active projects.</p>`}
-        </section>
-
-        <section class="df-section">
-          <h2>Transparency</h2>
-          <h3>How donations are used</h3>
-          ${foundation.howDonationsAreUsed
-            ? `<p>${esc(foundation.howDonationsAreUsed)}</p>`
-            : `<p class="df-muted">This information has not yet been published.</p>`}
-
-          <h3>Financial allocation</h3>
-          ${allocation
-            ? `
-              <div class="df-alloc">${allocation}</div>
-              <p class="df-fee-note">
-                Platform fee: ${esc(String(platform.feePercent || 10))}% —
-                ${esc(platform.feePurpose || 'Operational costs that keep World Choir and Creator Foundations running.')}
-              </p>
-            `
-            : `<p class="df-muted">This information has not yet been published.</p>`}
+        <section class="df-fp-block df-fp-support-end">
+          ${renderSupportCta(foundation, { id: 'cf-profile-donate-secondary', secondary: true })}
         </section>
 
         ${renderSocialLinks(foundation)}
-      </div>
+      </article>
     `;
+  }
+
+  async function shareFoundation(foundation) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('foundation', foundation.slug || foundation.id);
+    const shareData = {
+      title: foundation.foundationName || 'Creator Foundation',
+      text: foundation.mission
+        ? `${foundation.foundationName} — ${foundation.mission}`
+        : `Support ${foundation.foundationName || 'this Creator Foundation'} on World Choir.`,
+      url: url.toString(),
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+    }
+    try {
+      await navigator.clipboard.writeText(shareData.url);
+      const btn = document.getElementById('df-fp-share');
+      if (btn) {
+        btn.classList.add('is-copied');
+        window.setTimeout(() => btn.classList.remove('is-copied'), 1600);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function bindProfileInteractions(root, foundation) {
+    root.querySelectorAll('.df-fp-story__trigger').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const story = btn.closest('.df-fp-story');
+        if (!story) return;
+        const open = !story.classList.contains('is-open');
+        story.classList.toggle('is-open', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        const panel = story.querySelector('.df-fp-story__panel');
+        if (panel) panel.hidden = !open;
+      });
+    });
+
+    document.getElementById('df-fp-transparency-toggle')?.addEventListener('click', () => {
+      const detail = document.getElementById('df-fp-transparency-detail');
+      const toggle = document.getElementById('df-fp-transparency-toggle');
+      if (!detail || !toggle) return;
+      const open = detail.hidden;
+      detail.hidden = !open;
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.classList.toggle('is-open', open);
+    });
+
+    document.getElementById('df-fp-share')?.addEventListener('click', () => {
+      shareFoundation(foundation);
+    });
+
+    const animateCount = (el) => {
+      const target = Number(el.getAttribute('data-count') || 0);
+      if (!Number.isFinite(target) || target <= 0) {
+        el.textContent = formatCount(target || 0);
+        return;
+      }
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        el.textContent = formatCount(target);
+        return;
+      }
+      const duration = 900;
+      const start = performance.now();
+      const tick = (now) => {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = formatCount(Math.round(target * eased));
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+
+    const countEl = root.querySelector('[data-count]');
+    if (countEl && 'IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          animateCount(countEl);
+          io.disconnect();
+        });
+      }, { threshold: 0.4 });
+      io.observe(countEl);
+    } else if (countEl) {
+      animateCount(countEl);
+    }
   }
 
   function openProfile(foundation) {
@@ -872,8 +1120,14 @@ const WorldChoirDonate = (() => {
       renderHome();
     });
 
-    document.getElementById('cf-profile-donate')?.addEventListener('click', () => {
+    const openSupport = () => {
       if (foundation.donationsEnabled) openDonateModal(foundation, null);
+    };
+    document.getElementById('cf-profile-donate')?.addEventListener('click', openSupport);
+    document.getElementById('cf-profile-donate-secondary')?.addEventListener('click', openSupport);
+    root.querySelectorAll('[data-action="support-mission"]').forEach((btn) => {
+      if (btn.id === 'cf-profile-donate' || btn.id === 'cf-profile-donate-secondary') return;
+      btn.addEventListener('click', openSupport);
     });
 
     root.querySelectorAll('[data-action="donate-project"]').forEach((btn) => {
@@ -885,6 +1139,8 @@ const WorldChoirDonate = (() => {
         if (foundation.donationsEnabled) openDonateModal(foundation, project);
       });
     });
+
+    bindProfileInteractions(root, foundation);
   }
 
   function ensureModal() {
@@ -1165,6 +1421,26 @@ const WorldChoirDonate = (() => {
     }
   }
 
+  function applyDeepLinkFoundation() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const raw = String(params.get('foundation') || '').trim().toLowerCase();
+      if (!raw) return false;
+      const list = getAllFoundations();
+      const found = list.find((f) =>
+        String(f.slug || '').toLowerCase() === raw
+        || String(f.id || '').toLowerCase() === raw
+      );
+      if (found) {
+        openProfile(found);
+        return true;
+      }
+    } catch {
+      /* ignore */
+    }
+    return false;
+  }
+
   async function init() {
     WorldChoirNav.startWatcher('donate');
     ensureModal();
@@ -1177,7 +1453,9 @@ const WorldChoirDonate = (() => {
     try {
       await CreatorFoundationsStore.ready();
       applyDeepLinkCause();
-      renderHome();
+      if (!applyDeepLinkFoundation()) {
+        renderHome();
+      }
     } catch (err) {
       console.error('Creator Foundations init failed:', err);
       const offline = typeof navigator !== 'undefined' && !navigator.onLine;
