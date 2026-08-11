@@ -739,22 +739,6 @@ const WorldChoirDonate = (() => {
     `;
   }
 
-  function renderImpactMetrics(metrics) {
-    if (!metrics.length) {
-      return `<p class="df-muted">Impact measures appear here only when verified.</p>`;
-    }
-    return `
-      <div class="df-impact-grid">
-        ${metrics.map((m) => `
-          <div>
-            <span class="df-impact-item__value">${esc(String(m.value))}</span>
-            <span class="df-impact-item__label">${esc(m.label)}</span>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  }
-
   function renderProfileHero(foundation) {
     const cover = foundation.coverImage
       ? `<img class="df-profile-hero__cover-img" src="${esc(foundation.coverImage)}" alt="">`
@@ -842,11 +826,6 @@ const WorldChoirDonate = (() => {
             <p>${esc(foundation.howItWorks)}</p>
           ` : ''}
           ${values ? `<div class="df-chips">${values}</div>` : ''}
-        </section>
-
-        <section class="df-section">
-          <h2>Impact</h2>
-          ${renderImpactMetrics(foundation.impactMetrics)}
         </section>
 
         <section class="df-section">
