@@ -124,9 +124,11 @@ const WorldChoirMap = (() => {
     const loadingEl = document.getElementById('map-data-loading');
     const loadingText = document.getElementById('map-data-loading-text');
     const mapStats = document.getElementById('map-stats');
-    const isResolving = mapDataState === 'loading' || mapDataState === 'error';
 
-    loadingEl?.classList.toggle('is-visible', isResolving);
+    // Never block the Map tab with a loading message — only surface real errors.
+    const showError = mapDataState === 'error';
+    loadingEl?.classList.toggle('is-visible', showError);
+    if (loadingEl) loadingEl.hidden = !showError;
     mapStats?.classList.toggle('map-stats--loading', mapDataState === 'loading');
     mapStats?.classList.toggle('map-stats--loaded', mapDataState === 'loaded_empty' || mapDataState === 'loaded_with_voices');
     mapStats?.classList.toggle('map-stats--error', mapDataState === 'error');
@@ -134,7 +136,7 @@ const WorldChoirMap = (() => {
     if (loadingText) {
       loadingText.textContent = mapDataState === 'error'
         ? 'Could not load voices. Please try again.'
-        : 'Loading real voices…';
+        : '';
     }
   }
 
@@ -266,11 +268,14 @@ const WorldChoirMap = (() => {
   }
 
   function init() {
-    refreshMapData();
-
-    WorldChoirPledgeState.init().then(startMap).catch((err) => {
+    // Start the map UI immediately — don't wait on pledge/network bootstrap.
+    startMap();
+    WorldChoirPledgeState.init().then(() => {
+      refreshMapData();
+      updateEmptyState();
+    }).catch((err) => {
       console.error('Failed to connect to World Choir database:', err);
-      startMap();
+      refreshMapData();
     });
   }
 

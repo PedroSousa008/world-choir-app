@@ -61,20 +61,23 @@ const ProfilePage = (() => {
   }
 
   function init() {
+    // Instant first paint — same idea as Donate.
+    ChangeLocationModal.init();
+    PracticeMode.init();
+    DailyActsPeace.init();
+    OwnerAccess.init();
+    WorldChoirNav.startWatcher('profile');
+    render();
+
     WorldChoirPledgeState.init()
       .then(() => {
-        ChangeLocationModal.init();
-        PracticeMode.init();
-        DailyActsPeace.init();
-        OwnerAccess.init();
-        WorldChoirNav.startWatcher('profile');
-        render();
+        refresh();
         WorldChoirPledgeState.subscribe(() => refresh());
         maybeOpenPracticeFromQuery();
       })
       .catch((err) => {
         console.error('Failed to connect to World Choir database:', err);
-        WorldChoirNav.startWatcher('profile');
+        refresh();
       });
   }
 

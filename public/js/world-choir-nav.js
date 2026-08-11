@@ -1,9 +1,13 @@
 /**
  * World Choir — Shared bottom navigation
  * Donate is permanent. Memory appears only after the active event is globally completed.
+ *
+ * Also prefetches other tabs so switching feels as instant as Donate.
  */
 const WorldChoirNav = (() => {
   let watchInterval = null;
+  let prefetchStarted = false;
+  const prefetched = new Set();
 
   const ALL_PAGES = [
     { id: 'home', href: 'index.html', label: 'Home', icon: '◉' },
@@ -13,9 +17,115 @@ const WorldChoirNav = (() => {
     { id: 'profile', href: 'profile.html', label: 'Profile', icon: '○' },
   ];
 
+  /** Critical assets per tab — warm the cache before the user taps. */
+  const TAB_ASSETS = {
+    home: [
+      'index.html',
+      'css/home.css?v=20270707h',
+      'js/world-choir-home.js?v=20260811d',
+      'js/world-choir-onboarding.js?v=20260811a',
+    ],
+    map: [
+      'map.html',
+      'css/map.css?v=20260811d',
+      'js/world-choir-map.js?v=20260811d',
+      'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+      'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+    ],
+    donate: [
+      'donate.html',
+      'css/donate.css?v=20260811c',
+      'js/donate/creator-foundations-store.js?v=20260811c',
+      'js/donate/donate-page.js?v=20260811c',
+      '/api/creator-foundations',
+    ],
+    profile: [
+      'profile.html',
+      'css/profile.css?v=20260811b',
+      'js/profile/profile-page.js?v=20260811d',
+      'js/profile/daily-acts-peace.js?v=20260810i',
+      'js/profile/daily-acts-button.js?v=20260810i',
+    ],
+    memory: [
+      'memory.html',
+    ],
+    'daily-acts': [
+      'daily-acts.html',
+      'css/daily-acts-page.css?v=20260810i',
+      'js/daily-acts-page.js?v=20260810j',
+    ],
+  };
+
   function getVisiblePages() {
     const memoryUnlocked = WorldChoirConfig.isMemoryUnlocked();
     return ALL_PAGES.filter((page) => !page.requiresMemory || memoryUnlocked);
+  }
+
+  function prefetchUrl(url) {
+    if (!url || prefetched.has(url)) return;
+    prefetched.add(url);
+    try {
+      const link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = url;
+      link.as = url.endsWith('.js') || url.includes('.js?')
+        ? 'script'
+        : url.endsWith('.css') || url.includes('.css?')
+          ? 'style'
+          : url.includes('/api/')
+            ? 'fetch'
+            : 'document';
+      if (url.includes('/api/')) {
+        link.crossOrigin = 'anonymous';
+      }
+      document.head.appendChild(link);
+    } catch {
+      /* ignore */
+    }
+    // Also warm with fetch for APIs / HTML (best-effort, ignore errors)
+    if (url.includes('/api/') || url.endsWith('.html')) {
+      try {
+        fetch(url, { credentials: url.includes('/api/') ? 'omit' : 'same-origin', cache: 'force-cache' })
+          .catch(() => {});
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  function prefetchTabs(activePage) {
+    if (prefetchStarted) return;
+    prefetchStarted = true;
+
+    const run = () => {
+      Object.keys(TAB_ASSETS).forEach((id) => {
+        if (id === activePage) return;
+        if (id === 'memory' && !WorldChoirConfig.isMemoryUnlocked()) return;
+        (TAB_ASSETS[id] || []).forEach(prefetchUrl);
+      });
+      // Always warm Daily Acts + foundations for snappy secondary entry points
+      (TAB_ASSETS['daily-acts'] || []).forEach(prefetchUrl);
+      (TAB_ASSETS.donate || []).forEach(prefetchUrl);
+      try {
+        if (typeof CreatorFoundationsStore !== 'undefined') {
+          CreatorFoundationsStore.ready();
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(run, { timeout: 1200 });
+    } else {
+      setTimeout(run, 200);
+    }
+  }
+
+  function prefetchOnIntent(href) {
+    const page = ALL_PAGES.find((p) => p.href === href);
+    if (!page) return;
+    (TAB_ASSETS[page.id] || [href]).forEach(prefetchUrl);
   }
 
   function renderWorldChoirNav(activePage) {
@@ -28,6 +138,10 @@ const WorldChoirNav = (() => {
       link.href = page.href;
       link.className = 'nav-item' + (activePage === page.id ? ' active' : '');
       link.innerHTML = `<span class="nav-icon">${page.icon}</span><span>${page.label}</span>`;
+      const warm = () => prefetchOnIntent(page.href);
+      link.addEventListener('pointerdown', warm, { passive: true });
+      link.addEventListener('touchstart', warm, { passive: true });
+      link.addEventListener('mouseenter', warm, { passive: true });
       nav.appendChild(link);
     });
 
@@ -44,6 +158,7 @@ const WorldChoirNav = (() => {
   function startWatcher(activePage) {
     let wasUnlocked = WorldChoirConfig.isMemoryUnlocked();
     mount(activePage);
+    prefetchTabs(activePage);
 
     if (watchInterval) clearInterval(watchInterval);
     watchInterval = setInterval(() => {
@@ -66,7 +181,7 @@ const WorldChoirNav = (() => {
     return true;
   }
 
-  return { renderWorldChoirNav, mount, startWatcher, guardMemoryRoute, getVisiblePages };
+  return { renderWorldChoirNav, mount, startWatcher, guardMemoryRoute, getVisiblePages, prefetchTabs };
 })();
 
 /** @deprecated Use WorldChoirNav.mount — kept for compatibility */

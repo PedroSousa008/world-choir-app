@@ -249,11 +249,15 @@ const WorldChoirHome = (() => {
   }
 
   function init() {
+    // Paint immediately — never wait on network for the first Home frame.
+    startHome();
     WorldChoirPledgeState.init()
-      .then(startHome)
+      .then(() => {
+        if (isPreEvent() && !LiveEventMode.isActive()) render();
+      })
       .catch((err) => {
         console.error('Failed to connect to World Choir database:', err);
-        startHome();
+        if (isPreEvent() && !LiveEventMode.isActive()) render();
       });
   }
 
