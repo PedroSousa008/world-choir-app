@@ -196,11 +196,25 @@ async function findDonationByIdWithRetry(id, { attempts = 8, baseDelayMs = 150 }
 
 /**
  * Merge-write with conflict recovery for Vercel Blob (no CAS).
- * Re-reads after write; if our row is missing or downgraded, merges into the latest ledger and retries.
+ * - mode 'fast': one write for pending drafts (used on create-intent — must stay quick)
+ * - mode 'secure' (default): verify/retry — used when marking payments succeeded
  */
-async function upsertDonation(row) {
+async function upsertDonation(row, { mode = 'secure' } = {}) {
   const id = donationRecordId(row);
   if (!id) throw new Error('Donation id is required for upsert.');
+
+  if (mode === 'fast') {
+    const list = await readDonationsLedger();
+    const byId = new Map();
+    list.forEach((d) => {
+      const did = donationRecordId(d);
+      if (did) byId.set(did, d);
+    });
+    byId.set(id, mergeDonationRecords(byId.get(id), row));
+    const merged = Array.from(byId.values());
+    await writeDonationsLedger(merged);
+    return byId.get(id);
+  }
 
   let lastError = null;
   for (let attempt = 0; attempt < 8; attempt += 1) {

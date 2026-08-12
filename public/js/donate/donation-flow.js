@@ -12,6 +12,7 @@ const WorldChoirDonationFlow = (() => {
   let paymentElement = null;
   let config = null;
   let isSubmitting = false;
+  let isAdvancing = false;
 
   function esc(str) {
     const d = document.createElement('div');
@@ -85,6 +86,7 @@ const WorldChoirDonationFlow = (() => {
       clientSecret: null,
       paymentIntentId: null,
       paymentLabel: '',
+      paymentPreparing: false,
       firstName: '',
       lastName: '',
       donorDisplayName: '',
@@ -127,9 +129,20 @@ const WorldChoirDonationFlow = (() => {
     }
     if (!window.Stripe) {
       await new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[data-wc-stripe="1"]');
+        if (existing) {
+          if (window.Stripe) {
+            resolve();
+            return;
+          }
+          existing.addEventListener('load', () => resolve());
+          existing.addEventListener('error', () => reject(new Error('Could not load Stripe.js')));
+          return;
+        }
         const s = document.createElement('script');
         s.src = 'https://js.stripe.com/v3/';
         s.async = true;
+        s.dataset.wcStripe = '1';
         s.onload = resolve;
         s.onerror = () => reject(new Error('Could not load Stripe.js'));
         document.head.appendChild(s);
@@ -137,6 +150,11 @@ const WorldChoirDonationFlow = (() => {
     }
     if (!stripe) stripe = window.Stripe(config.publishableKey);
     return stripe;
+  }
+
+  /** Warm Stripe.js as soon as checkout opens so Continue feels instant. */
+  function prefetchStripe() {
+    ensureStripe().catch(() => { /* ignore warm-up errors */ });
   }
 
   function root() {
@@ -239,7 +257,13 @@ const WorldChoirDonationFlow = (() => {
     const i = order.indexOf(state.step);
     if (i > 0) {
       // Returning to amount invalidates the PaymentIntent UI — remount later.
-      if (order[i - 1] === 'amount') destroyPaymentElement();
+      if (order[i - 1] === 'amount') {
+        destroyPaymentElement();
+        state.clientSecret = null;
+        state.paymentIntentId = null;
+        state.donationId = null;
+        state.paymentPreparing = false;
+      }
       state.step = order[i - 1];
       state.error = '';
       render();
@@ -479,13 +503,16 @@ const WorldChoirDonationFlow = (() => {
   }
 
   function renderPayment() {
+    const preparing = state.paymentPreparing && !state.clientSecret;
     return `
       ${header('Payment')}
       ${foundationHeading()}
       <p class="df-checkout__hint">One-time donation of <strong>${esc(formatMoney(state.amount))}</strong></p>
-      <div id="df-co-payment-element" class="df-checkout__payment-el"></div>
+      <div id="df-co-payment-element" class="df-checkout__payment-el${preparing ? ' is-preparing' : ''}" ${preparing ? 'aria-busy="true"' : ''}>
+        ${preparing ? '<p class="df-checkout__payment-preparing">Preparing secure payment…</p>' : ''}
+      </div>
       ${state.error ? `<p class="df-checkout__error" role="alert">${esc(state.error)}</p>` : ''}
-      <button type="button" class="df-checkout__cta" id="df-co-next">Continue</button>
+      <button type="button" class="df-checkout__cta" id="df-co-next" ${preparing || !state.clientSecret ? 'disabled' : ''}>Continue</button>
       <p class="df-checkout__secure">Payments are processed securely by Stripe. World Choir never stores card numbers.</p>
     `;
   }
@@ -705,7 +732,7 @@ const WorldChoirDonationFlow = (() => {
     }
     state.amount = Math.round(amount * 100) / 100;
 
-    await ensureStripe();
+    await loadConfig();
 
     const idempotencyKey = `wc-${deviceId() || 'anon'}-${state.foundation.id}-${state.amount}-${Date.now()}`;
     const res = await fetch('/api/donations?action=create-intent', {
@@ -728,6 +755,27 @@ const WorldChoirDonationFlow = (() => {
     state.donationId = data.donationId;
     state.clientSecret = data.clientSecret;
     state.paymentIntentId = data.paymentIntentId;
+  }
+
+  async function preparePaymentStep() {
+    // Show Payment immediately, then create intent + warm Stripe in parallel.
+    state.paymentPreparing = true;
+    state.error = '';
+    state.step = 'payment';
+    render();
+
+    try {
+      await Promise.all([ensureStripe(), createIntent()]);
+      state.paymentPreparing = false;
+      render();
+      await mountPaymentElement();
+    } catch (err) {
+      state.paymentPreparing = false;
+      state.error = err.message || 'Could not continue.';
+      // Stay on payment with retry via Back → amount, or show error here.
+      render();
+      throw err;
+    }
   }
 
   async function persistDonorAndMessage() {
@@ -851,6 +899,7 @@ const WorldChoirDonationFlow = (() => {
   }
 
   async function advanceFromAmount() {
+    if (isAdvancing) return;
     state.error = '';
     const loc = participationLocation();
     if (!loc.city || !loc.country) {
@@ -858,14 +907,25 @@ const WorldChoirDonationFlow = (() => {
       render();
       return;
     }
+    const amount = chosenAmount();
+    const min = minAmount();
+    if (amount == null || amount < min) {
+      state.error = `Enter an amount of at least ${formatMoney(min)}.`;
+      render();
+      return;
+    }
+    isAdvancing = true;
+    const cta = document.getElementById('df-co-next');
+    if (cta) {
+      cta.disabled = true;
+      cta.textContent = 'Continuing…';
+    }
     try {
-      await createIntent();
-      state.step = 'payment';
-      render();
-      await mountPaymentElement();
-    } catch (err) {
-      state.error = err.message || 'Could not continue.';
-      render();
+      await preparePaymentStep();
+    } catch {
+      /* error already shown on payment step */
+    } finally {
+      isAdvancing = false;
     }
   }
 
@@ -940,12 +1000,15 @@ const WorldChoirDonationFlow = (() => {
         const raw = btn.getAttribute('data-amount');
         state.amountChoice = raw === 'custom' ? 'custom' : Number(raw);
         state.error = '';
+        prefetchStripe();
         render();
         if (state.amountChoice === 'custom') document.getElementById('df-co-custom')?.focus();
       });
     });
+    document.getElementById('df-co-custom')?.addEventListener('focus', prefetchStripe);
     document.getElementById('df-co-custom')?.addEventListener('input', (e) => {
       state.customAmount = e.target.value;
+      prefetchStripe();
       const cta = document.getElementById('df-co-next');
       if (cta && state.step === 'amount') {
         cta.textContent = amountContinueLabel();
@@ -1052,6 +1115,7 @@ const WorldChoirDonationFlow = (() => {
         render();
         return;
       }
+      prefetchStripe();
       render();
     } catch (err) {
       alert(err.message || 'Could not open donation flow.');

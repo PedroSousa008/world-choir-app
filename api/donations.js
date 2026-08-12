@@ -96,7 +96,7 @@ async function handleCreateIntent(req, res) {
     deviceId,
     paymentIntentId: paymentIntent.id,
   });
-  await donations.upsertDonation(draft);
+  await donations.upsertDonation(draft, { mode: 'fast' });
 
   return res.status(200).json({
     donationId,
