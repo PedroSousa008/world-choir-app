@@ -325,9 +325,9 @@ const WorldChoirDonate = (() => {
     reducedMotion: false,
     startedAt: 0,
     lastDrawAt: 0,
-    frameEveryMs: 55,
+    frameEveryMs: 70,
 
-    bufSize: 260,
+    bufSize: 220,
     bufCanvas: null,
     bufCtx: null,
     bufImageData: null,
