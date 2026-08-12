@@ -1,14 +1,19 @@
 /* World Choir — Donate / Creator Foundations
    Editorial, restrained, mobile-first. Almost pure black. */
 
-.donate-page {
+/* Tokens on :root + checkout so the flow (mounted on body) resolves colors */
+:root,
+.donate-page,
+.df-checkout {
   --df-warm: #f2efe8;
   --df-warm-soft: rgba(242, 239, 232, 0.72);
   --df-muted: #8a8d97;
   --df-line: rgba(255, 255, 255, 0.08);
   --df-line-strong: rgba(78, 197, 232, 0.28);
-  --df-accent: var(--accent-aurora);
+  --df-accent: var(--accent-aurora, #4ec5e8);
+}
 
+.donate-page {
   position: relative;
   z-index: 1;
   max-width: 820px;
@@ -2751,7 +2756,8 @@ body.df-checkout-open {
   width: 100%;
   border: 0;
   border-radius: 999px;
-  background: var(--df-accent);
+  background: #4ec5e8;
+  background: var(--df-accent, #4ec5e8);
   color: #041018;
   font-family: var(--font-sans);
   font-size: 0.8rem;
@@ -2761,25 +2767,31 @@ body.df-checkout-open {
   padding: 16px 22px;
   margin-top: 10px;
   cursor: pointer;
-  box-shadow: 0 10px 28px rgba(78, 197, 232, 0.18);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  box-shadow: none;
+  transition: transform 0.18s ease, filter 0.18s ease, opacity 0.18s ease, background 0.18s ease;
 }
 
 .df-checkout__cta:hover:not(:disabled),
 .df-checkout__cta:focus-visible:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 14px 34px rgba(78, 197, 232, 0.24);
+  filter: brightness(1.06);
   outline: none;
 }
 
 .df-checkout__cta:active:not(:disabled) {
   transform: translateY(0);
+  filter: brightness(0.96);
 }
 
 .df-checkout__cta:disabled {
-  opacity: 0.4;
+  background: rgba(78, 197, 232, 0.22);
+  color: rgba(4, 16, 24, 0.55);
+  opacity: 1;
   cursor: not-allowed;
-  box-shadow: none;
+  filter: none;
 }
 
 .df-checkout__cta--ghost {
