@@ -1,4 +1,4 @@
-const { findDonationById, publicReceipt } = require('../_lib/donations');
+const { findDonationById, publicReceipt } = require('./_lib/donations');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

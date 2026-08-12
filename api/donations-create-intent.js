@@ -8,7 +8,7 @@ const {
   upsertDonation,
   randomUUID,
   MIN_DONATION_CENTS,
-} = require('../_lib/donations');
+} = require('./_lib/donations');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

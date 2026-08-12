@@ -6,7 +6,7 @@ const {
   getStripe,
   paymentsConfigured,
   MAX_MESSAGE_LENGTH,
-} = require('../_lib/donations');
+} = require('./_lib/donations');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

@@ -3,7 +3,7 @@ const {
   publicReceipt,
   getStripe,
   paymentsConfigured,
-} = require('../_lib/donations');
+} = require('./_lib/donations');
 
 /**
  * Client polls after confirmPayment until webhook marks succeeded,
@@ -35,7 +35,7 @@ module.exports = async function handler(req, res) {
         const stripe = getStripe();
         const pi = await stripe.paymentIntents.retrieve(row.payment_transaction_id);
         if (pi.status === 'succeeded') {
-          const { upsertDonation } = require('../_lib/donations');
+          const { upsertDonation } = require('./_lib/donations');
           row = {
             ...row,
             paymentStatus: 'succeeded',

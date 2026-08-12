@@ -6,7 +6,7 @@ const {
   upsertDonation,
   sanitizeMessage,
   sanitizeName,
-} = require('../_lib/donations');
+} = require('./_lib/donations');
 
 async function readRawBody(req) {
   if (Buffer.isBuffer(req.body)) return req.body;
