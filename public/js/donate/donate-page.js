@@ -269,7 +269,7 @@ const WorldChoirDonate = (() => {
   function renderTopbar() {
     return `
       <div class="df-topbar df-rise">
-        <p class="df-kicker">Donate</p>
+        <p class="df-kicker">DONATE</p>
         ${searchOpen ? '' : `
           <button type="button" class="df-search-trigger" id="df-search-open" aria-label="Search foundations">
             ${searchIconSvg()}
@@ -296,12 +296,442 @@ const WorldChoirDonate = (() => {
 
   function renderIntro() {
     return `
-      <header class="df-intro df-rise df-rise-delay-1">
-        <h1 class="df-intro__title">Discover Impact</h1>
-        <p class="df-intro__lead">People you trust.<br>Causes you can change.</p>
-        <p class="df-intro__copy">Support verified creators turning their influence into real, meaningful and measurable action.</p>
+      <header class="df-intro df-intro--globe df-rise df-rise-delay-1">
+        <div class="df-intro__globe" aria-hidden="true">
+          <canvas id="df-donate-globe-canvas" class="df-donate-globe__canvas"></canvas>
+        </div>
+
+        <div class="df-intro__text">
+          <h1 class="df-intro__title">Discover Impact</h1>
+          <p class="df-intro__lead">Support people you trust.<br>Causes you can change.</p>
+          <p class="df-intro__copy">Verified creators turning their influence into real, meaningful and measurable action.</p>
+
+          <p class="df-intro__callout">
+            <span class="df-intro__heart" aria-hidden="true">♡</span>
+            Every contribution creates a <span class="df-intro__ripple">ripple</span> that reaches further.
+          </p>
+        </div>
       </header>
     `;
+  }
+
+  // ─── Donate hero globe (canvas) ───
+  // Lightweight, no extra dependencies: 2D canvas draws a textured sphere and a subtle network.
+  let donateGlobe = {
+    canvas: null,
+    ctx: null,
+    rafId: 0,
+    running: false,
+    reducedMotion: false,
+    startedAt: 0,
+    lastDrawAt: 0,
+    frameEveryMs: 55,
+
+    bufSize: 260,
+    bufCanvas: null,
+    bufCtx: null,
+    bufImageData: null,
+    bufData: null,
+
+    texW: 256,
+    texH: 128,
+    texData: null,
+
+    points: [],
+    connections: [],
+  };
+
+  function donatePrefersReducedMotion() {
+    try {
+      return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      return false;
+    }
+  }
+
+  function donateHash2(x, y) {
+    // Deterministic pseudo-random in [0,1).
+    const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+    return s - Math.floor(s);
+  }
+
+  function donateSmoothstep(t) {
+    return t * t * (3 - 2 * t);
+  }
+
+  function donateValueNoise2(x, y) {
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const xf = x - x0;
+    const yf = y - y0;
+
+    const a = donateHash2(x0, y0);
+    const b = donateHash2(x0 + 1, y0);
+    const c = donateHash2(x0, y0 + 1);
+    const d = donateHash2(x0 + 1, y0 + 1);
+
+    const u = donateSmoothstep(xf);
+    const v = donateSmoothstep(yf);
+
+    const ab = a * (1 - u) + b * u;
+    const cd = c * (1 - u) + d * u;
+    return ab * (1 - v) + cd * v;
+  }
+
+  function donateFbm2(x, y) {
+    // Fractal value noise for a “continents” texture.
+    let value = 0;
+    let amp = 0.55;
+    let freq = 1;
+    for (let i = 0; i < 4; i += 1) {
+      value += amp * donateValueNoise2(x * freq, y * freq);
+      freq *= 2;
+      amp *= 0.5;
+    }
+    return value;
+  }
+
+  function donateMakeTexture() {
+    const tw = donateGlobe.texW;
+    const th = donateGlobe.texH;
+    const texCanvas = document.createElement('canvas');
+    texCanvas.width = tw;
+    texCanvas.height = th;
+    const tctx = texCanvas.getContext('2d', { willReadFrequently: true });
+    const img = tctx.createImageData(tw, th);
+    const data = img.data;
+
+    for (let j = 0; j < th; j += 1) {
+      for (let i = 0; i < tw; i += 1) {
+        const u = i / (tw - 1);
+        const v = j / (th - 1);
+
+        // “Spherical-ish” noise: vary more around longitude, slightly less across latitude.
+        const nx = u * 5.2 + 0.13;
+        const ny = v * 2.6 + 0.07;
+        const n = donateFbm2(nx, ny); // 0..~1
+
+        // Continent mask.
+        const land = n - 0.44; // center threshold
+        const alt = Math.max(0, land) * 1.8;
+
+        // Color palette (ocean + vegetation + subtle snow bands).
+        const oceanR = 4, oceanG = 28, oceanB = 56;
+        const landR1 = 18, landG1 = 68, landB1 = 44;   // deep green
+        const landR2 = 120, landG2 = 165, landB2 = 120; // lighter land
+
+        const lat = (v - 0.5) * Math.PI; // -pi/2..pi/2
+        const snow = Math.max(0, (Math.abs(lat) - 0.95)) * 3.0; // thin polar snow
+
+        const oceanMix = Math.max(0, Math.min(1, 1 - alt * 1.2));
+        const landMix = 1 - oceanMix;
+
+        // Blend land from two greens based on altitude.
+        const gMix2 = Math.max(0, Math.min(1, alt * 0.9));
+
+        let r = oceanR * oceanMix + (landR1 * (1 - gMix2) + landR2 * gMix2) * landMix;
+        let g = oceanG * oceanMix + (landG1 * (1 - gMix2) + landG2 * gMix2) * landMix;
+        let b = oceanB * oceanMix + (landB1 * (1 - gMix2) + landB2 * gMix2) * landMix;
+
+        if (snow > 0) {
+          const s = Math.min(1, snow);
+          r = r * (1 - s) + 220 * s;
+          g = g * (1 - s) + 220 * s;
+          b = b * (1 - s) + 230 * s;
+        }
+
+        // Very subtle “clouds” layer (static) to add realism.
+        const clouds = donateFbm2(nx * 1.9 + 2.2, ny * 1.9 + 1.1);
+        const cloudMask = Math.max(0, clouds - 0.6) * 0.35;
+        if (cloudMask > 0.001) {
+          r = r * (1 - cloudMask) + 190 * cloudMask;
+          g = g * (1 - cloudMask) + 200 * cloudMask;
+          b = b * (1 - cloudMask) + 210 * cloudMask;
+        }
+
+        const idx = (j * tw + i) * 4;
+        data[idx] = Math.round(r);
+        data[idx + 1] = Math.round(g);
+        data[idx + 2] = Math.round(b);
+        data[idx + 3] = 255;
+      }
+    }
+
+    donateGlobe.texData = data;
+  }
+
+  function donateTexSample(u, v) {
+    const tw = donateGlobe.texW;
+    const th = donateGlobe.texH;
+    // Wrap U, clamp V.
+    const uu = ((u % 1) + 1) % 1;
+    const vv = Math.max(0, Math.min(1, v));
+    const x = Math.floor(uu * (tw - 1));
+    const y = Math.floor(vv * (th - 1));
+    const idx = (y * tw + x) * 4;
+    const d = donateGlobe.texData;
+    return { r: d[idx], g: d[idx + 1], b: d[idx + 2] };
+  }
+
+  function donateRotateY(vec, angle) {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const x = vec.x * cos + vec.z * sin;
+    const z = -vec.x * sin + vec.z * cos;
+    return { x, y: vec.y, z };
+  }
+
+  function donateProject(vec, r, cx, cy) {
+    // Camera at origin looking toward +Z.
+    const z = vec.z;
+    if (z <= 0) return null;
+    const sx = cx + (vec.x / z) * r;
+    const sy = cy - (vec.y / z) * r;
+    return { sx, sy, z };
+  }
+
+  function donateSlerp(a, b, t) {
+    // Spherical linear interpolation between unit vectors.
+    let dot = a.x * b.x + a.y * b.y + a.z * b.z;
+    dot = Math.max(-1, Math.min(1, dot));
+    const omega = Math.acos(dot);
+    if (omega < 1e-5) return { x: a.x, y: a.y, z: a.z };
+    const so = Math.sin(omega);
+    const s1 = Math.sin((1 - t) * omega) / so;
+    const s2 = Math.sin(t * omega) / so;
+    return {
+      x: a.x * s1 + b.x * s2,
+      y: a.y * s1 + b.y * s2,
+      z: a.z * s1 + b.z * s2,
+    };
+  }
+
+  function donateInitNetwork() {
+    if (donateGlobe.points.length) return;
+    // Fixed points (lat/lon) so it always feels calm and consistent.
+    const seeded = (n) => donateHash2(n * 1.31, n * 2.17);
+    const count = 14;
+    for (let i = 0; i < count; i += 1) {
+      const lat = (seeded(i + 1) * 2 - 1) * (Math.PI / 2) * 0.78;
+      const lon = (seeded(i + 11) * 2 - 1) * Math.PI;
+      const cl = Math.cos(lat);
+      donateGlobe.points.push({
+        x: cl * Math.sin(lon),
+        y: Math.sin(lat),
+        z: cl * Math.cos(lon),
+      });
+    }
+    // Subtle connections: short links, mostly local.
+    donateGlobe.connections = [];
+    for (let i = 0; i < donateGlobe.points.length - 1; i += 1) {
+      if (i % 2 === 0) {
+        donateGlobe.connections.push([i, i + 1]);
+      }
+    }
+    // A few extra links for “network” feel.
+    donateGlobe.connections.push([2, 7], [3, 10], [5, 12]);
+  }
+
+  function donateDrawGlobe(rotY) {
+    const canvas = donateGlobe.canvas;
+    const ctx = donateGlobe.ctx;
+    const size = donateGlobe.bufSize;
+
+    // Draw into buffer at fixed resolution; then scale to the real canvas.
+    const r = size / 2;
+    const cx = r;
+    const cy = r;
+
+    const data = donateGlobe.bufData;
+    // Clear to transparent.
+    data.fill(0);
+
+    const light = { x: -0.22, y: 0.18, z: 1.0 };
+    const lightLen = Math.hypot(light.x, light.y, light.z) || 1;
+    light.x /= lightLen;
+    light.y /= lightLen;
+    light.z /= lightLen;
+
+    const sin = Math.sin(rotY);
+    const cos = Math.cos(rotY);
+
+    // Camera-space sphere: normal derived from screen pixel.
+    for (let py = 0; py < size; py += 1) {
+      const ny = (py + 0.5 - cy) / r;
+      const ny2 = ny * ny;
+      for (let px = 0; px < size; px += 1) {
+        const nx = (px + 0.5 - cx) / r;
+        const rr = nx * nx + ny2;
+        if (rr > 1) continue;
+        const z = Math.sqrt(1 - rr);
+
+        // Inverse-rotate the camera normal to body coords to sample the texture.
+        const xB = nx * cos - z * sin;
+        const zB = nx * sin + z * cos;
+        const yB = ny;
+
+        const lon = Math.atan2(xB, zB); // -pi..pi
+        const lat = Math.asin(Math.max(-1, Math.min(1, yB)));
+
+        const u = lon / (2 * Math.PI) + 0.5;
+        const v = 0.5 - lat / Math.PI;
+
+        const tex = donateTexSample(u, v);
+
+        // Lighting in camera coords (normal doesn't change with rotation).
+        const diff = Math.max(0, (nx * light.x + ny * light.y + z * light.z));
+        const ambient = 0.22;
+        let rC = tex.r * (ambient + 0.78 * diff);
+        let gC = tex.g * (ambient + 0.78 * diff);
+        let bC = tex.b * (ambient + 0.78 * diff);
+
+        // Rim / atmospheric glow at the limb.
+        const rim = Math.pow(Math.max(0, 1 - z), 1.65);
+        rC += 26 * rim;
+        gC += 76 * rim;
+        bC += 120 * rim;
+
+        const idx = (py * size + px) * 4;
+        data[idx] = Math.round(Math.max(0, Math.min(255, rC)));
+        data[idx + 1] = Math.round(Math.max(0, Math.min(255, gC)));
+        data[idx + 2] = Math.round(Math.max(0, Math.min(255, bC)));
+        data[idx + 3] = 255;
+      }
+    }
+
+    donateGlobe.bufCtx.putImageData(donateGlobe.bufImageData, 0, 0);
+
+    // Network layer (draw on top, not inside pixels loop).
+    donateGlobe.bufCtx.save();
+    donateGlobe.bufCtx.globalCompositeOperation = 'screen';
+    donateGlobe.bufCtx.globalAlpha = 0.9;
+
+    const projR = r * 0.98;
+    const pointsRot = donateGlobe.points.map((p) => donateRotateY(p, rotY));
+    const projected = pointsRot.map((p) => donateProject(p, projR, cx, cy));
+
+    // Connections: thin, soft, mostly blue.
+    donateGlobe.connections.forEach(([a, b]) => {
+      const pa = projected[a];
+      const pb = projected[b];
+      if (!pa || !pb) return;
+      const alpha = Math.min(0.22, 0.08 + 0.16 * Math.min(pa.z, pb.z));
+      donateGlobe.bufCtx.strokeStyle = `rgba(78, 197, 232, ${alpha})`;
+      donateGlobe.bufCtx.lineWidth = 1;
+      donateGlobe.bufCtx.beginPath();
+      const va = donateGlobe.points[a];
+      const vb = donateGlobe.points[b];
+      for (let t = 0; t <= 1; t += 0.12) {
+        const v = donateSlerp(va, vb, t);
+        const vc = donateRotateY(v, rotY);
+        const pr = donateProject(vc, projR, cx, cy);
+        if (!pr) continue;
+        if (t === 0) donateGlobe.bufCtx.moveTo(pr.sx, pr.sy);
+        else donateGlobe.bufCtx.lineTo(pr.sx, pr.sy);
+      }
+      donateGlobe.bufCtx.stroke();
+    });
+
+    // Points: small, soft glows.
+    projected.forEach((p, idx) => {
+      if (!p) return;
+      const alpha = Math.min(0.35, 0.10 + 0.25 * p.z);
+      donateGlobe.bufCtx.fillStyle = `rgba(78, 197, 232, ${alpha})`;
+      donateGlobe.bufCtx.beginPath();
+      donateGlobe.bufCtx.arc(p.sx, p.sy, 1.4, 0, Math.PI * 2);
+      donateGlobe.bufCtx.fill();
+      // Outer glow
+      donateGlobe.bufCtx.globalAlpha = 1;
+      donateGlobe.bufCtx.fillStyle = `rgba(78, 197, 232, ${alpha * 0.25})`;
+      donateGlobe.bufCtx.beginPath();
+      donateGlobe.bufCtx.arc(p.sx, p.sy, 2.6, 0, Math.PI * 2);
+      donateGlobe.bufCtx.fill();
+      donateGlobe.bufCtx.globalAlpha = 0.9;
+    });
+
+    donateGlobe.bufCtx.restore();
+
+    // Render scaled result onto the actual canvas.
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(donateGlobe.bufCanvas, 0, 0, canvas.width, canvas.height);
+  }
+
+  function stopDonateGlobe() {
+    if (donateGlobe.rafId) {
+      cancelAnimationFrame(donateGlobe.rafId);
+    }
+    donateGlobe.rafId = 0;
+    donateGlobe.running = false;
+  }
+
+  function mountDonateGlobe() {
+    const canvas = document.getElementById('df-donate-globe-canvas');
+    if (!canvas) {
+      stopDonateGlobe();
+      return;
+    }
+
+    // If the canvas changed due to a re-render, restart.
+    if (donateGlobe.canvas !== canvas) {
+      stopDonateGlobe();
+      donateGlobe.canvas = canvas;
+      donateGlobe.ctx = canvas.getContext('2d', { alpha: true });
+    }
+
+    donateGlobe.reducedMotion = donatePrefersReducedMotion();
+    if (!donateGlobe.bufCanvas) {
+      donateGlobe.bufCanvas = document.createElement('canvas');
+      donateGlobe.bufCanvas.width = donateGlobe.bufSize;
+      donateGlobe.bufCanvas.height = donateGlobe.bufSize;
+      donateGlobe.bufCtx = donateGlobe.bufCanvas.getContext('2d', { alpha: true });
+      donateGlobe.bufImageData = donateGlobe.bufCtx.createImageData(donateGlobe.bufSize, donateGlobe.bufSize);
+      donateGlobe.bufData = donateGlobe.bufImageData.data;
+    }
+    if (!donateGlobe.texData) {
+      donateMakeTexture();
+    }
+    donateInitNetwork();
+
+    // Fit canvas to CSS size (retina aware).
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.floor(rect.width * dpr));
+    const h = Math.max(1, Math.floor(rect.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+
+    if (donateGlobe.reducedMotion) {
+      const rotY = 0;
+      donateDrawGlobe(rotY);
+      stopDonateGlobe();
+      return;
+    }
+
+    if (donateGlobe.running) return;
+    donateGlobe.running = true;
+    donateGlobe.startedAt = performance.now();
+    donateGlobe.lastDrawAt = 0;
+
+    const step = () => {
+      if (!donateGlobe.running) return;
+      const now = performance.now();
+      if (now - donateGlobe.lastDrawAt < donateGlobe.frameEveryMs) {
+        donateGlobe.rafId = requestAnimationFrame(step);
+        return;
+      }
+      donateGlobe.lastDrawAt = now;
+
+      // One full rotation ~45s (quiet and non-distracting).
+      const t = (now - donateGlobe.startedAt) / 45000;
+      const rotY = t * Math.PI * 2;
+      donateDrawGlobe(rotY);
+
+      donateGlobe.rafId = requestAnimationFrame(step);
+    };
+
+    donateGlobe.rafId = requestAnimationFrame(step);
   }
 
   function renderCauseFilters() {
@@ -672,6 +1102,7 @@ const WorldChoirDonate = (() => {
 
     // Search mode: keep the field + compact people results only.
     if (searchOpen) {
+      stopDonateGlobe();
       root.innerHTML = `
         ${renderTopbar()}
         ${demoBanner}
@@ -689,6 +1120,7 @@ const WorldChoirDonate = (() => {
       <div id="df-foundations-mount">${renderFoundationsMountHtml()}</div>
       ${renderHappeningNow()}
     `;
+    mountDonateGlobe();
     bindHomeEvents(opts);
   }
 
@@ -1392,6 +1824,7 @@ const WorldChoirDonate = (() => {
       <div id="df-foundations-mount">${renderPendingFoundations()}</div>
     `;
     bindHomeEvents();
+    mountDonateGlobe();
   }
 
   function renderError(message) {
