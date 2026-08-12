@@ -204,23 +204,64 @@ async function writeDonationsLedger(donations) {
   }, { overwrite: true });
 }
 
-async function upsertDonation(row) {
-  const list = await readDonationsLedger();
-  const id = row.id || row.donation_id;
-  const idx = list.findIndex((d) => (d.id || d.donation_id) === id);
-  if (idx >= 0) {
-    list[idx] = { ...list[idx], ...row };
-  } else {
-    list.push(row);
-  }
-  await writeDonationsLedger(list);
-  return row;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function findDonationById(id) {
   if (!id) return null;
   const list = await readDonationsLedger();
   return list.find((d) => (d.id || d.donation_id) === id) || null;
+}
+
+async function findDonationByIdWithRetry(id, { attempts = 8, baseDelayMs = 150 } = {}) {
+  for (let i = 0; i < attempts; i += 1) {
+    const row = await findDonationById(id);
+    if (row) return row;
+    await sleep(baseDelayMs * (i + 1));
+  }
+  return null;
+}
+
+/**
+ * Merge-write with read-after-write verification to reduce Vercel Blob lost updates.
+ */
+async function upsertDonation(row) {
+  const id = row.id || row.donation_id;
+  if (!id) throw new Error('Donation id is required for upsert.');
+
+  let lastError = null;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    try {
+      const list = await readDonationsLedger();
+      const idx = list.findIndex((d) => (d.id || d.donation_id) === id);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...row, id, donation_id: id };
+      } else {
+        list.push({ ...row, id, donation_id: id });
+      }
+      await writeDonationsLedger(list);
+
+      const verified = await findDonationByIdWithRetry(id, { attempts: 4, baseDelayMs: 100 });
+      if (verified) {
+        // Ensure this write's status (if any) wasn't clobbered by a concurrent older write.
+        const wantStatus = String(row.paymentStatus || row.status || '').toLowerCase();
+        const gotStatus = String(verified.paymentStatus || verified.status || '').toLowerCase();
+        if (!wantStatus || wantStatus === gotStatus || wantStatus === 'pending') {
+          return verified;
+        }
+        // Our succeeded write lost a race — retry merge.
+      }
+    } catch (err) {
+      lastError = err;
+    }
+    await sleep(120 * (attempt + 1));
+  }
+
+  if (lastError) throw lastError;
+  // Last resort: return the intended row so callers can still respond;
+  // subsequent reads/retries should converge.
+  return { ...row, id, donation_id: id };
 }
 
 async function findDonationByPaymentIntent(piId) {
@@ -421,6 +462,7 @@ module.exports = {
   writeDonationsLedger,
   upsertDonation,
   findDonationById,
+  findDonationByIdWithRetry,
   findDonationByPaymentIntent,
   assertFoundationDonatable,
   buildDraftRecord,

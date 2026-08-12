@@ -328,7 +328,7 @@ async function handleCompleteTest(req, res) {
   const donationId = String(body.donationId || '').trim();
   if (!donationId) return res.status(400).json({ error: 'donationId is required.' });
 
-  const row = await donations.findDonationById(donationId);
+  const row = await donations.findDonationByIdWithRetry(donationId);
   if (!row) return res.status(404).json({ error: 'Donation not found.' });
 
   const status = String(row.paymentStatus || row.status || '').toLowerCase();
