@@ -1961,10 +1961,10 @@ const WorldChoirDonate = (() => {
     const texBase = 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/';
     const loader = new THREE.TextureLoader();
 
-    const dayMap = await new Promise((resolve) => loader.load(texBase + 'earth_day_2048.jpg', resolve));
-    const nightMap = await new Promise((resolve) => loader.load(texBase + 'earth_lights_2048.png', resolve));
+    const dayMap = await new Promise((resolve) => loader.load(texBase + 'earth_day_4096.jpg', resolve));
+    const nightMap = await new Promise((resolve) => loader.load(texBase + 'earth_night_4096.jpg', resolve));
     const normalMap = await new Promise((resolve) => loader.load(texBase + 'earth_normal_2048.jpg', resolve));
-    const cloudMap = await new Promise((resolve) => loader.load(texBase + 'earth_clouds_1024.png', resolve));
+    const cloudMap = await new Promise((resolve) => loader.load(texBase + 'earth_clouds_2048.png', resolve));
     const atmosMap = await new Promise((resolve) => loader.load(texBase + 'earth_atmos_2048.jpg', resolve));
 
     dayMap.colorSpace = THREE.SRGBColorSpace;
