@@ -78,9 +78,9 @@ const WorldChoirDonationFlow = (() => {
       step: 'amount',
       foundation,
       project: project || null,
-      amountChoice: 25,
+      amountChoice: null,
       customAmount: '',
-      amount: 25,
+      amount: null,
       donationId: null,
       clientSecret: null,
       paymentIntentId: null,
@@ -92,6 +92,7 @@ const WorldChoirDonationFlow = (() => {
       paymentLabel: '',
       receipt: null,
       error: '',
+      feeDetailsOpen: false,
     };
   }
 
@@ -100,6 +101,7 @@ const WorldChoirDonationFlow = (() => {
       const n = parseFloat(String(state.customAmount).replace(',', '.'));
       return Number.isFinite(n) ? n : null;
     }
+    if (state.amountChoice == null || state.amountChoice === '') return null;
     return Number(state.amountChoice);
   }
 
@@ -244,7 +246,30 @@ const WorldChoirDonationFlow = (() => {
     }
   }
 
-  function header(title) {
+  function initials(name) {
+    return String(name || '?')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase() || '?';
+  }
+
+  function currencySymbol(currency = 'EUR') {
+    try {
+      const parts = new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency,
+        currencyDisplay: 'narrowSymbol',
+      }).formatToParts(0);
+      return parts.find((p) => p.type === 'currency')?.value || '€';
+    } catch {
+      return '€';
+    }
+  }
+
+  function header(title, { showKicker = true } = {}) {
     return `
       <header class="df-checkout__top">
         ${canGoBack()
@@ -252,7 +277,7 @@ const WorldChoirDonationFlow = (() => {
           : `<span class="df-checkout__back-spacer"></span>`}
         <button type="button" class="df-checkout__close" id="df-co-close" aria-label="Close">×</button>
       </header>
-      <p class="df-checkout__kicker">${esc(title)}</p>
+      ${showKicker && title ? `<p class="df-checkout__kicker">${esc(title)}</p>` : ''}
     `;
   }
 
@@ -268,13 +293,41 @@ const WorldChoirDonationFlow = (() => {
     `;
   }
 
-  function locationBlock({ requireChange = false } = {}) {
+  function foundationIdentityCard() {
+    const f = state.foundation;
+    const img = String(f.profileImage || f.coverImage || '').trim();
+    const verified = f.verificationStatus === 'verified'
+      ? `<span class="df-checkout__verified">Verified Creator Foundation</span>`
+      : '';
+    const projectLine = state.project
+      ? `<p class="df-checkout__project">Project: ${esc(state.project.title)}</p>`
+      : '';
+
+    return `
+      <div class="df-checkout__identity">
+        <div class="df-checkout__avatar ${img ? 'has-image' : ''}" aria-hidden="true">
+          ${img
+            ? `<img src="${esc(img)}" alt="">`
+            : `<span>${esc(initials(f.foundationName || f.creatorName))}</span>`}
+        </div>
+        <div class="df-checkout__identity-text">
+          <h1 class="df-checkout__foundation-name">${esc(f.foundationName)}</h1>
+          <p class="df-checkout__creator">by ${esc(f.creatorName)}</p>
+          ${verified}
+          ${projectLine}
+        </div>
+      </div>
+    `;
+  }
+
+  function locationBlock({ requireChange = false, compact = false } = {}) {
     const loc = participationLocation();
     const has = loc.city && loc.country;
     return `
-      <div class="df-checkout__location">
+      <div class="df-checkout__location${compact ? ' df-checkout__location--compact' : ''}">
         <p class="df-checkout__meta-label">Your World Choir location</p>
         <p class="df-checkout__location-value">
+          <span class="df-checkout__loc-icon" aria-hidden="true">◎</span>
           ${has
             ? esc(`${loc.city}, ${loc.country}`)
             : '<span class="df-checkout__warn">Add your location to continue</span>'}
@@ -289,30 +342,115 @@ const WorldChoirDonationFlow = (() => {
     `;
   }
 
+  function amountContinueLabel() {
+    const amt = chosenAmount();
+    const min = minAmount();
+    if (amt != null && amt >= min) return `Continue with ${formatMoney(amt)}`;
+    return 'Continue';
+  }
+
+  function amountIsValid() {
+    const amt = chosenAmount();
+    return amt != null && amt >= minAmount();
+  }
+
+  function feePreviewHtml() {
+    const amt = chosenAmount();
+    if (amt == null || amt < minAmount()) return '';
+    const split = feeSplit(amt);
+    return `
+      <div class="df-checkout__fee-preview" id="df-co-fee-preview">
+        <div class="df-checkout__fee-row"><span>Foundation</span><strong>${esc(formatMoney(split.foundationAmount))}</strong></div>
+        <div class="df-checkout__fee-row"><span>World Choir</span><strong>${esc(formatMoney(split.platformFee))}</strong></div>
+        <div class="df-checkout__fee-row df-checkout__fee-row--total"><span>Total</span><strong>${esc(formatMoney(split.amountGross))}</strong></div>
+      </div>
+    `;
+  }
+
   function renderAmount() {
     const amounts = config?.suggestedAmounts || [5, 10, 25, 50, 100];
     const currency = config?.currency || 'EUR';
+    const symbol = currencySymbol(currency);
+    const feeOpen = state.feeDetailsOpen === true;
+    const valid = amountIsValid();
+
     return `
-      ${header('Choose your contribution')}
-      ${foundationHeading()}
-      <div class="df-checkout__amounts" role="group" aria-label="Donation amount">
-        ${amounts.map((a) => `
-          <button type="button" class="df-checkout__amount${state.amountChoice === a ? ' is-selected' : ''}" data-amount="${a}">
-            ${formatMoney(a, currency)}
+      <div class="df-checkout__amount-step">
+        ${header('', { showKicker: false })}
+
+        <p class="df-checkout__eyebrow">Support a mission</p>
+        ${foundationIdentityCard()}
+
+        <p class="df-checkout__prompt">Choose an amount you'd like to give.</p>
+
+        <div class="df-checkout__amounts" role="group" aria-label="Donation amount">
+          ${amounts.map((a) => `
+            <button
+              type="button"
+              class="df-checkout__amount${state.amountChoice === a ? ' is-selected' : ''}"
+              data-amount="${a}"
+              aria-pressed="${state.amountChoice === a ? 'true' : 'false'}"
+            >
+              ${formatMoney(a, currency)}
+            </button>
+          `).join('')}
+          <button
+            type="button"
+            class="df-checkout__amount${state.amountChoice === 'custom' ? ' is-selected' : ''}"
+            data-amount="custom"
+            aria-pressed="${state.amountChoice === 'custom' ? 'true' : 'false'}"
+          >
+            Custom
           </button>
-        `).join('')}
-        <button type="button" class="df-checkout__amount${state.amountChoice === 'custom' ? ' is-selected' : ''}" data-amount="custom">
-          Custom
-        </button>
+        </div>
+
+        <div class="df-checkout__custom-field${state.amountChoice === 'custom' ? ' is-open' : ''}" ${state.amountChoice === 'custom' ? '' : 'hidden'}>
+          <label class="df-checkout__custom-label" for="df-co-custom">Custom amount</label>
+          <div class="df-checkout__custom-input">
+            <span class="df-checkout__currency" aria-hidden="true">${esc(symbol)}</span>
+            <input
+              id="df-co-custom"
+              type="number"
+              min="${minAmount()}"
+              step="0.01"
+              inputmode="decimal"
+              placeholder="0.00"
+              value="${esc(state.customAmount)}"
+              aria-label="Custom donation amount in ${esc(currency)}"
+            >
+          </div>
+        </div>
+
+        ${locationBlock({ requireChange: true, compact: true })}
+
+        ${state.error ? `<p class="df-checkout__error" role="alert">${esc(state.error)}</p>` : ''}
+
+        <button
+          type="button"
+          class="df-checkout__cta"
+          id="df-co-next"
+          ${valid ? '' : 'disabled'}
+        >${esc(amountContinueLabel())}</button>
+
+        <div class="df-checkout__transparency">
+          <p class="df-checkout__transparency-kicker">One-time donation</p>
+          <p class="df-checkout__transparency-copy">
+            10% of every donation supports World Choir's operational costs.
+            The remaining 90% goes directly to the Foundation.
+          </p>
+          <button
+            type="button"
+            class="df-checkout__fee-toggle"
+            id="df-co-fee-toggle"
+            aria-expanded="${feeOpen ? 'true' : 'false'}"
+          >
+            <span aria-hidden="true">ⓘ</span> How donations are allocated
+          </button>
+          <div class="df-checkout__fee-details" id="df-co-fee-details" ${feeOpen ? '' : 'hidden'}>
+            ${feePreviewHtml() || '<p class="df-checkout__note">Select an amount to see the allocation.</p>'}
+          </div>
+        </div>
       </div>
-      <div class="df-checkout__custom" ${state.amountChoice === 'custom' ? '' : 'hidden'}>
-        <label class="form-label" for="df-co-custom">Custom amount (${esc(currency)})</label>
-        <input class="form-input" id="df-co-custom" type="number" min="${minAmount()}" step="0.01" inputmode="decimal" placeholder="Enter amount" value="${esc(state.customAmount)}">
-      </div>
-      ${locationBlock({ requireChange: true })}
-      ${state.error ? `<p class="df-checkout__error" role="alert">${esc(state.error)}</p>` : ''}
-      <button type="button" class="df-checkout__cta" id="df-co-next">Continue</button>
-      <p class="df-checkout__note">One-time donation only. 10% supports World Choir operations — the Foundation receives 90%.</p>
     `;
   }
 
@@ -776,6 +914,11 @@ const WorldChoirDonationFlow = (() => {
         closeFlow();
         return;
       }
+      // Amount step: leave quietly — no payment started, Foundation page remains.
+      if (state?.step === 'amount' && !state?.donationId) {
+        closeFlow();
+        return;
+      }
       if (confirm('Leave this donation? Your payment will not be completed.')) {
         closeFlow();
       }
@@ -791,12 +934,37 @@ const WorldChoirDonationFlow = (() => {
       btn.addEventListener('click', () => {
         const raw = btn.getAttribute('data-amount');
         state.amountChoice = raw === 'custom' ? 'custom' : Number(raw);
+        state.error = '';
         render();
         if (state.amountChoice === 'custom') document.getElementById('df-co-custom')?.focus();
       });
     });
     document.getElementById('df-co-custom')?.addEventListener('input', (e) => {
       state.customAmount = e.target.value;
+      const cta = document.getElementById('df-co-next');
+      if (cta && state.step === 'amount') {
+        cta.textContent = amountContinueLabel();
+        cta.disabled = !amountIsValid();
+      }
+      const details = document.getElementById('df-co-fee-details');
+      if (details && state.feeDetailsOpen) {
+        details.innerHTML = feePreviewHtml()
+          || '<p class="df-checkout__note">Select an amount to see the allocation.</p>';
+      }
+    });
+
+    document.getElementById('df-co-fee-toggle')?.addEventListener('click', () => {
+      state.feeDetailsOpen = !state.feeDetailsOpen;
+      const toggle = document.getElementById('df-co-fee-toggle');
+      const details = document.getElementById('df-co-fee-details');
+      if (toggle) toggle.setAttribute('aria-expanded', state.feeDetailsOpen ? 'true' : 'false');
+      if (details) {
+        details.hidden = !state.feeDetailsOpen;
+        if (state.feeDetailsOpen) {
+          details.innerHTML = feePreviewHtml()
+            || '<p class="df-checkout__note">Select an amount to see the allocation.</p>';
+        }
+      }
     });
 
     document.getElementById('df-co-anon')?.addEventListener('change', (e) => {
@@ -853,7 +1021,8 @@ const WorldChoirDonationFlow = (() => {
   function render() {
     const el = root();
     if (!el || !state) return;
-    el.innerHTML = `<div class="df-checkout__panel df-rise">${renderBody()}${paymentHoldHtml()}</div>`;
+    const amountClass = state.step === 'amount' ? ' df-checkout__panel--amount' : '';
+    el.innerHTML = `<div class="df-checkout__panel${amountClass} df-rise">${renderBody()}${paymentHoldHtml()}</div>`;
     el.hidden = false;
     el.setAttribute('aria-hidden', 'false');
     document.body.classList.add('df-checkout-open');
