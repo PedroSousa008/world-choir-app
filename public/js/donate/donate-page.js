@@ -1149,7 +1149,7 @@ const WorldChoirDonate = (() => {
   }
 
   function supportCtaLabel(foundation) {
-    return foundation.donationsEnabled ? 'Support this mission' : 'Temporarily unavailable';
+    return foundation.donationsEnabled ? 'Support this foundation' : 'Temporarily unavailable';
   }
 
   function renderSupportCta(foundation, { id, secondary = false } = {}) {
@@ -1648,21 +1648,11 @@ const WorldChoirDonate = (() => {
       alert('Donations for this foundation are temporarily unavailable.');
       return;
     }
-
-    ensureModal();
-    selectedFoundation = foundation;
-    selectedProject = project || null;
-    selectedAmount = 25;
-    customAmount = '';
-    selectedPayment = 'card';
-    isSubmitting = false;
-
-    const overlay = document.getElementById('donate-modal-overlay');
-    const body = document.getElementById('donate-modal-body');
-    body.innerHTML = renderModalBody(foundation, selectedProject);
-    overlay.classList.add('active');
-    overlay.setAttribute('aria-hidden', 'false');
-    bindModalEvents();
+    if (typeof WorldChoirDonationFlow !== 'undefined' && WorldChoirDonationFlow.start) {
+      WorldChoirDonationFlow.start(foundation, project || null);
+      return;
+    }
+    alert('Donation flow is temporarily unavailable. Please refresh and try again.');
   }
 
   function bindModalEvents() {
@@ -2200,7 +2190,9 @@ const WorldChoirDonate = (() => {
     try {
       await CreatorFoundationsStore.ready();
       applyDeepLinkCause();
-      if (!applyDeepLinkFoundation()) {
+      const resumed = typeof WorldChoirDonationFlow !== 'undefined'
+        && await WorldChoirDonationFlow.resumeFromQuery?.();
+      if (!resumed && !applyDeepLinkFoundation()) {
         renderHome();
       }
     } catch (err) {

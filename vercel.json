@@ -11,9 +11,13 @@
     { "source": "/owner", "destination": "/owner.html" },
     { "source": "/members", "destination": "/members.html" }
   ],
+  // Increase maxDuration for Stripe + Blob writes
   "functions": {
     "api/**/*.js": {
       "maxDuration": 10
+    },
+    "api/donations/**/*.js": {
+      "maxDuration": 30
     }
   },
   "headers": [
