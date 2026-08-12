@@ -13,9 +13,6 @@
   ],
   "functions": {
     "api/**/*.js": {
-      "maxDuration": 10
-    },
-    "api/donations/**/*.js": {
       "maxDuration": 30
     }
   },
