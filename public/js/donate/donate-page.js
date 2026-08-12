@@ -268,8 +268,7 @@ const WorldChoirDonate = (() => {
 
   function renderTopbar() {
     return `
-      <div class="df-topbar df-rise">
-        <p class="df-kicker">DONATE</p>
+      <div class="df-topbar df-rise df-topbar--no-kicker">
         ${searchOpen ? '' : `
           <button type="button" class="df-search-trigger" id="df-search-open" aria-label="Search foundations">
             ${searchIconSvg()}
@@ -298,18 +297,13 @@ const WorldChoirDonate = (() => {
     return `
       <header class="df-intro df-intro--globe df-rise df-rise-delay-1">
         <div class="df-intro__globe" aria-hidden="true">
-          <canvas id="df-donate-globe-canvas" class="df-donate-globe__canvas"></canvas>
+          <div id="df-donate-earth-container" class="df-donate-earth" aria-hidden="true"></div>
         </div>
 
         <div class="df-intro__text">
           <h1 class="df-intro__title">Discover Impact</h1>
           <p class="df-intro__lead">Support people you trust.<br>Causes you can change.</p>
           <p class="df-intro__copy">Verified creators turning their influence into real, meaningful and measurable action.</p>
-
-          <p class="df-intro__callout">
-            <span class="df-intro__heart" aria-hidden="true">♡</span>
-            Every contribution creates a <span class="df-intro__ripple">ripple</span> that reaches further.
-          </p>
         </div>
       </header>
     `;
@@ -1102,7 +1096,7 @@ const WorldChoirDonate = (() => {
 
     // Search mode: keep the field + compact people results only.
     if (searchOpen) {
-      stopDonateGlobe();
+      stopDonateEarth3D();
       root.innerHTML = `
         ${renderTopbar()}
         ${demoBanner}
@@ -1120,7 +1114,7 @@ const WorldChoirDonate = (() => {
       <div id="df-foundations-mount">${renderFoundationsMountHtml()}</div>
       ${renderHappeningNow()}
     `;
-    mountDonateGlobe();
+    mountDonateEarth3D();
     bindHomeEvents(opts);
   }
 
@@ -1813,6 +1807,326 @@ const WorldChoirDonate = (() => {
     `;
   }
 
+  // ─── Donate header realistic Earth (Three.js) ───
+  // Must be slow, subtle, and respect reduced motion. We render only inside the header container.
+  let donateEarth3D = {
+    threeLoaded: false,
+    loadingPromise: null,
+    running: false,
+    rafId: 0,
+    resizeHandler: null,
+    renderer: null,
+    scene: null,
+    camera: null,
+    earth: null,
+    clouds: null,
+    atmosphere: null,
+    network: null,
+    container: null,
+    reducedMotion: false,
+    startedAt: 0,
+    light: null,
+    disposeFns: [],
+  };
+
+  function donateEnsureThree() {
+    if (donateEarth3D.threeLoaded && window.THREE) return Promise.resolve(window.THREE);
+    if (donateEarth3D.loadingPromise) return donateEarth3D.loadingPromise;
+
+    donateEarth3D.loadingPromise = new Promise((resolve, reject) => {
+      try {
+        if (window.THREE) {
+          donateEarth3D.threeLoaded = true;
+          resolve(window.THREE);
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/three@0.164.1/build/three.min.js';
+        script.async = true;
+        script.onload = () => {
+          donateEarth3D.threeLoaded = true;
+          resolve(window.THREE);
+        };
+        script.onerror = () => reject(new Error('Failed to load Three.js'));
+        document.head.appendChild(script);
+      } catch (e) {
+        reject(e);
+      }
+    });
+
+    return donateEarth3D.loadingPromise;
+  }
+
+  function donateDisposeEarth3D() {
+    donateEarth3D.running = false;
+    if (donateEarth3D.rafId) cancelAnimationFrame(donateEarth3D.rafId);
+    donateEarth3D.rafId = 0;
+
+    if (donateEarth3D.resizeHandler) {
+      window.removeEventListener('resize', donateEarth3D.resizeHandler);
+      donateEarth3D.resizeHandler = null;
+    }
+
+    // Dispose textures / geometry / materials when possible.
+    try {
+      if (donateEarth3D.scene) {
+        donateEarth3D.scene.traverse((obj) => {
+          if (!obj) return;
+          if (obj.geometry) obj.geometry.dispose?.();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) {
+              obj.material.forEach((m) => m.dispose?.());
+            } else {
+              obj.material.dispose?.();
+            }
+          }
+        });
+      }
+    } catch {
+      /* ignore */
+    }
+
+    donateEarth3D.disposeFns.forEach((fn) => {
+      try { fn?.(); } catch { /* ignore */ }
+    });
+    donateEarth3D.disposeFns = [];
+
+    if (donateEarth3D.renderer) {
+      try { donateEarth3D.renderer.dispose?.(); } catch { /* ignore */ }
+    }
+
+    if (donateEarth3D.container) {
+      try {
+        while (donateEarth3D.container.firstChild) donateEarth3D.container.removeChild(donateEarth3D.container.firstChild);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    donateEarth3D.renderer = null;
+    donateEarth3D.scene = null;
+    donateEarth3D.camera = null;
+    donateEarth3D.earth = null;
+    donateEarth3D.clouds = null;
+    donateEarth3D.atmosphere = null;
+    donateEarth3D.network = null;
+    donateEarth3D.light = null;
+    donateEarth3D.startedAt = 0;
+  }
+
+  function donatePrefersReducedMotion() {
+    try {
+      return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      return false;
+    }
+  }
+
+  async function mountDonateEarth3D() {
+    const container = document.getElementById('df-donate-earth-container');
+    if (!container) return;
+
+    // Restart if we re-render the header.
+    if (donateEarth3D.running) donateDisposeEarth3D();
+
+    donateEarth3D.container = container;
+    donateEarth3D.reducedMotion = donatePrefersReducedMotion();
+
+    const THREE = await donateEnsureThree();
+    if (!container || !THREE) return;
+
+    const width = Math.max(1, container.clientWidth);
+    const height = Math.max(1, container.clientHeight);
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(width, height);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 100);
+    camera.position.z = 3.35;
+
+    const light = new THREE.DirectionalLight(0xffffff, 1.15);
+    light.position.set(-2.2, 1.35, 2.3);
+    scene.add(light);
+    donateEarth3D.light = light;
+
+    // Earth textures — use the same texture set from Three.js examples.
+    // Note: We keep blend logic in shader to get a realistic day/night split.
+    const texBase = 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/';
+    const loader = new THREE.TextureLoader();
+
+    const dayMap = await new Promise((resolve) => loader.load(texBase + 'earth_day_2048.jpg', resolve));
+    const nightMap = await new Promise((resolve) => loader.load(texBase + 'earth_lights_2048.png', resolve));
+    const normalMap = await new Promise((resolve) => loader.load(texBase + 'earth_normal_2048.jpg', resolve));
+    const cloudMap = await new Promise((resolve) => loader.load(texBase + 'earth_clouds_1024.png', resolve));
+    const atmosMap = await new Promise((resolve) => loader.load(texBase + 'earth_atmos_2048.jpg', resolve));
+
+    dayMap.colorSpace = THREE.SRGBColorSpace;
+    nightMap.colorSpace = THREE.SRGBColorSpace;
+    cloudMap.colorSpace = THREE.SRGBColorSpace;
+    atmosMap.colorSpace = THREE.SRGBColorSpace;
+
+    const sphere = new THREE.SphereGeometry(1, 72, 72);
+
+    const uniforms = {
+      uDayMap: { value: dayMap },
+      uNightMap: { value: nightMap },
+      uNormalMap: { value: normalMap },
+      uLightDir: { value: light.position.clone().normalize() },
+    };
+
+    const earthMat = new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vViewDir;
+        void main() {
+          vUv = uv;
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vNormal = normalize(mat3(modelMatrix) * normal);
+          vec3 viewDir = normalize(cameraPosition - worldPos.xyz);
+          vViewDir = viewDir;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        varying vec2 vUv;
+        varying vec3 vNormal;
+
+        uniform sampler2D uDayMap;
+        uniform sampler2D uNightMap;
+        uniform vec3 uLightDir;
+
+        void main() {
+          vec3 n = normalize(vNormal);
+          float ndl = max(dot(n, normalize(uLightDir)), 0.0);
+          // Blend around terminator: keep night visible but realistic.
+          float mixAmt = smoothstep(0.0, 0.30, ndl);
+
+          vec3 day = texture2D(uDayMap, vUv).rgb;
+          vec3 night = texture2D(uNightMap, vUv).rgb;
+
+          vec3 color = mix(night, day, mixAmt);
+
+          // Subtle atmospheric haze at edges.
+          float rim = pow(1.0 - ndl, 2.2);
+          color += vec3(0.02, 0.08, 0.18) * rim;
+
+          gl_FragColor = vec4(color, 1.0);
+        }
+      `,
+    });
+
+    const earth = new THREE.Mesh(sphere, earthMat);
+    scene.add(earth);
+
+    // Clouds (very low opacity, rotates slightly slower).
+    const cloudGeo = new THREE.SphereGeometry(1.01, 72, 72);
+    const cloudsMat = new THREE.MeshLambertMaterial({
+      map: cloudMap,
+      transparent: true,
+      opacity: 0.22,
+      depthWrite: false,
+    });
+    const clouds = new THREE.Mesh(cloudGeo, cloudsMat);
+    scene.add(clouds);
+
+    // Atmosphere rim — additive & back side.
+    const atmosGeo = new THREE.SphereGeometry(1.08, 72, 72);
+    const atmosMat = new THREE.MeshBasicMaterial({
+      map: atmosMap,
+      transparent: true,
+      opacity: 0.14,
+      side: THREE.BackSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const atmosphere = new THREE.Mesh(atmosGeo, atmosMat);
+    scene.add(atmosphere);
+
+    // Subtle network points (few, low opacity).
+    const network = new THREE.Group();
+    scene.add(network);
+    const pointCount = 10;
+    for (let i = 0; i < pointCount; i += 1) {
+      const a = (i / pointCount) * Math.PI * 2;
+      const b = ((i * 9301) % 100) / 100 * Math.PI - Math.PI / 2;
+      const cl = Math.cos(b);
+      const pos = new THREE.Vector3(cl * Math.sin(a), Math.sin(b), cl * Math.cos(a)).multiplyScalar(1.01);
+      const g = new THREE.SphereGeometry(0.012, 8, 8);
+      const m = new THREE.MeshBasicMaterial({ color: 0x4ec5e8, transparent: true, opacity: 0.22 });
+      const s = new THREE.Mesh(g, m);
+      s.position.copy(pos);
+      network.add(s);
+    }
+
+    donateEarth3D.renderer = renderer;
+    donateEarth3D.scene = scene;
+    donateEarth3D.camera = camera;
+    donateEarth3D.earth = earth;
+    donateEarth3D.clouds = clouds;
+    donateEarth3D.atmosphere = atmosphere;
+    donateEarth3D.network = network;
+    donateEarth3D.running = true;
+
+    let disposed = false;
+    const resize = () => {
+      if (disposed) return;
+      const w = Math.max(1, container.clientWidth);
+      const h = Math.max(1, container.clientHeight);
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+    donateEarth3D.resizeHandler = resize;
+    window.addEventListener('resize', resize, { passive: true });
+
+    const animate = () => {
+      if (disposed || !donateEarth3D.running) return;
+      const now = performance.now();
+      const t = (now - donateEarth3D.startedAt) / 60000; // ~60s per rotation feels calm
+      const rot = t * Math.PI * 2;
+
+      // Rotate planet.
+      earth.rotation.y = rot;
+      clouds.rotation.y = rot * 0.98;
+
+      uniforms.uLightDir.value.copy(light.position).normalize();
+
+      renderer.render(scene, camera);
+      donateEarth3D.rafId = requestAnimationFrame(animate);
+    };
+
+    donateEarth3D.startedAt = performance.now();
+    if (donateEarth3D.reducedMotion) {
+      earth.rotation.y = 0;
+      clouds.rotation.y = 0;
+      uniforms.uLightDir.value.copy(light.position).normalize();
+      renderer.render(scene, camera);
+      donateEarth3D.running = false;
+      cancelAnimationFrame(donateEarth3D.rafId);
+    } else {
+      donateEarth3D.rafId = requestAnimationFrame(animate);
+    }
+
+    donateEarth3D.disposeFns.push(() => {
+      disposed = true;
+      donateEarth3D.running = false;
+    });
+  }
+
+  function stopDonateEarth3D() {
+    donateDisposeEarth3D();
+  }
+
   /** Paint the Donate chrome instantly — never show a loading message. */
   function renderHomeShell() {
     const root = document.getElementById('donate-content');
@@ -1824,7 +2138,7 @@ const WorldChoirDonate = (() => {
       <div id="df-foundations-mount">${renderPendingFoundations()}</div>
     `;
     bindHomeEvents();
-    mountDonateGlobe();
+    mountDonateEarth3D();
   }
 
   function renderError(message) {
