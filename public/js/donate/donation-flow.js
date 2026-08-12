@@ -846,6 +846,11 @@ const WorldChoirDonationFlow = (() => {
 
   async function confirmTestPayment() {
     const card = persistTestCardFromDom();
+    const loc = participationLocation();
+    const anonymous = state.donorAnonymous;
+    const donorDisplayName = anonymous
+      ? 'Anonymous'
+      : [state.firstName, state.lastName].filter(Boolean).join(' ').trim() || state.donorDisplayName;
     const idempotencyKey = `test-complete-${state.donationId}`;
     const res = await fetch('/api/donations?action=complete-test', {
       method: 'POST',
@@ -860,6 +865,15 @@ const WorldChoirDonationFlow = (() => {
         expYear: card.expYear,
         cvc: card.cvc,
         idempotencyKey,
+        firstName: state.firstName,
+        lastName: state.lastName,
+        donorDisplayName,
+        donorAnonymous: anonymous,
+        message: state.message,
+        city: loc.city,
+        country: loc.country,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
       }),
     });
     const data = await res.json();

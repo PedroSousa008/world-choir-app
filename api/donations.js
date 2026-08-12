@@ -363,7 +363,20 @@ async function handleCompleteTest(req, res) {
     req.headers['idempotency-key'] || body.idempotencyKey || ''
   ).slice(0, 255);
 
-  const completed = await donations.completeTestDonation(row, { idempotencyKey });
+  const completed = await donations.completeTestDonation(row, {
+    idempotencyKey,
+    details: {
+      firstName: body.firstName,
+      lastName: body.lastName,
+      donorDisplayName: body.donorDisplayName,
+      donorAnonymous: body.donorAnonymous === true,
+      message: body.message,
+      city: body.city,
+      country: body.country,
+      latitude: body.latitude,
+      longitude: body.longitude,
+    },
+  });
   return res.status(200).json({
     ok: true,
     ready: true,
@@ -454,10 +467,10 @@ module.exports = async function handler(req, res) {
   const action = String(req.query?.action || req.body?.action || '').trim();
 
   try {
-    if (req.method === 'GET' && (action === 'config' || !action)) {
-      // GET /api/donations?action=config  OR legacy path detection via query only
-      if (action === 'config' || req.query?.config === '1') return handleConfig(req, res);
-      if (action === 'receipt' || req.query?.id) return handleReceipt(req, res);
+    if (req.method === 'GET') {
+      if (action === 'receipt' || (req.query?.id && action !== 'config')) {
+        return handleReceipt(req, res);
+      }
       return handleConfig(req, res);
     }
 
@@ -467,7 +480,7 @@ module.exports = async function handler(req, res) {
       if (action === 'confirm-status') return handleConfirmStatus(req, res);
       if (action === 'complete-test') return handleCompleteTest(req, res);
       if (action === 'webhook') return handleWebhook(req, res);
-      // Stripe webhooks hit /api/donations-webhook or /api/donations?action=webhook
+      // Stripe webhooks hit /api/donations?action=webhook
       if (req.headers['stripe-signature']) return handleWebhook(req, res);
     }
 

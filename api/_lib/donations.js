@@ -96,10 +96,9 @@ function matchesControlledTestCard({ number, expMonth, expYear, cvc } = {}) {
 }
 
 function makeTestTransactionId(donationId) {
-  const stamp = Date.now().toString(36);
-  const rand = randomUUID().replace(/-/g, '').slice(0, 10);
-  const short = String(donationId || 'don').replace(/^don_/, '').slice(0, 10);
-  return `TEST_${short}_${stamp}_${rand}`;
+  // Deterministic per donation — safe for idempotent retries / cleanup.
+  const id = String(donationId || 'don').trim() || 'don';
+  return `TEST_${id}`;
 }
 
 function getStripe() {
@@ -301,8 +300,9 @@ function buildDraftRecord({
 /**
  * Complete a controlled test donation. Idempotent for already-succeeded rows.
  * Never calls Stripe. Never stores card PAN/CVC.
+ * `details` may re-apply donor/location/message so a single write survives Blob races.
  */
-async function completeTestDonation(row, { idempotencyKey } = {}) {
+async function completeTestDonation(row, { idempotencyKey, details } = {}) {
   assertTestModeAllowed();
   if (!row) {
     const err = new Error('Donation not found.');
@@ -310,23 +310,55 @@ async function completeTestDonation(row, { idempotencyKey } = {}) {
     throw err;
   }
 
-  const status = String(row.paymentStatus || row.status || '').toLowerCase();
+  const donationId = row.id || row.donation_id;
+  // Re-read immediately before write to reduce lost-update risk.
+  const fresh = (await findDonationById(donationId)) || row;
+  const status = String(fresh.paymentStatus || fresh.status || '').toLowerCase();
   if (SUCCESS_STATUSES.has(status)) {
-    return row;
+    return fresh;
   }
 
-  if (row.is_test !== true && row.isTest !== true && row.payment_provider !== 'test') {
+  if (fresh.is_test !== true && fresh.isTest !== true && fresh.payment_provider !== 'test') {
     const err = new Error('This donation is not a test payment.');
     err.code = 'NOT_A_TEST_DONATION';
     throw err;
   }
 
-  const testTxn = row.test_transaction_id
-    || row.testTransactionId
-    || makeTestTransactionId(row.id || row.donation_id);
+  const d = details && typeof details === 'object' ? details : {};
+  const hasDonorFlag = Object.prototype.hasOwnProperty.call(d, 'donorAnonymous');
+  const anonymous = hasDonorFlag
+    ? d.donorAnonymous === true
+    : (fresh.donor_anonymous === true || fresh.donorAnonymous === true);
+  const donorDisplayName = anonymous
+    ? 'Anonymous'
+    : sanitizeName(d.donorDisplayName || fresh.donor_display_name || fresh.donorDisplayName || '');
+  const message = d.message != null ? sanitizeMessage(d.message) : (fresh.message || '');
+  const city = d.city != null
+    ? sanitizeName(d.city).slice(0, 120)
+    : (fresh.city || fresh.participationCity || fresh.world_choir_city_name || '');
+  const country = d.country != null
+    ? sanitizeName(d.country).slice(0, 120)
+    : (fresh.country || fresh.participationCountry || fresh.world_choir_country || '');
+  const latitude = Number(d.latitude);
+  const longitude = Number(d.longitude);
+
+  const testTxn = makeTestTransactionId(donationId);
   const now = new Date().toISOString();
   const completed = {
-    ...row,
+    ...fresh,
+    donor_display_name: donorDisplayName,
+    donorDisplayName,
+    donor_anonymous: anonymous,
+    donorAnonymous: anonymous,
+    message,
+    city,
+    country,
+    participationCity: city,
+    participationCountry: country,
+    world_choir_city_name: city,
+    world_choir_country: country,
+    latitude: Number.isFinite(latitude) ? latitude : (fresh.latitude ?? null),
+    longitude: Number.isFinite(longitude) ? longitude : (fresh.longitude ?? null),
     paymentStatus: 'succeeded',
     status: 'succeeded',
     payment_provider: 'test',
@@ -350,7 +382,12 @@ async function completeTestDonation(row, { idempotencyKey } = {}) {
     test_idempotency_key: idempotencyKey ? String(idempotencyKey).slice(0, 255) : null,
   };
   await upsertDonation(completed);
-  return completed;
+
+  // Confirm persisted row (Blob can briefly lag).
+  const confirmed = await findDonationById(donationId);
+  return confirmed && SUCCESS_STATUSES.has(String(confirmed.paymentStatus || confirmed.status || '').toLowerCase())
+    ? confirmed
+    : completed;
 }
 
 function isSuccessfulDonation(d) {
