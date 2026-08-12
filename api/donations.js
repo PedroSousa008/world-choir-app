@@ -165,7 +165,7 @@ async function handleUpdate(req, res) {
   const donationId = String(body.donationId || '').trim();
   if (!donationId) return res.status(400).json({ error: 'donationId is required.' });
 
-  const existing = await donations.findDonationById(donationId);
+  const existing = await donations.findDonationByIdWithRetry(donationId);
   if (!existing) return res.status(404).json({ error: 'Donation not found.' });
 
   const status = String(existing.paymentStatus || existing.status || '').toLowerCase();
