@@ -1,7 +1,7 @@
 /**
- * WorldChoirDonationFlow — real one-time donation checkout.
+ * WorldChoirDonationFlow — one-time donation checkout.
  * Steps: amount → payment → donor → message → summary → success.
- * Never fakes payment success. Requires Stripe configuration.
+ * Live path uses Stripe. Controlled test path (server-gated) never calls Stripe.
  */
 const WorldChoirDonationFlow = (() => {
   const STEPS = ['amount', 'payment', 'donor', 'message', 'summary', 'success', 'receipt'];
@@ -84,12 +84,17 @@ const WorldChoirDonationFlow = (() => {
       donationId: null,
       clientSecret: null,
       paymentIntentId: null,
+      testMode: false,
+      testCardNumber: '',
+      testExpMonth: '',
+      testExpYear: '',
+      testCvc: '',
+      paymentLabel: '',
       firstName: '',
       lastName: '',
       donorDisplayName: '',
       donorAnonymous: false,
       message: '',
-      paymentLabel: '',
       receipt: null,
       error: '',
       feeDetailsOpen: false,
@@ -120,6 +125,9 @@ const WorldChoirDonationFlow = (() => {
 
   async function ensureStripe() {
     await loadConfig();
+    if (config.testPaymentsEnabled) {
+      return null;
+    }
     if (!config.configured || !config.publishableKey) {
       const err = new Error(config.message || 'Payments are not configured yet.');
       err.code = 'PAYMENTS_NOT_CONFIGURED';
@@ -137,6 +145,40 @@ const WorldChoirDonationFlow = (() => {
     }
     if (!stripe) stripe = window.Stripe(config.publishableKey);
     return stripe;
+  }
+
+  function isTestPaymentsMode() {
+    return !!(config?.testPaymentsEnabled || state?.testMode);
+  }
+
+  function readTestCardFromDom() {
+    return {
+      number: document.getElementById('df-co-card-number')?.value || state.testCardNumber || '',
+      expMonth: document.getElementById('df-co-card-exp-month')?.value || state.testExpMonth || '',
+      expYear: document.getElementById('df-co-card-exp-year')?.value || state.testExpYear || '',
+      cvc: document.getElementById('df-co-card-cvc')?.value || state.testCvc || '',
+    };
+  }
+
+  function persistTestCardFromDom() {
+    const card = readTestCardFromDom();
+    state.testCardNumber = card.number;
+    state.testExpMonth = card.expMonth;
+    state.testExpYear = card.expYear;
+    state.testCvc = card.cvc;
+    return card;
+  }
+
+  function validateControlledTestCard(card) {
+    const digits = String(card.number || '').replace(/\D/g, '');
+    const month = String(card.expMonth || '').replace(/\D/g, '').padStart(2, '0').slice(-2);
+    const yearRaw = String(card.expYear || '').replace(/\D/g, '');
+    const year = yearRaw.length === 4 ? yearRaw.slice(-2) : yearRaw.slice(0, 2);
+    const cvc = String(card.cvc || '').replace(/\D/g, '');
+    if (digits === '0000000000000000' && month === '03' && year === '30' && cvc === '123') {
+      return true;
+    }
+    return false;
   }
 
   function root() {
@@ -479,6 +521,73 @@ const WorldChoirDonationFlow = (() => {
   }
 
   function renderPayment() {
+    if (isTestPaymentsMode()) {
+      return `
+        ${header('Payment')}
+        ${foundationHeading()}
+        <p class="df-checkout__hint">One-time donation of <strong>${esc(formatMoney(state.amount))}</strong></p>
+        <div class="df-checkout__card-form" role="group" aria-label="Card payment">
+          <div class="form-group">
+            <label class="form-label" for="df-co-card-number">Card number</label>
+            <input
+              class="form-input"
+              id="df-co-card-number"
+              type="text"
+              inputmode="numeric"
+              autocomplete="cc-number"
+              placeholder="0000 0000 0000 0000"
+              maxlength="23"
+              value="${esc(state.testCardNumber)}"
+            >
+          </div>
+          <div class="df-checkout__card-row">
+            <div class="form-group">
+              <label class="form-label" for="df-co-card-exp-month">Exp. month</label>
+              <input
+                class="form-input"
+                id="df-co-card-exp-month"
+                type="text"
+                inputmode="numeric"
+                autocomplete="cc-exp-month"
+                placeholder="MM"
+                maxlength="2"
+                value="${esc(state.testExpMonth)}"
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="df-co-card-exp-year">Exp. year</label>
+              <input
+                class="form-input"
+                id="df-co-card-exp-year"
+                type="text"
+                inputmode="numeric"
+                autocomplete="cc-exp-year"
+                placeholder="YY"
+                maxlength="4"
+                value="${esc(state.testExpYear)}"
+              >
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="df-co-card-cvc">CVC</label>
+              <input
+                class="form-input"
+                id="df-co-card-cvc"
+                type="text"
+                inputmode="numeric"
+                autocomplete="cc-csc"
+                placeholder="123"
+                maxlength="4"
+                value="${esc(state.testCvc)}"
+              >
+            </div>
+          </div>
+        </div>
+        ${state.error ? `<p class="df-checkout__error" role="alert">${esc(state.error)}</p>` : ''}
+        <button type="button" class="df-checkout__cta" id="df-co-next">Continue</button>
+        <p class="df-checkout__secure">World Choir never stores card numbers.</p>
+      `;
+    }
+
     return `
       ${header('Payment')}
       ${foundationHeading()}
@@ -492,6 +601,7 @@ const WorldChoirDonationFlow = (() => {
 
   /** Keep Payment Element alive (hidden) while donor/message/summary steps run. */
   function paymentHoldHtml() {
+    if (isTestPaymentsMode()) return '';
     if (!state.clientSecret || state.step === 'payment' || state.step === 'amount' || state.step === 'success' || state.step === 'receipt') {
       return '';
     }
@@ -567,6 +677,7 @@ const WorldChoirDonationFlow = (() => {
             ${loc.city && loc.country ? esc(`${loc.city}, ${loc.country}`) : '<span class="df-checkout__warn">Add your location to continue</span>'}
             <button type="button" class="df-checkout__link" id="df-co-change-loc">Change location</button>
           </p>
+          <p><span class="df-checkout__meta-label">Payment method</span><br>${esc(state.paymentLabel || 'Card')}</p>
         </div>
 
         <p class="df-checkout__confirm-line">You are donating ${esc(formatMoney(state.amount))} to ${esc(state.foundation.foundationName)}.</p>
@@ -704,7 +815,11 @@ const WorldChoirDonationFlow = (() => {
     }
     state.amount = Math.round(amount * 100) / 100;
 
-    await ensureStripe();
+    await loadConfig();
+    if (!isTestPaymentsMode()) {
+      await ensureStripe();
+    }
+
     const idempotencyKey = `wc-${deviceId() || 'anon'}-${state.foundation.id}-${state.amount}-${Date.now()}`;
     const res = await fetch('/api/donations?action=create-intent', {
       method: 'POST',
@@ -724,8 +839,33 @@ const WorldChoirDonationFlow = (() => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Could not start payment.');
     state.donationId = data.donationId;
-    state.clientSecret = data.clientSecret;
-    state.paymentIntentId = data.paymentIntentId;
+    state.clientSecret = data.clientSecret || null;
+    state.paymentIntentId = data.paymentIntentId || null;
+    state.testMode = data.testMode === true || config.testPaymentsEnabled === true;
+  }
+
+  async function confirmTestPayment() {
+    const card = persistTestCardFromDom();
+    const idempotencyKey = `test-complete-${state.donationId}`;
+    const res = await fetch('/api/donations?action=complete-test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify({
+        donationId: state.donationId,
+        cardNumber: card.number,
+        expMonth: card.expMonth,
+        expYear: card.expYear,
+        cvc: card.cvc,
+        idempotencyKey,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Your donation could not be completed. Please try again.');
+    if (!data.donation) throw new Error('Your donation could not be confirmed. Please try again.');
+    return data.donation;
   }
 
   async function persistDonorAndMessage() {
@@ -772,61 +912,68 @@ const WorldChoirDonationFlow = (() => {
 
     try {
       await persistDonorAndMessage();
-      await ensureStripe();
 
-      if (!elements) {
-        throw new Error('Payment session expired. Go back and enter your payment details again.');
-      }
+      let receipt = null;
+      if (isTestPaymentsMode()) {
+        receipt = await confirmTestPayment();
+      } else {
+        await ensureStripe();
 
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        redirect: 'if_required',
-        confirmParams: {
-          return_url: `${window.location.origin}/donate.html?donation=${encodeURIComponent(state.donationId)}`,
-          payment_method_data: {
-            billing_details: {
-              name: state.donorAnonymous
-                ? undefined
-                : (state.donorDisplayName || undefined),
+        if (!elements) {
+          throw new Error('Payment session expired. Go back and enter your payment details again.');
+        }
+
+        const { error, paymentIntent } = await stripe.confirmPayment({
+          elements,
+          redirect: 'if_required',
+          confirmParams: {
+            return_url: `${window.location.origin}/donate.html?donation=${encodeURIComponent(state.donationId)}`,
+            payment_method_data: {
+              billing_details: {
+                name: state.donorAnonymous
+                  ? undefined
+                  : (state.donorDisplayName || undefined),
+              },
             },
           },
-        },
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Your donation could not be completed. Please check your payment details and try again.');
-      }
-
-      if (paymentIntent && paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'processing') {
-        throw new Error('Your donation could not be completed. Please try again.');
-      }
-
-      // Poll until ledger is updated
-      let receipt = null;
-      for (let i = 0; i < 12; i += 1) {
-        const res = await fetch('/api/donations?action=confirm-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ donationId: state.donationId }),
         });
-        const data = await res.json();
-        if (data.ready && data.donation) {
-          receipt = data.donation;
-          break;
+
+        if (error) {
+          throw new Error(error.message || 'Your donation could not be completed. Please check your payment details and try again.');
         }
-        await new Promise((r) => setTimeout(r, 500));
+
+        if (paymentIntent && paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'processing') {
+          throw new Error('Your donation could not be completed. Please try again.');
+        }
+
+        for (let i = 0; i < 12; i += 1) {
+          const res = await fetch('/api/donations?action=confirm-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ donationId: state.donationId }),
+          });
+          const data = await res.json();
+          if (data.ready && data.donation) {
+            receipt = data.donation;
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 500));
+        }
+
+        if (!receipt) {
+          const res = await fetch(`/api/donations?action=receipt&id=${encodeURIComponent(state.donationId)}`);
+          const data = await res.json();
+          if (res.ok) receipt = data.donation;
+        }
       }
 
       if (!receipt) {
-        const res = await fetch(`/api/donations?action=receipt&id=${encodeURIComponent(state.donationId)}`);
-        const data = await res.json();
-        if (res.ok) receipt = data.donation;
+        throw new Error('Your donation could not be confirmed. Please try again.');
       }
 
       state.receipt = receipt;
       state.step = 'success';
 
-      // Refresh foundation stats from catalog
       try {
         await CreatorFoundationsStore.refresh?.()
           || CreatorFoundationsStore.ready?.(true);
@@ -858,7 +1005,9 @@ const WorldChoirDonationFlow = (() => {
       await createIntent();
       state.step = 'payment';
       render();
-      await mountPaymentElement();
+      if (!isTestPaymentsMode()) {
+        await mountPaymentElement();
+      }
     } catch (err) {
       state.error = err.message || 'Could not continue.';
       render();
@@ -867,6 +1016,19 @@ const WorldChoirDonationFlow = (() => {
 
   async function advanceFromPayment() {
     state.error = '';
+    if (isTestPaymentsMode()) {
+      const card = persistTestCardFromDom();
+      if (!validateControlledTestCard(card)) {
+        state.error = 'Please check your payment details and try again.';
+        render();
+        return;
+      }
+      state.paymentLabel = 'Card';
+      state.step = 'donor';
+      render();
+      return;
+    }
+
     if (!state.clientSecret || !elements) {
       state.error = 'Payment is not ready. Go back and try again.';
       render();
@@ -880,6 +1042,7 @@ const WorldChoirDonationFlow = (() => {
         await mountPaymentElement();
         return;
       }
+      state.paymentLabel = 'Card';
       state.step = 'donor';
       render();
     } catch (err) {
@@ -1027,7 +1190,7 @@ const WorldChoirDonationFlow = (() => {
     el.setAttribute('aria-hidden', 'false');
     document.body.classList.add('df-checkout-open');
     bind();
-    if (state.clientSecret && state.step !== 'amount' && state.step !== 'success' && state.step !== 'receipt') {
+    if (state.clientSecret && !isTestPaymentsMode() && state.step !== 'amount' && state.step !== 'success' && state.step !== 'receipt') {
       requestAnimationFrame(() => { mountPaymentElement(); });
     }
   }
@@ -1040,12 +1203,14 @@ const WorldChoirDonationFlow = (() => {
     ensureShell();
     resetState(foundation, project);
     try {
+      config = null;
       await loadConfig();
       if (!config.configured) {
         state.step = 'not_configured';
         render();
         return;
       }
+      state.testMode = config.testPaymentsEnabled === true;
       render();
     } catch (err) {
       alert(err.message || 'Could not open donation flow.');

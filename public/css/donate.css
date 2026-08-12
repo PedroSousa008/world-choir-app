@@ -2926,6 +2926,29 @@ body.df-checkout-open {
   opacity: 0.85;
 }
 
+
+.df-checkout__card-form {
+  margin: 8px 0 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.df-checkout__card-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 420px) {
+  .df-checkout__card-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .df-checkout__card-row .form-group:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
 .df-checkout__payment-el {
   min-height: 180px;
   margin: 8px 0 4px;

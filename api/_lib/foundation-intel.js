@@ -152,8 +152,12 @@ function buildPledgeIndex(pledges) {
  * Never invents coordinates.
  */
 function resolveLocation(donation, pledgeIndex) {
-  const directCity = donation.city || donation.participationCity;
-  const directCountry = donation.country || donation.participationCountry;
+  const directCity = donation.city
+    || donation.participationCity
+    || donation.world_choir_city_name;
+  const directCountry = donation.country
+    || donation.participationCountry
+    || donation.world_choir_country;
   let latitude = Number(donation.latitude);
   let longitude = Number(donation.longitude);
   let city = directCity ? String(directCity).trim() : '';
@@ -291,20 +295,22 @@ function buildGeography(donations, pledgeIndex) {
 
 function privacySafeDonation(d, index) {
   const amount = Number(d.amount);
-  const shareIdentity = d.shareIdentity === true || d.publicName === true;
+  const anonymous = d.donor_anonymous === true || d.donorAnonymous === true;
+  const displayName = String(d.donor_display_name || d.donorDisplayName || '').trim();
+  const shareIdentity = !anonymous && !!displayName && displayName.toLowerCase() !== 'anonymous';
   return {
     id: d.id || `d-${index}`,
     date: (donationDate(d) || new Date(0)).toISOString(),
     amount: Number.isFinite(amount) ? amount : 0,
     currency: d.currency || 'EUR',
     projectId: d.projectId || null,
-    city: d.city || d.participationCity || null,
-    country: d.country || d.participationCountry || null,
+    city: d.city || d.participationCity || d.world_choir_city_name || null,
+    country: d.country || d.participationCountry || d.world_choir_country || null,
     isNewSupporter: d.isNewSupporter === true,
     isReturning: d.isReturning === true,
-    supporterLabel: shareIdentity && d.donorName
-      ? String(d.donorName)
-      : 'Anonymous Supporter',
+    supporterLabel: shareIdentity ? displayName : 'Anonymous Supporter',
+    message: d.message || '',
+    isTest: d.is_test === true || d.isTest === true,
   };
 }
 

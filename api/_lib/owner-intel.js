@@ -113,19 +113,27 @@ function bucketByDay(dates) {
 function buildCityIntelligence(pledges, donations, influencers) {
   const byCity = new Map();
 
-  pledges.forEach((p) => {
-    if (!p.city && !p.country) return;
-    const key = cityKey(p.city, p.country);
+  function ensureCity(city, country) {
+    const key = cityKey(city, country);
     if (!byCity.has(key)) {
       byCity.set(key, {
-        city: displayCity(p.city),
-        country: displayCountry(p.country),
+        city: displayCity(city),
+        country: displayCountry(country),
         voices: 0,
         latitudes: [],
         longitudes: [],
+        donors: new Set(),
+        totalDonations: 0,
+        donationAmount: 0,
+        foundationIds: new Set(),
       });
     }
-    const row = byCity.get(key);
+    return byCity.get(key);
+  }
+
+  pledges.forEach((p) => {
+    if (!p.city && !p.country) return;
+    const row = ensureCity(p.city, p.country);
     row.voices += 1;
     if (Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude))) {
       row.latitudes.push(Number(p.latitude));
@@ -133,33 +141,58 @@ function buildCityIntelligence(pledges, donations, influencers) {
     }
   });
 
-  // Donations ledger has no city field yet — leave donation metrics at 0 unless foundation country matches later.
+  (donations || []).forEach((d) => {
+    const city = d.city || d.participationCity || d.world_choir_city_name || '';
+    const country = d.country || d.participationCountry || d.world_choir_country || '';
+    if (!city && !country) return;
+    const row = ensureCity(city, country);
+    row.totalDonations += 1;
+    const amount = Number(d.amount);
+    if (Number.isFinite(amount) && amount > 0) row.donationAmount += amount;
+    const dk = d.donorId || d.deviceId || d.userId || d.emailHash || d.id;
+    if (dk) row.donors.add(String(dk));
+    if (d.foundationId) row.foundationIds.add(String(d.foundationId));
+    if (Number.isFinite(Number(d.latitude)) && Number.isFinite(Number(d.longitude))) {
+      row.latitudes.push(Number(d.latitude));
+      row.longitudes.push(Number(d.longitude));
+    }
+  });
+
   return Array.from(byCity.values())
-    .map((row, index) => {
+    .map((row) => {
       const lat = row.latitudes.length
         ? row.latitudes.reduce((a, b) => a + b, 0) / row.latitudes.length
         : null;
       const lng = row.longitudes.length
         ? row.longitudes.reduce((a, b) => a + b, 0) / row.longitudes.length
         : null;
+      const uniqueDonors = row.donors.size;
       return {
         rank: 0,
         city: row.city,
         country: row.country,
         voices: row.voices,
-        uniqueDonors: 0,
-        totalDonations: 0,
-        averageDonation: null,
-        donationConversion: null,
+        uniqueDonors,
+        totalDonations: Math.round(row.donationAmount * 100) / 100,
+        donationCount: row.totalDonations,
+        averageDonation: row.totalDonations > 0
+          ? Math.round((row.donationAmount / row.totalDonations) * 100) / 100
+          : null,
+        donationConversion: row.voices > 0
+          ? Math.round((uniqueDonors / row.voices) * 1000) / 10
+          : null,
         latitude: lat,
         longitude: lng,
-        foundations: influencers.filter(
-          (i) => String(i.country || '').trim().toLowerCase() === String(row.country).toLowerCase()
-            && String(row.city).toLowerCase() !== 'unknown city'
-        ).length,
+        foundations: Math.max(
+          row.foundationIds.size,
+          influencers.filter(
+            (i) => String(i.country || '').trim().toLowerCase() === String(row.country).toLowerCase()
+              && String(row.city).toLowerCase() !== 'unknown city'
+          ).length
+        ),
       };
     })
-    .sort((a, b) => b.voices - a.voices || a.city.localeCompare(b.city))
+    .sort((a, b) => b.voices - a.voices || b.donationCount - a.donationCount || a.city.localeCompare(b.city))
     .map((row, i) => ({ ...row, rank: i + 1 }));
 }
 
@@ -174,11 +207,46 @@ function buildCountryIntelligence(pledges, cities, influencers, donations) {
         country: displayCountry(p.country),
         voices: 0,
         cities: new Set(),
+        donors: new Set(),
+        totalDonated: 0,
+        donationCount: 0,
+        foundationAmount: 0,
+        platformFee: 0,
       });
     }
     const row = byCountry.get(key);
     row.voices += 1;
     if (p.city) row.cities.add(String(p.city).trim().toLowerCase());
+  });
+
+  (donations || []).forEach((d) => {
+    const country = d.country || d.participationCountry || d.world_choir_country || '';
+    if (!country) return;
+    const key = String(country).trim().toLowerCase();
+    if (!byCountry.has(key)) {
+      byCountry.set(key, {
+        country: displayCountry(country),
+        voices: 0,
+        cities: new Set(),
+        donors: new Set(),
+        totalDonated: 0,
+        donationCount: 0,
+        foundationAmount: 0,
+        platformFee: 0,
+      });
+    }
+    const row = byCountry.get(key);
+    row.donationCount += 1;
+    const amount = Number(d.amount);
+    if (Number.isFinite(amount) && amount > 0) row.totalDonated += amount;
+    const foundationAmount = Number(d.foundation_amount);
+    const platformFee = Number(d.platform_fee);
+    if (Number.isFinite(foundationAmount) && foundationAmount > 0) row.foundationAmount += foundationAmount;
+    if (Number.isFinite(platformFee) && platformFee > 0) row.platformFee += platformFee;
+    const city = d.city || d.participationCity || d.world_choir_city_name;
+    if (city) row.cities.add(String(city).trim().toLowerCase());
+    const dk = d.donorId || d.deviceId || d.userId || d.emailHash || d.id;
+    if (dk) row.donors.add(String(dk));
   });
 
   return Array.from(byCountry.values())
@@ -190,18 +258,23 @@ function buildCountryIntelligence(pledges, cities, influencers, donations) {
         country: row.country,
         voices: row.voices,
         cities: row.cities.size,
-        donors: 0,
-        totalDonated: 0,
-        donationConversion: null,
+        donors: row.donors.size,
+        totalDonated: Math.round(row.totalDonated * 100) / 100,
+        donationCount: row.donationCount,
+        foundationAllocation: Math.round(row.foundationAmount * 100) / 100,
+        platformFee: Math.round(row.platformFee * 100) / 100,
+        donationConversion: row.voices > 0
+          ? Math.round((row.donors.size / row.voices) * 1000) / 10
+          : null,
         foundations: countryFoundations.length,
         growth: null,
       };
     })
-    .sort((a, b) => b.voices - a.voices || a.country.localeCompare(b.country));
+    .sort((a, b) => b.voices - a.voices || b.totalDonated - a.totalDonated || a.country.localeCompare(b.country));
 }
 
-function buildMapPoints(pledges) {
-  return pledges
+function buildMapPoints(pledges, donations = []) {
+  const voicePoints = pledges
     .filter((p) => Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude)))
     .map((p) => ({
       id: p.id,
@@ -214,6 +287,43 @@ function buildMapPoints(pledges) {
       pledgedAt: p.pledged_at || null,
       type: 'voice',
     }));
+
+  const donationPoints = [];
+  const byCity = new Map();
+  (donations || []).forEach((d) => {
+    const lat = Number(d.latitude);
+    const lng = Number(d.longitude);
+    const city = d.city || d.participationCity || d.world_choir_city_name || null;
+    const country = d.country || d.participationCountry || d.world_choir_country || null;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const key = `${String(city || '').toLowerCase()}|${String(country || '').toLowerCase()}`;
+    if (!byCity.has(key)) {
+      byCity.set(key, {
+        id: `don-geo-${key}`,
+        latitude: lat,
+        longitude: lng,
+        city,
+        country,
+        count: 0,
+        raised: 0,
+        type: 'donation',
+      });
+    }
+    const row = byCity.get(key);
+    row.count += 1;
+    const amount = Number(d.amount);
+    if (Number.isFinite(amount) && amount > 0) row.raised += amount;
+  });
+  byCity.forEach((row) => {
+    donationPoints.push({
+      ...row,
+      raised: Math.round(row.raised * 100) / 100,
+      donors: row.count,
+      voices: 0,
+    });
+  });
+
+  return { voicePoints, donationPoints };
 }
 
 function buildActivity({ users, pledges, promises, influencers, donations }) {
@@ -311,7 +421,9 @@ async function buildOwnerControlCenter() {
   const verifiedDonations = filterDonations(donations, {});
   const cities = buildCityIntelligence(pledges, verifiedDonations, influencers);
   const countries = buildCountryIntelligence(pledges, cities, influencers, verifiedDonations);
-  const mapPoints = buildMapPoints(pledges);
+  const mapBundles = buildMapPoints(pledges, verifiedDonations);
+  const mapPoints = mapBundles.voicePoints;
+  const donationMapPoints = mapBundles.donationPoints;
   const activity = buildActivity({ users, pledges, promises, influencers, donations });
   const growth = buildGrowthSeries({ users, pledges, donations, influencers });
 
@@ -427,13 +539,16 @@ async function buildOwnerControlCenter() {
     cities,
     countries,
     map: {
-      modes: ['voices'],
+      modes: donationMapPoints.length ? ['voices', 'donations', 'combined'] : ['voices'],
       points: mapPoints,
-      note: mapPoints.length
+      donationPoints: donationMapPoints,
+      note: mapPoints.length || donationMapPoints.length
         ? null
         : 'No geolocated Voices yet. Map points appear when participants share a location.',
-      unavailableModes: ['donations', 'combined'],
-      unavailableNote: 'Donation geography is unavailable until the donations ledger includes location fields.',
+      unavailableModes: donationMapPoints.length ? [] : ['donations', 'combined'],
+      unavailableNote: donationMapPoints.length
+        ? null
+        : 'Donation map points appear when verified donations include World Choir participation coordinates.',
     },
     donations: {
       totalDonated: totalRaised,
@@ -449,6 +564,34 @@ async function buildOwnerControlCenter() {
       platformFeePercent: PLATFORM_FEE_PERCENT,
       operationsShare: operations.operationsShare,
       note: operations.note,
+      recent: verifiedDonations
+        .slice()
+        .sort((a, b) => String(b.created_at || b.createdAt || '').localeCompare(String(a.created_at || a.createdAt || '')))
+        .slice(0, 40)
+        .map((d) => ({
+          id: d.id || d.donation_id,
+          foundationId: d.foundationId || d.foundation_id,
+          foundationName: d.foundationName || '',
+          creatorName: d.creatorName || '',
+          amount: Number(d.amount_gross ?? d.amount ?? 0),
+          foundationAmount: Number(d.foundation_amount ?? 0),
+          platformFee: Number(d.platform_fee ?? 0),
+          currency: d.currency || 'EUR',
+          status: d.paymentStatus || d.status,
+          paymentProvider: d.payment_provider || d.paymentProvider || null,
+          paymentTransactionId: d.payment_transaction_id || d.paymentTransactionId || null,
+          testTransactionId: d.test_transaction_id || d.testTransactionId || null,
+          isTest: d.is_test === true || d.isTest === true,
+          donorAnonymous: d.donor_anonymous === true || d.donorAnonymous === true,
+          donorDisplayName: (d.donor_anonymous === true || d.donorAnonymous === true)
+            ? 'Anonymous'
+            : (d.donor_display_name || d.donorDisplayName || 'Anonymous'),
+          message: d.message || '',
+          city: d.city || d.participationCity || d.world_choir_city_name || '',
+          country: d.country || d.participationCountry || d.world_choir_country || '',
+          paymentMethodType: d.payment_method_type || d.paymentMethodType || null,
+          createdAt: d.created_at || d.createdAt || null,
+        })),
       byFoundation: activeFoundations.map((f) => {
         const rows = verifiedDonations.filter((d) => d.foundationId === f.id);
         const raised = sumAmounts(rows);
@@ -470,8 +613,6 @@ async function buildOwnerControlCenter() {
       unavailable: [
         'Repeat donors',
         'Failed payment rate',
-        'Donation by city',
-        'Donation by country',
       ],
     },
     foundations: influencers.map((f) => ({

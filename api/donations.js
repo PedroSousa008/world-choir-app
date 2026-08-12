@@ -1,5 +1,5 @@
 /**
- * Unified donations API — ?action=config|create-intent|update|receipt|confirm-status|webhook
+ * Unified donations API — ?action=config|create-intent|update|receipt|confirm-status|complete-test|webhook
  * Keeps a single serverless function for Vercel deploy reliability.
  */
 const donations = require('./_lib/donations');
@@ -22,10 +22,16 @@ async function readRawBody(req) {
 }
 
 async function handleConfig(req, res) {
-  const configured = donations.paymentsConfigured();
+  const stripeConfigured = donations.paymentsConfigured();
+  const testPaymentsEnabled = donations.donationTestModeEnabled();
+  const configured = donations.donationsFlowAvailable();
   return res.status(200).json({
     configured,
-    publishableKey: configured ? donations.getStripePublishableKey() : null,
+    stripeConfigured,
+    testPaymentsEnabled,
+    publishableKey: stripeConfigured && !testPaymentsEnabled
+      ? donations.getStripePublishableKey()
+      : (stripeConfigured ? donations.getStripePublishableKey() : null),
     currency: 'EUR',
     platformFeePercent: donations.PLATFORM_FEE_PERCENT,
     foundationSharePercent: 100 - donations.PLATFORM_FEE_PERCENT,
@@ -40,7 +46,8 @@ async function handleConfig(req, res) {
 }
 
 async function handleCreateIntent(req, res) {
-  if (!donations.paymentsConfigured()) {
+  const testMode = donations.donationTestModeEnabled();
+  if (!donations.donationsFlowAvailable()) {
     return res.status(503).json({
       error: 'Payments are not configured yet.',
       code: 'PAYMENTS_NOT_CONFIGURED',
@@ -66,6 +73,44 @@ async function handleCreateIntent(req, res) {
   const foundation = await donations.assertFoundationDonatable(foundationId);
   const split = donations.splitDonationCents(grossCents);
   const donationId = `don_${donations.randomUUID().replace(/-/g, '').slice(0, 20)}`;
+
+  // Controlled test path: never creates a Stripe PaymentIntent (safe with live keys).
+  if (testMode) {
+    const draft = donations.buildDraftRecord({
+      donationId,
+      foundation,
+      projectId,
+      split,
+      currency,
+      deviceId,
+      paymentIntentId: null,
+      isTest: true,
+    });
+    await donations.upsertDonation(draft);
+
+    return res.status(200).json({
+      donationId,
+      clientSecret: null,
+      paymentIntentId: null,
+      testMode: true,
+      currency,
+      amountGross: split.amountGross,
+      platformFee: split.platformFee,
+      foundationAmount: split.foundationAmount,
+      platformFeePercent: split.platformFeePercent,
+      foundationSharePercent: split.foundationSharePercent,
+      foundationName: foundation.foundationName || '',
+      creatorName: foundation.displayName || '',
+    });
+  }
+
+  if (!donations.paymentsConfigured()) {
+    return res.status(503).json({
+      error: 'Payments are not configured yet.',
+      code: 'PAYMENTS_NOT_CONFIGURED',
+    });
+  }
+
   const idempotencyKey = String(
     req.headers['idempotency-key'] || body.idempotencyKey || `create-${donationId}`
   ).slice(0, 255);
@@ -95,6 +140,7 @@ async function handleCreateIntent(req, res) {
     currency,
     deviceId,
     paymentIntentId: paymentIntent.id,
+    isTest: false,
   });
   await donations.upsertDonation(draft);
 
@@ -102,6 +148,7 @@ async function handleCreateIntent(req, res) {
     donationId,
     clientSecret: paymentIntent.client_secret,
     paymentIntentId: paymentIntent.id,
+    testMode: false,
     currency,
     amountGross: split.amountGross,
     platformFee: split.platformFee,
@@ -160,7 +207,16 @@ async function handleUpdate(req, res) {
 
   await donations.upsertDonation(updated);
 
-  if (donations.paymentsConfigured() && updated.payment_transaction_id) {
+  const isTestRow = updated.is_test === true
+    || updated.isTest === true
+    || updated.payment_provider === 'test';
+
+  if (
+    !isTestRow
+    && donations.paymentsConfigured()
+    && updated.payment_transaction_id
+    && !String(updated.payment_transaction_id).startsWith('TEST_')
+  ) {
     try {
       const stripe = donations.getStripe();
       await stripe.paymentIntents.update(updated.payment_transaction_id, {
@@ -212,6 +268,15 @@ async function handleConfirmStatus(req, res) {
     return res.status(200).json({ donation: donations.publicReceipt(row), ready: true });
   }
 
+  const isTestRow = row.is_test === true || row.isTest === true || row.payment_provider === 'test';
+  if (isTestRow) {
+    return res.status(200).json({
+      donation: donations.publicReceipt(row),
+      ready: false,
+      paymentStatus: status || 'pending',
+    });
+  }
+
   if (donations.paymentsConfigured() && row.payment_transaction_id) {
     try {
       const stripe = donations.getStripe();
@@ -246,6 +311,64 @@ async function handleConfirmStatus(req, res) {
   }
 
   return res.status(200).json({ donation: donations.publicReceipt(row), ready: false });
+}
+
+/**
+ * Complete a controlled test payment. Card details are validated then discarded.
+ * Never touches Stripe. Idempotent once the donation is succeeded.
+ */
+async function handleCompleteTest(req, res) {
+  try {
+    donations.assertTestModeAllowed();
+  } catch (err) {
+    return res.status(403).json({ error: err.message, code: err.code });
+  }
+
+  const body = req.body || {};
+  const donationId = String(body.donationId || '').trim();
+  if (!donationId) return res.status(400).json({ error: 'donationId is required.' });
+
+  const row = await donations.findDonationById(donationId);
+  if (!row) return res.status(404).json({ error: 'Donation not found.' });
+
+  const status = String(row.paymentStatus || row.status || '').toLowerCase();
+  if (status === 'succeeded' || status === 'completed' || status === 'paid') {
+    return res.status(200).json({
+      ok: true,
+      ready: true,
+      donation: donations.publicReceipt(row),
+    });
+  }
+
+  if (row.is_test !== true && row.isTest !== true && row.payment_provider !== 'test') {
+    return res.status(400).json({
+      error: 'This donation cannot be completed via the test payment path.',
+      code: 'NOT_A_TEST_DONATION',
+    });
+  }
+
+  if (!donations.matchesControlledTestCard({
+    number: body.cardNumber,
+    expMonth: body.expMonth,
+    expYear: body.expYear,
+    cvc: body.cvc,
+  })) {
+    return res.status(402).json({
+      error: 'Your card could not be processed. Please check your payment details and try again.',
+      code: 'CARD_DECLINED',
+    });
+  }
+
+  const idempotencyKey = String(
+    req.headers['idempotency-key'] || body.idempotencyKey || ''
+  ).slice(0, 255);
+
+  const completed = await donations.completeTestDonation(row, { idempotencyKey });
+  return res.status(200).json({
+    ok: true,
+    ready: true,
+    donation: donations.publicReceipt(completed),
+  });
 }
 
 async function completeFromPi(pi) {
@@ -342,6 +465,7 @@ module.exports = async function handler(req, res) {
       if (action === 'create-intent') return handleCreateIntent(req, res);
       if (action === 'update') return handleUpdate(req, res);
       if (action === 'confirm-status') return handleConfirmStatus(req, res);
+      if (action === 'complete-test') return handleCompleteTest(req, res);
       if (action === 'webhook') return handleWebhook(req, res);
       // Stripe webhooks hit /api/donations-webhook or /api/donations?action=webhook
       if (req.headers['stripe-signature']) return handleWebhook(req, res);
@@ -353,7 +477,9 @@ module.exports = async function handler(req, res) {
     const status = err.code === 'FOUNDATION_UNAVAILABLE' ? 404
       : err.code === 'AMOUNT_TOO_LOW' ? 400
         : err.code === 'PAYMENTS_NOT_CONFIGURED' ? 503
-          : 503;
+          : err.code === 'TEST_PAYMENTS_DISABLED' ? 403
+            : err.code === 'NOT_A_TEST_DONATION' ? 400
+              : 503;
     return res.status(status).json({
       error: err.message || 'Donation request failed.',
       code: err.code || 'DONATIONS_ERROR',

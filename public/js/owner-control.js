@@ -513,14 +513,57 @@ const OwnerControl = (() => {
     const foundation = (state.data.foundations || []).find((x) => x.id === f.foundationId);
 
     if (f.mode === 'donations' || f.mode === 'combined') {
-      return {
-        cities: [],
-        stats: { voices: 0, cities: 0, countries: 0 },
-        note: f.mode === 'donations'
-          ? 'Donation locations are not available yet. The donations ledger does not include geography.'
-          : 'Combined mode needs donation geography. Showing no invented markers — use Voices until donation locations exist.',
-        modeBlocked: true,
-      };
+      const donationPoints = state.data?.map?.donationPoints || [];
+      if (!donationPoints.length) {
+        return {
+          cities: [],
+          stats: { voices: 0, cities: 0, countries: 0 },
+          note: f.mode === 'donations'
+            ? 'Donation map points appear when verified donations include World Choir participation coordinates.'
+            : 'Combined mode needs donation geography. Showing Voices until donation coordinates exist.',
+          modeBlocked: f.mode === 'donations',
+        };
+      }
+
+      let filteredDonations = donationPoints.filter((p) =>
+        Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude))
+      );
+      if (f.country) {
+        filteredDonations = filteredDonations.filter(
+          (p) => String(p.country || '').toLowerCase() === f.country.toLowerCase()
+        );
+      }
+      if (foundation?.country && f.mode === 'donations') {
+        // Keep donation points; foundation filter is country-based for Voices only.
+      }
+
+      if (f.mode === 'donations') {
+        const cities = filteredDonations.map((p) => ({
+          city: p.city || 'Unknown city',
+          country: p.country || 'Unknown country',
+          latitude: Number(p.latitude),
+          longitude: Number(p.longitude),
+          count: p.count || p.donors || 1,
+          voices: 0,
+          donors: p.donors || p.count || 1,
+          raised: p.raised || 0,
+          currency: state.data.currency || 'EUR',
+        }));
+        return {
+          cities,
+          stats: {
+            voices: 0,
+            cities: cities.length,
+            countries: new Set(cities.map((c) => c.country)).size,
+          },
+          note: null,
+          modeBlocked: false,
+        };
+      }
+      // combined: fall through after merging donation markers into Voices path below
+      state._combinedDonationCities = filteredDonations;
+    } else {
+      state._combinedDonationCities = null;
     }
 
     let filtered = points.filter((p) =>
@@ -571,6 +614,31 @@ const OwnerControl = (() => {
       row.count += 1;
       row.voices += 1;
     });
+
+    if (f.mode === 'combined' && Array.isArray(state._combinedDonationCities)) {
+      state._combinedDonationCities.forEach((p) => {
+        const city = p.city || 'Unknown city';
+        const country = p.country || 'Unknown country';
+        const key = `${city}|${country}`;
+        if (!byCity.has(key)) {
+          byCity.set(key, {
+            city,
+            country,
+            latitude: Number(p.latitude),
+            longitude: Number(p.longitude),
+            count: 0,
+            voices: 0,
+            donors: 0,
+            raised: 0,
+            currency: state.data.currency || 'EUR',
+          });
+        }
+        const row = byCity.get(key);
+        row.donors += p.donors || p.count || 1;
+        row.raised += Number(p.raised) || 0;
+        row.count = Math.max(row.count, row.voices + row.donors);
+      });
+    }
 
     const cities = Array.from(byCity.values());
     const countries = new Set(cities.map((c) => c.country));
@@ -778,8 +846,7 @@ const OwnerControl = (() => {
     return `
       <div class="owner-detail">
         <h3>${esc(c.city)}, ${esc(c.country)}</h3>
-        <p class="owner-muted">Voices pledged: ${esc(num(c.voices))} · Donors: ${esc(num(c.uniqueDonors))} · Donated: ${esc(money(c.totalDonations, state.data.currency))}</p>
-        <p class="owner-muted" style="margin-top:8px">Donation geography by city is unavailable until the donations ledger includes location fields.</p>
+        <p class="owner-muted">Voices pledged: ${esc(num(c.voices))} · Donors: ${esc(num(c.uniqueDonors))} · Donated: ${esc(money(c.totalDonations, state.data.currency))}${c.donationCount != null ? ` · Donations: ${esc(num(c.donationCount))}` : ''}</p>
       </div>
     `;
   }
@@ -817,6 +884,12 @@ const OwnerControl = (() => {
       <div class="owner-detail">
         <h3>${esc(c.country)}</h3>
         <p class="owner-muted">Voices: ${esc(num(c.voices))} · Cities: ${esc(num(c.cities))} · Creator Foundations: ${esc(num(c.foundations))}</p>
+        <p class="owner-muted" style="margin-top:8px">
+          Donors: ${esc(num(c.donors))}
+          · Donated: ${esc(money(c.totalDonated, state.data.currency))}
+          ${c.foundationAllocation != null ? ` · Foundation allocation: ${esc(money(c.foundationAllocation, state.data.currency))}` : ''}
+          ${c.platformFee != null ? ` · Platform fee: ${esc(money(c.platformFee, state.data.currency))}` : ''}
+        </p>
       </div>
     `;
   }
@@ -906,6 +979,32 @@ const OwnerControl = (() => {
               </tbody>
             </table></div>`}
         <p class="owner-muted" style="margin-top:12px">Unavailable until tracked: ${(d.unavailable || []).map(esc).join(' · ')}</p>
+      </section>
+      <section class="owner-section">
+        <p class="owner-section__label">Recent donations</p>
+        ${!(d.recent || []).length
+          ? `<p class="owner-empty">No verified donations yet.</p>`
+          : `<div class="owner-table-wrap"><table class="owner-table">
+              <thead><tr>
+                <th>Date</th><th>Foundation</th><th>Amount</th><th>Foundation net</th>
+                <th>Ops fee</th><th>Donor</th><th>Place</th><th>Status</th><th>Type</th>
+              </tr></thead>
+              <tbody>
+                ${d.recent.map((row) => `
+                  <tr>
+                    <td>${esc(when(row.createdAt))}</td>
+                    <td>${esc(row.foundationName || '—')}<div class="owner-muted">${esc(row.creatorName || '')}</div></td>
+                    <td>${esc(money(row.amount, row.currency || currency))}</td>
+                    <td>${esc(money(row.foundationAmount, row.currency || currency))}</td>
+                    <td>${esc(money(row.platformFee, row.currency || currency))}</td>
+                    <td>${esc(row.donorDisplayName || 'Anonymous')}${row.message ? `<div class="owner-muted">“${esc(row.message)}”</div>` : ''}</td>
+                    <td>${esc([row.city, row.country].filter(Boolean).join(', ') || '—')}</td>
+                    <td>${esc(row.status || '—')}</td>
+                    <td>${row.isTest ? 'TEST' : 'REAL'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table></div>`}
       </section>
     `;
   }

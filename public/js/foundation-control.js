@@ -1106,7 +1106,7 @@ const FoundationControl = (() => {
               <table class="fcc-rank">
                 <thead>
                   <tr>
-                    <th>Date</th><th>Supporter</th><th>Place</th><th class="num">Amount</th>
+                    <th>Date</th><th>Supporter</th><th>Place</th><th>Message</th><th class="num">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1115,6 +1115,7 @@ const FoundationControl = (() => {
                       <td>${esc(when(row.date))}</td>
                       <td>${esc(row.supporterLabel)}${row.isReturning ? ' · returning' : (row.isNewSupporter ? ' · new' : '')}</td>
                       <td>${esc([row.city, row.country].filter(Boolean).join(', ') || '—')}</td>
+                      <td>${row.message ? esc(row.message) : '—'}</td>
                       <td class="num">${esc(money(row.amount, row.currency || currency()))}</td>
                     </tr>
                   `).join('')}
