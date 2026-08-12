@@ -14,7 +14,14 @@ if [[ -z "$(git status --porcelain)" ]]; then
 fi
 
 git add -A
-git reset HEAD -- .env.local .env .env.* 2>/dev/null || true
+
+# Unstage secret env files only — keep .env.example (placeholders, no secrets)
+git reset HEAD -- .env .env.local 2>/dev/null || true
+while IFS= read -r envfile; do
+  [[ -z "$envfile" ]] && continue
+  [[ "$envfile" == ".env.example" ]] && continue
+  git reset HEAD -- "$envfile" 2>/dev/null || true
+done < <(git diff --cached --name-only | grep -E '^\.env' || true)
 
 if git diff --cached --quiet; then
   echo "No staged changes after excluding env files."

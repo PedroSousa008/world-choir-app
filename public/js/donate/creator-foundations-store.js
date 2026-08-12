@@ -134,7 +134,7 @@ const CreatorFoundationsStore = (() => {
     return load();
   }
 
-  /** Force-reload catalog (e.g. after a successful donation). */
+  /** Force re-fetch public catalog (e.g. after a successful donation). */
   function refresh() {
     catalog = null;
     loadPromise = null;
@@ -162,10 +162,8 @@ const CreatorFoundationsStore = (() => {
     if (!catalog) return [];
     return catalog.donations.filter((d) => {
       if (!isSuccessfulDonation(d)) return false;
-      const fid = d.foundationId || d.foundation_id;
-      const pid = d.projectId || d.project_id;
-      if (filter.foundationId && fid !== filter.foundationId) return false;
-      if (filter.projectId && pid !== filter.projectId) return false;
+      if (filter.foundationId && d.foundationId !== filter.foundationId) return false;
+      if (filter.projectId && d.projectId !== filter.projectId) return false;
       return true;
     });
   }
@@ -523,8 +521,8 @@ const CreatorFoundationsStore = (() => {
 
   return {
     ready,
-    load,
     refresh,
+    load,
     isLoaded,
     getLoadError,
     usingDemoCatalog,

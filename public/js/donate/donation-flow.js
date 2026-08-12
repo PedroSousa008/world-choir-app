@@ -225,7 +225,10 @@ const WorldChoirDonationFlow = (() => {
   }
 
   function canGoBack() {
-    return state.step !== 'success' && state.step !== 'receipt' && state.step !== 'amount';
+    return state.step !== 'success'
+      && state.step !== 'receipt'
+      && state.step !== 'amount'
+      && state.step !== 'not_configured';
   }
 
   function goBack() {
@@ -265,6 +268,27 @@ const WorldChoirDonationFlow = (() => {
     `;
   }
 
+  function locationBlock({ requireChange = false } = {}) {
+    const loc = participationLocation();
+    const has = loc.city && loc.country;
+    return `
+      <div class="df-checkout__location">
+        <p class="df-checkout__meta-label">Your World Choir location</p>
+        <p class="df-checkout__location-value">
+          ${has
+            ? esc(`${loc.city}, ${loc.country}`)
+            : '<span class="df-checkout__warn">Add your location to continue</span>'}
+        </p>
+        <button type="button" class="df-checkout__link" id="df-co-change-loc">
+          ${has ? 'Change location' : 'Choose location'}
+        </button>
+        ${requireChange && !has
+          ? '<p class="df-checkout__note">Donations use your World Choir participation city — not GPS or billing address.</p>'
+          : ''}
+      </div>
+    `;
+  }
+
   function renderAmount() {
     const amounts = config?.suggestedAmounts || [5, 10, 25, 50, 100];
     const currency = config?.currency || 'EUR';
@@ -285,8 +309,34 @@ const WorldChoirDonationFlow = (() => {
         <label class="form-label" for="df-co-custom">Custom amount (${esc(currency)})</label>
         <input class="form-input" id="df-co-custom" type="number" min="${minAmount()}" step="0.01" inputmode="decimal" placeholder="Enter amount" value="${esc(state.customAmount)}">
       </div>
+      ${locationBlock({ requireChange: true })}
       ${state.error ? `<p class="df-checkout__error" role="alert">${esc(state.error)}</p>` : ''}
       <button type="button" class="df-checkout__cta" id="df-co-next">Continue</button>
+      <p class="df-checkout__note">One-time donation only. 10% supports World Choir operations — the Foundation receives 90%.</p>
+    `;
+  }
+
+  function renderNotConfigured() {
+    const logo = (typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO?.url)
+      ? WorldChoirConfig.LOGO.url
+      : 'images/world-choir-logo.png';
+    return `
+      <header class="df-checkout__top">
+        <span class="df-checkout__back-spacer"></span>
+        <button type="button" class="df-checkout__close" id="df-co-close" aria-label="Close">×</button>
+      </header>
+      <div class="df-checkout__summary">
+        <img class="df-checkout__logo" src="${esc(logo)}" alt="World Choir" width="72" height="72">
+        <h1 class="df-checkout__title">Payments almost ready</h1>
+        <p class="df-checkout__hint">
+          The donation flow is built and waiting for Stripe credentials.
+          Live Apple Pay, Google Pay, and card payments will unlock as soon as keys are connected.
+        </p>
+        <p class="df-checkout__note">
+          No charge is made and no donation is recorded until Stripe confirms a successful payment.
+        </p>
+        <button type="button" class="df-checkout__cta" id="df-co-close-cta">Close</button>
+      </div>
     `;
   }
 
@@ -468,6 +518,7 @@ const WorldChoirDonationFlow = (() => {
       case 'summary': return renderSummary();
       case 'success': return renderSuccess();
       case 'receipt': return renderReceipt();
+      case 'not_configured': return renderNotConfigured();
       default: return renderAmount();
     }
   }
@@ -659,6 +710,12 @@ const WorldChoirDonationFlow = (() => {
 
   async function advanceFromAmount() {
     state.error = '';
+    const loc = participationLocation();
+    if (!loc.city || !loc.country) {
+      state.error = 'Add your World Choir location before continuing.';
+      render();
+      return;
+    }
     try {
       await createIntent();
       state.step = 'payment';
@@ -715,7 +772,7 @@ const WorldChoirDonationFlow = (() => {
 
   function bind() {
     document.getElementById('df-co-close')?.addEventListener('click', () => {
-      if (state?.step === 'success' || state?.step === 'receipt') {
+      if (state?.step === 'success' || state?.step === 'receipt' || state?.step === 'not_configured') {
         closeFlow();
         return;
       }
@@ -723,6 +780,7 @@ const WorldChoirDonationFlow = (() => {
         closeFlow();
       }
     });
+    document.getElementById('df-co-close-cta')?.addEventListener('click', closeFlow);
     document.getElementById('df-co-back')?.addEventListener('click', goBack);
     document.getElementById('df-co-back-success')?.addEventListener('click', () => {
       state.step = 'success';
@@ -815,7 +873,8 @@ const WorldChoirDonationFlow = (() => {
     try {
       await loadConfig();
       if (!config.configured) {
-        alert(config.message || 'Payments are not configured yet. Live donations will be available once Stripe is connected.');
+        state.step = 'not_configured';
+        render();
         return;
       }
       render();

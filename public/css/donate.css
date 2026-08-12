@@ -2431,6 +2431,9 @@
 /* Legacy aliases used lightly by shared overlay styles */
 .cf-muted { color: var(--df-muted); }
 
+/* Legacy aliases used lightly by shared overlay styles */
+.cf-muted { color: var(--df-muted); }
+
 /* ─── Donation checkout flow ─── */
 
 body.df-checkout-open {
@@ -2761,4 +2764,16 @@ body.df-checkout-open {
   .df-checkout__amounts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+.df-checkout__location {
+  margin: 18px 0 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--df-line);
+}
+
+.df-checkout__location-value {
+  margin: 4px 0 6px;
+  font-size: 0.95rem;
+  color: var(--df-warm-soft);
 }
