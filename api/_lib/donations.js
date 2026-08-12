@@ -17,6 +17,22 @@ const MAX_MESSAGE_LENGTH = 500;
 const SUCCESS_STATUSES = new Set(['succeeded', 'completed', 'paid']);
 const PENDING_STATUSES = new Set(['pending', 'requires_payment', 'processing']);
 
+function getStripeSecretKey() {
+  return String(process.env.STRIPE_SECRET_KEY || '').trim();
+}
+
+function getStripePublishableKey() {
+  return String(process.env.STRIPE_PUBLISHABLE_KEY || '').trim();
+}
+
+function getStripeWebhookSecret() {
+  return String(process.env.STRIPE_WEBHOOK_SECRET || '').trim();
+}
+
+function paymentsConfigured() {
+  return Boolean(getStripeSecretKey() && getStripePublishableKey());
+}
+
 function getStripe() {
   const key = getStripeSecretKey();
   if (!key) {
