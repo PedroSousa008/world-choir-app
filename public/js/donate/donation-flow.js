@@ -109,7 +109,7 @@ const WorldChoirDonationFlow = (() => {
 
   async function loadConfig() {
     if (config) return config;
-    const res = await fetch('/api/donations-config');
+    const res = await fetch('/api/donations?action=config');
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Could not load payment configuration.');
     config = data;
@@ -517,7 +517,7 @@ const WorldChoirDonationFlow = (() => {
 
     await ensureStripe();
     const idempotencyKey = `wc-${deviceId() || 'anon'}-${state.foundation.id}-${state.amount}-${Date.now()}`;
-    const res = await fetch('/api/donations-create-intent', {
+    const res = await fetch('/api/donations?action=create-intent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -555,7 +555,7 @@ const WorldChoirDonationFlow = (() => {
 
     state.donorDisplayName = donorDisplayName;
 
-    const res = await fetch('/api/donations-update', {
+    const res = await fetch('/api/donations?action=update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -615,7 +615,7 @@ const WorldChoirDonationFlow = (() => {
       // Poll until ledger is updated
       let receipt = null;
       for (let i = 0; i < 12; i += 1) {
-        const res = await fetch('/api/donations-confirm-status', {
+        const res = await fetch('/api/donations?action=confirm-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ donationId: state.donationId }),
@@ -629,7 +629,7 @@ const WorldChoirDonationFlow = (() => {
       }
 
       if (!receipt) {
-        const res = await fetch(`/api/donations-receipt?id=${encodeURIComponent(state.donationId)}`);
+        const res = await fetch(`/api/donations?action=receipt&id=${encodeURIComponent(state.donationId)}`);
         const data = await res.json();
         if (res.ok) receipt = data.donation;
       }
@@ -832,7 +832,7 @@ const WorldChoirDonationFlow = (() => {
       if (!donationId) return false;
       ensureShell();
       await loadConfig();
-      const res = await fetch(`/api/donations-receipt?id=${encodeURIComponent(donationId)}`);
+      const res = await fetch(`/api/donations?action=receipt&id=${encodeURIComponent(donationId)}`);
       const data = await res.json();
       if (!res.ok || !data.donation) return false;
       const foundation = CreatorFoundationsStore.getById(data.donation.foundationId);
