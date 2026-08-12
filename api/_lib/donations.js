@@ -195,6 +195,52 @@ function publicReceipt(row) {
   };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function donationRecordId(d) {
+  return d ? (d.id || d.donation_id || null) : null;
+}
+
+function donationStatus(d) {
+  return String(d?.paymentStatus || d?.status || '').toLowerCase();
+}
+
+/** Prefer completed fields — never let a stale pending write wipe a succeeded gift. */
+function mergeDonationRecords(prev, next) {
+  const base = { ...(prev || {}), ...(next || {}) };
+  const prevSuccess = SUCCESS_STATUSES.has(donationStatus(prev));
+  const nextSuccess = SUCCESS_STATUSES.has(donationStatus(next));
+  if (prevSuccess && !nextSuccess) {
+    const keepKeys = [
+      'paymentStatus', 'status', 'completed_at', 'updated_at',
+      'payment_provider', 'paymentProvider',
+      'payment_transaction_id', 'paymentTransactionId',
+      'test_transaction_id', 'testTransactionId',
+      'is_test', 'isTest',
+      'payment_method_type', 'paymentMethodType',
+      'card_brand', 'cardBrand', 'card_last4', 'cardLast4',
+      'donor_display_name', 'donorDisplayName',
+      'donor_anonymous', 'donorAnonymous',
+      'message', 'city', 'country',
+      'participationCity', 'participationCountry',
+      'world_choir_city_name', 'world_choir_country',
+      'latitude', 'longitude',
+      'mock', 'test_completed_via', 'test_idempotency_key',
+    ];
+    keepKeys.forEach((k) => {
+      if (prev[k] !== undefined) base[k] = prev[k];
+    });
+  }
+  const id = donationRecordId(next) || donationRecordId(prev);
+  if (id) {
+    base.id = id;
+    base.donation_id = id;
+  }
+  return base;
+}
+
 async function writeDonationsLedger(donations) {
   assertBlobConfigured();
   await writeJson(DONATIONS_LEDGER_PATH, {
@@ -204,14 +250,10 @@ async function writeDonationsLedger(donations) {
   }, { overwrite: true });
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function findDonationById(id) {
   if (!id) return null;
   const list = await readDonationsLedger();
-  return list.find((d) => (d.id || d.donation_id) === id) || null;
+  return list.find((d) => donationRecordId(d) === id) || null;
 }
 
 async function findDonationByIdWithRetry(id, { attempts = 8, baseDelayMs = 150 } = {}) {
@@ -224,43 +266,76 @@ async function findDonationByIdWithRetry(id, { attempts = 8, baseDelayMs = 150 }
 }
 
 /**
- * Merge-write with read-after-write verification to reduce Vercel Blob lost updates.
+ * Merge-write with conflict recovery for Vercel Blob (no CAS).
+ * Re-reads after write; if our row is missing or downgraded, merges into the latest ledger and retries.
  */
 async function upsertDonation(row) {
-  const id = row.id || row.donation_id;
+  const id = donationRecordId(row);
   if (!id) throw new Error('Donation id is required for upsert.');
 
   let lastError = null;
-  for (let attempt = 0; attempt < 6; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     try {
       const list = await readDonationsLedger();
-      const idx = list.findIndex((d) => (d.id || d.donation_id) === id);
-      if (idx >= 0) {
-        list[idx] = { ...list[idx], ...row, id, donation_id: id };
-      } else {
-        list.push({ ...row, id, donation_id: id });
-      }
-      await writeDonationsLedger(list);
+      const byId = new Map();
+      list.forEach((d) => {
+        const did = donationRecordId(d);
+        if (did) byId.set(did, d);
+      });
+      byId.set(id, mergeDonationRecords(byId.get(id), row));
+      await writeDonationsLedger(Array.from(byId.values()));
 
-      const verified = await findDonationByIdWithRetry(id, { attempts: 4, baseDelayMs: 100 });
+      await sleep(80 + attempt * 40);
+      const latest = await readDonationsLedger();
+      const latestMap = new Map();
+      latest.forEach((d) => {
+        const did = donationRecordId(d);
+        if (did) latestMap.set(did, d);
+      });
+
+      // Restore any rows we knew about that a concurrent writer dropped.
+      let needsRewrite = false;
+      byId.forEach((d, did) => {
+        if (!latestMap.has(did)) {
+          latestMap.set(did, d);
+          needsRewrite = true;
+        } else {
+          const merged = mergeDonationRecords(latestMap.get(did), d);
+          const before = JSON.stringify(latestMap.get(did));
+          const after = JSON.stringify(merged);
+          if (before !== after) {
+            latestMap.set(did, merged);
+            needsRewrite = true;
+          }
+        }
+      });
+
+      // Ensure our target row reflects this write.
+      const target = mergeDonationRecords(latestMap.get(id), row);
+      latestMap.set(id, target);
+
+      const wantSuccess = SUCCESS_STATUSES.has(donationStatus(row));
+      const gotSuccess = SUCCESS_STATUSES.has(donationStatus(target));
+      if (wantSuccess && !gotSuccess) needsRewrite = true;
+      if (!latestMap.has(id)) needsRewrite = true;
+
+      if (needsRewrite) {
+        await writeDonationsLedger(Array.from(latestMap.values()));
+        await sleep(80 + attempt * 40);
+      }
+
+      const verified = (await readDonationsLedger()).find((d) => donationRecordId(d) === id);
       if (verified) {
-        // Ensure this write's status (if any) wasn't clobbered by a concurrent older write.
-        const wantStatus = String(row.paymentStatus || row.status || '').toLowerCase();
-        const gotStatus = String(verified.paymentStatus || verified.status || '').toLowerCase();
-        if (!wantStatus || wantStatus === gotStatus || wantStatus === 'pending') {
+        if (!wantSuccess || SUCCESS_STATUSES.has(donationStatus(verified))) {
           return verified;
         }
-        // Our succeeded write lost a race — retry merge.
       }
     } catch (err) {
       lastError = err;
     }
-    await sleep(120 * (attempt + 1));
   }
 
   if (lastError) throw lastError;
-  // Last resort: return the intended row so callers can still respond;
-  // subsequent reads/retries should converge.
   return { ...row, id, donation_id: id };
 }
 
