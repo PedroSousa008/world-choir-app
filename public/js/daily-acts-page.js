@@ -6,7 +6,6 @@ const DailyActsPage = (() => {
   let selectedCategory = 'all';
   let view = { mode: 'grid' };
   let calendarMonth = null;
-  let calendarData = null;
   let busy = false;
   let justCompletedDate = null;
 
@@ -377,7 +376,7 @@ const DailyActsPage = (() => {
     `, { className: 'dap-sheet--reflect' });
   }
 
-  function renderCalendar() {
+  function renderCalendarPanel() {
     if (!calendarMonth) calendarMonth = localDateString().slice(0, 7);
     const [year, month] = calendarMonth.split('-').map(Number);
     const first = new Date(year, month - 1, 1);
@@ -399,7 +398,7 @@ const DailyActsPage = (() => {
       `);
     }
 
-    return renderMain() + renderSheet(`
+    return `
       <button type="button" class="dap-sheet__close" id="dap-sheet-close-btn" aria-label="Close">×</button>
       <p class="dap-sheet__kicker">Calendar</p>
       <div class="dap-calendar">
@@ -414,7 +413,21 @@ const DailyActsPage = (() => {
         </div>
         <p class="dap-calendar__note">Marked days are when you completed an act of peace.</p>
       </div>
-    `, { className: 'dap-sheet--calendar' });
+    `;
+  }
+
+  function renderCalendar() {
+    return renderMain() + renderSheet(renderCalendarPanel(), { className: 'dap-sheet--calendar' });
+  }
+
+  function refreshCalendarInPlace() {
+    const panel = document.querySelector('.dap-sheet--calendar .dap-sheet__panel');
+    if (!panel) {
+      paint();
+      return;
+    }
+    panel.innerHTML = renderCalendarPanel();
+    bindCalendar();
   }
 
   function paint() {
@@ -699,21 +712,21 @@ const DailyActsPage = (() => {
   function bindCalendar() {
     bindSheetClose();
 
-    document.getElementById('dap-cal-prev')?.addEventListener('click', async () => {
-      await loadCalendar(shiftMonth(calendarMonth, -1));
-      paint();
+    document.getElementById('dap-cal-prev')?.addEventListener('click', () => {
+      calendarMonth = shiftMonth(calendarMonth, -1);
+      refreshCalendarInPlace();
     });
-    document.getElementById('dap-cal-next')?.addEventListener('click', async () => {
-      await loadCalendar(shiftMonth(calendarMonth, 1));
-      paint();
+    document.getElementById('dap-cal-next')?.addEventListener('click', () => {
+      calendarMonth = shiftMonth(calendarMonth, 1);
+      refreshCalendarInPlace();
     });
 
     document.querySelectorAll('[data-calendar-day]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const day = btn.getAttribute('data-calendar-day');
-        const item = calendarData?.days?.[day];
-        if (!item) return;
-        view = { mode: 'detail', item };
+        const journeyItem = completedByDate()[day];
+        if (!journeyItem) return;
+        view = { mode: 'detail', item: itemToDetail(journeyItem) };
         paint();
       });
     });
