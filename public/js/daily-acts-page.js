@@ -31,7 +31,9 @@ const DailyActsPage = (() => {
   }
 
   function padSeq(n) {
-    return String(n).padStart(2, '0');
+    const total = journeyData?.summary?.totalActs || 0;
+    const width = total >= 100 ? 3 : 2;
+    return String(n).padStart(width, '0');
   }
 
   function monthLabel(ym) {
@@ -76,8 +78,14 @@ const DailyActsPage = (() => {
     return journeyData?.themes || [];
   }
 
-  function findItem(date) {
-    return allItems().find((item) => item.date === date) || null;
+  function findItem(date, key) {
+    const items = allItems();
+    if (key) {
+      const byKey = items.find((item) => item.key === key || item.actId === key);
+      if (byKey) return byKey;
+    }
+    if (date) return items.find((item) => item.date === date) || null;
+    return null;
   }
 
   function filteredItems() {
@@ -201,7 +209,8 @@ const DailyActsPage = (() => {
   function renderSquare(item) {
     const seq = padSeq(item.sequence);
     const status = item.status;
-    const isJustCompleted = justCompletedDate && justCompletedDate === item.date;
+    const isJustCompleted = justCompletedDate
+      && (justCompletedDate === item.date || justCompletedDate === item.key || justCompletedDate === item.actId);
     const stateClass =
       status === 'completed' ? 'is-completed'
         : status === 'future' ? 'is-future'
@@ -221,7 +230,8 @@ const DailyActsPage = (() => {
       <button
         type="button"
         class="dap-square ${stateClass} ${isJustCompleted ? 'is-just-completed' : ''} ${item.isToday ? 'is-today' : ''}"
-        data-open-date="${esc(item.date)}"
+        data-open-date="${esc(item.date || '')}"
+        data-item-key="${esc(item.key || item.actId || '')}"
         data-status="${esc(status)}"
         aria-label="${esc(aria)}"
       >
@@ -511,15 +521,17 @@ const DailyActsPage = (() => {
       });
     });
 
-    document.querySelectorAll('[data-open-date]').forEach((btn) => {
+    document.querySelectorAll('[data-open-date], [data-item-key]').forEach((btn) => {
+      if (!btn.classList.contains('dap-square')) return;
       btn.addEventListener('click', () => {
-        const date = btn.getAttribute('data-open-date');
+        const date = btn.getAttribute('data-open-date') || '';
+        const key = btn.getAttribute('data-item-key') || '';
         const status = btn.getAttribute('data-status');
-        const item = findItem(date);
+        const item = findItem(date, key);
         if (!item) return;
 
         if (status === 'future' || item.status === 'future') {
-          view = { mode: 'future', date };
+          view = { mode: 'future', date: date || null, key };
           paint();
           return;
         }

@@ -697,62 +697,69 @@ async function getJourney(deviceId, todayInput) {
 
   await getOrAssignDailyAct(deviceId, todayDate);
 
-  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const catalog = loadCatalog();
+  const actsById = new Map(catalog.map((act) => [act.id, act]));
   const rows = await listUserAssignmentRows(user.id);
-  const byDate = new Map();
+
+  // Best assignment per act (prefer completed, then latest date).
+  const byActId = new Map();
   for (const raw of rows) {
     const row = normalizeRow(raw);
-    if (row.date) byDate.set(row.date, row);
+    if (!row.act_id) continue;
+    const prev = byActId.get(row.act_id);
+    if (!prev) {
+      byActId.set(row.act_id, row);
+      continue;
+    }
+    if (row.completed && !prev.completed) {
+      byActId.set(row.act_id, row);
+      continue;
+    }
+    if (prev.completed && !row.completed) continue;
+    if (String(row.date || '') > String(prev.date || '')) {
+      byActId.set(row.act_id, row);
+    }
   }
 
-  let earliest = todayDate;
-  for (const d of byDate.keys()) {
-    if (d < earliest) earliest = d;
-  }
-
-  const dates = [];
-  for (let d = earliest; d <= todayDate; d = addDays(d, 1)) {
-    dates.push(d);
-  }
-  for (let i = 1; i <= FUTURE_PLACEHOLDER_DAYS; i += 1) {
-    dates.push(addDays(todayDate, i));
-  }
-
-  // Ensure future days are assigned server-side (for category filters)
-  // without exposing act content to the client.
-  const recentExtra = [];
-  for (const date of dates) {
-    if (date <= todayDate) continue;
-    if (byDate.has(date)) continue;
-    const mapped = await assignFreshDailyAct(user, date, actsById, recentExtra);
-    recentExtra.push(mapped.act?.id);
-    const row = await readUserDailyAct(user.id, date);
-    if (row) byDate.set(date, normalizeRow(row));
-  }
+  const themeIndex = Object.fromEntries(THEMES.map((t, i) => [t.id, i]));
+  const ordered = [...catalog].sort((a, b) => {
+    const ta = themeIndex[resolveTheme(a.category).category] ?? 99;
+    const tb = themeIndex[resolveTheme(b.category).category] ?? 99;
+    if (ta !== tb) return ta - tb;
+    return String(a.id).localeCompare(String(b.id));
+  });
 
   const journey = [];
   let momentsOfPeace = 0;
   let sequence = 0;
 
-  for (const date of dates) {
-    const isToday = date === todayDate;
-    const isFuture = date > todayDate;
-    let row = byDate.get(date);
-
-    if (!row && isToday) {
-      row = normalizeRow(await readUserDailyAct(user.id, date));
-    }
-    if (!row?.act_id) continue;
-
-    const act = actsById.get(row.act_id);
-    if (!act) continue;
-
+  for (const act of ordered) {
     sequence += 1;
     const theme = resolveTheme(act.category);
+    const row = byActId.get(act.id) || null;
+
+    if (!row) {
+      journey.push({
+        key: act.id,
+        actId: act.id,
+        date: null,
+        sequence,
+        status: 'future',
+        isToday: false,
+        category: theme.category,
+        categoryLabel: theme.categoryLabel,
+      });
+      continue;
+    }
+
+    const isFuture = row.date > todayDate;
+    const isToday = row.date === todayDate;
 
     if (isFuture) {
       journey.push({
-        date,
+        key: act.id,
+        actId: act.id,
+        date: row.date,
         sequence,
         status: 'future',
         isToday: false,
@@ -765,7 +772,9 @@ async function getJourney(deviceId, todayInput) {
     if (row.completed) momentsOfPeace += 1;
 
     journey.push({
-      date,
+      key: act.id,
+      actId: act.id,
+      date: row.date,
       sequence,
       status: row.completed ? 'completed' : 'available',
       isToday,
@@ -782,14 +791,10 @@ async function getJourney(deviceId, todayInput) {
     });
   }
 
-  // Chronological: oldest first (01 → newest)
-  // Already built ascending by date loop.
-
   const themeCounts = Object.fromEntries(THEMES.map((t) => [t.id, 0]));
-  for (const item of journey) {
-    if (item.category && themeCounts[item.category] != null) {
-      themeCounts[item.category] += 1;
-    }
+  for (const act of catalog) {
+    const theme = resolveTheme(act.category);
+    if (themeCounts[theme.category] != null) themeCounts[theme.category] += 1;
   }
 
   return {
