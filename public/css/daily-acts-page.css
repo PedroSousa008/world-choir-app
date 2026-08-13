@@ -12,8 +12,22 @@
 /* ── Header ── */
 
 .dap-header {
-  text-align: center;
   margin-bottom: 28px;
+}
+
+.dap-header__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12px;
+  position: relative;
+}
+
+.dap-header__main {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding-inline: 44px;
 }
 
 .dap-header__label {
@@ -39,6 +53,31 @@
   font-size: 0.92rem;
   line-height: 1.55;
   color: var(--text-secondary);
+}
+
+.dap-header__calendar {
+  appearance: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.dap-header__calendar:hover {
+  color: var(--accent-aurora);
+  border-color: rgba(78, 197, 232, 0.35);
+  background: rgba(78, 197, 232, 0.06);
 }
 
 /* ── Category nav ── */
@@ -121,13 +160,12 @@
 
 .dap-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
 }
 
 @media (min-width: 520px) {
   .dap-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
   }
 }
@@ -144,10 +182,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
-  padding: 12px;
-  border-radius: 16px;
+  padding: 8px;
+  border-radius: 12px;
   border: 1px solid transparent;
   font-family: var(--font-sans);
   cursor: pointer;
@@ -160,14 +198,14 @@
 }
 
 .dap-square__seq {
-  font-size: clamp(0.95rem, 3.2vw, 1.05rem);
+  font-size: clamp(0.78rem, 2.8vw, 1.05rem);
   font-weight: 600;
   letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
 }
 
 .dap-square__mark {
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 700;
   line-height: 1;
   opacity: 0.9;
@@ -607,6 +645,95 @@
   color: var(--text-primary);
 }
 
+/* ── Calendar ── */
+
+.dap-calendar {
+  margin-top: 8px;
+}
+
+.dap-calendar__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dap-calendar__month {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.dap-calendar__nav button {
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.dap-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.dap-calendar__dow {
+  text-align: center;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+
+.dap-calendar__day {
+  appearance: none;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  cursor: default;
+  position: relative;
+}
+
+.dap-calendar__day.is-marked {
+  border-color: rgba(78, 197, 232, 0.4);
+  color: var(--accent-aurora);
+  cursor: pointer;
+  background: rgba(78, 197, 232, 0.1);
+}
+
+.dap-calendar__mark {
+  position: absolute;
+  bottom: 3px;
+  right: 4px;
+  font-size: 0.55rem;
+}
+
+.dap-calendar__day.is-empty {
+  opacity: 0.25;
+}
+
+.dap-calendar__note {
+  margin: 18px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 @media (min-width: 640px) {
   .dap-sheet {
     padding: 24px;
@@ -615,15 +742,30 @@
   .dap-sheet__panel {
     max-height: min(calc(100dvh - 48px), 680px);
   }
+
+  .dap-square {
+    border-radius: 16px;
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .dap-square__mark {
+    font-size: 0.72rem;
+  }
 }
 
 @media (max-width: 380px) {
   .dap-grid {
-    gap: 10px;
+    gap: 8px;
   }
 
   .dap-square {
-    border-radius: 14px;
-    padding: 10px;
+    border-radius: 10px;
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .dap-header__main {
+    padding-inline: 40px;
   }
 }

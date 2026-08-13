@@ -5,6 +5,8 @@ const DailyActsPage = (() => {
   let journeyData = null;
   let selectedCategory = 'all';
   let view = { mode: 'grid' };
+  let calendarMonth = null;
+  let calendarData = null;
   let busy = false;
   let justCompletedDate = null;
 
@@ -31,6 +33,18 @@ const DailyActsPage = (() => {
 
   function padSeq(n) {
     return String(n).padStart(2, '0');
+  }
+
+  function monthLabel(ym) {
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(y, m - 1, 1);
+    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  function shiftMonth(ym, delta) {
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   }
 
   async function apiFetch(path, options = {}) {
@@ -111,12 +125,30 @@ const DailyActsPage = (() => {
     return journeyData;
   }
 
+  async function loadCalendar(month) {
+    calendarMonth = month;
+    calendarData = await apiFetch(
+      `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&view=calendar&month=${encodeURIComponent(month)}&date=${encodeURIComponent(localDateString())}`
+    );
+    return calendarData;
+  }
+
   function renderHeader() {
     return `
       <header class="dap-header">
-        <p class="dap-header__label">Daily Acts of Peace</p>
-        <h1 class="dap-header__title">Create a little more peace</h1>
-        <p class="dap-header__subtitle">Small actions. Real moments. A little more peace.</p>
+        <div class="dap-header__row">
+          <div class="dap-header__main">
+            <p class="dap-header__label">Daily Acts of Peace</p>
+            <h1 class="dap-header__title">Create a little more peace</h1>
+            <p class="dap-header__subtitle">Small actions. Real moments. A little more peace.</p>
+          </div>
+          <button type="button" class="dap-header__calendar" id="dap-open-calendar" aria-label="Open calendar overview">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
       </header>
     `;
   }
@@ -337,6 +369,48 @@ const DailyActsPage = (() => {
     `, { className: 'dap-sheet--reflect' });
   }
 
+  function renderCalendar() {
+    if (!calendarData) {
+      return renderMain() + renderSheet('<p class="dap-loading">Loading calendar…</p>');
+    }
+    const [year, month] = calendarMonth.split('-').map(Number);
+    const first = new Date(year, month - 1, 1);
+    const startDow = first.getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const marked = calendarData.days || {};
+
+    const cells = [];
+    for (let i = 0; i < startDow; i += 1) {
+      cells.push('<div class="dap-calendar__day is-empty" aria-hidden="true"></div>');
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = `${calendarMonth}-${String(day).padStart(2, '0')}`;
+      const isMarked = !!marked[date];
+      cells.push(`
+        <button type="button" class="dap-calendar__day ${isMarked ? 'is-marked' : ''}" ${isMarked ? `data-calendar-day="${date}"` : 'disabled'}>
+          ${day}${isMarked ? '<span class="dap-calendar__mark" aria-hidden="true">✓</span>' : ''}
+        </button>
+      `);
+    }
+
+    return renderMain() + renderSheet(`
+      <button type="button" class="dap-sheet__close" id="dap-sheet-close-btn" aria-label="Close">×</button>
+      <p class="dap-sheet__kicker">Calendar</p>
+      <div class="dap-calendar">
+        <div class="dap-calendar__nav">
+          <button type="button" id="dap-cal-prev" aria-label="Previous month">‹</button>
+          <p class="dap-calendar__month">${esc(monthLabel(calendarMonth))}</p>
+          <button type="button" id="dap-cal-next" aria-label="Next month">›</button>
+        </div>
+        <div class="dap-calendar__grid">
+          ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d) => `<div class="dap-calendar__dow">${d}</div>`).join('')}
+          ${cells.join('')}
+        </div>
+        <p class="dap-calendar__note">Marked days are when you completed an act of peace.</p>
+      </div>
+    `, { className: 'dap-sheet--calendar' });
+  }
+
   function paint() {
     const el = root();
     if (!el) return;
@@ -374,6 +448,13 @@ const DailyActsPage = (() => {
       return;
     }
 
+    if (view.mode === 'calendar') {
+      el.innerHTML = renderCalendar();
+      bindGrid();
+      bindCalendar();
+      return;
+    }
+
     el.innerHTML = renderMain();
     bindGrid();
     markTodayViewed();
@@ -397,6 +478,16 @@ const DailyActsPage = (() => {
   }
 
   function bindGrid() {
+    document.getElementById('dap-open-calendar')?.addEventListener('click', async () => {
+      try {
+        await loadCalendar(localDateString().slice(0, 7));
+        view = { mode: 'calendar' };
+        paint();
+      } catch (err) {
+        alert(err.message || 'Could not load calendar.');
+      }
+    });
+
     document.querySelectorAll('[data-dap-cat]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const next = btn.getAttribute('data-dap-cat');
@@ -602,6 +693,29 @@ const DailyActsPage = (() => {
       } finally {
         busy = false;
       }
+    });
+  }
+
+  function bindCalendar() {
+    bindSheetClose();
+
+    document.getElementById('dap-cal-prev')?.addEventListener('click', async () => {
+      await loadCalendar(shiftMonth(calendarMonth, -1));
+      paint();
+    });
+    document.getElementById('dap-cal-next')?.addEventListener('click', async () => {
+      await loadCalendar(shiftMonth(calendarMonth, 1));
+      paint();
+    });
+
+    document.querySelectorAll('[data-calendar-day]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const day = btn.getAttribute('data-calendar-day');
+        const item = calendarData?.days?.[day];
+        if (!item) return;
+        view = { mode: 'detail', item };
+        paint();
+      });
     });
   }
 
