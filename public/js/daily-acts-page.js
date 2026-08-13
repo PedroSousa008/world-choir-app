@@ -30,12 +30,6 @@ const DailyActsPage = (() => {
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   }
 
-  function padSeq(n) {
-    const total = journeyData?.summary?.totalActs || 0;
-    const width = total >= 100 ? 3 : 2;
-    return String(n).padStart(width, '0');
-  }
-
   function monthLabel(ym) {
     const [y, m] = ym.split('-').map(Number);
     const d = new Date(y, m - 1, 1);
@@ -248,7 +242,6 @@ const DailyActsPage = (() => {
   }
 
   function renderSquare(item) {
-    const seq = padSeq(item.sequence);
     const status = item.status;
     const isJustCompleted = justCompletedDate
       && (justCompletedDate === item.date || justCompletedDate === item.key || justCompletedDate === item.actId);
@@ -257,15 +250,14 @@ const DailyActsPage = (() => {
         : status === 'future' ? 'is-future'
           : 'is-available';
 
-    const mark =
-      status === 'completed' ? '<span class="dap-square__mark" aria-hidden="true">✓</span>'
-        : status === 'future' ? '<span class="dap-square__mark dap-square__mark--soft" aria-hidden="true">·</span>'
-          : '<span class="dap-square__mark dap-square__mark--soft" aria-hidden="true">○</span>';
+    const inner = status === 'completed'
+      ? '<span class="dap-square__mark" aria-hidden="true">✓</span>'
+      : '<span class="dap-square__mystery" aria-hidden="true">?</span>';
 
     const aria =
-      status === 'completed' ? `Act ${seq}, completed`
-        : status === 'future' ? `Act ${seq}, not yet revealed`
-          : `Act ${seq}, available`;
+      status === 'completed' ? 'Completed act of peace'
+        : status === 'future' ? 'Act not yet revealed'
+          : 'Act available to complete';
 
     return `
       <button
@@ -276,8 +268,7 @@ const DailyActsPage = (() => {
         data-status="${esc(status)}"
         aria-label="${esc(aria)}"
       >
-        <span class="dap-square__seq">${esc(seq)}</span>
-        ${mark}
+        ${inner}
       </button>
     `;
   }

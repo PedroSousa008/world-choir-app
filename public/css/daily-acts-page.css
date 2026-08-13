@@ -205,15 +205,22 @@
 }
 
 .dap-square__mark {
-  font-size: 0.62rem;
+  font-size: clamp(1.05rem, 3.5vw, 1.35rem);
   font-weight: 700;
   line-height: 1;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
-.dap-square__mark--soft {
-  opacity: 0.45;
-  font-weight: 500;
+.dap-square__mystery {
+  font-size: clamp(1.05rem, 3.5vw, 1.35rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+}
+
+.dap-square.is-future .dap-square__mystery {
+  opacity: 0.35;
 }
 
 /* Completed = World Choir blue */
@@ -771,10 +778,6 @@
     border-radius: 16px;
     padding: 12px;
     gap: 8px;
-  }
-
-  .dap-square__mark {
-    font-size: 0.72rem;
   }
 }
 
