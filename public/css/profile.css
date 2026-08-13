@@ -11,7 +11,7 @@
 }
 
 .profile-section {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .profile-section:last-child {
@@ -136,7 +136,7 @@
 
 /* Practice button */
 .practice-section {
-  margin: 28px 0;
+  margin: 0;
 }
 
 .btn-practice {
