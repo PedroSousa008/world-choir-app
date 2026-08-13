@@ -94,20 +94,41 @@ const DailyActsPage = (() => {
       ? items.slice()
       : items.filter((item) => item.category === selectedCategory);
 
-    const rank = (status) => {
-      if (status === 'available') return 0; // can still complete — first
-      if (status === 'completed') return 1; // already done — next
-      return 2; // future / not revealed — last
+    const today = todayDate();
+
+    const rank = (item) => {
+      // 1) Today's act — always first (completed or not)
+      if (item.isToday || item.date === today) return 0;
+      // 2) Completed (not today)
+      if (item.status === 'completed') return 1;
+      // 3) Past / available, not completed
+      if (item.status === 'available') return 2;
+      // 4) Not yet revealed
+      return 3;
     };
 
+    const completedStamp = (item) =>
+      String(item.assignment?.completedAt || item.date || '');
+
+    const revealedStamp = (item) =>
+      String(item.date || item.assignment?.revealedAt || '');
+
     filtered.sort((a, b) => {
-      const ra = rank(a.status);
-      const rb = rank(b.status);
+      const ra = rank(a);
+      const rb = rank(b);
       if (ra !== rb) return ra - rb;
-      // Within a group: earlier revealed/completed dates first; then sequence
-      if (a.date && b.date && a.date !== b.date) return a.date.localeCompare(b.date);
-      if (a.date && !b.date) return -1;
-      if (!a.date && b.date) return 1;
+
+      // Completed: most recent → oldest
+      if (ra === 1) {
+        return completedStamp(b).localeCompare(completedStamp(a));
+      }
+
+      // Available past: most recent reveal day → oldest
+      if (ra === 2) {
+        return revealedStamp(b).localeCompare(revealedStamp(a));
+      }
+
+      // Future / today (single): stable by sequence
       return (a.sequence || 0) - (b.sequence || 0);
     });
 
