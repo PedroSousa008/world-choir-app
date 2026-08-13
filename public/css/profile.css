@@ -130,9 +130,9 @@
   100% { background-position: -100% 0; }
 }
 
-/* Practice button */
+/* Practice button — keep shared profile-section 14px bottom gap */
 .practice-section {
-  margin: 0;
+  margin-top: 0;
 }
 
 .btn-practice {
