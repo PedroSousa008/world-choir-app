@@ -1474,10 +1474,18 @@ const WorldChoirDonate = (() => {
       const detail = document.getElementById('df-fp-transparency-detail');
       const toggle = document.getElementById('df-fp-transparency-toggle');
       if (!detail || !toggle) return;
-      const open = detail.hidden;
-      detail.hidden = !open;
-      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      toggle.classList.toggle('is-open', open);
+      const open = detail.hasAttribute('hidden');
+      if (open) {
+        detail.removeAttribute('hidden');
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.classList.add('is-open');
+        toggle.innerHTML = 'Hide how donations are used <span aria-hidden="true">↑</span>';
+      } else {
+        detail.setAttribute('hidden', '');
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.classList.remove('is-open');
+        toggle.innerHTML = 'See how donations are used <span aria-hidden="true">→</span>';
+      }
     });
 
     document.getElementById('df-fp-share')?.addEventListener('click', () => {

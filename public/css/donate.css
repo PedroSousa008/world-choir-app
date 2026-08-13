@@ -2068,8 +2068,15 @@
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--df-line);
+}
+
+.df-fp-transparency__detail:not([hidden]) {
   display: grid;
   gap: 12px;
+}
+
+.df-fp-transparency__detail[hidden] {
+  display: none !important;
 }
 
 .df-fp-support-end {
