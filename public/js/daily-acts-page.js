@@ -1,13 +1,12 @@
 /**
- * Daily Acts of Peace — personal journey experience
+ * Daily Acts of Peace — minimalist act grid
  */
 const DailyActsPage = (() => {
   let journeyData = null;
-  let view = { mode: 'journey' };
-  let calendarMonth = null;
-  let calendarData = null;
+  let selectedCategory = 'all';
+  let view = { mode: 'grid' };
   let busy = false;
-  let completingDate = null;
+  let justCompletedDate = null;
 
   function esc(str) {
     const d = document.createElement('div');
@@ -22,14 +21,6 @@ const DailyActsPage = (() => {
     return `${y}-${m}-${day}`;
   }
 
-  function formatShortDate(isoOrDay) {
-    if (!isoOrDay) return '';
-    const raw = String(isoOrDay);
-    const d = raw.length <= 10 ? new Date(`${raw}T12:00:00`) : new Date(raw);
-    if (Number.isNaN(d.getTime())) return raw;
-    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-  }
-
   function formatLongDate(isoOrDay) {
     if (!isoOrDay) return '';
     const raw = String(isoOrDay);
@@ -38,25 +29,8 @@ const DailyActsPage = (() => {
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   }
 
-  function futureLabel(date, todayDate) {
-    const t = new Date(`${todayDate}T12:00:00`);
-    const target = new Date(`${date}T12:00:00`);
-    const diff = Math.round((target - t) / 86400000);
-    if (diff === 1) return 'Tomorrow';
-    if (diff === 2) return 'In two days';
-    return formatShortDate(date);
-  }
-
-  function monthLabel(ym) {
-    const [y, m] = ym.split('-').map(Number);
-    const d = new Date(y, m - 1, 1);
-    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  }
-
-  function shiftMonth(ym, delta) {
-    const [y, m] = ym.split('-').map(Number);
-    const d = new Date(y, m - 1 + delta, 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  function padSeq(n) {
+    return String(n).padStart(2, '0');
   }
 
   async function apiFetch(path, options = {}) {
@@ -81,12 +55,37 @@ const DailyActsPage = (() => {
     return journeyData?.summary?.todayDate || localDateString();
   }
 
-  function journeyItems() {
+  function allItems() {
     return journeyData?.journey || [];
   }
 
+  function themes() {
+    return journeyData?.themes || [];
+  }
+
   function findItem(date) {
-    return journeyItems().find((item) => item.date === date) || null;
+    return allItems().find((item) => item.date === date) || null;
+  }
+
+  function filteredItems() {
+    const items = allItems();
+    if (selectedCategory === 'all') return items;
+    return items.filter((item) => item.category === selectedCategory);
+  }
+
+  function selectedThemeMeta() {
+    if (selectedCategory === 'all') {
+      return {
+        id: 'all',
+        label: 'All',
+        description: 'Every moment in your journey of peace.',
+      };
+    }
+    return themes().find((t) => t.id === selectedCategory) || {
+      id: selectedCategory,
+      label: selectedCategory,
+      description: '',
+    };
   }
 
   function itemToDetail(item) {
@@ -94,13 +93,13 @@ const DailyActsPage = (() => {
     return {
       act: item.act,
       userDailyAct: {
-        id: item.assignment.id,
+        id: item.assignment?.id,
         date: item.date,
         completed: item.status === 'completed',
-        completedAt: item.assignment.completedAt,
-        revealedAt: item.assignment.revealedAt,
-        reflection: item.assignment.reflection,
-        reflectionAt: item.assignment.reflectionAt,
+        completedAt: item.assignment?.completedAt,
+        revealedAt: item.assignment?.revealedAt,
+        reflection: item.assignment?.reflection,
+        reflectionAt: item.assignment?.reflectionAt,
       },
     };
   }
@@ -112,148 +111,114 @@ const DailyActsPage = (() => {
     return journeyData;
   }
 
-  async function loadCalendar(month) {
-    calendarMonth = month;
-    calendarData = await apiFetch(
-      `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&view=calendar&month=${encodeURIComponent(month)}&date=${encodeURIComponent(localDateString())}`
-    );
-    return calendarData;
-  }
-
-  function momentsCopy(count) {
-    if (!count) return null;
-    if (count === 1) return '1 moment of peace';
-    return `${count} moments of peace`;
-  }
-
   function renderHeader() {
-    const moments = journeyData?.summary?.momentsOfPeace || 0;
-    const momentsText = momentsCopy(moments);
     return `
       <header class="dap-header">
-        <div class="dap-header__row">
-          <div class="dap-header__main">
-            <p class="dap-header__label">Daily Acts of Peace</p>
-            <h1 class="dap-header__title">Create a little more peace</h1>
-            <p class="dap-header__subtitle">One small act. One moment. A little more peace.</p>
-          </div>
-          <button type="button" class="dap-header__calendar" id="dap-open-calendar" aria-label="Open calendar overview">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
-        ${momentsText ? `<p class="dap-header__moments">${esc(momentsText)}</p>` : ''}
+        <p class="dap-header__label">Daily Acts of Peace</p>
+        <h1 class="dap-header__title">Create a little more peace</h1>
+        <p class="dap-header__subtitle">Small actions. Real moments. A little more peace.</p>
       </header>
     `;
   }
 
-  function renderTodayCard(item) {
-    if (!item?.act) {
-      return '<p class="dap-loading">Preparing today’s act…</p>';
-    }
-    const completed = item.status === 'completed';
-    const act = item.act;
+  function renderCategoryNav() {
+    const themeList = themes();
+    const allCount = allItems().length;
+
+    const pills = [
+      { id: 'all', label: 'All', count: allCount },
+      ...themeList.map((t) => ({ id: t.id, label: t.label, count: t.count || 0 })),
+    ];
 
     return `
-      <section class="dap-today" aria-label="Today's act">
-        <p class="dap-today__label">Today</p>
-        <button type="button" class="dap-journey-card dap-journey-card--today ${completed ? 'is-completed' : 'is-revealed'}" data-open-date="${esc(item.date)}">
-          <div class="dap-journey-card__inner">
-            ${act.categoryLabel ? `<p class="dap-journey-card__category">${esc(act.categoryLabel)}</p>` : ''}
-            <h2 class="dap-journey-card__title">${esc(act.text)}</h2>
-            <p class="dap-journey-card__status">
-              ${completed
-                ? `<span class="dap-status dap-status--done">✓ Completed today</span>`
-                : `<span class="dap-status dap-status--open">Open act</span>`
-              }
-            </p>
-          </div>
-        </button>
-      </section>
+      <nav class="dap-cats" aria-label="Act categories">
+        <div class="dap-cats__track" role="tablist">
+          ${pills.map((p) => `
+            <button
+              type="button"
+              class="dap-cats__pill ${selectedCategory === p.id ? 'is-active' : ''}"
+              data-dap-cat="${esc(p.id)}"
+              role="tab"
+              aria-selected="${selectedCategory === p.id}"
+            >
+              <span class="dap-cats__name">${esc(p.label)}</span>
+            </button>
+          `).join('')}
+        </div>
+      </nav>
     `;
   }
 
-  function renderTimelineItem(item, { isLast = false } = {}) {
-    if (item.status === 'future') {
+  function renderThemeIntro() {
+    const meta = selectedThemeMeta();
+    return `
+      <div class="dap-theme-intro">
+        <h2 class="dap-theme-intro__label">${esc(meta.label)}</h2>
+        ${meta.description ? `<p class="dap-theme-intro__copy">${esc(meta.description)}</p>` : ''}
+      </div>
+    `;
+  }
+
+  function renderSquare(item) {
+    const seq = padSeq(item.sequence);
+    const status = item.status;
+    const isJustCompleted = justCompletedDate && justCompletedDate === item.date;
+    const stateClass =
+      status === 'completed' ? 'is-completed'
+        : status === 'future' ? 'is-future'
+          : 'is-available';
+
+    const mark =
+      status === 'completed' ? '<span class="dap-square__mark" aria-hidden="true">✓</span>'
+        : status === 'future' ? '<span class="dap-square__mark dap-square__mark--soft" aria-hidden="true">·</span>'
+          : '<span class="dap-square__mark dap-square__mark--soft" aria-hidden="true">○</span>';
+
+    const aria =
+      status === 'completed' ? `Act ${seq}, completed`
+        : status === 'future' ? `Act ${seq}, not yet revealed`
+          : `Act ${seq}, available`;
+
+    return `
+      <button
+        type="button"
+        class="dap-square ${stateClass} ${isJustCompleted ? 'is-just-completed' : ''} ${item.isToday ? 'is-today' : ''}"
+        data-open-date="${esc(item.date)}"
+        data-status="${esc(status)}"
+        aria-label="${esc(aria)}"
+      >
+        <span class="dap-square__seq">${esc(seq)}</span>
+        ${mark}
+      </button>
+    `;
+  }
+
+  function renderGrid() {
+    const items = filteredItems();
+    if (!items.length) {
       return `
-        <li class="dap-timeline__item dap-timeline__item--future ${isLast ? 'is-last' : ''}">
-          <div class="dap-timeline__rail" aria-hidden="true">
-            <span class="dap-timeline__dot dap-timeline__dot--future"></span>
-            ${!isLast ? '<span class="dap-timeline__line"></span>' : ''}
-          </div>
-          <button type="button" class="dap-journey-card dap-journey-card--future" data-future-date="${esc(item.date)}">
-            <p class="dap-journey-card__date">${esc(futureLabel(item.date, todayDate()))}</p>
-            <p class="dap-journey-card__mystery">An act awaits you.</p>
-            <p class="dap-journey-card__hint">Not revealed yet</p>
-          </button>
-        </li>
+        <div class="dap-empty-state">
+          <p class="dap-empty-state__title">No acts yet</p>
+          <p class="dap-empty-state__copy">This part of your journey hasn’t appeared yet.</p>
+        </div>
       `;
     }
 
-    const completed = item.status === 'completed';
-    const act = item.act;
-    const overdue = !completed && !item.isToday;
-    const stateClass = completed ? 'is-completed' : 'is-revealed';
-
     return `
-      <li class="dap-timeline__item ${stateClass} ${isLast ? 'is-last' : ''}">
-        <div class="dap-timeline__rail" aria-hidden="true">
-          <span class="dap-timeline__dot ${completed ? 'dap-timeline__dot--done' : 'dap-timeline__dot--open'}"></span>
-          ${!isLast ? '<span class="dap-timeline__line"></span>' : ''}
-        </div>
-        <button type="button" class="dap-journey-card ${stateClass}" data-open-date="${esc(item.date)}">
-          <div class="dap-journey-card__inner">
-            ${completed ? '<span class="dap-journey-card__check" aria-hidden="true">✓</span>' : ''}
-            ${act.categoryLabel && !completed ? `<p class="dap-journey-card__category">${esc(act.categoryLabel)}</p>` : ''}
-            <h3 class="dap-journey-card__title">${esc(act.text)}</h3>
-            <div class="dap-journey-card__meta">
-              ${completed
-                ? `<span class="dap-status dap-status--done">Completed ${esc(formatShortDate(item.assignment.completedAt || item.date))}</span>`
-                : overdue
-                  ? `<span class="dap-status dap-status--waiting">Revealed ${esc(formatShortDate(item.date))}</span>`
-                  : `<span class="dap-status dap-status--waiting">${esc(formatShortDate(item.date))}</span>`
-              }
-            </div>
-          </div>
-        </button>
-      </li>
+      <div class="dap-grid" role="list">
+        ${items.map((item) => `<div class="dap-grid__cell" role="listitem">${renderSquare(item)}</div>`).join('')}
+      </div>
     `;
   }
 
-  function renderJourney() {
+  function renderMain() {
     if (!journeyData) {
-      return '<p class="dap-loading">Loading your journey…</p>';
+      return '<p class="dap-loading">Loading…</p>';
     }
-
-    const items = journeyItems();
-    const todayItem = items.find((i) => i.isToday && i.status !== 'future') || null;
-    const pastItems = items.filter((i) => !i.isToday && i.status !== 'future');
-    const futureItems = items.filter((i) => i.status === 'future');
-
     return `
       ${renderHeader()}
-      ${renderTodayCard(todayItem)}
-      ${pastItems.length ? `
-        <section class="dap-section" aria-label="Previous moments">
-          <h2 class="dap-section__label">Previous moments</h2>
-          <ol class="dap-timeline">
-            ${pastItems.map((item, idx) => renderTimelineItem(item, { isLast: idx === pastItems.length - 1 && !futureItems.length })).join('')}
-          </ol>
-        </section>
-      ` : ''}
-      ${futureItems.length ? `
-        <section class="dap-section dap-section--future" aria-label="Future acts">
-          <h2 class="dap-section__label">Ahead</h2>
-          <ol class="dap-timeline">
-            ${futureItems.map((item, idx) => renderTimelineItem(item, { isLast: idx === futureItems.length - 1 })).join('')}
-          </ol>
-        </section>
-      ` : ''}
-      ${!pastItems.length && !futureItems.length && todayItem ? `
-        <p class="dap-empty">Your journey begins today. Each act you complete becomes a moment of peace.</p>
-      ` : ''}
+      ${renderCategoryNav()}
+      ${renderThemeIntro()}
+      ${renderGrid()}
     `;
   }
 
@@ -268,86 +233,78 @@ const DailyActsPage = (() => {
     `;
   }
 
-  function renderActDetail(item, { editingReflection = false } = {}) {
-    const uda = item.userDailyAct;
-    const act = item.act;
-    const completed = !!uda.completed;
-    const overdue = !completed && uda.date < todayDate();
-
-    return `
-      ${renderSheet(`
-        <button type="button" class="dap-sheet__close" id="dap-sheet-close-btn" aria-label="Close">×</button>
-        <p class="dap-sheet__kicker">Daily Act of Peace</p>
-        ${act.categoryLabel ? `<p class="dap-sheet__category">${esc(act.categoryLabel)}</p>` : ''}
-        <h2 class="dap-sheet__title">${esc(act.text)}</h2>
-        ${act.explanation ? `<p class="dap-sheet__body">${esc(act.explanation)}</p>` : ''}
-
-        ${overdue ? `
-          <p class="dap-sheet__dates">Revealed ${esc(formatLongDate(uda.revealedAt || uda.date))}</p>
-        ` : ''}
-
-        ${completed ? `
-          ${uda.reflection && !editingReflection ? `
-            <div class="dap-reflection-view">
-              <p class="dap-reflection-view__label">Your message</p>
-              <blockquote class="dap-reflection-view__quote">${esc(uda.reflection)}</blockquote>
-              <button type="button" class="dap-link-btn" id="dap-edit-reflection">Edit message</button>
-            </div>
-          ` : ''}
-          ${editingReflection ? `
-            <div class="dap-reflection-box">
-              <label for="dap-reflection-edit">Your message</label>
-              <textarea id="dap-reflection-edit" maxlength="4000" placeholder="Write a few words…">${esc(uda.reflection || '')}</textarea>
-              <div class="dap-sheet__actions">
-                <button type="button" class="btn btn-primary" id="dap-save-reflection-edit">Save message</button>
-                <button type="button" class="btn btn-ghost" id="dap-cancel-reflection-edit">Cancel</button>
-              </div>
-            </div>
-          ` : ''}
-          <div class="dap-sheet__completed">
-            <span class="dap-status dap-status--done">✓ Completed</span>
-            <p class="dap-sheet__completed-date">${esc(formatLongDate(uda.completedAt))}</p>
-            ${uda.date !== localDateFromCompletionDay(uda.completedAt) && uda.date < todayDate() ? `
-              <p class="dap-sheet__completed-note">Revealed ${esc(formatLongDate(uda.date))}</p>
-            ` : ''}
-          </div>
-        ` : `
-          <div class="dap-sheet__actions">
-            ${act.nav?.type ? `
-              <button type="button" class="btn btn-secondary" id="dap-nav-btn"
-                data-nav-type="${esc(act.nav.type)}"
-                data-nav-cause="${esc(act.nav.cause || '')}"
-                data-assignment-date="${esc(uda.date)}">
-                ${esc(act.nav.label || 'Open')}
-              </button>
-            ` : ''}
-            <button type="button" class="btn btn-primary" id="dap-complete-btn" data-assignment-date="${esc(uda.date)}">
-              Complete act
-            </button>
-          </div>
-        `}
-      `, { className: completed ? 'dap-sheet--completed' : '' })}
-    `;
-  }
-
-  function localDateFromCompletionDay(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    return localDateString(d);
-  }
-
-  function renderFutureSheet(date) {
+  function renderFutureSheet() {
     return renderSheet(`
       <button type="button" class="dap-sheet__close" id="dap-sheet-close-btn" aria-label="Close">×</button>
       <p class="dap-sheet__kicker">Not yet revealed</p>
-      <h2 class="dap-sheet__title dap-sheet__title--muted">${esc(futureLabel(date, todayDate()))}</h2>
-      <p class="dap-sheet__body">This act hasn't been revealed yet.</p>
+      <h2 class="dap-sheet__title dap-sheet__title--muted">An act awaits you</h2>
+      <p class="dap-sheet__body">This Act hasn’t been revealed yet.</p>
       <p class="dap-sheet__body dap-sheet__body--soft">Come back when its moment arrives.</p>
       <div class="dap-sheet__actions">
         <button type="button" class="btn btn-secondary" id="dap-sheet-close-btn-bottom">Close</button>
       </div>
     `, { className: 'dap-sheet--future' });
+  }
+
+  function renderActDetail(item, { editingReflection = false } = {}) {
+    const uda = item.userDailyAct;
+    const act = item.act;
+    const completed = !!uda.completed;
+
+    return renderSheet(`
+      <button type="button" class="dap-sheet__close" id="dap-sheet-close-btn" aria-label="Close">×</button>
+      <p class="dap-sheet__kicker">Daily Act of Peace</p>
+      ${act.categoryLabel ? `<p class="dap-sheet__category">${esc(act.categoryLabel)}</p>` : ''}
+      <h2 class="dap-sheet__title">${esc(act.text)}</h2>
+      ${act.explanation ? `<p class="dap-sheet__body">${esc(act.explanation)}</p>` : ''}
+
+      ${completed ? `
+        <div class="dap-sheet__meta-block">
+          <p class="dap-sheet__meta-label">Completed</p>
+          <p class="dap-sheet__meta-value">${esc(formatLongDate(uda.completedAt))}</p>
+          ${uda.date && String(uda.completedAt || '').slice(0, 10) !== uda.date ? `
+            <p class="dap-sheet__meta-note">Revealed ${esc(formatLongDate(uda.date))}</p>
+          ` : ''}
+        </div>
+
+        ${editingReflection ? `
+          <div class="dap-reflection-box">
+            <label for="dap-reflection-edit">Your message</label>
+            <textarea id="dap-reflection-edit" maxlength="4000" placeholder="What did this moment mean to you?">${esc(uda.reflection || '')}</textarea>
+            <div class="dap-sheet__actions">
+              <button type="button" class="btn btn-primary" id="dap-save-reflection-edit">Save message</button>
+              <button type="button" class="btn btn-ghost" id="dap-cancel-reflection-edit">Cancel</button>
+            </div>
+          </div>
+        ` : uda.reflection ? `
+          <div class="dap-reflection-view">
+            <p class="dap-reflection-view__label">Your message</p>
+            <blockquote class="dap-reflection-view__quote">${esc(uda.reflection)}</blockquote>
+            <button type="button" class="dap-link-btn" id="dap-edit-reflection">Edit message</button>
+          </div>
+        ` : `
+          <button type="button" class="dap-link-btn" id="dap-edit-reflection" style="margin-top:18px">Add a message</button>
+        `}
+      ` : `
+        <div class="dap-sheet__meta-block">
+          <p class="dap-sheet__meta-label">Revealed</p>
+          <p class="dap-sheet__meta-value">${esc(formatLongDate(uda.revealedAt || uda.date))}</p>
+        </div>
+        <div class="dap-sheet__actions">
+          ${act.nav?.type ? `
+            <button type="button" class="btn btn-secondary" id="dap-nav-btn"
+              data-nav-type="${esc(act.nav.type)}"
+              data-nav-cause="${esc(act.nav.cause || '')}"
+              data-assignment-date="${esc(uda.date)}">
+              ${esc(act.nav.label || 'Open')}
+            </button>
+          ` : ''}
+          <button type="button" class="btn btn-primary" id="dap-complete-btn" data-assignment-date="${esc(uda.date)}">
+            Complete act
+          </button>
+        </div>
+      `}
+    `, { className: completed ? 'dap-sheet--completed' : '' });
   }
 
   function renderCompleteMoment() {
@@ -364,13 +321,13 @@ const DailyActsPage = (() => {
   }
 
   function renderReflect(item) {
-    const prompt = item.act?.reflectionPrompt || 'What would you like to remember about this act?';
+    const prompt = item.act?.reflectionPrompt || 'What did this moment mean to you?';
     return renderSheet(`
-      <p class="dap-sheet__kicker">Optional reflection</p>
+      <p class="dap-sheet__kicker">Optional</p>
       <h2 class="dap-sheet__title dap-sheet__title--small">Save this moment</h2>
       <div class="dap-reflection-box">
         <label for="dap-reflection-input">${esc(prompt)}</label>
-        <p class="dap-reflection-hint">Share what you did, who you reached, or anything you'd like to remember. Optional.</p>
+        <p class="dap-reflection-hint">A few words you’ll want to remember. Optional.</p>
         <textarea id="dap-reflection-input" maxlength="4000" placeholder="Write a few words…"></textarea>
         <div class="dap-sheet__actions">
           <button type="button" class="btn btn-primary" id="dap-save-reflection" data-assignment-date="${esc(item.userDailyAct.date)}">Save message</button>
@@ -380,97 +337,56 @@ const DailyActsPage = (() => {
     `, { className: 'dap-sheet--reflect' });
   }
 
-  function renderCalendar() {
-    if (!calendarData) return renderJourney() + renderSheet('<p class="dap-loading">Loading calendar…</p>');
-    const [year, month] = calendarMonth.split('-').map(Number);
-    const first = new Date(year, month - 1, 1);
-    const startDow = first.getDay();
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const marked = calendarData.days || {};
-
-    const cells = [];
-    for (let i = 0; i < startDow; i += 1) {
-      cells.push('<div class="dap-calendar__day is-empty" aria-hidden="true"></div>');
-    }
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      const date = `${calendarMonth}-${String(day).padStart(2, '0')}`;
-      const isMarked = !!marked[date];
-      cells.push(`
-        <button type="button" class="dap-calendar__day ${isMarked ? 'is-marked' : ''}" ${isMarked ? `data-calendar-day="${date}"` : 'disabled'}>
-          ${day}${isMarked ? '<span class="dap-calendar__mark" aria-hidden="true">✓</span>' : ''}
-        </button>
-      `);
-    }
-
-    return renderJourney() + renderSheet(`
-      <button type="button" class="dap-sheet__close" id="dap-sheet-close-btn" aria-label="Close">×</button>
-      <p class="dap-sheet__kicker">Calendar</p>
-      <div class="dap-calendar">
-        <div class="dap-calendar__nav">
-          <button type="button" id="dap-cal-prev" aria-label="Previous month">‹</button>
-          <p class="dap-calendar__month">${esc(monthLabel(calendarMonth))}</p>
-          <button type="button" id="dap-cal-next" aria-label="Next month">›</button>
-        </div>
-        <div class="dap-calendar__grid">
-          ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d) => `<div class="dap-calendar__dow">${d}</div>`).join('')}
-          ${cells.join('')}
-        </div>
-        <p class="dap-calendar__note">Marked days are when you completed an act of peace.</p>
-      </div>
-    `, { className: 'dap-sheet--calendar' });
-  }
-
   function paint() {
     const el = root();
     if (!el) return;
 
     if (view.mode === 'complete-moment') {
-      el.innerHTML = renderJourney() + renderCompleteMoment();
-      bindJourney();
+      el.innerHTML = renderMain() + renderCompleteMoment();
+      bindGrid();
       window.setTimeout(() => {
         if (view.mode === 'complete-moment' && view.item) {
           view = { mode: 'reflect', item: view.item };
           paint();
         }
-      }, 1400);
+      }, 1200);
       return;
     }
 
     if (view.mode === 'reflect' && view.item) {
-      el.innerHTML = renderJourney() + renderReflect(view.item);
-      bindJourney();
+      el.innerHTML = renderMain() + renderReflect(view.item);
+      bindGrid();
       bindReflect();
       return;
     }
 
     if (view.mode === 'detail' && view.item) {
-      el.innerHTML = renderJourney() + renderActDetail(view.item, { editingReflection: !!view.editingReflection });
-      bindJourney();
+      el.innerHTML = renderMain() + renderActDetail(view.item, { editingReflection: !!view.editingReflection });
+      bindGrid();
       bindDetail();
       return;
     }
 
-    if (view.mode === 'future' && view.date) {
-      el.innerHTML = renderJourney() + renderFutureSheet(view.date);
-      bindJourney();
-      bindFutureSheet();
+    if (view.mode === 'future') {
+      el.innerHTML = renderMain() + renderFutureSheet();
+      bindGrid();
+      bindSheetClose();
       return;
     }
 
-    if (view.mode === 'calendar') {
-      el.innerHTML = renderCalendar();
-      bindJourney();
-      bindCalendar();
-      return;
-    }
-
-    el.innerHTML = renderJourney();
-    bindJourney();
+    el.innerHTML = renderMain();
+    bindGrid();
     markTodayViewed();
+
+    if (justCompletedDate) {
+      window.setTimeout(() => {
+        justCompletedDate = null;
+      }, 900);
+    }
   }
 
   function closeSheet() {
-    view = { mode: 'journey' };
+    view = { mode: 'grid' };
     paint();
   }
 
@@ -480,30 +396,31 @@ const DailyActsPage = (() => {
     });
   }
 
-  function bindJourney() {
-    document.getElementById('dap-open-calendar')?.addEventListener('click', async () => {
-      try {
-        await loadCalendar(localDateString().slice(0, 7));
-        view = { mode: 'calendar' };
+  function bindGrid() {
+    document.querySelectorAll('[data-dap-cat]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const next = btn.getAttribute('data-dap-cat');
+        if (!next || next === selectedCategory) return;
+        selectedCategory = next;
+        view = { mode: 'grid' };
         paint();
-      } catch (err) {
-        alert(err.message || 'Could not load calendar.');
-      }
+      });
     });
 
     document.querySelectorAll('[data-open-date]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const date = btn.getAttribute('data-open-date');
+        const status = btn.getAttribute('data-status');
         const item = findItem(date);
-        if (!item || item.status === 'future') return;
-        view = { mode: 'detail', item: itemToDetail(item) };
-        paint();
-      });
-    });
+        if (!item) return;
 
-    document.querySelectorAll('[data-future-date]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        view = { mode: 'future', date: btn.getAttribute('data-future-date') };
+        if (status === 'future' || item.status === 'future') {
+          view = { mode: 'future', date };
+          paint();
+          return;
+        }
+
+        view = { mode: 'detail', item: itemToDetail(item) };
         paint();
       });
     });
@@ -561,7 +478,6 @@ const DailyActsPage = (() => {
   async function completeAct(assignmentDate) {
     if (busy) return;
     busy = true;
-    completingDate = assignmentDate;
     const btn = document.getElementById('dap-complete-btn');
     if (btn) {
       btn.disabled = true;
@@ -578,6 +494,7 @@ const DailyActsPage = (() => {
         }),
       });
       if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
+      justCompletedDate = assignmentDate;
       await loadJourney();
       view = { mode: 'complete-moment', item: data };
       paint();
@@ -589,7 +506,6 @@ const DailyActsPage = (() => {
       alert(err.message || 'Could not save completion.');
     } finally {
       busy = false;
-      completingDate = null;
     }
   }
 
@@ -649,14 +565,10 @@ const DailyActsPage = (() => {
     });
   }
 
-  function bindFutureSheet() {
-    bindSheetClose();
-  }
-
   function bindReflect() {
     bindSheetClose();
 
-    document.getElementById('dap-skip-reflection')?.addEventListener('click', async () => {
+    document.getElementById('dap-skip-reflection')?.addEventListener('click', () => {
       closeSheet();
       if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
     });
@@ -693,31 +605,8 @@ const DailyActsPage = (() => {
     });
   }
 
-  function bindCalendar() {
-    bindSheetClose();
-
-    document.getElementById('dap-cal-prev')?.addEventListener('click', async () => {
-      await loadCalendar(shiftMonth(calendarMonth, -1));
-      paint();
-    });
-    document.getElementById('dap-cal-next')?.addEventListener('click', async () => {
-      await loadCalendar(shiftMonth(calendarMonth, 1));
-      paint();
-    });
-
-    document.querySelectorAll('[data-calendar-day]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const day = btn.getAttribute('data-calendar-day');
-        const item = calendarData?.days?.[day];
-        if (!item) return;
-        view = { mode: 'detail', item };
-        paint();
-      });
-    });
-  }
-
   function markTodayViewed() {
-    const todayItem = journeyItems().find((i) => i.isToday && i.status !== 'future');
+    const todayItem = allItems().find((i) => i.isToday && i.status !== 'future');
     if (!todayItem?.date) return;
     apiFetch('/api/daily-peace', {
       method: 'POST',
@@ -732,6 +621,7 @@ const DailyActsPage = (() => {
 
   async function init() {
     WorldChoirNav.startWatcher('daily-acts');
+    selectedCategory = 'all';
     root().innerHTML = '<p class="dap-loading">Loading…</p>';
 
     try {

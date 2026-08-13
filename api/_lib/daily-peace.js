@@ -7,24 +7,69 @@ const RECENT_ACT_LIMIT = 90;
 const HISTORY_LIST_LIMIT = 400;
 const FUTURE_PLACEHOLDER_DAYS = 7;
 
-const CATEGORY_LABELS = {
-  'connection-kindness': 'Connection',
-  communication: 'Communication',
-  helping: 'Helping',
-  courage: 'Courage',
-  joy: 'Joy',
-  self: 'Self',
-  family: 'Family',
-  community: 'Community',
-  reconnecting: 'Reconnecting',
-  planet: 'Planet',
-  'supporting-change': 'Generosity',
-  'foundation-discovery': 'Awareness',
-  'in-app-discovery': 'Awareness',
-  practice: 'Practice',
-  'special-choir': 'Community',
-  bigger: 'Courage',
-  beyond: 'Beyond',
+/** Curated themes shown in the Daily Acts grid (not difficulty). */
+const THEMES = [
+  {
+    id: 'kindness',
+    label: 'Kindness',
+    description: 'Small gestures of care and generosity of spirit.',
+  },
+  {
+    id: 'connection',
+    label: 'Connection',
+    description: 'Acts that bring people a little closer together.',
+  },
+  {
+    id: 'courage',
+    label: 'Courage',
+    description: 'Moments that ask for honesty, bravery, or presence.',
+  },
+  {
+    id: 'compassion',
+    label: 'Compassion',
+    description: 'Care for others, for the planet, and for those in need.',
+  },
+  {
+    id: 'understanding',
+    label: 'Understanding',
+    description: 'Listening, learning, and seeing with clearer eyes.',
+  },
+  {
+    id: 'generosity',
+    label: 'Generosity',
+    description: 'Giving time, attention, or support without expectation.',
+  },
+  {
+    id: 'presence',
+    label: 'Presence',
+    description: 'Being fully here — with yourself and with others.',
+  },
+  {
+    id: 'community',
+    label: 'Community',
+    description: 'Acts that strengthen the choir we share.',
+  },
+];
+
+/** Map catalog category slugs → curated theme ids. */
+const CATALOG_TO_THEME = {
+  'connection-kindness': 'kindness',
+  communication: 'understanding',
+  helping: 'compassion',
+  courage: 'courage',
+  joy: 'presence',
+  self: 'presence',
+  family: 'connection',
+  community: 'community',
+  reconnecting: 'connection',
+  planet: 'compassion',
+  'supporting-change': 'generosity',
+  'foundation-discovery': 'understanding',
+  'in-app-discovery': 'understanding',
+  practice: 'presence',
+  'special-choir': 'community',
+  bigger: 'courage',
+  beyond: 'understanding',
 };
 
 let catalogCache = null;
@@ -125,10 +170,21 @@ function pickActForUser(userId, date, recentActIds) {
   return pool[seed % pool.length];
 }
 
+function resolveTheme(catalogCategory) {
+  const themeId = CATALOG_TO_THEME[catalogCategory] || 'presence';
+  const theme = THEMES.find((t) => t.id === themeId) || THEMES.find((t) => t.id === 'presence');
+  return {
+    category: theme.id,
+    categoryLabel: theme.label,
+  };
+}
+
 function categoryLabel(slug) {
   if (!slug) return null;
-  return CATEGORY_LABELS[slug]
-    || String(slug).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const theme = THEMES.find((t) => t.id === slug);
+  if (theme) return theme.label;
+  const mapped = resolveTheme(slug);
+  return mapped.categoryLabel;
 }
 
 function addDays(dateStr, delta) {
@@ -139,12 +195,13 @@ function addDays(dateStr, delta) {
 
 function mapAct(act) {
   if (!act) return null;
+  const theme = resolveTheme(act.category);
   const mapped = {
     id: act.id,
     text: act.text,
     explanation: act.explanation || null,
-    category: act.category || null,
-    categoryLabel: categoryLabel(act.category),
+    category: theme.category,
+    categoryLabel: theme.categoryLabel,
     reflectionPrompt: act.reflectionPrompt || 'What would you like to remember about this act?',
   };
   if (act.nav && typeof act.nav === 'object') {
@@ -588,6 +645,9 @@ async function getAssignment(deviceId, assignmentDateInput, todayInput) {
   const todayDate = resolveDate(todayInput);
   const assignmentDate = parseDateStrict(assignmentDateInput);
   if (!assignmentDate) throw new Error('assignment date required');
+  if (assignmentDate > todayDate) {
+    throw new Error('This Act hasn’t been revealed yet.');
+  }
 
   const user = await findUserByDevice(deviceId);
   if (!user) throw new Error('user not found');
@@ -658,23 +718,27 @@ async function getJourney(deviceId, todayInput) {
     dates.push(addDays(todayDate, i));
   }
 
+  // Ensure future days are assigned server-side (for category filters)
+  // without exposing act content to the client.
+  const recentExtra = [];
+  for (const date of dates) {
+    if (date <= todayDate) continue;
+    if (byDate.has(date)) continue;
+    const mapped = await assignFreshDailyAct(user, date, actsById, recentExtra);
+    recentExtra.push(mapped.act?.id);
+    const row = await readUserDailyAct(user.id, date);
+    if (row) byDate.set(date, normalizeRow(row));
+  }
+
   const journey = [];
   let momentsOfPeace = 0;
+  let sequence = 0;
 
   for (const date of dates) {
     const isToday = date === todayDate;
     const isFuture = date > todayDate;
-
-    if (isFuture) {
-      journey.push({
-        date,
-        status: 'future',
-        isToday: false,
-      });
-      continue;
-    }
-
     let row = byDate.get(date);
+
     if (!row && isToday) {
       row = normalizeRow(await readUserDailyAct(user.id, date));
     }
@@ -683,12 +747,30 @@ async function getJourney(deviceId, todayInput) {
     const act = actsById.get(row.act_id);
     if (!act) continue;
 
+    sequence += 1;
+    const theme = resolveTheme(act.category);
+
+    if (isFuture) {
+      journey.push({
+        date,
+        sequence,
+        status: 'future',
+        isToday: false,
+        category: theme.category,
+        categoryLabel: theme.categoryLabel,
+      });
+      continue;
+    }
+
     if (row.completed) momentsOfPeace += 1;
 
     journey.push({
       date,
-      status: row.completed ? 'completed' : 'revealed',
+      sequence,
+      status: row.completed ? 'completed' : 'available',
       isToday,
+      category: theme.category,
+      categoryLabel: theme.categoryLabel,
       assignment: {
         id: row.id,
         revealedAt: row.assigned_at,
@@ -700,13 +782,26 @@ async function getJourney(deviceId, todayInput) {
     });
   }
 
-  journey.sort((a, b) => b.date.localeCompare(a.date));
+  // Chronological: oldest first (01 → newest)
+  // Already built ascending by date loop.
+
+  const themeCounts = Object.fromEntries(THEMES.map((t) => [t.id, 0]));
+  for (const item of journey) {
+    if (item.category && themeCounts[item.category] != null) {
+      themeCounts[item.category] += 1;
+    }
+  }
 
   return {
     summary: {
       momentsOfPeace,
       todayDate,
+      totalActs: journey.length,
     },
+    themes: THEMES.map((t) => ({
+      ...t,
+      count: themeCounts[t.id] || 0,
+    })),
     journey,
   };
 }
