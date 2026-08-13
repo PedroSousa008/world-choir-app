@@ -14,10 +14,6 @@
   margin-bottom: 14px;
 }
 
-.profile-section:last-child {
-  margin-bottom: 0;
-}
-
 .profile-logo {
   display: block;
   width: min(168px, 44vw);
