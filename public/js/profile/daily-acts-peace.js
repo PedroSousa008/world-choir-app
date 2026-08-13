@@ -125,7 +125,7 @@ const DailyActsPeace = (() => {
 
   function shareInvite() {
     const text =
-      "I'm joining World Choir 2027. On July 1, 2027 at 16:00 UTC, the world sings together. Add your voice.";
+      "I'm joining World Choir 2027. On September 21, 2027 at 16:00 UTC, the world sings together. Add your voice.";
     if (typeof InviteButton !== 'undefined' && typeof InviteButton.share === 'function') {
       InviteButton.share();
       return;

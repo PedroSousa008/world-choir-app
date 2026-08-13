@@ -3,7 +3,7 @@
  */
 const InviteButton = (() => {
   const SHARE_TEXT =
-    "I'm joining World Choir 2027. On July 1, 2027 at 16:00 UTC, the world sings together. Add your voice.";
+    "I'm joining World Choir 2027. On September 21, 2027 at 16:00 UTC, the world sings together. Add your voice.";
 
   function render() {
     return `

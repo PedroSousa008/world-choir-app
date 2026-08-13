@@ -239,7 +239,7 @@ const WorldChoirHome = (() => {
 
   function shareCountdown() {
     const url = window.location.origin + window.location.pathname.replace(/index\.html$/, '') || 'https://world-choir-app.vercel.app';
-    const text = `I'm joining World Choir 2027. On July 1, 2027 at 16:00 UTC, the world sings together. Add your voice: ${url}`;
+    const text = `I'm joining World Choir 2027. On September 21, 2027 at 16:00 UTC, the world sings together. Add your voice: ${url}`;
     if (navigator.share) {
       navigator.share({ title: 'World Choir 2027', text });
     } else {

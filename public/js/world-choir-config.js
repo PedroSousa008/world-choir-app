@@ -10,7 +10,7 @@ const WorldChoirConfig = (() => {
     title: 'World Choir 2027',
     songName: 'Imagine',
     artistName: 'John Lennon',
-    eventDateUTC: '2027-07-01T16:00:00.000Z',
+    eventDateUTC: '2027-09-21T16:00:00.000Z',
     songDurationSeconds: 183,
     hashtag: '#WorldChoir2027',
     theme: 'Hope & Unity',

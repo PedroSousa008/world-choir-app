@@ -7,7 +7,7 @@ const WorldChoirRemindersWeb = (() => {
   function getReminderDetailsText() {
     return [
       'World Choir 2027',
-      'July 1, 2027 · 16:00 UTC',
+      'September 21, 2027 · 16:00 UTC',
       'Song: Imagine — John Lennon',
       '',
       'Once a year, the world sings the same song at the exact same time.',

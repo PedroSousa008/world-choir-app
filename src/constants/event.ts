@@ -1,6 +1,6 @@
 // Global singing event configuration
 export const EVENT_CONFIG = {
-  EVENT_DATE: new Date('2027-07-01T16:00:00.000Z'),
+  EVENT_DATE: new Date('2027-09-21T16:00:00.000Z'),
   SONG_DURATION_MS: 183 * 1000,
   FINAL_HOUR_MS: 60 * 60 * 1000,
   EVENT_TITLE: 'World Choir 2027',
@@ -20,7 +20,7 @@ export const EVENT_CONFIG = {
     ONE_HOUR_BEFORE: 60,
     FIVE_MINUTES_BEFORE: 5,
   },
-  SHARE_MESSAGE: "I'll be singing with the world on July 1, 2027. Join me for World Choir:",
+  SHARE_MESSAGE: "I'll be singing with the world on September 21, 2027. Join me for World Choir:",
   SHARE_URL: 'https://world-choir-app.vercel.app',
   MAP_UPDATE_INTERVAL: 10000,
   HEAT_MAP_RADIUS: 50,

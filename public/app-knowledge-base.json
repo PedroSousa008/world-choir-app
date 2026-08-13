@@ -5,7 +5,7 @@
   
   "event": {
     "name": "Global Moment of Unity",
-    "date": "June 15, 2026",
+    "date": "September 21, 2027",
     "time": "16:00 UTC",
     "duration": "10-20 seconds of shared song",
     "song": {
@@ -199,7 +199,7 @@
   },
   
   "importantNotes": {
-    "eventTime": "Always 16:00 UTC on June 15, 2026 - converts to local time automatically",
+    "eventTime": "Always 16:00 UTC on September 21, 2027 - converts to local time automatically",
     "songChoice": "'Imagine' by John Lennon - chosen for its message of unity and peace",
     "participation": "No audio recording - this is about participation and unity, not content creation",
     "location": "Only city is shown on global map, not exact coordinates",
