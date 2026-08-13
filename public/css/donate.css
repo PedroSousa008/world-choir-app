@@ -51,7 +51,6 @@
   .df-rise,
   .df-search-inline,
   .df-cause,
-  .df-sort__btn,
   .df-fcard,
   .df-spotlight__card,
   .df-pcard,
@@ -531,62 +530,6 @@
   line-height: 1.45;
   color: var(--df-muted);
   max-width: 34em;
-}
-
-.df-sort {
-  margin-top: 4px;
-}
-
-.df-sort__label {
-  margin: 0 0 8px;
-  font-size: 0.62rem;
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--df-muted);
-}
-
-.df-sort__scroller {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  padding-bottom: 2px;
-}
-
-.df-sort__scroller::-webkit-scrollbar {
-  display: none;
-}
-
-.df-sort__btn {
-  appearance: none;
-  flex: 0 0 auto;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  background: transparent;
-  color: var(--df-muted);
-  font-family: var(--font-sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 6px 2px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color 0.2s ease, border-color 0.2s ease;
-}
-
-.df-sort__btn:hover,
-.df-sort__btn:focus-visible {
-  color: var(--df-warm-soft);
-  outline: none;
-}
-
-.df-sort__btn.is-active {
-  color: var(--df-accent);
-  border-bottom-color: color-mix(in srgb, var(--df-accent) 70%, transparent);
 }
 
 /* ─── Featured spotlight ─── */

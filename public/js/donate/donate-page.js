@@ -21,7 +21,6 @@ const WorldChoirDonate = (() => {
   let searchOpen = false;
   let searchQuery = '';
   let selectedCause = 'all';
-  let selectedExplore = 'trending';
   let lastFocusEl = null;
 
   const CAUSE_FILTERS = [
@@ -31,14 +30,6 @@ const WorldChoirDonate = (() => {
     { id: 'Education', label: 'Education', icon: 'education' },
     { id: 'Humanitarian Aid', label: 'Humanitarian Aid', icon: 'aid' },
     { id: 'Environment', label: 'Environment', icon: 'env' },
-  ];
-
-  const EXPLORE_FILTERS = [
-    { id: 'trending', label: 'Trending' },
-    { id: 'new', label: 'New' },
-    { id: 'mostActive', label: 'Most Active' },
-    { id: 'near', label: 'Near You' },
-    { id: 'recent', label: 'Recently Updated' },
   ];
 
   function esc(str) {
@@ -85,28 +76,15 @@ const WorldChoirDonate = (() => {
     return initials(foundation.foundationName || foundation.creatorName).slice(0, 2);
   }
 
-  function getUserCountry() {
-    try {
-      if (typeof WorldChoirDB === 'undefined') return '';
-      const user = WorldChoirDB.getCurrentUser?.() || WorldChoirDB.getOrCreateUser?.();
-      return String(user?.country || '').trim();
-    } catch {
-      return '';
-    }
-  }
-
   function getFilteredFoundations() {
     const category = selectedCause === 'all' ? null : selectedCause;
     const query = searchOpen ? searchQuery : '';
-    const userCountry = getUserCountry();
-    const nearCountry = selectedExplore === 'near' && userCountry ? userCountry : null;
     const result = CreatorFoundationsStore.listActive({
       page: 1,
       pageSize: 500,
-      sort: selectedExplore === 'near' ? 'near' : selectedExplore,
+      sort: 'trending',
       category,
       query,
-      country: nearCountry,
     });
     return result.items || [];
   }
@@ -757,24 +735,6 @@ const WorldChoirDonate = (() => {
     `;
   }
 
-  function renderExploreSorts() {
-    return `
-      <div class="df-sort" aria-labelledby="df-sort-label">
-        <p class="df-sort__label" id="df-sort-label">Explore</p>
-        <div class="df-sort__scroller" role="toolbar" aria-label="Explore sorting">
-          ${EXPLORE_FILTERS.map((f) => `
-            <button
-              type="button"
-              class="df-sort__btn ${selectedExplore === f.id ? 'is-active' : ''}"
-              data-explore="${esc(f.id)}"
-              aria-pressed="${selectedExplore === f.id ? 'true' : 'false'}"
-            >${esc(f.label)}</button>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-
   function renderFoundationCard(foundation) {
     const img = visualUrl(foundation);
     const tags = causeTags(foundation);
@@ -825,20 +785,17 @@ const WorldChoirDonate = (() => {
 
   function renderEmptyResults() {
     const searching = searchOpen && searchQuery.trim();
-    const nearNoCountry = selectedExplore === 'near' && !getUserCountry();
-    const copy = nearNoCountry
-      ? 'Share your place when you Join to discover Foundations near you.'
-      : searching
-        ? 'No Creator Foundations match this search in the selected cause.'
-        : selectedCause === 'all'
-          ? 'Verified Creator Foundations will appear here as the circle grows.'
-          : 'There are currently no Creator Foundations in this cause.';
+    const copy = searching
+      ? 'No Creator Foundations match this search in the selected cause.'
+      : selectedCause === 'all'
+        ? 'Verified Creator Foundations will appear here as the circle grows.'
+        : 'There are currently no Creator Foundations in this cause.';
 
     return `
       <div class="df-empty">
         <p class="df-empty__title">No foundations found</p>
         <p class="df-empty__copy">${esc(copy)}</p>
-        ${selectedCause !== 'all' || searching || selectedExplore === 'near' ? `
+        ${selectedCause !== 'all' || searching ? `
           <button type="button" class="df-empty__action" id="df-view-all">View all foundations</button>
         ` : ''}
       </div>
@@ -996,7 +953,6 @@ const WorldChoirDonate = (() => {
       <section class="df-explore df-rise df-rise-delay-2" aria-labelledby="df-explore-label">
         <p class="df-section-label" id="df-explore-label">Explore by cause</p>
         ${renderCauseFilters()}
-        ${renderExploreSorts()}
       </section>
     `;
   }
@@ -1019,7 +975,6 @@ const WorldChoirDonate = (() => {
 
   function resetExplore() {
     selectedCause = 'all';
-    selectedExplore = 'trending';
     searchOpen = false;
     searchQuery = '';
     renderHome();
@@ -1058,18 +1013,6 @@ const WorldChoirDonate = (() => {
         // Keep the search field mounted; only refresh results + active styles.
         document.querySelectorAll('[data-cause]').forEach((b) => {
           const active = b.getAttribute('data-cause') === selectedCause;
-          b.classList.toggle('is-active', active);
-          b.setAttribute('aria-pressed', active ? 'true' : 'false');
-        });
-        updateFoundationsList();
-      });
-    });
-
-    document.querySelectorAll('[data-explore]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        selectedExplore = btn.getAttribute('data-explore') || 'trending';
-        document.querySelectorAll('[data-explore]').forEach((b) => {
-          const active = b.getAttribute('data-explore') === selectedExplore;
           b.classList.toggle('is-active', active);
           b.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
