@@ -82,7 +82,7 @@
 .df-topbar__logo {
   display: flex;
   align-items: center;
-  height: 44px;
+  height: 35px;
   margin: 0;
   padding: 0;
   line-height: 0;
@@ -93,7 +93,7 @@
 
 .df-topbar__logo img {
   display: block;
-  height: 44px;
+  height: 35px;
   width: auto;
   max-width: min(160px, 48vw);
   object-fit: contain;
