@@ -22,7 +22,6 @@ const WorldChoirDonate = (() => {
   let searchQuery = '';
   let selectedCause = 'all';
   let selectedExplore = 'trending';
-  let moreCausesOpen = false;
   let lastFocusEl = null;
 
   const CAUSE_FILTERS = [
@@ -743,18 +742,7 @@ const WorldChoirDonate = (() => {
               <span>${esc(f.label)}</span>
             </button>
           `).join('')}
-          <button
-            type="button"
-            class="df-cause df-cause--more ${moreCausesOpen ? 'is-active' : ''}"
-            id="df-causes-more"
-            aria-expanded="${moreCausesOpen ? 'true' : 'false'}"
-          >
-            <span>More</span>
-          </button>
         </div>
-        ${moreCausesOpen ? `
-          <p class="df-causes__note">These are the primary World Choir causes. More focused filters may arrive as Foundations join.</p>
-        ` : ''}
       </div>
     `;
   }
@@ -1022,7 +1010,6 @@ const WorldChoirDonate = (() => {
   function resetExplore() {
     selectedCause = 'all';
     selectedExplore = 'trending';
-    moreCausesOpen = false;
     searchOpen = false;
     searchQuery = '';
     renderHome();
@@ -1031,10 +1018,6 @@ const WorldChoirDonate = (() => {
   function bindHomeEvents(opts = {}) {
     document.getElementById('df-search-open')?.addEventListener('click', openSearch);
     document.getElementById('df-search-close')?.addEventListener('click', closeSearch);
-    document.getElementById('df-causes-more')?.addEventListener('click', () => {
-      moreCausesOpen = !moreCausesOpen;
-      renderHome({ focusSearch: searchOpen });
-    });
     document.getElementById('df-see-projects')?.addEventListener('click', () => {
       const el = document.getElementById('df-now-label');
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1062,7 +1045,6 @@ const WorldChoirDonate = (() => {
     document.querySelectorAll('[data-cause]').forEach((btn) => {
       btn.addEventListener('click', () => {
         selectedCause = btn.getAttribute('data-cause') || 'all';
-        moreCausesOpen = false;
         // Keep the search field mounted; only refresh results + active styles.
         document.querySelectorAll('[data-cause]').forEach((b) => {
           const active = b.getAttribute('data-cause') === selectedCause;
