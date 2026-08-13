@@ -90,8 +90,28 @@ const DailyActsPage = (() => {
 
   function filteredItems() {
     const items = allItems();
-    if (selectedCategory === 'all') return items;
-    return items.filter((item) => item.category === selectedCategory);
+    const filtered = selectedCategory === 'all'
+      ? items.slice()
+      : items.filter((item) => item.category === selectedCategory);
+
+    const rank = (status) => {
+      if (status === 'available') return 0; // can still complete — first
+      if (status === 'completed') return 1; // already done — next
+      return 2; // future / not revealed — last
+    };
+
+    filtered.sort((a, b) => {
+      const ra = rank(a.status);
+      const rb = rank(b.status);
+      if (ra !== rb) return ra - rb;
+      // Within a group: earlier revealed/completed dates first; then sequence
+      if (a.date && b.date && a.date !== b.date) return a.date.localeCompare(b.date);
+      if (a.date && !b.date) return -1;
+      if (!a.date && b.date) return 1;
+      return (a.sequence || 0) - (b.sequence || 0);
+    });
+
+    return filtered;
   }
 
   function selectedThemeMeta() {
