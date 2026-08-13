@@ -270,9 +270,9 @@ const WorldChoirDonate = (() => {
       <div class="df-topbar df-rise">
         <a class="df-topbar__logo" href="index.html" aria-label="World Choir home">
           <img
-            src="images/world-choir-logo-donate.png?v=20260813t"
+            src="images/world-choir-logo-donate.png?v=20260813u"
             alt="World Choir"
-            width="117"
+            width="132"
             height="44"
             decoding="async"
           >
