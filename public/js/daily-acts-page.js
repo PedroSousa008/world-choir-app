@@ -125,12 +125,20 @@ const DailyActsPage = (() => {
     return journeyData;
   }
 
-  async function loadCalendar(month) {
-    calendarMonth = month;
-    calendarData = await apiFetch(
-      `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&view=calendar&month=${encodeURIComponent(month)}&date=${encodeURIComponent(localDateString())}`
-    );
-    return calendarData;
+  function completedByDate() {
+    const map = {};
+    for (const item of allItems()) {
+      if (item.status === 'completed' && item.date) {
+        map[item.date] = item;
+      }
+    }
+    return map;
+  }
+
+  function openCalendar(month) {
+    calendarMonth = month || localDateString().slice(0, 7);
+    view = { mode: 'calendar' };
+    paint();
   }
 
   function renderHeader() {
@@ -370,14 +378,12 @@ const DailyActsPage = (() => {
   }
 
   function renderCalendar() {
-    if (!calendarData) {
-      return renderMain() + renderSheet('<p class="dap-loading">Loading calendar…</p>');
-    }
+    if (!calendarMonth) calendarMonth = localDateString().slice(0, 7);
     const [year, month] = calendarMonth.split('-').map(Number);
     const first = new Date(year, month - 1, 1);
     const startDow = first.getDay();
     const daysInMonth = new Date(year, month, 0).getDate();
-    const marked = calendarData.days || {};
+    const marked = completedByDate();
 
     const cells = [];
     for (let i = 0; i < startDow; i += 1) {
@@ -478,14 +484,8 @@ const DailyActsPage = (() => {
   }
 
   function bindGrid() {
-    document.getElementById('dap-open-calendar')?.addEventListener('click', async () => {
-      try {
-        await loadCalendar(localDateString().slice(0, 7));
-        view = { mode: 'calendar' };
-        paint();
-      } catch (err) {
-        alert(err.message || 'Could not load calendar.');
-      }
+    document.getElementById('dap-open-calendar')?.addEventListener('click', () => {
+      openCalendar(localDateString().slice(0, 7));
     });
 
     document.querySelectorAll('[data-dap-cat]').forEach((btn) => {
