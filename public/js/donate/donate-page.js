@@ -266,24 +266,8 @@ const WorldChoirDonate = (() => {
   }
 
   function renderTopbar() {
-    return `
-      <div class="df-topbar df-rise">
-        <a class="df-topbar__logo" href="index.html" aria-label="World Choir home">
-          <img
-            src="images/world-choir-logo-donate.png?v=20260813v"
-            alt="World Choir"
-            width="105"
-            height="35"
-            decoding="async"
-          >
-        </a>
-        ${searchOpen ? '<span class="df-topbar__spacer" aria-hidden="true"></span>' : `
-          <button type="button" class="df-search-trigger" id="df-search-open" aria-label="Search foundations">
-            ${searchIconSvg()}
-          </button>
-        `}
-      </div>
-      ${searchOpen ? `
+    if (searchOpen) {
+      return `
         <div class="df-search-inline" role="search">
           <input
             class="df-search-inline__input"
@@ -297,7 +281,24 @@ const WorldChoirDonate = (() => {
           >
           <button type="button" class="df-search-inline__close" id="df-search-close">Close</button>
         </div>
-      ` : ''}
+      `;
+    }
+
+    return `
+      <div class="df-topbar df-rise">
+        <a class="df-topbar__logo" href="index.html" aria-label="World Choir home">
+          <img
+            src="images/world-choir-logo-donate.png?v=20260813v"
+            alt="World Choir"
+            width="105"
+            height="35"
+            decoding="async"
+          >
+        </a>
+        <button type="button" class="df-search-trigger" id="df-search-open" aria-label="Search foundations">
+          ${searchIconSvg()}
+        </button>
+      </div>
     `;
   }
 
