@@ -436,9 +436,12 @@ function influencerToFoundation(row, projects = []) {
       { label: 'Direct program support', percent: 100 - PLATFORM_FEE_PERCENT },
       { label: 'Platform fee', percent: PLATFORM_FEE_PERCENT },
     ],
-    howDonationsAreUsed:
-      `${100 - PLATFORM_FEE_PERCENT}% of every donation goes directly to this Creator Foundation's mission. `
-      + `${PLATFORM_FEE_PERCENT}% helps keep World Choir and Creator Foundations running.`,
+    howDonationsAreUsed: [
+      'Every donation supports two causes at once.',
+      '90% goes directly to the creator\'s foundation and the people it serves.',
+      '10% helps sustain the infrastructure that enables thousands of creators and millions of supporters to come together in a trusted, transparent ecosystem for good.',
+      'By supporting World Choir, donors help expand the movement itself—allowing more foundations to be created, more communities to be served, and more acts of peace and generosity to reach the world.',
+    ].join('\n\n'),
     featured: true,
     active: row.active !== false,
     donationsEnabled: true,

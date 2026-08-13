@@ -1337,7 +1337,12 @@ const WorldChoirDonate = (() => {
             <span aria-hidden="true">→</span>
           </button>
           <div class="df-fp-transparency__detail" id="df-fp-transparency-detail" hidden>
-            <p>${esc(foundation.howDonationsAreUsed)}</p>
+            ${String(foundation.howDonationsAreUsed || '')
+              .split(/\n+/)
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .map((line) => `<p>${esc(line)}</p>`)
+              .join('')}
           </div>
         ` : ''}
       </section>
