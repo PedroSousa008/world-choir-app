@@ -9,6 +9,8 @@ const {
   getImpact,
   getCalendarMonth,
   getAssignment,
+  getJourney,
+  updateReflection,
   resolveDate,
   parseDateStrict,
 } = require('./_lib/daily-peace');
@@ -46,6 +48,11 @@ module.exports = async function handler(req, res) {
         return res.status(200).json(result);
       }
 
+      if (view === 'journey') {
+        const result = await getJourney(deviceId, date);
+        return res.status(200).json(result);
+      }
+
       const result = await getOrAssignDailyAct(deviceId, date);
       return res.status(200).json(result);
     }
@@ -75,6 +82,16 @@ module.exports = async function handler(req, res) {
 
       if (action === 'save-reflection') {
         const result = await saveReflection(
+          deviceId,
+          assignmentDate,
+          date,
+          req.body?.reflection
+        );
+        return res.status(200).json(result);
+      }
+
+      if (action === 'update-reflection') {
+        const result = await updateReflection(
           deviceId,
           assignmentDate,
           date,

@@ -146,9 +146,8 @@ const DailyActsPeace = (() => {
   }
 
   function open(opts = {}) {
-    const tab = opts.tab === 'impact' ? 'impact' : 'today';
     // Opening must NOT dismiss the notification.
-    window.location.href = `daily-acts.html?tab=${encodeURIComponent(tab)}`;
+    window.location.href = 'daily-acts.html';
   }
 
   function close() {

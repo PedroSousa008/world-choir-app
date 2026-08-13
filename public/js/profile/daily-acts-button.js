@@ -19,7 +19,7 @@ const DailyActsButton = (() => {
     container.innerHTML = render();
     document.getElementById('daily-acts-btn')?.addEventListener('click', () => {
       if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.open({ tab: 'today' });
-      else window.location.href = 'daily-acts.html?tab=today';
+      else window.location.href = 'daily-acts.html';
     });
     document.getElementById('how-world-choir-works-btn')?.addEventListener('click', () => {
       if (typeof WorldChoirOnboarding === 'undefined') return;

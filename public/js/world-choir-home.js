@@ -223,7 +223,7 @@ const WorldChoirHome = (() => {
     document.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
     document.getElementById('daily-peace-btn')?.addEventListener('click', () => {
       if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.open({ tab: 'today' });
-      else window.location.href = 'daily-acts.html?tab=today';
+      else window.location.href = 'daily-acts.html';
     });
     document.getElementById('share-btn')?.addEventListener('click', shareCountdown);
   }

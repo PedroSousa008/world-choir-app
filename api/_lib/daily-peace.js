@@ -5,6 +5,27 @@ const { readBlobJson, writeJson, findUserByDevice, assertBlobConfigured } = requ
 const ROOT = 'wc-data/daily-peace';
 const RECENT_ACT_LIMIT = 90;
 const HISTORY_LIST_LIMIT = 400;
+const FUTURE_PLACEHOLDER_DAYS = 7;
+
+const CATEGORY_LABELS = {
+  'connection-kindness': 'Connection',
+  communication: 'Communication',
+  helping: 'Helping',
+  courage: 'Courage',
+  joy: 'Joy',
+  self: 'Self',
+  family: 'Family',
+  community: 'Community',
+  reconnecting: 'Reconnecting',
+  planet: 'Planet',
+  'supporting-change': 'Generosity',
+  'foundation-discovery': 'Awareness',
+  'in-app-discovery': 'Awareness',
+  practice: 'Practice',
+  'special-choir': 'Community',
+  bigger: 'Courage',
+  beyond: 'Beyond',
+};
 
 let catalogCache = null;
 
@@ -104,6 +125,18 @@ function pickActForUser(userId, date, recentActIds) {
   return pool[seed % pool.length];
 }
 
+function categoryLabel(slug) {
+  if (!slug) return null;
+  return CATEGORY_LABELS[slug]
+    || String(slug).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function addDays(dateStr, delta) {
+  const d = new Date(`${dateStr}T12:00:00`);
+  d.setDate(d.getDate() + delta);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function mapAct(act) {
   if (!act) return null;
   const mapped = {
@@ -111,6 +144,7 @@ function mapAct(act) {
     text: act.text,
     explanation: act.explanation || null,
     category: act.category || null,
+    categoryLabel: categoryLabel(act.category),
     reflectionPrompt: act.reflectionPrompt || 'What would you like to remember about this act?',
   };
   if (act.nav && typeof act.nav === 'object') {
@@ -156,6 +190,7 @@ function mapUserDailyAct(row, act, { todayDate = null } = {}) {
       completedOnAssignedDay: n.completed_on_assigned_day,
       completionSource: n.completion_source,
       assignedAt: n.assigned_at,
+      revealedAt: n.assigned_at,
       notificationDismissed,
       notificationDismissedAt: n.notification_dismissed_at,
       viewed: n.viewed,
@@ -370,7 +405,7 @@ async function getCalendarMonth(deviceId, monthInput, todayInput) {
   for (const raw of rows) {
     const row = normalizeRow(raw);
     if (!row.date || !row.date.startsWith(month)) continue;
-    if (!row.completed || !row.completed_on_assigned_day) continue;
+    if (!row.completed) continue;
     const act = actsById.get(row.act_id);
     days[row.date] = mapUserDailyAct(row, act, { todayDate });
   }
@@ -567,6 +602,115 @@ async function getAssignment(deviceId, assignmentDateInput, todayInput) {
   return mapUserDailyAct(normalizeRow(row), act, { todayDate });
 }
 
+async function updateReflection(deviceId, assignmentDateInput, todayInput, reflectionText) {
+  assertBlobConfigured();
+  const todayDate = resolveDate(todayInput);
+  const assignmentDate = parseDateStrict(assignmentDateInput) || todayDate;
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const row = await readUserDailyAct(user.id, assignmentDate);
+  if (!row) throw new Error('no daily act found');
+  if (!row.completed) throw new Error('act must be completed before editing reflection');
+
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const act = actsById.get(row.act_id);
+  if (!act) throw new Error('assigned act not found in catalog');
+
+  const text = String(reflectionText || '').trim().slice(0, 4000);
+  const now = new Date().toISOString();
+  const updated = normalizeRow({
+    ...row,
+    reflection: text || null,
+    reflection_at: text ? (row.reflection_at || now) : null,
+  });
+
+  await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
+  return mapUserDailyAct(updated, act, { todayDate });
+}
+
+async function getJourney(deviceId, todayInput) {
+  assertBlobConfigured();
+  const todayDate = resolveDate(todayInput);
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  await getOrAssignDailyAct(deviceId, todayDate);
+
+  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const rows = await listUserAssignmentRows(user.id);
+  const byDate = new Map();
+  for (const raw of rows) {
+    const row = normalizeRow(raw);
+    if (row.date) byDate.set(row.date, row);
+  }
+
+  let earliest = todayDate;
+  for (const d of byDate.keys()) {
+    if (d < earliest) earliest = d;
+  }
+
+  const dates = [];
+  for (let d = earliest; d <= todayDate; d = addDays(d, 1)) {
+    dates.push(d);
+  }
+  for (let i = 1; i <= FUTURE_PLACEHOLDER_DAYS; i += 1) {
+    dates.push(addDays(todayDate, i));
+  }
+
+  const journey = [];
+  let momentsOfPeace = 0;
+
+  for (const date of dates) {
+    const isToday = date === todayDate;
+    const isFuture = date > todayDate;
+
+    if (isFuture) {
+      journey.push({
+        date,
+        status: 'future',
+        isToday: false,
+      });
+      continue;
+    }
+
+    let row = byDate.get(date);
+    if (!row && isToday) {
+      row = normalizeRow(await readUserDailyAct(user.id, date));
+    }
+    if (!row?.act_id) continue;
+
+    const act = actsById.get(row.act_id);
+    if (!act) continue;
+
+    if (row.completed) momentsOfPeace += 1;
+
+    journey.push({
+      date,
+      status: row.completed ? 'completed' : 'revealed',
+      isToday,
+      assignment: {
+        id: row.id,
+        revealedAt: row.assigned_at,
+        completedAt: row.completed_at,
+        reflection: row.reflection,
+        reflectionAt: row.reflection_at,
+      },
+      act: mapAct(act),
+    });
+  }
+
+  journey.sort((a, b) => b.date.localeCompare(a.date));
+
+  return {
+    summary: {
+      momentsOfPeace,
+      todayDate,
+    },
+    journey,
+  };
+}
+
 /** Owner analytics — scans assignment blobs (real data only). */
 async function buildDailyPeaceOwnerIntel() {
   assertBlobConfigured();
@@ -710,6 +854,8 @@ module.exports = {
   getImpact,
   getCalendarMonth,
   getAssignment,
+  getJourney,
+  updateReflection,
   loadCatalog,
   buildDailyPeaceOwnerIntel,
   localDateFromIso,
