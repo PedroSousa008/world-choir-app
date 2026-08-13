@@ -267,8 +267,17 @@ const WorldChoirDonate = (() => {
 
   function renderTopbar() {
     return `
-      <div class="df-topbar df-rise df-topbar--no-kicker">
-        ${searchOpen ? '' : `
+      <div class="df-topbar df-rise">
+        <a class="df-topbar__logo" href="index.html" aria-label="World Choir home">
+          <img
+            src="images/world-choir-logo-donate.png?v=20260813t"
+            alt="World Choir"
+            width="117"
+            height="44"
+            decoding="async"
+          >
+        </a>
+        ${searchOpen ? '<span class="df-topbar__spacer" aria-hidden="true"></span>' : `
           <button type="button" class="df-search-trigger" id="df-search-open" aria-label="Search foundations">
             ${searchIconSvg()}
           </button>
