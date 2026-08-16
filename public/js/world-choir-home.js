@@ -248,16 +248,34 @@ const WorldChoirHome = (() => {
     }
   }
 
+  async function maybeLaunchAfterOnboardingGate() {
+    let startedOnboarding = false;
+    if (typeof WorldChoirOnboarding !== 'undefined' && WorldChoirOnboarding.maybeStartFirstTime) {
+      startedOnboarding = await WorldChoirOnboarding.maybeStartFirstTime({
+        onDone: () => {
+          if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
+          LiveEventMode.launch();
+        },
+      });
+    }
+    if (!startedOnboarding) {
+      LiveEventMode.launch();
+    }
+  }
+
   function init() {
     // Paint immediately — never wait on network for the first Home frame.
     startHome();
     WorldChoirPledgeState.init()
-      .then(() => {
+      .then(async () => {
         if (isPreEvent() && !LiveEventMode.isActive()) render();
+        await maybeLaunchAfterOnboardingGate();
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error('Failed to connect to World Choir database:', err);
         if (isPreEvent() && !LiveEventMode.isActive()) render();
+        // Still attempt the gate — maybeStartFirstTime awaits ready() itself.
+        await maybeLaunchAfterOnboardingGate();
       });
   }
 
@@ -287,18 +305,6 @@ const WorldChoirHome = (() => {
 
     LiveEventMode.init();
     render();
-
-    const startedOnboarding = typeof WorldChoirOnboarding !== 'undefined'
-      && WorldChoirOnboarding.maybeStartFirstTime({
-        onDone: () => {
-          if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
-          LiveEventMode.launch();
-        },
-      });
-
-    if (!startedOnboarding) {
-      LiveEventMode.launch();
-    }
 
     countdownTimer = setInterval(updateCountdown, 1000);
   }

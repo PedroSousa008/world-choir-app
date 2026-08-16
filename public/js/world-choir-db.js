@@ -216,9 +216,22 @@ const WorldChoirDB = (() => {
     };
   }
 
+  function onboardingCompleteKey(userId) {
+    return `wc_onboarding_complete_${userId || 'unknown'}`;
+  }
+
   function needsWorldChoirOnboarding() {
     if (!remoteUser) return false;
-    return remoteUser.hasCompletedWorldChoirOnboarding !== true;
+    if (remoteUser.hasCompletedWorldChoirOnboarding === true) return false;
+    try {
+      // Same-device optimistic completion so a flaky write never re-shows forever.
+      if (localStorage.getItem(onboardingCompleteKey(remoteUser.id)) === '1') {
+        return false;
+      }
+    } catch {
+      /* ignore */
+    }
+    return true;
   }
 
   async function completeWorldChoirOnboarding() {
@@ -230,13 +243,13 @@ const WorldChoirDB = (() => {
       }),
     });
     remoteUser = data.user;
-    try {
-      localStorage.setItem(
-        `wc_onboarding_complete_${remoteUser.id}`,
-        '1'
-      );
-    } catch {
-      /* ignore */
+    if (remoteUser) {
+      remoteUser.hasCompletedWorldChoirOnboarding = true;
+      try {
+        localStorage.setItem(onboardingCompleteKey(remoteUser.id), '1');
+      } catch {
+        /* ignore */
+      }
     }
     return remoteUser;
   }

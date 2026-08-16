@@ -259,12 +259,22 @@ const WorldChoirOnboarding = (() => {
     document.body.classList.add('is-onboarding-open');
   }
 
-  function maybeStartFirstTime(options = {}) {
+  async function maybeStartFirstTime(options = {}) {
     try {
       if (typeof WorldChoirDB === 'undefined') return false;
+      // Must wait for the account record — checking before bootstrap always skipped new users.
+      if (typeof WorldChoirDB.ready === 'function') {
+        try {
+          await WorldChoirDB.ready();
+        } catch (err) {
+          console.error('Onboarding wait for user failed:', err);
+          return false;
+        }
+      }
       if (!WorldChoirDB.needsWorldChoirOnboarding || !WorldChoirDB.needsWorldChoirOnboarding()) {
         return false;
       }
+      if (open) return true;
       openOnboarding({
         mode: 'firstTime',
         onDone: options.onDone,
