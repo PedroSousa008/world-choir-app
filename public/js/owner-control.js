@@ -36,6 +36,10 @@ const OwnerControl = (() => {
     searchResults: null,
     activityFilter: 'all',
     growthMetric: 'voices',
+    growthRange: '30d',
+    growthCustomFrom: '',
+    growthCustomTo: '',
+    growthRangeOpen: false,
     citySort: 'voices',
     countrySort: 'voices',
     foundationView: 'curated',
@@ -1271,22 +1275,421 @@ const OwnerControl = (() => {
     `;
   }
 
-  function renderGrowth() {
-    const g = state.data.growth || {};
-    const series = g[state.growthMetric] || [];
-    return `
-      <section class="owner-section">
-        <p class="owner-section__label">Growth</p>
-        <h2 class="owner-h1" style="font-size:1.35rem;margin-bottom:8px">Historical momentum</h2>
-        <p class="owner-sub">Built from real timestamps. Comparison percentages appear only when enough history exists.</p>
-        <div class="owner-chips" style="margin-top:14px">
-          ${['voices', 'users', 'donations', 'foundations'].map((m) => `
-            <button type="button" class="owner-chip ${state.growthMetric === m ? 'is-active' : ''}" data-growth-metric="${m}">${esc(m)}</button>
-          `).join('')}
+  function utcDay(iso = new Date()) {
+    return new Date(iso).toISOString().slice(0, 10);
+  }
+
+  function shiftUtcDay(day, delta) {
+    const d = new Date(`${day}T12:00:00.000Z`);
+    d.setUTCDate(d.getUTCDate() + delta);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function inclusiveDaySpan(from, to) {
+    if (!from || !to || from > to) return 0;
+    const a = new Date(`${from}T12:00:00.000Z`).getTime();
+    const b = new Date(`${to}T12:00:00.000Z`).getTime();
+    return Math.round((b - a) / 86400000) + 1;
+  }
+
+  function formatGrowthDay(day, long = false) {
+    if (!day) return '—';
+    const d = new Date(`${day}T12:00:00.000Z`);
+    if (Number.isNaN(d.getTime())) return day;
+    return d.toLocaleDateString('en-GB', long
+      ? { day: 'numeric', month: 'long', year: 'numeric' }
+      : { day: 'numeric', month: 'short' });
+  }
+
+  const GROWTH_CHART = { w: 800, h: 260 };
+
+  const GROWTH_METRICS = {
+    voices: {
+      label: 'Voices',
+      title: 'Voices Growth Over Time',
+      blurb: 'Total committed voices registered on World Choir.',
+      unit: 'voices',
+      unitOne: 'voice',
+    },
+    users: {
+      label: 'Users',
+      title: 'User Growth Over Time',
+      blurb: 'People who have created a World Choir account.',
+      unit: 'users',
+      unitOne: 'user',
+    },
+    donations: {
+      label: 'Donations',
+      title: 'Donation Growth Over Time',
+      blurb: 'Verified donations completed through World Choir.',
+      unit: 'donations',
+      unitOne: 'donation',
+    },
+    foundations: {
+      label: 'Foundations',
+      title: 'Foundation Growth Over Time',
+      blurb: 'Creator Foundations created on World Choir.',
+      unit: 'foundations',
+      unitOne: 'foundation',
+    },
+  };
+
+  const GROWTH_RANGES = [
+    { id: '7d', label: 'Last 7 Days', days: 7 },
+    { id: '30d', label: 'Last 30 Days', days: 30 },
+    { id: '90d', label: 'Last 90 Days', days: 90 },
+    { id: '1y', label: 'Last 1 Year', days: 365 },
+    { id: 'all', label: 'All Time' },
+    { id: 'custom', label: 'Custom Range' },
+  ];
+
+  function growthUsesAmount(series) {
+    return (series || []).some((p) => Number(p.amount) > 0);
+  }
+
+  function growthPointValue(point, useAmount) {
+    if (!point) return 0;
+    if (useAmount) {
+      const amt = Number(point.amount);
+      return Number.isFinite(amt) ? amt : 0;
+    }
+    return Number(point.count) || 0;
+  }
+
+  function growthRangeBounds(series) {
+    const today = utcDay();
+    const first = series[0]?.date;
+    const last = series[series.length - 1]?.date || today;
+    const range = state.growthRange || '30d';
+    if (range === 'all') {
+      return { from: first || today, to: last > today ? last : today, label: 'All Time' };
+    }
+    if (range === 'custom') {
+      let from = state.growthCustomFrom || first || today;
+      let to = state.growthCustomTo || today;
+      if (from > to) {
+        const swap = from;
+        from = to;
+        to = swap;
+      }
+      return { from, to, label: `${formatGrowthDay(from, true)} → ${formatGrowthDay(to, true)}` };
+    }
+    const opt = GROWTH_RANGES.find((r) => r.id === range);
+    const days = opt?.days || 30;
+    const to = today;
+    const from = shiftUtcDay(to, -(days - 1));
+    return { from, to, label: opt?.label || 'Last 30 Days' };
+  }
+
+  function buildGrowthView() {
+    const metric = { ...(GROWTH_METRICS[state.growthMetric] || GROWTH_METRICS.voices) };
+    const raw = [...((state.data.growth || {})[state.growthMetric] || [])]
+      .filter((p) => p && p.date)
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const useAmount = state.growthMetric === 'donations' && growthUsesAmount(raw);
+    if (useAmount) {
+      metric.blurb = 'Total verified donation volume completed through World Choir.';
+    }
+    const bounds = growthRangeBounds(raw);
+    const inRange = raw.filter((p) => p.date >= bounds.from && p.date <= bounds.to);
+    let running = 0;
+    const allCumulative = raw.map((p) => {
+      running += growthPointValue(p, useAmount);
+      return { date: p.date, increment: growthPointValue(p, useAmount), total: running };
+    });
+    const points = [];
+    allCumulative.forEach((p, idx) => {
+      if (p.date < bounds.from || p.date > bounds.to) return;
+      const prev = idx > 0 ? allCumulative[idx - 1] : null;
+      points.push({
+        ...p,
+        prevTotal: prev ? prev.total : null,
+        prevDate: prev ? prev.date : null,
+      });
+    });
+    const periodGrowth = inRange.reduce((sum, p) => sum + growthPointValue(p, useAmount), 0);
+    const endTotal = points.length
+      ? points[points.length - 1].total
+      : allCumulative.filter((p) => p.date <= bounds.to).pop()?.total || 0;
+    const calendarDays = inclusiveDaySpan(bounds.from, bounds.to);
+    const recordedDays = points.length;
+    const avgDaily = calendarDays > 0 ? periodGrowth / calendarDays : null;
+
+    const spanDays = calendarDays;
+    const prevTo = shiftUtcDay(bounds.from, -1);
+    const prevFrom = spanDays > 0 ? shiftUtcDay(prevTo, -(spanDays - 1)) : prevTo;
+    const prevGrowth = raw
+      .filter((p) => p.date >= prevFrom && p.date <= prevTo)
+      .reduce((sum, p) => sum + growthPointValue(p, useAmount), 0);
+    const prevHasHistory = raw.some((p) => p.date <= prevTo);
+    let comparison = null;
+    if (prevHasHistory && prevGrowth > 0 && Number.isFinite(periodGrowth)) {
+      comparison = {
+        pct: Math.round(((periodGrowth - prevGrowth) / prevGrowth) * 1000) / 10,
+        previous: prevGrowth,
+      };
+    }
+
+    const canProject = recordedDays >= 7 && avgDaily != null && avgDaily > 0;
+    const projection = canProject ? endTotal + (avgDaily * 30) : null;
+
+    return {
+      metric,
+      useAmount,
+      bounds,
+      points,
+      periodGrowth,
+      endTotal,
+      calendarDays,
+      recordedDays,
+      avgDaily,
+      comparison,
+      projection,
+      empty: raw.length === 0,
+    };
+  }
+
+  function formatGrowthNumber(value, view) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    const absNum = Math.abs(n);
+    if (view.useAmount) return money(absNum, state.data.currency);
+    if (Math.abs(absNum - Math.round(absNum)) < 0.05) return num(Math.round(absNum));
+    return (Math.round(absNum * 10) / 10).toLocaleString('en-US', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+  }
+
+  function formatGrowthValue(value, view, { signed = false } = {}) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    const abs = formatGrowthNumber(n, view);
+    const roundedAbs = Math.abs(n);
+    const isOne = !view.useAmount && Math.abs(roundedAbs - 1) < 0.05;
+    const unit = view.useAmount ? '' : ` ${isOne ? view.metric.unitOne : view.metric.unit}`;
+    if (!signed) return `${abs}${unit}`;
+    if (n === 0) return view.useAmount ? money(0, state.data.currency) : `0 ${view.metric.unit}`;
+    return `${n > 0 ? '+' : '−'}${abs}${unit}`;
+  }
+
+  function growthLinePath(coords) {
+    if (!coords.length) return '';
+    if (coords.length === 1) return `M${coords[0].x} ${coords[0].y}`;
+    let d = `M${coords[0].x} ${coords[0].y}`;
+    for (let i = 1; i < coords.length; i += 1) {
+      const prev = coords[i - 1];
+      const cur = coords[i];
+      const cpx = (prev.x + cur.x) / 2;
+      d += ` C ${cpx} ${prev.y}, ${cpx} ${cur.y}, ${cur.x} ${cur.y}`;
+    }
+    return d;
+  }
+
+  function renderGrowthChart(view) {
+    const points = view.points;
+    if (!points.length) {
+      return `
+        <div class="owner-growth-empty">
+          <p class="owner-growth-empty__title">${view.empty
+            ? 'World Choir is just beginning to build its history.'
+            : 'No activity was recorded in this range.'}</p>
+          <p class="owner-muted" style="margin-top:8px">${view.empty
+            ? `Historical momentum will appear here as ${esc(view.metric.unit)} accumulate.`
+            : `Try another data range to see ${esc(view.metric.unit)} that already exist.`}</p>
         </div>
-        ${renderSpark(series)}
-        <p class="owner-muted" style="margin-top:12px">${esc(num(series.length))} days with recorded ${esc(state.growthMetric)}.</p>
-        <p class="owner-muted" style="margin-top:8px">Unavailable: ${(state.data.unavailableCapabilities || []).filter((x) => /attribution|viral|invitation/i.test(x)).map(esc).join(' · ') || '—'}</p>
+      `;
+    }
+
+    const w = GROWTH_CHART.w;
+    const h = GROWTH_CHART.h;
+    const pad = { t: 18, r: 16, b: 16, l: 16 };
+    const innerW = w - pad.l - pad.r;
+    const innerH = h - pad.t - pad.b;
+    const values = points.map((p) => p.total);
+    const dataMin = Math.min(...values);
+    const dataMax = Math.max(...values);
+    const spread = dataMax - dataMin;
+    const padAmt = spread === 0 ? Math.max(1, dataMax * 0.08 || 1) : spread * 0.14;
+    const minY = Math.max(0, dataMin - padAmt);
+    const maxY = dataMax + padAmt || 1;
+    const ySpan = maxY - minY || 1;
+    const coords = points.map((p, i) => {
+      const x = points.length === 1
+        ? pad.l + innerW / 2
+        : pad.l + (i / (points.length - 1)) * innerW;
+      const y = pad.t + innerH - ((p.total - minY) / ySpan) * innerH;
+      return { x, y, ...p };
+    });
+    const line = growthLinePath(coords);
+    const bottom = pad.t + innerH;
+    const area = `${line} L ${coords[coords.length - 1].x} ${bottom} L ${coords[0].x} ${bottom} Z`;
+    const yTicks = [maxY, minY + ySpan / 2, minY];
+    const xTicks = coords.length === 1
+      ? [coords[0]]
+      : [coords[0], coords[Math.floor(coords.length / 2)], coords[coords.length - 1]]
+        .filter((c, i, arr) => arr.findIndex((x) => x.date === c.date) === i);
+    const showDots = coords.length <= 14;
+    const yLabel = (tick) => (view.useAmount ? money(tick, state.data.currency) : num(Math.round(tick)));
+
+    return `
+      <div class="owner-growth-chart" data-growth-chart data-growth-points="${esc(JSON.stringify(coords.map((c) => ({
+        x: c.x,
+        y: c.y,
+        date: c.date,
+        total: c.total,
+        increment: c.increment,
+        prevTotal: c.prevTotal,
+        prevDate: c.prevDate,
+      }))))}">
+        <div class="owner-growth-chart__plot">
+          <div class="owner-growth-chart__y" aria-hidden="true">
+            ${yTicks.map((tick) => `<span>${esc(yLabel(tick))}</span>`).join('')}
+          </div>
+          <svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(view.metric.title)}">
+            <defs>
+              <linearGradient id="owner-growth-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#4ec5e8" stop-opacity="0.28"/>
+                <stop offset="100%" stop-color="#4ec5e8" stop-opacity="0"/>
+              </linearGradient>
+              <filter id="owner-growth-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2.2" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            ${yTicks.map((tick) => {
+              const y = pad.t + innerH - ((tick - minY) / ySpan) * innerH;
+              return `<line class="owner-growth-chart__grid" x1="${pad.l}" y1="${y}" x2="${w - pad.r}" y2="${y}"/>`;
+            }).join('')}
+            <path class="owner-growth-chart__area" d="${area}" fill="url(#owner-growth-fill)"/>
+            <path class="owner-growth-chart__line" d="${line}" filter="url(#owner-growth-glow)"/>
+            ${showDots ? coords.map((c) => `<circle class="owner-growth-chart__dot" cx="${c.x}" cy="${c.y}" r="3.2"/>`).join('') : ''}
+            <rect class="owner-growth-chart__hit" x="0" y="0" width="${w}" height="${h}" fill="transparent"/>
+            <circle class="owner-growth-chart__hover-dot" data-growth-hover-dot cx="0" cy="0" r="5" hidden/>
+          </svg>
+        </div>
+        <div class="owner-growth-chart__x" aria-hidden="true">
+          ${xTicks.map((c) => `<span>${esc(formatGrowthDay(c.date))}</span>`).join('')}
+        </div>
+        <div class="owner-growth-tip" data-growth-tip hidden></div>
+      </div>
+    `;
+  }
+
+  function growthRecordedCopy(view) {
+    if (view.empty) return 'No historical records yet.';
+    if (view.recordedDays === 0) {
+      return `No days recorded in this range · ${formatGrowthDay(view.bounds.from, true)} – ${formatGrowthDay(view.bounds.to, true)}`;
+    }
+    if (view.recordedDays === 1) {
+      return `Historical data available: 1 day · ${formatGrowthDay(view.points[0].date, true)}`;
+    }
+    return `Historical data available: ${num(view.recordedDays)} days · ${formatGrowthDay(view.bounds.from)} – ${formatGrowthDay(view.bounds.to)}`;
+  }
+
+  function renderGrowth() {
+    const view = buildGrowthView();
+    const rangeLabel = state.growthRange === 'custom'
+      ? view.bounds.label
+      : (GROWTH_RANGES.find((r) => r.id === state.growthRange)?.label || view.bounds.label);
+    const cmp = view.comparison;
+    let cmpHtml;
+    if (!cmp) {
+      cmpHtml = `<span class="owner-growth-delta is-flat">Not enough historical data</span>`;
+    } else if (cmp.pct === 0) {
+      cmpHtml = `<span class="owner-growth-delta is-flat">0.0% vs previous period</span>`;
+    } else {
+      cmpHtml = `<span class="owner-growth-delta ${cmp.pct > 0 ? 'is-up' : 'is-down'}">${cmp.pct > 0 ? '↑' : '↓'} ${esc(Math.abs(cmp.pct).toFixed(1))}% vs previous period</span>`;
+    }
+
+    return `
+      <section class="owner-section owner-growth">
+        <p class="owner-section__label">Growth</p>
+        <h2 class="owner-h1">Historical Momentum</h2>
+        <p class="owner-sub">${view.empty
+          ? 'World Choir is just beginning to build its history.'
+          : 'See how World Choir is growing over time.'}</p>
+
+        <div class="owner-growth-toolbar">
+          <div class="owner-chips owner-growth-metrics">
+            ${Object.entries(GROWTH_METRICS).map(([id, m]) => `
+              <button type="button" class="owner-chip ${state.growthMetric === id ? 'is-active' : ''}" data-growth-metric="${id}">${esc(m.label)}</button>
+            `).join('')}
+          </div>
+          <div class="owner-growth-range" data-growth-range-wrap>
+            <button type="button" class="owner-btn-ghost owner-growth-range__btn" data-growth-range-toggle aria-expanded="${state.growthRangeOpen ? 'true' : 'false'}">
+              Data range: ${esc(rangeLabel)}
+              <span class="owner-growth-range__caret" aria-hidden="true"></span>
+            </button>
+            ${state.growthRangeOpen ? `
+              <div class="owner-growth-range__menu" data-growth-range-menu role="listbox" aria-label="Data range">
+                ${GROWTH_RANGES.map((r) => `
+                  <button type="button" class="owner-growth-range__option ${state.growthRange === r.id ? 'is-active' : ''}" data-growth-range="${r.id}" role="option" aria-selected="${state.growthRange === r.id ? 'true' : 'false'}">${esc(r.label)}</button>
+                `).join('')}
+                ${state.growthRange === 'custom' ? `
+                  <div class="owner-growth-range__custom">
+                    <label class="owner-field">
+                      <span>Start date</span>
+                      <input type="date" data-growth-custom="from" value="${esc(state.growthCustomFrom || view.bounds.from)}">
+                    </label>
+                    <label class="owner-field">
+                      <span>End date</span>
+                      <input type="date" data-growth-custom="to" value="${esc(state.growthCustomTo || view.bounds.to)}">
+                    </label>
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="owner-growth-hero">
+          <div class="owner-growth-hero__head">
+            <p class="owner-section__label">${esc(view.metric.title)}</p>
+            <p class="owner-muted">${esc(view.metric.blurb)}</p>
+          </div>
+          ${renderGrowthChart(view)}
+          <div class="owner-growth-hero__stats">
+            <p class="owner-growth-hero__value">${esc(formatGrowthValue(view.endTotal, view))}</p>
+            ${cmpHtml}
+            <p class="owner-muted" style="margin-top:10px">${esc(growthRecordedCopy(view))}</p>
+          </div>
+        </div>
+
+        ${view.empty ? '' : `
+          <div class="owner-groups owner-growth-cards">
+            <div class="owner-group">
+              <p class="owner-group__title">Data range</p>
+              <p class="owner-metric__value">${esc(rangeLabel)}</p>
+              <p class="owner-metric__label">${esc(formatGrowthDay(view.bounds.from, true))} → ${esc(formatGrowthDay(view.bounds.to, true))}</p>
+            </div>
+            <div class="owner-group">
+              <p class="owner-group__title">Total growth</p>
+              <p class="owner-metric__value">${esc(formatGrowthValue(view.periodGrowth, view, { signed: true }))}</p>
+              <p class="owner-metric__label">Added during this range</p>
+            </div>
+            <div class="owner-group">
+              <p class="owner-group__title">Average daily growth</p>
+              <p class="owner-metric__value">${view.avgDaily == null ? '—' : esc(formatGrowthValue(view.avgDaily, view, { signed: true }))}</p>
+              <p class="owner-metric__label">${view.calendarDays ? `${esc(num(view.calendarDays))} calendar days in range` : '—'}</p>
+            </div>
+            <div class="owner-group">
+              <p class="owner-group__title">Recorded days</p>
+              <p class="owner-metric__value">${esc(num(view.recordedDays))}</p>
+              <p class="owner-metric__label">${view.recordedDays === 1 ? 'day with real activity' : 'days with real activity'}</p>
+            </div>
+            ${view.projection != null ? `
+              <div class="owner-group">
+                <p class="owner-group__title">Projected</p>
+                <p class="owner-metric__value">${esc(formatGrowthValue(view.projection, view))}</p>
+                <p class="owner-metric__label">30 days ahead from this range’s average daily growth</p>
+              </div>
+            ` : ''}
+          </div>
+        `}
       </section>
     `;
   }
@@ -1843,6 +2246,138 @@ const OwnerControl = (() => {
     }
   }
 
+  function bindGrowthRange() {
+    const wrap = root().querySelector('[data-growth-range-wrap]');
+    if (!wrap) return;
+    wrap.querySelector('[data-growth-range-toggle]')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.growthRangeOpen = !state.growthRangeOpen;
+      render();
+    });
+    wrap.querySelectorAll('[data-growth-range]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-growth-range');
+        if (id === 'custom') {
+          if (!state.growthCustomFrom || !state.growthCustomTo) {
+            const series = [...((state.data.growth || {})[state.growthMetric] || [])]
+              .filter((p) => p && p.date)
+              .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+            const current = growthRangeBounds(series);
+            state.growthCustomFrom = current.from;
+            state.growthCustomTo = current.to;
+          }
+          state.growthRange = 'custom';
+          state.growthRangeOpen = true;
+        } else {
+          state.growthRange = id;
+          state.growthRangeOpen = false;
+        }
+        render();
+      });
+    });
+    wrap.querySelectorAll('[data-growth-custom]').forEach((input) => {
+      input.addEventListener('click', (e) => e.stopPropagation());
+      input.addEventListener('change', () => {
+        const which = input.getAttribute('data-growth-custom');
+        if (which === 'from') state.growthCustomFrom = input.value;
+        if (which === 'to') state.growthCustomTo = input.value;
+        state.growthRange = 'custom';
+        state.growthRangeOpen = true;
+        render();
+      });
+    });
+  }
+
+  function bindGrowthChart() {
+    const chart = root().querySelector('[data-growth-chart]');
+    if (!chart) return;
+    let points = [];
+    try {
+      points = JSON.parse(chart.getAttribute('data-growth-points') || '[]');
+    } catch {
+      points = [];
+    }
+    const svg = chart.querySelector('svg');
+    const tip = chart.querySelector('[data-growth-tip]');
+    const dot = chart.querySelector('[data-growth-hover-dot]');
+    if (!svg || !tip || !points.length) return;
+    const view = buildGrowthView();
+
+    function nearest(ev) {
+      const rect = svg.getBoundingClientRect();
+      if (!rect.width) return points[0];
+      const x = ((ev.clientX - rect.left) / rect.width) * GROWTH_CHART.w;
+      let best = points[0];
+      let bestDist = Infinity;
+      points.forEach((p) => {
+        const dist = Math.abs(p.x - x);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = p;
+        }
+      });
+      return best;
+    }
+
+    function hide() {
+      tip.hidden = true;
+      if (dot) dot.setAttribute('hidden', '');
+    }
+
+    function show(ev) {
+      const p = nearest(ev);
+      if (!p) return;
+      const changeBits = [];
+      if (Number.isFinite(Number(p.increment))) {
+        changeBits.push(esc(formatGrowthValue(p.increment, view, { signed: true })));
+      }
+      if (p.prevTotal != null && Number(p.prevTotal) > 0 && Number.isFinite(Number(p.total))) {
+        const dayPct = Math.round(((Number(p.total) - Number(p.prevTotal)) / Number(p.prevTotal)) * 1000) / 10;
+        if (Number.isFinite(dayPct)) {
+          changeBits.push(`${dayPct > 0 ? '+' : ''}${dayPct.toFixed(1)}% vs previous recorded day`);
+        }
+      }
+      const changeClass = Number(p.increment) < 0 ? 'is-down' : Number(p.increment) > 0 ? 'is-up' : 'is-flat';
+      tip.innerHTML = `
+        <p class="owner-growth-tip__date">${esc(formatGrowthDay(p.date, true))}</p>
+        <p class="owner-growth-tip__value">${esc(formatGrowthValue(p.total, view))}</p>
+        ${changeBits.length ? `<p class="owner-growth-tip__change ${changeClass}">${changeBits.join(' · ')}</p>` : ''}
+      `;
+      tip.hidden = false;
+      if (dot) {
+        dot.removeAttribute('hidden');
+        dot.setAttribute('cx', String(p.x));
+        dot.setAttribute('cy', String(p.y));
+      }
+      const chartRect = chart.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
+      const px = svgRect.left - chartRect.left + (p.x / GROWTH_CHART.w) * svgRect.width;
+      const py = svgRect.top - chartRect.top + (p.y / GROWTH_CHART.h) * svgRect.height;
+      const tipW = tip.offsetWidth || 180;
+      const tipH = tip.offsetHeight || 72;
+      let left = px - tipW / 2;
+      left = Math.max(8, Math.min(left, chartRect.width - tipW - 8));
+      let top = py - tipH - 14;
+      if (top < 8) top = py + 16;
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+    }
+
+    chart.addEventListener('pointermove', show);
+    chart.addEventListener('pointerdown', show);
+    chart.addEventListener('pointerleave', hide);
+  }
+
+  function onGrowthRangeDocumentClick(e) {
+    if (!state.growthRangeOpen) return;
+    if (state.growthRange === 'custom') return;
+    const wrap = root()?.querySelector('[data-growth-range-wrap]');
+    if (wrap && wrap.contains(e.target)) return;
+    state.growthRangeOpen = false;
+    render();
+  }
+
   function bindSectionEvents() {
     root().querySelectorAll('[data-section-jump]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1871,9 +2406,12 @@ const OwnerControl = (() => {
     root().querySelectorAll('[data-growth-metric]').forEach((btn) => {
       btn.addEventListener('click', () => {
         state.growthMetric = btn.getAttribute('data-growth-metric');
+        state.growthRangeOpen = false;
         render();
       });
     });
+    bindGrowthRange();
+    bindGrowthChart();
     root().querySelectorAll('[data-dap-main-view]').forEach((btn) => {
       btn.addEventListener('click', () => {
         state.dapView = btn.getAttribute('data-dap-main-view') || 'library';
@@ -2425,8 +2963,14 @@ const OwnerControl = (() => {
         e.preventDefault();
         if (state.authenticated) openSearch();
       }
+      if (e.key === 'Escape' && state.growthRangeOpen) {
+        state.growthRangeOpen = false;
+        render();
+        return;
+      }
       if (e.key === 'Escape' && state.searchOpen) closeSearch();
     });
+    document.addEventListener('click', onGrowthRangeDocumentClick);
     window.addEventListener('hashchange', () => {
       if (!state.authenticated || !state.data) return;
       applyOwnerRoute();

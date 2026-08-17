@@ -110,6 +110,21 @@ function bucketByDay(dates) {
     .map(([date, count]) => ({ date, count }));
 }
 
+function bucketDonationsByDay(donations) {
+  const map = new Map();
+  donations.filter(isSuccessfulDonation).forEach((d) => {
+    const parsed = parseDate(d.date || d.createdAt);
+    if (!parsed) return;
+    const key = parsed.toISOString().slice(0, 10);
+    const row = map.get(key) || { date: key, count: 0, amount: 0 };
+    row.count += 1;
+    const amt = Number(d.amount);
+    if (Number.isFinite(amt) && amt > 0) row.amount += amt;
+    map.set(key, row);
+  });
+  return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
 function buildCityIntelligence(pledges, donations, influencers) {
   const byCity = new Map();
 
@@ -389,9 +404,7 @@ function buildGrowthSeries({ users, pledges, donations, influencers }) {
   return {
     users: bucketByDay(users.map((u) => u.created_at)),
     voices: bucketByDay(pledges.map((p) => p.pledged_at)),
-    donations: bucketByDay(
-      donations.filter(isSuccessfulDonation).map((d) => d.date || d.createdAt)
-    ),
+    donations: bucketDonationsByDay(donations),
     foundations: bucketByDay(influencers.map((i) => i.createdAt)),
   };
 }
