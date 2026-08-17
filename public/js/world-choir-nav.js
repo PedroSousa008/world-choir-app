@@ -38,7 +38,7 @@ const WorldChoirNav = (() => {
       'css/donate.css?v=20260813y',
       'js/donate/creator-foundations-store.js?v=20260812m',
       'js/donate/donation-flow.js?v=20260812n',
-      'js/donate/donate-page.js?v=20260813y',
+      'js/donate/donate-page.js?v=20260817g',
       '/api/creator-foundations',
       '/api/donations?action=config',
     ],
@@ -57,7 +57,7 @@ const WorldChoirNav = (() => {
     'daily-acts': [
       'daily-acts.html',
       'css/daily-acts-page.css?v=20260817b',
-      'js/daily-acts-page.js?v=20260817f',
+      'js/daily-acts-page.js?v=20260817g',
     ],
   };
 

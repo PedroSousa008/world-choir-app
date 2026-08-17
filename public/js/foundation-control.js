@@ -50,6 +50,32 @@ const FoundationControl = (() => {
     settingsTab: 'foundation',
   };
 
+  const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
+
+  function applyRoute() {
+    const parts = String(window.location.hash || '').replace(/^#/, '').split('/').filter(Boolean);
+    if (!parts.length) return;
+    if (!SECTION_IDS.has(parts[0])) return;
+    state.section = parts[0];
+    if (parts[1] && parts[0] === 'settings') state.settingsTab = parts[1];
+    if (parts[1] && parts[0] === 'foundation') state.foundationTab = parts[1];
+  }
+
+  function syncRoute() {
+    if (!state.authenticated) return;
+    const parts = [state.section || 'overview'];
+    if (state.section === 'settings' && state.settingsTab && state.settingsTab !== 'foundation') {
+      parts.push(state.settingsTab);
+    } else if (state.section === 'foundation' && state.foundationTab && state.foundationTab !== 'page') {
+      parts.push(state.foundationTab);
+    }
+    const hash = parts[0] === 'overview' && parts.length === 1 ? '' : `#${parts.join('/')}`;
+    const url = `${window.location.pathname}${window.location.search}${hash}`;
+    const cur = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (url === cur) return;
+    window.history.replaceState(null, '', url);
+  }
+
   const root = () => document.getElementById('members-root');
 
   function esc(v) {
@@ -1638,6 +1664,7 @@ const FoundationControl = (() => {
       root().innerHTML = `<p class="fcc-boot">${state.busy ? 'Loading Foundation Control Center…' : (state.error || 'Loading…')}</p>`;
       return;
     }
+    syncRoute();
     renderApp();
   }
 
@@ -2009,6 +2036,11 @@ const FoundationControl = (() => {
   async function init() {
     document.addEventListener('keydown', onKeydown);
     root()?.addEventListener('click', onClick);
+    window.addEventListener('hashchange', () => {
+      if (!state.authenticated || !state.data) return;
+      applyRoute();
+      render();
+    });
     root().innerHTML = `<p class="fcc-boot">Loading…</p>`;
     document.body.classList.add('fcc-body');
     try {
@@ -2017,6 +2049,7 @@ const FoundationControl = (() => {
         state.authenticated = true;
         state.email = session.influencer?.email || null;
         state.influencer = session.influencer || null;
+        applyRoute();
         await loadCenter();
         return;
       }

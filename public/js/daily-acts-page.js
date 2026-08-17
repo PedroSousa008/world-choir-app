@@ -516,9 +516,69 @@ const DailyActsPage = (() => {
     bindCalendar();
   }
 
+  function applyDailyActsRoute() {
+    const parts = String(window.location.hash || '').replace(/^#/, '').split('/').filter(Boolean);
+    if (!parts.length) {
+      if (view.mode !== 'grid' && view.mode !== 'complete-moment' && view.mode !== 'reflect') {
+        view = { mode: 'grid' };
+      }
+      return;
+    }
+    if (parts[0] === 'calendar') {
+      calendarMonth = parts[1] && /^\d{4}-\d{2}$/.test(parts[1])
+        ? parts[1]
+        : localDateString().slice(0, 7);
+      view = { mode: 'calendar' };
+      return;
+    }
+    if (parts[0] === 'theme' && parts[1]) {
+      selectedCategory = parts[1];
+      view = { mode: 'grid' };
+      return;
+    }
+    if (parts[0] === 'act' && parts[1]) {
+      const token = parts[1];
+      const item = findItem(token, token);
+      if (!item) return;
+      if (item.status === 'future') {
+        view = { mode: 'future', date: item.date || null, key: item.key };
+        return;
+      }
+      view = { mode: 'detail', item: itemToDetail(item) };
+    }
+  }
+
+  function dailyActsHash() {
+    if (view.mode === 'calendar') {
+      return `#calendar/${calendarMonth || localDateString().slice(0, 7)}`;
+    }
+    if (view.mode === 'detail' || view.mode === 'complete-moment' || view.mode === 'reflect') {
+      const date = view.item?.userDailyAct?.date;
+      const id = view.item?.act?.id || view.item?.actId;
+      if (date) return `#act/${date}`;
+      if (id) return `#act/${id}`;
+    }
+    if (view.mode === 'future' && (view.date || view.key)) {
+      return `#act/${view.date || view.key}`;
+    }
+    if (view.mode === 'grid' && selectedCategory && selectedCategory !== 'all') {
+      return `#theme/${selectedCategory}`;
+    }
+    return '';
+  }
+
+  function syncDailyActsRoute() {
+    const hash = dailyActsHash();
+    const url = `${window.location.pathname}${window.location.search}${hash}`;
+    const cur = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (url === cur) return;
+    window.history.replaceState(null, '', url);
+  }
+
   function paint() {
     const el = root();
     if (!el) return;
+    syncDailyActsRoute();
 
     if (view.mode === 'complete-moment') {
       el.innerHTML = renderMain() + renderCompleteMoment();
@@ -877,7 +937,12 @@ const DailyActsPage = (() => {
       await WorldChoirDB.ready();
       if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.start?.();
       await loadJourney();
+      applyDailyActsRoute();
       paint();
+      window.addEventListener('hashchange', () => {
+        applyDailyActsRoute();
+        paint();
+      });
     } catch (err) {
       root().innerHTML = `<p class="dap-error">${esc(err.message || 'Could not load Daily Acts of Peace.')}</p>`;
     }

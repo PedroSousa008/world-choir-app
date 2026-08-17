@@ -67,6 +67,55 @@ const OwnerControl = (() => {
     },
   };
 
+  const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
+
+  function applyOwnerRoute() {
+    const parts = String(window.location.hash || '').replace(/^#/, '').split('/').filter(Boolean);
+    if (!parts.length) return;
+    if (!SECTION_IDS.has(parts[0])) return;
+    state.section = parts[0];
+    if (parts[0] !== 'daily-acts') return;
+    const sub = parts[1];
+    if (['library', 'engagement', 'partnerships'].includes(sub)) {
+      state.dapView = sub;
+    } else if (['users', 'acts'].includes(sub)) {
+      state.dapView = 'engagement';
+      state.dailyPeaceView = sub;
+    }
+    const third = parts[2];
+    if (state.dapView === 'partnerships' && third && third !== 'new') {
+      state.dapPartnershipId = third;
+      state.dapPartnershipDetail = null;
+    }
+    if (state.dapView === 'engagement' && third && third.startsWith('user-')) {
+      state.dailyPeaceUserId = third.slice(5);
+    }
+  }
+
+  function ownerHash() {
+    if (!state.authenticated) return '';
+    const section = state.section || 'overview';
+    const parts = [section];
+    if (section === 'daily-acts') {
+      parts.push(state.dapView || 'library');
+      if (state.dapView === 'partnerships' && state.dapPartnershipId) {
+        parts.push(state.dapPartnershipId);
+      } else if (state.dapView === 'engagement' && state.dailyPeaceUserId) {
+        parts.push(`user-${state.dailyPeaceUserId}`);
+      }
+    }
+    if (section === 'overview' && parts.length === 1) return '';
+    return `#${parts.join('/')}`;
+  }
+
+  function syncOwnerRoute() {
+    const hash = ownerHash();
+    const url = `${window.location.pathname}${window.location.search}${hash}`;
+    const cur = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    if (url === cur) return;
+    window.history.replaceState(null, '', url);
+  }
+
   const root = () => document.getElementById('owner-root');
 
   function esc(v) {
@@ -2283,6 +2332,7 @@ const OwnerControl = (() => {
       root().innerHTML = `<p class="owner-boot">${state.busy ? 'Loading Owner Control Center…' : 'No data loaded.'}</p>`;
       return;
     }
+    syncOwnerRoute();
     root().innerHTML = renderShell(sectionContent());
     bindShell();
     bindSectionEvents();
@@ -2318,12 +2368,18 @@ const OwnerControl = (() => {
       }
       if (e.key === 'Escape' && state.searchOpen) closeSearch();
     });
+    window.addEventListener('hashchange', () => {
+      if (!state.authenticated || !state.data) return;
+      applyOwnerRoute();
+      render();
+    });
 
     try {
       const session = await api('session');
       if (session.authenticated) {
         state.authenticated = true;
         state.email = session.email || null;
+        applyOwnerRoute();
         await loadCenter();
         return;
       }

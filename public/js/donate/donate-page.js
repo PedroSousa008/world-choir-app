@@ -1481,9 +1481,26 @@ const WorldChoirDonate = (() => {
     }
   }
 
+  function syncDonateUrl() {
+    try {
+      const url = new URL(window.location.href);
+      if (selectedFoundation) {
+        url.searchParams.set('foundation', selectedFoundation.slug || selectedFoundation.id);
+      } else {
+        url.searchParams.delete('foundation');
+      }
+      const next = `${url.pathname}${url.search}${url.hash}`;
+      const cur = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (next !== cur) window.history.replaceState({}, '', next);
+    } catch {
+      /* ignore */
+    }
+  }
+
   function openProfile(foundation) {
     selectedFoundation = foundation;
     selectedProject = null;
+    syncDonateUrl();
     const root = document.getElementById('donate-content');
     root.innerHTML = renderProfile(foundation);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1491,6 +1508,7 @@ const WorldChoirDonate = (() => {
     document.getElementById('donate-back')?.addEventListener('click', () => {
       selectedFoundation = null;
       selectedProject = null;
+      syncDonateUrl();
       renderHome();
     });
 
