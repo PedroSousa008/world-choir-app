@@ -383,7 +383,10 @@ async function joinWorldChoir({ deviceId, eventId, city, country, latitude, long
   await writeJson(userPath(trimmedEvent, user.anonymous_device_id), user, { overwrite: true });
 
   const existing = await readPledge(trimmedEvent, user.id);
-  if (existing) return existing;
+  if (existing) {
+    await upsertPledgeIntoIndex(trimmedEvent, existing).catch(() => {});
+    return existing;
+  }
 
   const voiceNumber = await allocateVoiceNumber(trimmedEvent);
   const now = new Date().toISOString();
@@ -407,13 +410,13 @@ async function joinWorldChoir({ deviceId, eventId, city, country, latitude, long
     if (isBlobUnavailable(err)) throw wrapBlobError(err);
     const raced = await readPledge(trimmedEvent, user.id);
     if (raced) {
-      rememberPledge(trimmedEvent).catch(() => {});
+      await upsertPledgeIntoIndex(trimmedEvent, raced);
       return raced;
     }
     throw new Error('Could not save participation. Please try again.');
   }
 
-  rememberPledge(trimmedEvent).catch(() => {});
+  await upsertPledgeIntoIndex(trimmedEvent, pledge);
   return pledge;
 }
 
@@ -436,7 +439,7 @@ async function updatePledgeLocation({ deviceId, eventId, city, country, latitude
   };
 
   await writeJson(pledgePath(trimmedEvent, user.id), updated, { overwrite: true });
-  rememberPledge(trimmedEvent).catch(() => {});
+  await upsertPledgeIntoIndex(trimmedEvent, updated);
   return updated;
 }
 
@@ -444,59 +447,81 @@ function pledgesIndexPath(eventId) {
   return `${eventPrefix(eventId)}/pledges-index.json`;
 }
 
-async function listPledges(eventId) {
-  assertBlobConfigured();
-  const trimmedEvent = String(eventId).trim();
-  const cacheKey = `pledges:${trimmedEvent}`;
-  const cached = cacheGet(cacheKey);
-  if (cached) return cached;
+function sortPledges(pledges) {
+  return [...(pledges || [])]
+    .filter(Boolean)
+    .sort((a, b) => (Number(a.voice_number) || 0) - (Number(b.voice_number) || 0));
+}
 
+async function loadPledgesFromFiles(eventId) {
+  const blobs = await listBlobs(`${eventPrefix(eventId)}/pledges/`);
+  const pledgeBlobs = blobs.filter((b) => (
+    b.pathname.endsWith('.json') && !b.pathname.endsWith('/pledges-index.json')
+  ));
+  return sortPledges(await readJsonBlobs(pledgeBlobs));
+}
+
+async function readPledgesIndex(eventId) {
   try {
-    const index = await readBlobJson(pledgesIndexPath(trimmedEvent));
-    if (Array.isArray(index?.pledges) && (index.fromList === true || index.pledges.length > 0)) {
-      const pledges = index.pledges.filter(Boolean).sort((a, b) => a.voice_number - b.voice_number);
-      return cacheSet(cacheKey, pledges);
-    }
+    const index = await readBlobJson(pledgesIndexPath(eventId));
+    if (Array.isArray(index?.pledges)) return sortPledges(index.pledges);
   } catch (err) {
     if (isBlobUnavailable(err)) throw wrapBlobError(err);
   }
+  return null;
+}
 
-  const blobs = await listBlobs(`${eventPrefix(trimmedEvent)}/pledges/`);
-  const pledges = (await readJsonBlobs(blobs)).sort((a, b) => a.voice_number - b.voice_number);
-  cacheSet(cacheKey, pledges);
-  writeJson(pledgesIndexPath(trimmedEvent), {
+async function writePledgesIndex(eventId, pledges) {
+  const sorted = sortPledges(pledges);
+  memCache.delete(`pledges:${eventId}`);
+  memCache.delete('pledges:all');
+  await writeJson(pledgesIndexPath(eventId), {
     updated_at: new Date().toISOString(),
-    fromList: true,
-    pledges,
-  }, { overwrite: true }).catch(() => {});
+    count: sorted.length,
+    pledges: sorted,
+  }, { overwrite: true });
+  return sorted;
+}
+
+async function upsertPledgeIntoIndex(eventId, pledge) {
+  if (!pledge) return [];
+  let pledges = await readPledgesIndex(eventId);
+  if (!pledges) {
+    pledges = await loadPledgesFromFiles(eventId);
+  }
+  const next = pledges
+    .filter((p) => p.user_id !== pledge.user_id && p.id !== pledge.id)
+    .concat(pledge);
+  return writePledgesIndex(eventId, next);
+}
+
+async function reconcilePledges(eventId) {
+  const pledges = await loadPledgesFromFiles(eventId);
+  try {
+    await writePledgesIndex(eventId, pledges);
+  } catch {
+    /* index write is best-effort after a successful file read */
+  }
   return pledges;
 }
 
-async function rememberPledge(eventId) {
+async function listPledges(eventId) {
+  assertBlobConfigured();
   const trimmedEvent = String(eventId).trim();
-  memCache.delete(`pledges:${trimmedEvent}`);
-  memCache.delete('pledges:all');
-  try {
-    await listPledges(trimmedEvent);
-  } catch {
-    /* index rebuild is best-effort */
-  }
+  const fromIndex = await readPledgesIndex(trimmedEvent);
+  if (fromIndex && fromIndex.length) return fromIndex;
+  return reconcilePledges(trimmedEvent);
 }
 
 async function listAllUsers() {
   assertBlobConfigured();
-  const cached = cacheGet('users:all');
-  if (cached) return cached;
   const blobs = await listBlobs(`${ROOT}/users-by-device/`);
-  return cacheSet('users:all', await readJsonBlobs(blobs));
+  return readJsonBlobs(blobs);
 }
 
 async function listAllPledges() {
   assertBlobConfigured();
-  const cached = cacheGet('pledges:all');
-  if (cached) return cached;
-  const pledges = await listPledges('world-choir-2027');
-  return cacheSet('pledges:all', pledges);
+  return reconcilePledges('world-choir-2027');
 }
 
 async function listAllPromises() {
