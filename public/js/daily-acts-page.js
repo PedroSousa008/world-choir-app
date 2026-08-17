@@ -161,10 +161,24 @@ const DailyActsPage = (() => {
     };
   }
 
+  function partnerWebsiteUrl(sponsorship) {
+    const raw = String(sponsorship?.companyWebsiteUrl || '').trim();
+    if (!raw) return '';
+    try {
+      const parsed = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+      return parsed.href;
+    } catch {
+      return '';
+    }
+  }
+
   function renderSponsorMeta(sponsorship, revealedDate, assignmentDate) {
     if (!sponsorship?.companyName && !sponsorship?.companyLogoUrl) return '';
     const logo = sponsorship.companyLogoUrl || '';
     const name = sponsorship.companyName || 'Partner';
+    const website = partnerWebsiteUrl(sponsorship);
+    const logoInner = `<img src="${esc(logo)}" alt="${esc(name)}" loading="lazy" decoding="async">`;
     return `
       <div class="dap-sheet__meta-row">
         <div class="dap-sheet__meta-block dap-sheet__meta-block--inline">
@@ -173,13 +187,11 @@ const DailyActsPage = (() => {
         </div>
         <div class="dap-sheet__meta-block dap-sheet__meta-block--inline dap-sheet__meta-block--sponsor">
           <p class="dap-sheet__meta-label">Featured by</p>
-          ${logo ? `
-            <button type="button" class="dap-sponsor-logo" id="dap-sponsor-logo"
-              data-assignment-date="${esc(assignmentDate)}"
-              aria-label="Visit ${esc(name)} website">
-              <img src="${esc(logo)}" alt="${esc(name)}" loading="lazy" decoding="async">
-            </button>
-          ` : `<p class="dap-sheet__meta-value">${esc(name)}</p>`}
+          ${logo ? (
+            website
+              ? `<a class="dap-sponsor-logo" id="dap-sponsor-logo" href="${esc(website)}" target="_blank" rel="noopener noreferrer" data-assignment-date="${esc(assignmentDate)}" aria-label="Visit ${esc(name)} website">${logoInner}</a>`
+              : `<span class="dap-sponsor-logo" id="dap-sponsor-logo">${logoInner}</span>`
+          ) : `<p class="dap-sheet__meta-value">${esc(name)}</p>`}
         </div>
       </div>
     `;
@@ -721,12 +733,12 @@ const DailyActsPage = (() => {
         }),
       }).catch(() => {});
 
-      document.getElementById('dap-sponsor-logo')?.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        try {
-          const data = await apiFetch('/api/daily-peace', {
+      const logoEl = document.getElementById('dap-sponsor-logo');
+      if (logoEl?.tagName === 'A' && logoEl.getAttribute('href')) {
+        logoEl.addEventListener('click', () => {
+          apiFetch('/api/daily-peace', {
             method: 'POST',
+            keepalive: true,
             body: JSON.stringify({
               deviceId: deviceId(),
               date: localDateString(),
@@ -734,14 +746,9 @@ const DailyActsPage = (() => {
               action: 'track-sponsor-click',
               platform: 'web',
             }),
-          });
-          const url = data?.redirectUrl || sponsorship.companyWebsiteUrl;
-          if (url) window.open(url, '_blank', 'noopener,noreferrer');
-        } catch {
-          const url = sponsorship.companyWebsiteUrl;
-          if (url) window.open(url, '_blank', 'noopener,noreferrer');
-        }
-      });
+          }).catch(() => {});
+        });
+      }
     }
 
     document.getElementById('dap-edit-reflection')?.addEventListener('click', () => {

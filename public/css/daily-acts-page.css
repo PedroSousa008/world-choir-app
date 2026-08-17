@@ -523,6 +523,8 @@
   align-items: center;
   justify-content: flex-end;
   max-width: 120px;
+  text-decoration: none;
+  color: inherit;
   transition: opacity 0.2s ease;
 }
 
