@@ -171,6 +171,10 @@ function pickActForUser(userId, date, recentActIds) {
 }
 
 function resolveTheme(catalogCategory) {
+  const direct = THEMES.find((t) => t.id === catalogCategory);
+  if (direct) {
+    return { category: direct.id, categoryLabel: direct.label };
+  }
   const themeId = CATALOG_TO_THEME[catalogCategory] || 'presence';
   const theme = THEMES.find((t) => t.id === themeId) || THEMES.find((t) => t.id === 'presence');
   return {
@@ -228,7 +232,23 @@ function normalizeRow(row) {
     reflection: typeof row.reflection === 'string' && row.reflection.trim() ? row.reflection.trim() : null,
     reflection_at: row.reflection_at || null,
     interactions: row.interactions && typeof row.interactions === 'object' ? row.interactions : {},
+    partnership_id: row.partnership_id || null,
+    sponsor_impression_logged: !!row.sponsor_impression_logged,
   };
+}
+
+async function attachSponsorshipToMapped(mapped, row) {
+  if (!row?.partnership_id) return mapped;
+  try {
+    const { getSponsorshipForAssignmentRow } = require('./daily-peace-partnerships');
+    const sponsorship = await getSponsorshipForAssignmentRow(row);
+    if (sponsorship) {
+      return { ...mapped, sponsorship };
+    }
+  } catch {
+    /* ignore */
+  }
+  return mapped;
 }
 
 function mapUserDailyAct(row, act, { todayDate = null } = {}) {
@@ -272,11 +292,28 @@ function localDateFromIso(iso) {
 }
 
 async function assignFreshDailyAct(user, date, actsById, recentExtraIds = []) {
-  const recentActIds = [
-    ...recentExtraIds,
-    ...(await listRecentUserActIds(user.id, date)),
-  ];
-  const chosen = pickActForUser(user.id, date, recentActIds);
+  const {
+    resolveSponsorshipForNewAssignment,
+    recordSponsorEvent,
+  } = require('./daily-peace-partnerships');
+
+  let chosen = null;
+  let partnershipId = null;
+
+  const sponsored = await resolveSponsorshipForNewAssignment(user, date);
+  if (sponsored?.act) {
+    chosen = sponsored.act;
+    partnershipId = sponsored.partnershipId;
+  }
+
+  if (!chosen) {
+    const recentActIds = [
+      ...recentExtraIds,
+      ...(await listRecentUserActIds(user.id, date)),
+    ];
+    chosen = pickActForUser(user.id, date, recentActIds);
+  }
+
   const now = new Date().toISOString();
 
   const row = {
@@ -296,6 +333,8 @@ async function assignFreshDailyAct(user, date, actsById, recentExtraIds = []) {
     reflection: null,
     reflection_at: null,
     interactions: {},
+    partnership_id: partnershipId,
+    sponsor_impression_logged: false,
   };
 
   try {
@@ -304,12 +343,31 @@ async function assignFreshDailyAct(user, date, actsById, recentExtraIds = []) {
     const raced = await readUserDailyAct(user.id, date);
     if (raced) {
       const racedAct = actsById.get(raced.act_id);
-      if (racedAct) return mapUserDailyAct(raced, racedAct, { todayDate: date });
+      if (racedAct) {
+        const mapped = mapUserDailyAct(raced, racedAct, { todayDate: date });
+        return attachSponsorshipToMapped(mapped, normalizeRow(raced));
+      }
     }
     throw new Error('Could not assign daily act. Please try again.');
   }
 
-  return mapUserDailyAct(row, chosen, { todayDate: date });
+  if (partnershipId) {
+    try {
+      await recordSponsorEvent({
+        partnershipId,
+        userId: user.id,
+        eventType: 'daily_act_assigned',
+        date,
+        city: user.city || null,
+        country: user.country || null,
+      });
+    } catch (err) {
+      console.error('sponsor assigned event failed:', err);
+    }
+  }
+
+  const mapped = mapUserDailyAct(row, chosen, { todayDate: date });
+  return attachSponsorshipToMapped(mapped, row);
 }
 
 async function getOrAssignDailyAct(deviceId, dateInput) {
@@ -319,12 +377,14 @@ async function getOrAssignDailyAct(deviceId, dateInput) {
   if (!user) throw new Error('user not found');
 
   const existing = await readUserDailyAct(user.id, date);
-  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const { getAllActsById } = require('./daily-peace-partnerships');
+  const actsById = await getAllActsById();
 
   if (existing) {
     const act = actsById.get(existing.act_id);
     if (!act) {
-      return assignFreshDailyAct(user, date, actsById, [existing.act_id]);
+      const mapped = await assignFreshDailyAct(user, date, actsById, [existing.act_id]);
+      return mapped;
     }
     const patched = normalizeRow({
       ...existing,
@@ -335,7 +395,8 @@ async function getOrAssignDailyAct(deviceId, dateInput) {
     if (JSON.stringify(patched) !== JSON.stringify(normalizeRow(existing))) {
       await writeJson(userDailyActPath(user.id, date), patched, { overwrite: true });
     }
-    return mapUserDailyAct(patched, act, { todayDate: date });
+    const mapped = mapUserDailyAct(patched, act, { todayDate: date });
+    return attachSponsorshipToMapped(mapped, patched);
   }
 
   return assignFreshDailyAct(user, date, actsById);
@@ -480,16 +541,17 @@ async function completeAssignment(deviceId, assignmentDateInput, todayInput, { s
   const row = await readUserDailyAct(user.id, assignmentDate);
   if (!row) throw new Error('no daily act assigned for that day');
 
-  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const { getAllActsById } = require('./daily-peace-partnerships');
+  const actsById = await getAllActsById();
   const act = actsById.get(row.act_id);
   if (!act) throw new Error('assigned act not found in catalog');
 
   if (row.completed) {
-    return mapUserDailyAct(normalizeRow(row), act, { todayDate });
+    const mapped = mapUserDailyAct(normalizeRow(row), act, { todayDate });
+    return attachSponsorshipToMapped(mapped, normalizeRow(row));
   }
 
   const now = new Date().toISOString();
-  // Prefer client today date for "on assigned day" check (calendar day consistency).
   const completedOnAssignedDay = todayDate === assignmentDate;
   const completionSource = completedOnAssignedDay
     ? 'daily'
@@ -506,7 +568,25 @@ async function completeAssignment(deviceId, assignmentDateInput, todayInput, { s
   });
 
   await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
-  return mapUserDailyAct(updated, act, { todayDate });
+
+  if (row.partnership_id) {
+    try {
+      const { recordSponsorEvent } = require('./daily-peace-partnerships');
+      await recordSponsorEvent({
+        partnershipId: row.partnership_id,
+        userId: user.id,
+        eventType: 'daily_act_completed',
+        date: assignmentDate,
+        city: user.city || null,
+        country: user.country || null,
+      });
+    } catch (err) {
+      console.error('sponsor completion event failed:', err);
+    }
+  }
+
+  const mapped = mapUserDailyAct(updated, act, { todayDate });
+  return attachSponsorshipToMapped(mapped, updated);
 }
 
 async function completeDailyAct(deviceId, dateInput) {
@@ -608,7 +688,25 @@ async function markViewed(deviceId, assignmentDateInput, todayInput) {
     viewed_at: new Date().toISOString(),
   });
   await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
-  return mapUserDailyAct(updated, act, { todayDate });
+
+  if (row.partnership_id) {
+    try {
+      const { recordSponsorEvent } = require('./daily-peace-partnerships');
+      await recordSponsorEvent({
+        partnershipId: row.partnership_id,
+        userId: user.id,
+        eventType: 'daily_act_viewed',
+        date: assignmentDate,
+        city: user.city || null,
+        country: user.country || null,
+      });
+    } catch (err) {
+      console.error('sponsor view event failed:', err);
+    }
+  }
+
+  const mapped = mapUserDailyAct(updated, act, { todayDate });
+  return attachSponsorshipToMapped(mapped, updated);
 }
 
 async function trackInteraction(deviceId, assignmentDateInput, todayInput, interactionKey) {
@@ -655,11 +753,91 @@ async function getAssignment(deviceId, assignmentDateInput, todayInput) {
   const row = await readUserDailyAct(user.id, assignmentDate);
   if (!row) throw new Error('no daily act found');
 
-  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const { getAllActsById } = require('./daily-peace-partnerships');
+  const actsById = await getAllActsById();
   const act = actsById.get(row.act_id);
   if (!act) throw new Error('assigned act not found in catalog');
 
-  return mapUserDailyAct(normalizeRow(row), act, { todayDate });
+  const mapped = mapUserDailyAct(normalizeRow(row), act, { todayDate });
+  return attachSponsorshipToMapped(mapped, normalizeRow(row));
+}
+
+async function trackSponsorLogoImpression(deviceId, assignmentDateInput, todayInput) {
+  assertBlobConfigured();
+  const todayDate = resolveDate(todayInput);
+  const assignmentDate = parseDateStrict(assignmentDateInput) || todayDate;
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const row = normalizeRow(await readUserDailyAct(user.id, assignmentDate));
+  if (!row || !row.partnership_id) {
+    return { ok: true, logged: false };
+  }
+  if (row.sponsor_impression_logged) {
+    return { ok: true, logged: false, duplicate: true };
+  }
+
+  const { getAllActsById, recordSponsorEvent } = require('./daily-peace-partnerships');
+  const actsById = await getAllActsById();
+  const act = actsById.get(row.act_id);
+  if (!act) throw new Error('assigned act not found in catalog');
+
+  await recordSponsorEvent({
+    partnershipId: row.partnership_id,
+    userId: user.id,
+    eventType: 'sponsor_logo_impression',
+    date: assignmentDate,
+    city: user.city || null,
+    country: user.country || null,
+  });
+
+  const updated = { ...row, sponsor_impression_logged: true };
+  await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
+  const mapped = mapUserDailyAct(updated, act, { todayDate });
+  return attachSponsorshipToMapped(mapped, updated);
+}
+
+async function trackSponsorLogoClick(deviceId, assignmentDateInput, todayInput, platform = 'web') {
+  assertBlobConfigured();
+  const todayDate = resolveDate(todayInput);
+  const assignmentDate = parseDateStrict(assignmentDateInput) || todayDate;
+  const user = await findUserByDevice(deviceId);
+  if (!user) throw new Error('user not found');
+
+  const row = normalizeRow(await readUserDailyAct(user.id, assignmentDate));
+  if (!row || !row.partnership_id) throw new Error('no sponsored act for this assignment');
+
+  const { getAllActsById, recordSponsorEvent, getPartnershipById } = require('./daily-peace-partnerships');
+  const actsById = await getAllActsById();
+  const act = actsById.get(row.act_id);
+  if (!act) throw new Error('assigned act not found in catalog');
+
+  await recordSponsorEvent({
+    partnershipId: row.partnership_id,
+    userId: user.id,
+    eventType: 'sponsor_logo_clicked',
+    date: assignmentDate,
+    city: user.city || null,
+    country: user.country || null,
+    platform,
+  });
+  await recordSponsorEvent({
+    partnershipId: row.partnership_id,
+    userId: user.id,
+    eventType: 'external_destination_opened',
+    date: assignmentDate,
+    city: user.city || null,
+    country: user.country || null,
+    platform,
+  });
+
+  const partnership = await getPartnershipById(row.partnership_id);
+  const mapped = mapUserDailyAct(row, act, { todayDate });
+  const withSponsor = await attachSponsorshipToMapped(mapped, row);
+  return {
+    ...withSponsor,
+    redirectUrl: partnership?.companyWebsiteUrl || null,
+  };
 }
 
 async function updateReflection(deviceId, assignmentDateInput, todayInput, reflectionText) {
@@ -771,7 +949,7 @@ async function getJourney(deviceId, todayInput) {
 
     if (row.completed) momentsOfPeace += 1;
 
-    journey.push({
+    const journeyItem = {
       key: act.id,
       actId: act.id,
       date: row.date,
@@ -786,9 +964,22 @@ async function getJourney(deviceId, todayInput) {
         completedAt: row.completed_at,
         reflection: row.reflection,
         reflectionAt: row.reflection_at,
+        partnershipId: row.partnership_id || null,
       },
       act: mapAct(act),
-    });
+    };
+
+    if (row.partnership_id) {
+      try {
+        const { getSponsorshipForAssignmentRow } = require('./daily-peace-partnerships');
+        const sponsorship = await getSponsorshipForAssignmentRow(normalizeRow(row));
+        if (sponsorship) journeyItem.sponsorship = sponsorship;
+      } catch {
+        /* ignore */
+      }
+    }
+
+    journey.push(journeyItem);
   }
 
   const themeCounts = Object.fromEntries(THEMES.map((t) => [t.id, 0]));
@@ -951,6 +1142,8 @@ module.exports = {
   saveReflection,
   markViewed,
   trackInteraction,
+  trackSponsorLogoImpression,
+  trackSponsorLogoClick,
   getImpact,
   getCalendarMonth,
   getAssignment,
@@ -959,4 +1152,8 @@ module.exports = {
   loadCatalog,
   buildDailyPeaceOwnerIntel,
   localDateFromIso,
+  resolveTheme,
+  categoryLabel,
+  listUserAssignmentRows,
+  THEMES,
 };

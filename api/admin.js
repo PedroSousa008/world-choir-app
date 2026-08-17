@@ -17,6 +17,17 @@ const {
 } = require('./_lib/owner-intel');
 const { buildDailyPeaceOwnerIntel } = require('./_lib/daily-peace');
 const {
+  buildOwnerPartnershipsLibrary,
+  getPartnershipDetail,
+  createPartnership,
+  updatePartnership,
+  publishPartnership,
+  setPartnershipStatus,
+  uploadPartnershipLogo,
+  exportPartnershipReportCsv,
+  findSpecificDateConflict,
+} = require('./_lib/daily-peace-partnerships');
+const {
   listInfluencers,
   createInfluencer,
   updateInfluencer,
@@ -77,6 +88,82 @@ module.exports = async function handler(req, res) {
       if (!requireOwner(req, res)) return;
       const data = await buildDailyPeaceOwnerIntel();
       return res.status(200).json(data);
+    }
+
+    if (action === 'daily-peace-partnerships' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await buildOwnerPartnershipsLibrary();
+      return res.status(200).json(data);
+    }
+
+    if (action === 'daily-peace-partnership' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const id = req.query.id;
+      if (!id) return res.status(400).json({ error: 'Partnership id required' });
+      const data = await getPartnershipDetail(id);
+      return res.status(200).json(data);
+    }
+
+    if (action === 'daily-peace-partnership-export' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const id = req.query.id;
+      if (!id) return res.status(400).json({ error: 'Partnership id required' });
+      const detail = await getPartnershipDetail(id);
+      const csv = exportPartnershipReportCsv(detail);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="partnership-${id.slice(0, 8)}.csv"`);
+      return res.status(200).send(csv);
+    }
+
+    if (action === 'daily-peace-date-conflict' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const date = req.query.date;
+      const excludeId = req.query.excludeId || null;
+      if (!date) return res.status(400).json({ error: 'date required' });
+      const conflict = await findSpecificDateConflict(date, excludeId);
+      return res.status(200).json({ conflict: conflict ? { id: conflict.id, companyName: conflict.companyName } : null });
+    }
+
+    if (action === 'create-daily-peace-partnership' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const partnership = await createPartnership(req.body || {});
+      return res.status(200).json({ ok: true, partnership });
+    }
+
+    if (action === 'update-daily-peace-partnership' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id, ...updates } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Partnership id required' });
+      const partnership = await updatePartnership(id, updates);
+      return res.status(200).json({ ok: true, partnership });
+    }
+
+    if (action === 'publish-daily-peace-partnership' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Partnership id required' });
+      const partnership = await publishPartnership(id);
+      return res.status(200).json({ ok: true, partnership });
+    }
+
+    if (action === 'set-daily-peace-partnership-status' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id, status } = req.body || {};
+      if (!id || !status) return res.status(400).json({ error: 'Partnership id and status required' });
+      const partnership = await setPartnershipStatus(id, status);
+      return res.status(200).json({ ok: true, partnership });
+    }
+
+    if (action === 'upload-daily-peace-partnership-logo' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id, dataUrl, fileName } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Partnership id required' });
+      const partnership = await uploadPartnershipLogo(id, dataUrl, fileName);
+      return res.status(200).json({ ok: true, partnership });
     }
 
     if (action === 'search' && req.method === 'GET') {

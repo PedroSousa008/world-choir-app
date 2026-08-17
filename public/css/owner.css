@@ -829,3 +829,67 @@
   margin: 0 0 8px;
   font-size: 1.2rem;
 }
+
+/* Daily Acts partnerships */
+.owner-dap-logo {
+  display: inline-block;
+  vertical-align: middle;
+  max-height: 22px;
+  max-width: 64px;
+  object-fit: contain;
+  margin-right: 6px;
+}
+
+.owner-dap-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.owner-dap-detail-logo {
+  max-width: 72px;
+  max-height: 48px;
+  object-fit: contain;
+}
+
+.owner-table--dap td {
+  vertical-align: middle;
+}
+
+.owner-form__grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .owner-form__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.owner-dap-preview-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.owner-dap-preview-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.owner-dap-preview-label {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 4px;
+}
+
+.owner-flash--error {
+  color: #ff8a8a;
+  margin: 12px 0;
+}

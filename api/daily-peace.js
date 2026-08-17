@@ -6,6 +6,8 @@ const {
   saveReflection,
   markViewed,
   trackInteraction,
+  trackSponsorLogoImpression,
+  trackSponsorLogoClick,
   getImpact,
   getCalendarMonth,
   getAssignment,
@@ -111,6 +113,21 @@ module.exports = async function handler(req, res) {
           assignmentDate,
           date,
           req.body?.interaction
+        );
+        return res.status(200).json(result);
+      }
+
+      if (action === 'track-sponsor-impression') {
+        const result = await trackSponsorLogoImpression(deviceId, assignmentDate, date);
+        return res.status(200).json(result);
+      }
+
+      if (action === 'track-sponsor-click') {
+        const result = await trackSponsorLogoClick(
+          deviceId,
+          assignmentDate,
+          date,
+          req.body?.platform || 'web'
         );
         return res.status(200).json(result);
       }

@@ -49,6 +49,16 @@ const OwnerControl = (() => {
     dailyPeaceFilter: 'all',
     dailyPeaceBusy: false,
     dailyPeaceError: null,
+    dapView: 'library',
+    dapLibrary: null,
+    dapLibraryBusy: false,
+    dapQuery: '',
+    dapFilter: 'all',
+    dapPartnershipId: null,
+    dapPartnershipDetail: null,
+    dapFormMode: false,
+    dapForm: null,
+    dapFormError: null,
     mapFilters: {
       mode: 'voices',
       country: '',
@@ -1232,6 +1242,22 @@ const OwnerControl = (() => {
     `;
   }
 
+  async function ensureDapLibraryLoaded() {
+    if (state.dapLibrary || state.dapLibraryBusy) return;
+    state.dapLibraryBusy = true;
+    try {
+      state.dapLibrary = await api('daily-peace-partnerships');
+    } catch (err) {
+      state.dapLibrary = { catalogCount: 0, acts: [], partnerships: [], error: err.message };
+    } finally {
+      state.dapLibraryBusy = false;
+    }
+  }
+
+  async function loadPartnershipDetail(id) {
+    state.dapPartnershipDetail = await api('daily-peace-partnership', { query: `&id=${encodeURIComponent(id)}` });
+  }
+
   async function ensureDailyPeaceLoaded() {
     if (state.dailyPeace || state.dailyPeaceBusy) return;
     state.dailyPeaceBusy = true;
@@ -1246,19 +1272,7 @@ const OwnerControl = (() => {
     }
   }
 
-  function renderDailyActs() {
-    if (!state.dailyPeace && !state.dailyPeaceError) {
-      if (!state.dailyPeaceBusy) {
-        ensureDailyPeaceLoaded().then(() => render());
-      }
-      return `
-        <section class="owner-section">
-          <p class="owner-section__label">Daily Acts</p>
-          <p class="owner-muted">Loading real Daily Acts engagement…</p>
-        </section>
-      `;
-    }
-
+  function renderDailyActsEngagement() {
     const data = state.dailyPeace || { totals: {}, users: [], acts: [] };
     const totals = data.totals || {};
     const q = String(state.dailyPeaceQuery || '').trim().toLowerCase();
@@ -1420,6 +1434,9 @@ const OwnerControl = (() => {
           <div class="owner-group">${metricBtn(totals.stillOpen, 'Still open', 'daily-acts')}</div>
         </div>
         <div class="owner-chips" style="margin:18px 0 12px">
+          <button type="button" class="owner-chip" data-dap-main-view="library">Library</button>
+          <button type="button" class="owner-chip is-active" data-dap-main-view="engagement">Engagement</button>
+          <button type="button" class="owner-chip" data-dap-main-view="partnerships">Partnerships</button>
           <button type="button" class="owner-chip is-active" data-dap-view="users">Users</button>
           <button type="button" class="owner-chip" data-dap-view="acts">Act performance</button>
           <button type="button" class="owner-chip" data-dap-refresh>Refresh</button>
@@ -1455,6 +1472,50 @@ const OwnerControl = (() => {
         </div>
       </section>
     `;
+  }
+
+  function renderDailyActs() {
+    const needsLibrary = state.dapView === 'library'
+      || state.dapView === 'partnerships'
+      || state.dapFormMode
+      || state.dapPartnershipId;
+
+    if (needsLibrary && !state.dapLibrary && !state.dapLibraryBusy) {
+      ensureDapLibraryLoaded().then(() => {
+        if (state.dapPartnershipId && !state.dapPartnershipDetail) {
+          loadPartnershipDetail(state.dapPartnershipId).then(() => render()).catch(() => render());
+        } else {
+          render();
+        }
+      });
+      return `
+        <section class="owner-section">
+          <p class="owner-section__label">Daily Acts</p>
+          <p class="owner-muted">Loading Daily Acts library…</p>
+        </section>
+      `;
+    }
+
+    if (state.dapView === 'engagement') {
+      if (!state.dailyPeace && !state.dailyPeaceError) {
+        if (!state.dailyPeaceBusy) ensureDailyPeaceLoaded().then(() => render());
+        return `<section class="owner-section"><p class="owner-muted">Loading engagement data…</p></section>`;
+      }
+    }
+
+    if (typeof OwnerDailyPeacePartnerships !== 'undefined') {
+      const engagementHtml = state.dapView === 'engagement' ? renderDailyActsEngagement() : '';
+      if (state.dapView !== 'engagement' || state.dapFormMode || state.dapPartnershipId) {
+        return OwnerDailyPeacePartnerships.render(state, { esc, money, num, when }, engagementHtml);
+      }
+      if (state.dapView === 'engagement') return engagementHtml;
+    }
+
+    if (!state.dailyPeace && !state.dailyPeaceError) {
+      if (!state.dailyPeaceBusy) ensureDailyPeaceLoaded().then(() => render());
+      return `<section class="owner-section"><p class="owner-muted">Loading…</p></section>`;
+    }
+    return renderDailyActsEngagement();
   }
 
   function renderApplications() {
@@ -1699,9 +1760,28 @@ const OwnerControl = (() => {
         render();
       });
     });
+    root().querySelectorAll('[data-dap-main-view]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.dapView = btn.getAttribute('data-dap-main-view') || 'library';
+        state.dapPartnershipId = null;
+        state.dapPartnershipDetail = null;
+        state.dapFormMode = false;
+        state.dapForm = null;
+        render();
+      });
+    });
     root().querySelectorAll('[data-dap-view]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        state.dailyPeaceView = btn.getAttribute('data-dap-view');
+        const view = btn.getAttribute('data-dap-view');
+        if (['library', 'engagement', 'partnerships'].includes(view)) {
+          state.dapView = view;
+          state.dapPartnershipId = null;
+          state.dapPartnershipDetail = null;
+          state.dapFormMode = false;
+        } else {
+          state.dailyPeaceView = view;
+          state.dapView = 'engagement';
+        }
         state.dailyPeaceUserId = null;
         render();
       });
@@ -1724,13 +1804,22 @@ const OwnerControl = (() => {
     });
     root().querySelectorAll('[data-dap-filter]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        state.dailyPeaceFilter = btn.getAttribute('data-dap-filter');
+        const f = btn.getAttribute('data-dap-filter');
+        if (['all', 'sponsored', 'not_sponsored', 'company_created', 'standard', 'active', 'expired'].includes(f)) {
+          state.dapFilter = f;
+        } else {
+          state.dailyPeaceFilter = f;
+        }
         render();
       });
     });
     root().querySelectorAll('[data-dap-query]').forEach((input) => {
       input.addEventListener('input', () => {
-        state.dailyPeaceQuery = input.value || '';
+        if (state.dapView === 'library' || state.dapView === 'partnerships') {
+          state.dapQuery = input.value || '';
+        } else {
+          state.dailyPeaceQuery = input.value || '';
+        }
         render();
         const el = root().querySelector('[data-dap-query]');
         if (el) {
@@ -1740,6 +1829,212 @@ const OwnerControl = (() => {
         }
       });
     });
+    root().querySelectorAll('[data-dap-refresh-library]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        state.dapLibrary = null;
+        await ensureDapLibraryLoaded();
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-create-partnership]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.dapFormMode = true;
+        state.dapForm = {
+          partnershipType: 'sponsored_standard',
+          assignmentMethod: 'random',
+          randomMinDay: 1,
+          randomMaxDay: state.dapLibrary?.catalogCount || 403,
+          currency: 'EUR',
+          paymentStatus: 'pending',
+        };
+        state.dapFormError = null;
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-sponsor-act]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.dapFormMode = true;
+        state.dapForm = {
+          actId: btn.getAttribute('data-dap-sponsor-act'),
+          partnershipType: 'sponsored_standard',
+          assignmentMethod: 'random',
+          randomMinDay: 1,
+          randomMaxDay: state.dapLibrary?.catalogCount || 403,
+          currency: 'EUR',
+          paymentStatus: 'pending',
+        };
+        state.dapFormError = null;
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-open-partnership]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        state.dapPartnershipId = btn.getAttribute('data-dap-open-partnership');
+        state.dapPartnershipDetail = null;
+        try {
+          await loadPartnershipDetail(state.dapPartnershipId);
+        } catch (err) {
+          setFlash(err.message, 'err');
+        }
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-back-library]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.dapPartnershipId = null;
+        state.dapPartnershipDetail = null;
+        state.dapFormMode = false;
+        state.dapForm = null;
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-edit-partnership]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-dap-edit-partnership');
+        const p = state.dapPartnershipDetail?.partnership;
+        if (!p) return;
+        state.dapFormMode = true;
+        state.dapForm = { ...p, companyAct: p.companyAct || null };
+        state.dapFormError = null;
+        render();
+      });
+    });
+    async function publishPartnershipById(id) {
+      try {
+        await api('publish-daily-peace-partnership', { method: 'POST', body: { id } });
+        state.dapLibrary = null;
+        state.dapPartnershipDetail = null;
+        await ensureDapLibraryLoaded();
+        if (id) await loadPartnershipDetail(id);
+        state.dapPartnershipId = id;
+        setFlash('Partnership published.');
+      } catch (err) {
+        setFlash(err.message, 'err');
+      }
+      render();
+    }
+    root().querySelectorAll('[data-dap-publish-partnership]').forEach((btn) => {
+      btn.addEventListener('click', () => publishPartnershipById(btn.getAttribute('data-dap-publish-partnership')));
+    });
+    root().querySelectorAll('[data-dap-pause-partnership]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await api('set-daily-peace-partnership-status', { method: 'POST', body: { id: btn.getAttribute('data-dap-pause-partnership'), status: 'paused' } });
+          state.dapLibrary = null;
+          await ensureDapLibraryLoaded();
+          await loadPartnershipDetail(state.dapPartnershipId);
+          setFlash('Partnership paused.');
+        } catch (err) {
+          setFlash(err.message, 'err');
+        }
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-resume-partnership]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await api('set-daily-peace-partnership-status', { method: 'POST', body: { id: btn.getAttribute('data-dap-resume-partnership'), status: 'active' } });
+          state.dapLibrary = null;
+          await ensureDapLibraryLoaded();
+          await loadPartnershipDetail(state.dapPartnershipId);
+          setFlash('Partnership resumed.');
+        } catch (err) {
+          setFlash(err.message, 'err');
+        }
+        render();
+      });
+    });
+
+    const partnershipForm = document.getElementById('dap-partnership-form');
+    if (partnershipForm) {
+      document.getElementById('dap-partnership-type')?.addEventListener('change', (e) => {
+        const isCompany = e.target.value === 'company_created';
+        document.getElementById('dap-standard-act-picker').style.display = isCompany ? 'none' : '';
+        document.getElementById('dap-company-act-fields').style.display = isCompany ? '' : 'none';
+      });
+      document.getElementById('dap-assignment-method')?.addEventListener('change', (e) => {
+        const isSpecific = e.target.value === 'specific_date';
+        document.getElementById('dap-field-random-min').style.display = isSpecific ? 'none' : '';
+        document.getElementById('dap-field-random-max').style.display = isSpecific ? 'none' : '';
+        document.getElementById('dap-field-specific-date').style.display = isSpecific ? '' : 'none';
+      });
+      document.getElementById('dap-logo-upload')?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            let id = state.dapForm?.id;
+            if (!id) {
+              const fd = new FormData(partnershipForm);
+              const body = collectPartnershipForm(fd);
+              const created = await api('create-daily-peace-partnership', { method: 'POST', body });
+              id = created.partnership.id;
+              state.dapForm = created.partnership;
+            }
+            const updated = await api('upload-daily-peace-partnership-logo', {
+              method: 'POST',
+              body: { id, dataUrl: reader.result, fileName: file.name },
+            });
+            state.dapForm = updated.partnership;
+            render();
+          } catch (err) {
+            state.dapFormError = err.message;
+            render();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+      partnershipForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(partnershipForm);
+        const body = collectPartnershipForm(fd);
+        try {
+          if (state.dapForm?.id) {
+            await api('update-daily-peace-partnership', { method: 'POST', body: { id: state.dapForm.id, ...body } });
+          } else {
+            const created = await api('create-daily-peace-partnership', { method: 'POST', body });
+            state.dapForm = created.partnership;
+          }
+          state.dapLibrary = null;
+          await ensureDapLibraryLoaded();
+          state.dapFormMode = false;
+          state.dapForm = null;
+          setFlash('Partnership saved.');
+        } catch (err) {
+          state.dapFormError = err.message;
+        }
+        render();
+      });
+    }
+
+    function collectPartnershipForm(fd) {
+      const partnershipType = fd.get('partnershipType');
+      const body = {
+        companyName: String(fd.get('companyName') || '').trim(),
+        companyWebsiteUrl: String(fd.get('companyWebsiteUrl') || '').trim(),
+        partnershipType,
+        startDate: fd.get('startDate'),
+        endDate: fd.get('endDate'),
+        contractedAmount: Number(fd.get('contractedAmount')) || 0,
+        currency: String(fd.get('currency') || 'EUR').trim(),
+        paymentStatus: fd.get('paymentStatus'),
+        assignmentMethod: fd.get('assignmentMethod'),
+        randomMinDay: Number(fd.get('randomMinDay')) || 1,
+        randomMaxDay: Number(fd.get('randomMaxDay')) || (state.dapLibrary?.catalogCount || 403),
+        specificDate: fd.get('specificDate') || null,
+        internalNotes: String(fd.get('internalNotes') || '').trim(),
+        actId: fd.get('actId') || null,
+      };
+      if (partnershipType === 'company_created') {
+        body.companyAct = {
+          text: String(fd.get('companyActText') || '').trim(),
+          explanation: String(fd.get('companyActExplanation') || '').trim(),
+          category: fd.get('companyActCategory'),
+        };
+      }
+      return body;
+    }
     root().querySelectorAll('[data-dap-refresh]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         state.dailyPeace = null;

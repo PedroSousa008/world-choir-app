@@ -148,6 +148,7 @@ const DailyActsPage = (() => {
     if (!item?.act) return null;
     return {
       act: item.act,
+      sponsorship: item.sponsorship || null,
       userDailyAct: {
         id: item.assignment?.id,
         date: item.date,
@@ -158,6 +159,28 @@ const DailyActsPage = (() => {
         reflectionAt: item.assignment?.reflectionAt,
       },
     };
+  }
+
+  function renderSponsorMeta(sponsorship, revealedDate, assignmentDate) {
+    if (!sponsorship?.companyLogoUrl) return '';
+    const logo = sponsorship.companyLogoUrl;
+    const name = sponsorship.companyName || 'Partner';
+    return `
+      <div class="dap-sheet__meta-row">
+        <div class="dap-sheet__meta-block dap-sheet__meta-block--inline">
+          <p class="dap-sheet__meta-label">Revealed</p>
+          <p class="dap-sheet__meta-value">${esc(formatLongDate(revealedDate))}</p>
+        </div>
+        <div class="dap-sheet__meta-block dap-sheet__meta-block--inline dap-sheet__meta-block--sponsor">
+          <p class="dap-sheet__meta-label">Featured by</p>
+          <button type="button" class="dap-sponsor-logo" id="dap-sponsor-logo"
+            data-assignment-date="${esc(assignmentDate)}"
+            aria-label="Visit ${esc(name)} website">
+            <img src="${esc(logo)}" alt="${esc(name)}" loading="lazy" decoding="async">
+          </button>
+        </div>
+      </div>
+    `;
   }
 
   async function loadJourney() {
@@ -330,7 +353,16 @@ const DailyActsPage = (() => {
   function renderActDetail(item, { editingReflection = false } = {}) {
     const uda = item.userDailyAct;
     const act = item.act;
+    const sponsorship = item.sponsorship || null;
     const completed = !!uda.completed;
+    const revealedMeta = sponsorship
+      ? renderSponsorMeta(sponsorship, uda.revealedAt || uda.date, uda.date)
+      : `
+        <div class="dap-sheet__meta-block">
+          <p class="dap-sheet__meta-label">Revealed</p>
+          <p class="dap-sheet__meta-value">${esc(formatLongDate(uda.revealedAt || uda.date))}</p>
+        </div>
+      `;
 
     return renderSheet(`
       <button type="button" class="dap-sheet__close" id="dap-sheet-close-btn" aria-label="Close">×</button>
@@ -347,6 +379,7 @@ const DailyActsPage = (() => {
             <p class="dap-sheet__meta-note">Revealed ${esc(formatLongDate(uda.date))}</p>
           ` : ''}
         </div>
+        ${sponsorship ? renderSponsorMeta(sponsorship, uda.date, uda.date) : ''}
 
         ${editingReflection ? `
           <div class="dap-reflection-box">
@@ -367,10 +400,7 @@ const DailyActsPage = (() => {
           <button type="button" class="dap-link-btn" id="dap-edit-reflection" style="margin-top:18px">Add a message</button>
         `}
       ` : `
-        <div class="dap-sheet__meta-block">
-          <p class="dap-sheet__meta-label">Revealed</p>
-          <p class="dap-sheet__meta-value">${esc(formatLongDate(uda.revealedAt || uda.date))}</p>
-        </div>
+        ${revealedMeta}
         <div class="dap-sheet__actions">
           ${act.nav?.type ? `
             <button type="button" class="btn btn-secondary" id="dap-nav-btn"
@@ -672,6 +702,42 @@ const DailyActsPage = (() => {
     document.getElementById('dap-complete-btn')?.addEventListener('click', (e) => {
       completeAct(e.currentTarget.getAttribute('data-assignment-date'));
     });
+
+    const sponsorship = view.item?.sponsorship;
+    if (sponsorship && view.item?.userDailyAct?.date) {
+      const assignmentDate = view.item.userDailyAct.date;
+      apiFetch('/api/daily-peace', {
+        method: 'POST',
+        body: JSON.stringify({
+          deviceId: deviceId(),
+          date: localDateString(),
+          assignmentDate,
+          action: 'track-sponsor-impression',
+        }),
+      }).catch(() => {});
+
+      document.getElementById('dap-sponsor-logo')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          const data = await apiFetch('/api/daily-peace', {
+            method: 'POST',
+            body: JSON.stringify({
+              deviceId: deviceId(),
+              date: localDateString(),
+              assignmentDate,
+              action: 'track-sponsor-click',
+              platform: 'web',
+            }),
+          });
+          const url = data?.redirectUrl || sponsorship.companyWebsiteUrl;
+          if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        } catch {
+          const url = sponsorship.companyWebsiteUrl;
+          if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      });
+    }
 
     document.getElementById('dap-edit-reflection')?.addEventListener('click', () => {
       view = { ...view, editingReflection: true };
