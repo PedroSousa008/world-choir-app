@@ -204,14 +204,35 @@ const OwnerDailyPeacePartnerships = (() => {
       </section>
       <section class="owner-section">
         <p class="owner-section__label">Impact</p>
-        <div class="owner-groups">
-          <div class="owner-group"><span class="owner-metric__value">${Number(a.reach || 0).toLocaleString()}</span><span class="owner-metric__label">Reach</span></div>
-          <div class="owner-group"><span class="owner-metric__value">${Number(a.views || 0).toLocaleString()}</span><span class="owner-metric__label">Views</span></div>
-          <div class="owner-group"><span class="owner-metric__value">${Number(a.completions || 0).toLocaleString()}</span><span class="owner-metric__label">Completed</span></div>
-          <div class="owner-group"><span class="owner-metric__value">${(a.completionRate || 0).toFixed(1)}%</span><span class="owner-metric__label">Completion Rate</span></div>
-          <div class="owner-group"><span class="owner-metric__value">${Number(a.logoImpressions || 0).toLocaleString()}</span><span class="owner-metric__label">Logo Impressions</span></div>
-          <div class="owner-group"><span class="owner-metric__value">${Number(a.uniqueLogoClicks || 0).toLocaleString()}</span><span class="owner-metric__label">Unique Clicks</span></div>
-          <div class="owner-group"><span class="owner-metric__value">${(a.ctrUnique || 0).toFixed(2)}%</span><span class="owner-metric__label">CTR</span></div>
+        <div class="owner-groups owner-dap-impact">
+          <div class="owner-group">
+            <span class="owner-metric__value">${Number(a.reach || 0).toLocaleString()}</span>
+            <span class="owner-metric__label">Reach</span>
+          </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${Number(a.views || 0).toLocaleString()}</span>
+            <span class="owner-metric__label">Views</span>
+          </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${Number(a.completions || 0).toLocaleString()}</span>
+            <span class="owner-metric__label">Completed</span>
+          </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${(a.completionRate || 0).toFixed(1)}%</span>
+            <span class="owner-metric__label">Completion Rate</span>
+          </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${Number(a.logoImpressions || 0).toLocaleString()}</span>
+            <span class="owner-metric__label">Logo Impressions</span>
+          </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${Number(a.uniqueLogoClicks || 0).toLocaleString()}</span>
+            <span class="owner-metric__label">Unique Clicks</span>
+          </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${(a.ctrUnique || 0).toFixed(2)}%</span>
+            <span class="owner-metric__label">CTR</span>
+          </div>
         </div>
       </section>
       <section class="owner-section">

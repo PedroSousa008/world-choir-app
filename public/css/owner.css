@@ -891,6 +891,22 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   vertical-align: middle;
 }
 
+.owner-dap-impact .owner-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.owner-dap-impact .owner-metric__value {
+  display: block;
+  line-height: 1.1;
+}
+
+.owner-dap-impact .owner-metric__label {
+  display: block;
+  margin: 0;
+}
+
 .owner-form__grid {
   display: grid;
   gap: 16px;
