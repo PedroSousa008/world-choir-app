@@ -162,7 +162,13 @@ async function readCompanyAct(actId) {
   }
 }
 
+let actsByIdCache = null;
+let actsByIdCacheAt = 0;
+const ACTS_CACHE_MS = 5 * 60 * 1000;
+
 async function getAllActsById() {
+  const now = Date.now();
+  if (actsByIdCache && now - actsByIdCacheAt < ACTS_CACHE_MS) return actsByIdCache;
   const map = new Map(loadCatalogActs().map((a) => [a.id, a]));
   assertBlobConfigured();
   const { list } = require('@vercel/blob');
@@ -177,12 +183,16 @@ async function getAllActsById() {
       }
     })
   );
+  actsByIdCache = map;
+  actsByIdCacheAt = now;
   return map;
 }
 
 async function invalidatePartnershipsCache() {
   partnershipsCache = null;
   partnershipsCacheAt = 0;
+  actsByIdCache = null;
+  actsByIdCacheAt = 0;
 }
 
 async function loadAllPartnerships({ fresh = false } = {}) {
@@ -817,6 +827,9 @@ async function collectAssignmentAnalyticsForPartnership(partnership) {
   return map.get(partnership.id) || emptyAssignmentAnalytics();
 }
 
+let assignmentBlobsCache = null;
+let assignmentBlobsCacheAt = 0;
+
 async function collectAssignmentAnalyticsForPartnerships(partnerships) {
   assertBlobConfigured();
   const { list } = require('@vercel/blob');
@@ -825,10 +838,16 @@ async function collectAssignmentAnalyticsForPartnerships(partnerships) {
   const states = new Map(list_.map((p) => [p.id, createAssignmentAnalyticsState()]));
   if (!list_.length) return new Map();
 
-  const [{ blobs }, choirDb] = await Promise.all([
-    list({ prefix: 'wc-data/daily-peace/assignments/', limit: 5000 }),
-    buildOwnerDatabaseRows().catch(() => ({ rows: [] })),
-  ]);
+  const now = Date.now();
+  let blobs = assignmentBlobsCache;
+  if (!blobs || now - assignmentBlobsCacheAt > 60 * 1000) {
+    const listed = await list({ prefix: 'wc-data/daily-peace/assignments/', limit: 5000 });
+    blobs = listed.blobs || [];
+    assignmentBlobsCache = blobs;
+    assignmentBlobsCacheAt = now;
+  }
+
+  const choirDb = await buildOwnerDatabaseRows().catch(() => ({ rows: [] }));
   const identityByUser = new Map((choirDb.rows || []).map((r) => [r.userId, r]));
 
   const bumpDaily = (state, date, field) => {

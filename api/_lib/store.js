@@ -26,6 +26,25 @@ function wrapBlobError(err) {
   return wrapped;
 }
 
+const memCache = new Map();
+const LIST_CACHE_MS = 60 * 1000;
+const INVENTORY_CACHE_MS = 5 * 60 * 1000;
+
+function cacheGet(key) {
+  const hit = memCache.get(key);
+  if (!hit) return undefined;
+  if (Date.now() - hit.at > hit.ttl) {
+    memCache.delete(key);
+    return undefined;
+  }
+  return hit.value;
+}
+
+function cacheSet(key, value, ttl = LIST_CACHE_MS) {
+  memCache.set(key, { at: Date.now(), ttl, value });
+  return value;
+}
+
 async function jsonStorageError(err) {
   const wrapped = wrapBlobError(err);
   const payload = {
@@ -35,10 +54,16 @@ async function jsonStorageError(err) {
     storageUnavailable: wrapped.code === 'STORAGE_UNAVAILABLE',
   };
   if (payload.storageUnavailable) {
-    try {
-      payload.inventory = await buildStorageInventory();
-    } catch {
-      /* listing can also be blocked */
+    const cachedInv = cacheGet('inventory');
+    if (cachedInv) {
+      payload.inventory = cachedInv;
+    } else {
+      try {
+        payload.inventory = await buildStorageInventory();
+        cacheSet('inventory', payload.inventory, INVENTORY_CACHE_MS);
+      } catch {
+        /* listing can also be blocked */
+      }
     }
   }
   return payload;
@@ -378,12 +403,17 @@ async function joinWorldChoir({ deviceId, eventId, city, country, latitude, long
 
   try {
     await writeJson(pledgePath(trimmedEvent, user.id), pledge, { overwrite: false });
-  } catch {
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
     const raced = await readPledge(trimmedEvent, user.id);
-    if (raced) return raced;
+    if (raced) {
+      rememberPledge(trimmedEvent).catch(() => {});
+      return raced;
+    }
     throw new Error('Could not save participation. Please try again.');
   }
 
+  rememberPledge(trimmedEvent).catch(() => {});
   return pledge;
 }
 
@@ -406,34 +436,75 @@ async function updatePledgeLocation({ deviceId, eventId, city, country, latitude
   };
 
   await writeJson(pledgePath(trimmedEvent, user.id), updated, { overwrite: true });
+  rememberPledge(trimmedEvent).catch(() => {});
   return updated;
+}
+
+function pledgesIndexPath(eventId) {
+  return `${eventPrefix(eventId)}/pledges-index.json`;
 }
 
 async function listPledges(eventId) {
   assertBlobConfigured();
-  const prefix = `${eventPrefix(eventId)}/pledges/`;
-  const blobs = await listBlobs(prefix);
-  const pledges = await readJsonBlobs(blobs);
-  return pledges.sort((a, b) => a.voice_number - b.voice_number);
+  const trimmedEvent = String(eventId).trim();
+  const cacheKey = `pledges:${trimmedEvent}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const index = await readBlobJson(pledgesIndexPath(trimmedEvent));
+    if (Array.isArray(index?.pledges) && (index.fromList === true || index.pledges.length > 0)) {
+      const pledges = index.pledges.filter(Boolean).sort((a, b) => a.voice_number - b.voice_number);
+      return cacheSet(cacheKey, pledges);
+    }
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+  }
+
+  const blobs = await listBlobs(`${eventPrefix(trimmedEvent)}/pledges/`);
+  const pledges = (await readJsonBlobs(blobs)).sort((a, b) => a.voice_number - b.voice_number);
+  cacheSet(cacheKey, pledges);
+  writeJson(pledgesIndexPath(trimmedEvent), {
+    updated_at: new Date().toISOString(),
+    fromList: true,
+    pledges,
+  }, { overwrite: true }).catch(() => {});
+  return pledges;
+}
+
+async function rememberPledge(eventId) {
+  const trimmedEvent = String(eventId).trim();
+  memCache.delete(`pledges:${trimmedEvent}`);
+  memCache.delete('pledges:all');
+  try {
+    await listPledges(trimmedEvent);
+  } catch {
+    /* index rebuild is best-effort */
+  }
 }
 
 async function listAllUsers() {
   assertBlobConfigured();
+  const cached = cacheGet('users:all');
+  if (cached) return cached;
   const blobs = await listBlobs(`${ROOT}/users-by-device/`);
-  return readJsonBlobs(blobs);
+  return cacheSet('users:all', await readJsonBlobs(blobs));
 }
 
 async function listAllPledges() {
   assertBlobConfigured();
-  const blobs = await listBlobs(`${ROOT}/`);
-  const pledgeBlobs = blobs.filter(
-    (b) => b.pathname.includes('/pledges/') && b.pathname.endsWith('.json')
-  );
-  const pledges = await readJsonBlobs(pledgeBlobs);
-  return pledges.sort((a, b) => {
-    if (a.event_id !== b.event_id) return a.event_id.localeCompare(b.event_id);
-    return a.voice_number - b.voice_number;
-  });
+  const cached = cacheGet('pledges:all');
+  if (cached) return cached;
+  const pledges = await listPledges('world-choir-2027');
+  return cacheSet('pledges:all', pledges);
+}
+
+async function listAllPromises() {
+  assertBlobConfigured();
+  const cached = cacheGet('promises:all');
+  if (cached) return cached;
+  const blobs = await listBlobs(`${ROOT}/promises/`);
+  return cacheSet('promises:all', await readJsonBlobs(blobs), LIST_CACHE_MS);
 }
 
 function promisePath(userId, eventId) {
@@ -474,32 +545,14 @@ async function readPromise(userId, eventId) {
   }
 }
 
-async function listAllPromises() {
-  assertBlobConfigured();
-  const blobs = await listBlobs(`${ROOT}/promises/`);
-  return readJsonBlobs(blobs);
-}
-
-async function buildOwnerDatabaseRows() {
-  const [users, pledges, promises] = await Promise.all([
-    listAllUsers(),
-    listAllPledges(),
-    listAllPromises(),
-  ]);
-
+function assembleOwnerDatabaseRows(users = [], pledges = [], promises = []) {
   const promiseByUserEvent = new Map();
   promises.forEach((p) => {
     promiseByUserEvent.set(`${p.user_id}|${p.event_id}`, p);
   });
 
-  const pledgeByUserEvent = new Map();
-  pledges.forEach((p) => {
-    pledgeByUserEvent.set(`${p.user_id}|${p.event_id}`, p);
-  });
-
   const userIdsFromPledges = new Set(pledges.map((p) => p.user_id));
   const allUserIds = new Set([...users.map((u) => u.id), ...userIdsFromPledges]);
-
   const userById = new Map(users.map((u) => [u.id, u]));
   const rows = [];
 
@@ -552,6 +605,15 @@ async function buildOwnerDatabaseRows() {
   };
 }
 
+async function buildOwnerDatabaseRows() {
+  const [users, pledges, promises] = await Promise.all([
+    listAllUsers(),
+    listAllPledges(),
+    listAllPromises(),
+  ]);
+  return assembleOwnerDatabaseRows(users, pledges, promises);
+}
+
 module.exports = {
   mapPledgeRow,
   ensureUser,
@@ -565,6 +627,7 @@ module.exports = {
   listAllUsers,
   listAllPledges,
   listAllPromises,
+  assembleOwnerDatabaseRows,
   buildOwnerDatabaseRows,
   getOwnerPasswordHash,
   getOwnerEmailOverride,

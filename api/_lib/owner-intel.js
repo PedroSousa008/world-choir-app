@@ -6,7 +6,7 @@ const {
   listAllUsers,
   listAllPledges,
   listAllPromises,
-  buildOwnerDatabaseRows,
+  assembleOwnerDatabaseRows,
   assertBlobConfigured,
   readBlobJson,
   isBlobUnavailable,
@@ -422,15 +422,15 @@ function countToday(dates) {
  * Full Owner Control Center payload.
  */
 async function buildOwnerControlCenter() {
-  const [users, pledges, promises, influencers, donations, choirDb, operations] = await Promise.all([
+  const [users, pledges, promises, influencers, donations, operations] = await Promise.all([
     listAllUsers(),
     listAllPledges(),
     listAllPromises(),
     listInfluencersOwnerView(),
     readDonationsLedgerSafe(),
-    buildOwnerDatabaseRows(),
     getOperationsOverview(),
   ]);
+  const choirDb = assembleOwnerDatabaseRows(users, pledges, promises);
 
   const verifiedDonations = filterDonations(donations, {});
   const cities = buildCityIntelligence(pledges, verifiedDonations, influencers);
