@@ -953,11 +953,20 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   font-size: 0.85rem;
 }
 
+.owner-field input[type="date"] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  min-height: 44px;
+}
+
 .owner-upload__pick {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  justify-self: start;
+  width: auto;
+  min-width: 148px;
   cursor: pointer;
   margin: 0;
 }

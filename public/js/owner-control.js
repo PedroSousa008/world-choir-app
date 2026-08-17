@@ -1963,18 +1963,33 @@ const OwnerControl = (() => {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = async () => {
+          const dataUrl = reader.result;
+          const fd = new FormData(partnershipForm);
+          const body = collectPartnershipForm(fd);
+          state.dapForm = { ...(state.dapForm || {}), ...body, companyLogoUrl: dataUrl };
+          state.dapFormError = null;
+
+          const preview = document.querySelector('.owner-upload__preview');
+          if (preview) {
+            preview.innerHTML = '';
+            const img = document.createElement('img');
+            img.alt = '';
+            img.src = dataUrl;
+            preview.appendChild(img);
+          }
+          const previewLogo = document.querySelector('.owner-dap-preview-card .owner-dap-logo, .owner-dap-preview-meta img');
+          if (previewLogo) previewLogo.src = dataUrl;
+
           try {
             let id = state.dapForm?.id;
             if (!id) {
-              const fd = new FormData(partnershipForm);
-              const body = collectPartnershipForm(fd);
               const created = await api('create-daily-peace-partnership', { method: 'POST', body });
               id = created.partnership.id;
-              state.dapForm = created.partnership;
+              state.dapForm = { ...created.partnership, companyLogoUrl: dataUrl };
             }
             const updated = await api('upload-daily-peace-partnership-logo', {
               method: 'POST',
-              body: { id, dataUrl: reader.result, fileName: file.name },
+              body: { id, dataUrl, fileName: file.name },
             });
             state.dapForm = updated.partnership;
             render();
@@ -1989,6 +2004,7 @@ const OwnerControl = (() => {
         e.preventDefault();
         const fd = new FormData(partnershipForm);
         const body = collectPartnershipForm(fd);
+        state.dapForm = { ...(state.dapForm || {}), ...body };
         try {
           if (state.dapForm?.id) {
             await api('update-daily-peace-partnership', { method: 'POST', body: { id: state.dapForm.id, ...body } });
@@ -2000,6 +2016,7 @@ const OwnerControl = (() => {
           await ensureDapLibraryLoaded();
           state.dapFormMode = false;
           state.dapForm = null;
+          state.dapFormError = null;
           setFlash('Partnership saved.');
         } catch (err) {
           state.dapFormError = err.message;
@@ -2008,23 +2025,40 @@ const OwnerControl = (() => {
       });
     }
 
+    function normalizeDateInput(input) {
+      const raw = String(input || '').trim();
+      if (!raw) return '';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+      const eu = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(raw);
+      if (eu) {
+        const day = Number(eu[1]);
+        const month = Number(eu[2]);
+        const year = eu[3];
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+          return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+      }
+      return raw;
+    }
+
     function collectPartnershipForm(fd) {
       const partnershipType = fd.get('partnershipType');
       const body = {
         companyName: String(fd.get('companyName') || '').trim(),
         companyWebsiteUrl: String(fd.get('companyWebsiteUrl') || '').trim(),
         partnershipType,
-        startDate: fd.get('startDate'),
-        endDate: fd.get('endDate'),
+        startDate: normalizeDateInput(fd.get('startDate')),
+        endDate: normalizeDateInput(fd.get('endDate')),
         contractedAmount: Number(fd.get('contractedAmount')) || 0,
         currency: String(fd.get('currency') || 'EUR').trim(),
         paymentStatus: fd.get('paymentStatus'),
         assignmentMethod: fd.get('assignmentMethod'),
         randomMinDay: Number(fd.get('randomMinDay')) || 1,
         randomMaxDay: Number(fd.get('randomMaxDay')) || (state.dapLibrary?.catalogCount || 403),
-        specificDate: fd.get('specificDate') || null,
+        specificDate: normalizeDateInput(fd.get('specificDate')) || null,
         internalNotes: String(fd.get('internalNotes') || '').trim(),
         actId: fd.get('actId') || null,
+        companyLogoUrl: state.dapForm?.companyLogoUrl || null,
       };
       if (partnershipType === 'company_created') {
         body.companyAct = {

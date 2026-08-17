@@ -1,11 +1,14 @@
 /**
- * Public proxy for private Foundation media stored in Vercel Blob.
- * Only serves paths under wc-data/members/media/
+ * Public proxy for private media stored in Vercel Blob.
+ * Serves Foundation media and Daily Acts partnership logos.
  */
 const { corsHeaders } = require('./_lib/auth');
 const { readPrivateBinary } = require('./_lib/store');
 
-const ALLOWED_PREFIX = 'wc-data/members/media/';
+const ALLOWED_PREFIXES = [
+  'wc-data/members/media/',
+  'wc-data/daily-peace/partnerships/media/',
+];
 
 module.exports = async function handler(req, res) {
   corsHeaders(res);
@@ -17,7 +20,8 @@ module.exports = async function handler(req, res) {
 
   try {
     const pathname = String(req.query.path || '').trim();
-    if (!pathname || pathname.includes('..') || !pathname.startsWith(ALLOWED_PREFIX)) {
+    const allowed = ALLOWED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+    if (!pathname || pathname.includes('..') || !allowed) {
       return res.status(404).json({ error: 'Media not found' });
     }
 

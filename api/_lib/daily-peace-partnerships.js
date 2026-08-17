@@ -221,9 +221,34 @@ async function appendAuditLog(action, partnershipId, details = {}) {
   return entry;
 }
 
+function normalizeDate(input) {
+  const raw = String(input || '').trim();
+  if (!raw) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+
+  const eu = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(raw);
+  if (eu) {
+    const day = Number(eu[1]);
+    const month = Number(eu[2]);
+    const year = eu[3];
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+
+  const iso = Date.parse(raw);
+  if (Number.isFinite(iso)) {
+    return new Date(iso).toISOString().slice(0, 10);
+  }
+  return '';
+}
+
 function validatePartnershipPayload(data, { partial = false } = {}) {
   const errors = [];
   const p = data || {};
+  if (p.startDate !== undefined) p.startDate = normalizeDate(p.startDate) || p.startDate;
+  if (p.endDate !== undefined) p.endDate = normalizeDate(p.endDate) || p.endDate;
+  if (p.specificDate !== undefined) p.specificDate = normalizeDate(p.specificDate) || p.specificDate;
 
   if (!partial || p.companyName !== undefined) {
     if (!String(p.companyName || '').trim()) errors.push('Company name is required');
@@ -233,12 +258,14 @@ function validatePartnershipPayload(data, { partial = false } = {}) {
     if (!url) errors.push('A valid company website URL is required');
   }
   if (!partial || p.startDate !== undefined) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.startDate || ''))) errors.push('Partnership start date is required');
+    if (!normalizeDate(p.startDate)) errors.push('Partnership start date is required');
   }
   if (!partial || p.endDate !== undefined) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.endDate || ''))) errors.push('Partnership end date is required');
+    if (!normalizeDate(p.endDate)) errors.push('Partnership end date is required');
   }
-  if (p.startDate && p.endDate && p.endDate < p.startDate) {
+  const start = normalizeDate(p.startDate);
+  const end = normalizeDate(p.endDate);
+  if (start && end && end < start) {
     errors.push('End date must be on or after start date');
   }
   if (!partial || p.partnershipType !== undefined) {
@@ -248,9 +275,10 @@ function validatePartnershipPayload(data, { partial = false } = {}) {
     if (!ASSIGNMENT_METHODS.has(p.assignmentMethod)) errors.push('Assignment method is required');
   }
   if (p.assignmentMethod === 'specific_date') {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.specificDate || ''))) {
+    const specific = normalizeDate(p.specificDate);
+    if (!specific) {
       errors.push('Specific calendar date is required');
-    } else if (p.startDate && p.endDate && (p.specificDate < p.startDate || p.specificDate > p.endDate)) {
+    } else if (start && end && (specific < start || specific > end)) {
       errors.push('Specific date must fall within the partnership period');
     }
   }
@@ -683,14 +711,14 @@ async function createPartnership(payload) {
     companyName: String(payload.companyName).trim(),
     companyLogoUrl: payload.companyLogoUrl || null,
     companyWebsiteUrl: normalizeUrl(payload.companyWebsiteUrl),
-    startDate: payload.startDate,
-    endDate: payload.endDate,
+    startDate: normalizeDate(payload.startDate),
+    endDate: normalizeDate(payload.endDate),
     contractedAmount: Number(payload.contractedAmount) || 0,
     currency: String(payload.currency || 'EUR').trim().toUpperCase(),
     paymentStatus: payload.paymentStatus || 'pending',
     internalNotes: String(payload.internalNotes || '').trim(),
     assignmentMethod: payload.assignmentMethod,
-    specificDate: payload.assignmentMethod === 'specific_date' ? payload.specificDate : null,
+    specificDate: payload.assignmentMethod === 'specific_date' ? normalizeDate(payload.specificDate) : null,
     randomMinDay: payload.assignmentMethod === 'random' ? Number(payload.randomMinDay) : null,
     randomMaxDay: payload.assignmentMethod === 'random' ? Number(payload.randomMaxDay) : null,
     companyAct: payload.partnershipType === 'company_created' ? {
@@ -721,6 +749,9 @@ async function updatePartnership(id, payload) {
     ...existing,
     ...payload,
     id: existing.id,
+    startDate: payload.startDate != null ? normalizeDate(payload.startDate) : existing.startDate,
+    endDate: payload.endDate != null ? normalizeDate(payload.endDate) : existing.endDate,
+    specificDate: payload.specificDate != null ? normalizeDate(payload.specificDate) : existing.specificDate,
     companyWebsiteUrl: payload.companyWebsiteUrl != null
       ? normalizeUrl(payload.companyWebsiteUrl)
       : existing.companyWebsiteUrl,
