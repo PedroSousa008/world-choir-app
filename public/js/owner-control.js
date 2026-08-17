@@ -225,8 +225,8 @@ const OwnerControl = (() => {
             `).join('')}
           </ul>
           <div class="owner-nav__foot">
-            <button type="button" class="owner-btn-ghost" id="owner-open-search">Search</button>
-            <button type="button" class="owner-btn-ghost" id="owner-logout">Sign out</button>
+            <button type="button" class="owner-nav__btn" id="owner-open-search">Search</button>
+            <button type="button" class="owner-nav__btn" id="owner-logout">Sign out</button>
           </div>
         </aside>
         <main class="owner-main">

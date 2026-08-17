@@ -253,87 +253,147 @@ const OwnerDailyPeacePartnerships = (() => {
     const isEdit = !!form.id;
     const lib = state.dapLibrary || { catalogCount: 403, acts: [] };
     const catalogActs = (lib.acts || []).filter((a) => a.source === 'standard');
+    const selectedActText = catalogActs.find((a) => a.actId === form.actId)?.text || form.companyAct?.text || 'Act title';
 
     return `
       <section class="owner-section">
         <button type="button" class="owner-btn-ghost" data-dap-back-library>← Cancel</button>
         <p class="owner-section__label" style="margin-top:16px">${isEdit ? 'Edit Partnership' : 'Create Partnership'}</p>
         <h2 class="owner-h1">${isEdit ? 'Update sponsorship' : 'New sponsorship'}</h2>
-        ${state.dapFormError ? `<p class="owner-flash owner-flash--error">${esc(state.dapFormError)}</p>` : ''}
-        <form class="owner-form" id="dap-partnership-form">
+        <p class="owner-sub">Configure the company, assignment, and how the Daily Act will appear to users.</p>
+        ${state.dapFormError ? `<p class="owner-flash is-err">${esc(state.dapFormError)}</p>` : ''}
+        <form class="owner-form owner-form--wide" id="dap-partnership-form">
           <div class="owner-form__grid">
-            <label>Company name<input class="owner-input" name="companyName" value="${esc(form.companyName || '')}" required></label>
-            <label>Website URL<input class="owner-input" name="companyWebsiteUrl" type="url" value="${esc(form.companyWebsiteUrl || '')}" placeholder="https://company.com" required></label>
-            <label>Partnership type
-              <select class="owner-input" name="partnershipType" id="dap-partnership-type">
+            <div class="owner-field">
+              <label for="dap-company-name">Company name</label>
+              <input id="dap-company-name" name="companyName" value="${esc(form.companyName || '')}" required>
+            </div>
+            <div class="owner-field">
+              <label for="dap-company-url">Website URL</label>
+              <input id="dap-company-url" name="companyWebsiteUrl" type="url" value="${esc(form.companyWebsiteUrl || '')}" placeholder="https://company.com" required>
+            </div>
+            <div class="owner-field">
+              <label for="dap-partnership-type">Partnership type</label>
+              <select name="partnershipType" id="dap-partnership-type">
                 <option value="sponsored_standard" ${form.partnershipType !== 'company_created' ? 'selected' : ''}>Sponsored Standard Act</option>
                 <option value="company_created" ${form.partnershipType === 'company_created' ? 'selected' : ''}>Company-Created Act</option>
               </select>
-            </label>
-            <label>Start date<input class="owner-input" name="startDate" type="date" value="${esc(form.startDate || '')}" required></label>
-            <label>End date<input class="owner-input" name="endDate" type="date" value="${esc(form.endDate || '')}" required></label>
-            <label>Contracted amount<input class="owner-input" name="contractedAmount" type="number" min="0" step="0.01" value="${esc(form.contractedAmount ?? '')}"></label>
-            <label>Currency<input class="owner-input" name="currency" value="${esc(form.currency || 'EUR')}"></label>
-            <label>Payment status
-              <select class="owner-input" name="paymentStatus">
+            </div>
+            <div class="owner-field">
+              <label for="dap-payment-status">Payment status</label>
+              <select id="dap-payment-status" name="paymentStatus">
                 ${['pending', 'partially_paid', 'paid', 'overdue', 'cancelled'].map((s) => `
                   <option value="${s}" ${form.paymentStatus === s ? 'selected' : ''}>${s.replace('_', ' ')}</option>
                 `).join('')}
               </select>
-            </label>
-            <label>Assignment method
-              <select class="owner-input" name="assignmentMethod" id="dap-assignment-method">
+            </div>
+            <div class="owner-field">
+              <label for="dap-start-date">Start date</label>
+              <input id="dap-start-date" name="startDate" type="date" value="${esc(form.startDate || '')}" required>
+            </div>
+            <div class="owner-field">
+              <label for="dap-end-date">End date</label>
+              <input id="dap-end-date" name="endDate" type="date" value="${esc(form.endDate || '')}" required>
+            </div>
+            <div class="owner-field">
+              <label for="dap-amount">Contracted amount</label>
+              <input id="dap-amount" name="contractedAmount" type="number" min="0" step="0.01" value="${esc(form.contractedAmount ?? '')}">
+            </div>
+            <div class="owner-field">
+              <label for="dap-currency">Currency</label>
+              <input id="dap-currency" name="currency" value="${esc(form.currency || 'EUR')}">
+            </div>
+            <div class="owner-field">
+              <label for="dap-assignment-method">Assignment method</label>
+              <select name="assignmentMethod" id="dap-assignment-method">
                 <option value="random" ${form.assignmentMethod !== 'specific_date' ? 'selected' : ''}>Random Daily Assignment</option>
                 <option value="specific_date" ${form.assignmentMethod === 'specific_date' ? 'selected' : ''}>Specific Calendar Day</option>
               </select>
-            </label>
-            <label id="dap-field-random-min" style="${form.assignmentMethod === 'specific_date' ? 'display:none' : ''}">Min journey day<input class="owner-input" name="randomMinDay" type="number" min="1" value="${esc(form.randomMinDay ?? 1)}"></label>
-            <label id="dap-field-random-max" style="${form.assignmentMethod === 'specific_date' ? 'display:none' : ''}">Max journey day<input class="owner-input" name="randomMaxDay" type="number" min="1" value="${esc(form.randomMaxDay ?? lib.catalogCount)}"></label>
-            <label id="dap-field-specific-date" style="${form.assignmentMethod === 'specific_date' ? '' : 'display:none'}">Specific date<input class="owner-input" name="specificDate" type="date" value="${esc(form.specificDate || '')}"></label>
-          </div>
-
-          <div id="dap-standard-act-picker" style="${form.partnershipType === 'company_created' ? 'display:none' : ''};margin-top:16px">
-            <label>Daily Act
-              <select class="owner-input" name="actId">
-                <option value="">Select an act…</option>
-                ${catalogActs.map((a) => `
-                  <option value="${esc(a.actId)}" ${form.actId === a.actId ? 'selected' : ''}>${esc(a.text?.slice(0, 72))}</option>
-                `).join('')}
-              </select>
-            </label>
-          </div>
-
-          <div id="dap-company-act-fields" style="${form.partnershipType === 'company_created' ? '' : 'display:none'};margin-top:16px">
-            <label>Act title<input class="owner-input" name="companyActText" value="${esc(form.companyAct?.text || '')}"></label>
-            <label>Act description<textarea class="owner-input" name="companyActExplanation" rows="3">${esc(form.companyAct?.explanation || '')}</textarea></label>
-            <label>Category
-              <select class="owner-input" name="companyActCategory">
-                ${THEMES.map((t) => `<option value="${t.id}" ${form.companyAct?.category === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
-              </select>
-            </label>
-          </div>
-
-          <label style="margin-top:16px;display:block">Internal notes (Owner only)<textarea class="owner-input" name="internalNotes" rows="3">${esc(form.internalNotes || '')}</textarea></label>
-
-          <label style="margin-top:16px;display:block">Company logo
-            <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" id="dap-logo-upload">
-            ${form.companyLogoUrl ? `<img src="${esc(form.companyLogoUrl)}" alt="" class="owner-dap-detail-logo" style="margin-top:8px">` : ''}
-          </label>
-
-          <div class="owner-dap-preview" style="margin-top:24px">
-            <p class="owner-section__label">User preview</p>
-            <div class="owner-dap-preview-card">
-              <div class="owner-dap-preview-meta">
-                <div><span class="owner-dap-preview-label">Revealed</span><span>${esc(form.startDate || '—')}</span></div>
-                <div><span class="owner-dap-preview-label">Featured by</span>${form.companyLogoUrl ? `<img src="${esc(form.companyLogoUrl)}" alt="" class="owner-dap-logo">` : '<span class="owner-muted">Logo</span>'}</div>
-              </div>
-              <p class="owner-h2" style="font-size:1rem;margin-top:12px">${esc(form.companyAct?.text || catalogActs.find((a) => a.actId === form.actId)?.text || 'Act title')}</p>
+            </div>
+            <div class="owner-field" id="dap-field-random-min" style="${form.assignmentMethod === 'specific_date' ? 'display:none' : ''}">
+              <label for="dap-random-min">Min journey day</label>
+              <input id="dap-random-min" name="randomMinDay" type="number" min="1" value="${esc(form.randomMinDay ?? 1)}">
+            </div>
+            <div class="owner-field" id="dap-field-random-max" style="${form.assignmentMethod === 'specific_date' ? 'display:none' : ''}">
+              <label for="dap-random-max">Max journey day</label>
+              <input id="dap-random-max" name="randomMaxDay" type="number" min="1" value="${esc(form.randomMaxDay ?? lib.catalogCount)}">
+            </div>
+            <div class="owner-field" id="dap-field-specific-date" style="${form.assignmentMethod === 'specific_date' ? '' : 'display:none'}">
+              <label for="dap-specific-date">Specific date</label>
+              <input id="dap-specific-date" name="specificDate" type="date" value="${esc(form.specificDate || '')}">
             </div>
           </div>
 
-          <div style="display:flex;gap:10px;margin-top:20px">
+          <div id="dap-standard-act-picker" class="owner-field" style="${form.partnershipType === 'company_created' ? 'display:none' : ''}">
+            <label for="dap-act-id">Daily Act</label>
+            <select id="dap-act-id" name="actId">
+              <option value="">Select an act…</option>
+              ${catalogActs.map((a) => `
+                <option value="${esc(a.actId)}" ${form.actId === a.actId ? 'selected' : ''}>${esc(a.text?.slice(0, 72))}</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <div id="dap-company-act-fields" style="${form.partnershipType === 'company_created' ? '' : 'display:none'}">
+            <div class="owner-form__grid">
+              <div class="owner-field">
+                <label for="dap-act-title">Act title</label>
+                <input id="dap-act-title" name="companyActText" value="${esc(form.companyAct?.text || '')}">
+              </div>
+              <div class="owner-field">
+                <label for="dap-act-category">Category</label>
+                <select id="dap-act-category" name="companyActCategory">
+                  ${THEMES.map((t) => `<option value="${t.id}" ${form.companyAct?.category === t.id ? 'selected' : ''}>${t.label}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="owner-field" style="margin-top:16px">
+              <label for="dap-act-desc">Act description</label>
+              <textarea id="dap-act-desc" name="companyActExplanation" rows="3">${esc(form.companyAct?.explanation || '')}</textarea>
+            </div>
+          </div>
+
+          <div class="owner-field">
+            <label for="dap-notes">Internal notes</label>
+            <textarea id="dap-notes" name="internalNotes" rows="3" placeholder="Owner only — never shown to users">${esc(form.internalNotes || '')}</textarea>
+          </div>
+
+          <div class="owner-field">
+            <label>Company logo</label>
+            <div class="owner-upload">
+              <div class="owner-upload__preview">
+                ${form.companyLogoUrl
+                  ? `<img src="${esc(form.companyLogoUrl)}" alt="">`
+                  : `<span class="owner-upload__placeholder">No logo yet</span>`}
+              </div>
+              <label class="owner-upload__pick owner-btn-ghost">
+                Choose image
+                <input type="file" accept="image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.svg,.ico,.jfif,.gif" id="dap-logo-upload">
+              </label>
+              <p class="owner-upload__hint">Any image from your device</p>
+            </div>
+          </div>
+
+          <div class="owner-dap-preview">
+            <p class="owner-section__label">User preview</p>
+            <div class="owner-dap-preview-card">
+              <div class="owner-dap-preview-meta">
+                <div>
+                  <span class="owner-dap-preview-label">Revealed</span>
+                  <span>${esc(form.startDate || '—')}</span>
+                </div>
+                <div style="text-align:right">
+                  <span class="owner-dap-preview-label">Featured by</span>
+                  ${form.companyLogoUrl ? `<img src="${esc(form.companyLogoUrl)}" alt="" class="owner-dap-logo">` : '<span class="owner-muted">Logo</span>'}
+                </div>
+              </div>
+              <p class="owner-h1" style="font-size:1.1rem;margin-top:16px">${esc(selectedActText)}</p>
+            </div>
+          </div>
+
+          <div class="owner-actions" style="margin-top:8px">
             <button type="submit" class="owner-btn">${isEdit ? 'Save changes' : 'Save draft'}</button>
-            ${!isEdit ? '' : `<button type="button" class="owner-btn" data-dap-publish-partnership="${esc(form.id)}">Publish</button>`}
+            ${isEdit ? `<button type="button" class="owner-btn-ghost" data-dap-publish-partnership="${esc(form.id)}">Publish</button>` : ''}
           </div>
         </form>
       </section>

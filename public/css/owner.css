@@ -5,6 +5,7 @@
   background: #000;
   color: #f2efe8;
   font-family: var(--font-sans);
+  color-scheme: dark;
 }
 
 .owner-boot {
@@ -123,7 +124,9 @@
 .owner-nav__foot {
   margin-top: 24px;
   display: grid;
-  gap: 8px;
+  gap: 2px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 @media (max-width: 900px) {
@@ -566,7 +569,12 @@
   max-width: 420px;
 }
 
-.owner-field label {
+.owner-form--wide {
+  max-width: none;
+}
+
+.owner-field label,
+.owner-form .owner-field > label {
   display: block;
   margin-bottom: 6px;
   font-size: 0.68rem;
@@ -577,18 +585,45 @@
 
 .owner-field input,
 .owner-field textarea,
-.owner-field select {
+.owner-field select,
+.owner-input {
   width: 100%;
   appearance: none;
+  -webkit-appearance: none;
+  color-scheme: dark;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(255, 255, 255, 0.04);
   color: #f2efe8;
   font: inherit;
   padding: 11px 12px;
   border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s ease;
 }
 
-.owner-field textarea { min-height: 88px; resize: vertical; }
+.owner-field input:focus,
+.owner-field textarea:focus,
+.owner-field select:focus,
+.owner-input:focus {
+  border-color: rgba(78, 197, 232, 0.45);
+}
+
+.owner-field select,
+select.owner-input {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='none' stroke='%238a8d97' stroke-width='1.4' d='M1 1.5l5 5 5-5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.owner-field option,
+.owner-input option {
+  background: #111;
+  color: #f2efe8;
+}
+
+.owner-field textarea,
+textarea.owner-input { min-height: 88px; resize: vertical; }
 
 .owner-password-row {
   display: flex;
@@ -858,7 +893,7 @@
 
 .owner-form__grid {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 @media (min-width: 720px) {
@@ -869,9 +904,8 @@
 
 .owner-dap-preview-card {
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
 }
 
 .owner-dap-preview-meta {
@@ -885,11 +919,66 @@
   font-size: 0.62rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--accent-aurora);
   margin-bottom: 4px;
 }
 
-.owner-flash--error {
+.owner-upload {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.owner-upload__preview {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.owner-upload__preview img {
+  display: block;
+  max-height: 56px;
+  max-width: 180px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.owner-upload__placeholder {
+  color: #6b6f7d;
+  font-size: 0.85rem;
+}
+
+.owner-upload__pick {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin: 0;
+}
+
+.owner-upload__pick input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.owner-upload__hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #6b6f7d;
+}
+
+.owner-flash--error,
+.owner-flash.is-err {
   color: #ff8a8a;
   margin: 12px 0;
 }

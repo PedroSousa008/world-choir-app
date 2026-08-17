@@ -34,13 +34,26 @@ const THEME_IDS = new Set([
   'understanding', 'generosity', 'presence', 'community',
 ]);
 
-const IMAGE_MIME_RE = /^image\/(png|jpe?g|webp|svg\+xml)$/i;
+const IMAGE_MIME_RE = /^image\/[a-z0-9.+-]+$/i;
 const IMAGE_EXT_MAP = {
   png: 'png',
   jpeg: 'jpg',
   jpg: 'jpg',
   webp: 'webp',
+  gif: 'gif',
+  avif: 'avif',
+  bmp: 'bmp',
+  tiff: 'tiff',
+  tif: 'tiff',
+  heic: 'heic',
+  heif: 'heif',
+  svg: 'svg',
   'svg+xml': 'svg',
+  ico: 'ico',
+  'x-icon': 'ico',
+  jfif: 'jpg',
+  pjpeg: 'jpg',
+  pjp: 'jpg',
 };
 
 let partnershipsCache = null;
@@ -803,13 +816,27 @@ async function uploadPartnershipLogo(partnershipId, dataUrl, fileName = '') {
 
   let contentType = String(match[1] || '').trim().toLowerCase();
   if (contentType === 'image/jpg') contentType = 'image/jpeg';
-  if (!IMAGE_MIME_RE.test(contentType)) throw new Error('Unsupported image type');
+  if (contentType === 'application/octet-stream' || !contentType) {
+    const name = String(fileName || '').toLowerCase();
+    const extGuess = name.split('.').pop();
+    if (extGuess && IMAGE_EXT_MAP[extGuess]) {
+      contentType = extGuess === 'svg' ? 'image/svg+xml' : `image/${extGuess === 'jpg' ? 'jpeg' : extGuess}`;
+    } else {
+      contentType = 'image/png';
+    }
+  }
+  if (!IMAGE_MIME_RE.test(contentType) && !String(fileName || '').match(/\.(heic|heif|avif|bmp|tif|tiff|svg|ico|jfif|gif|webp|png|jpe?g)$/i)) {
+    contentType = 'image/png';
+  }
 
   const subtype = contentType.replace(/^image\//, '');
-  const ext = IMAGE_EXT_MAP[subtype] || 'img';
+  const ext = IMAGE_EXT_MAP[subtype] || subtype.replace(/[^a-z0-9]/gi, '') || 'img';
   const buffer = Buffer.from(match[2], 'base64');
-  if (!buffer.length || buffer.length > 4 * 1024 * 1024) {
-    throw new Error('Image must be under 4 MB');
+  if (!buffer.length) {
+    throw new Error('Image file was empty');
+  }
+  if (buffer.length > 8 * 1024 * 1024) {
+    throw new Error('Image must be under 8 MB');
   }
 
   const pathname = `${PARTNERSHIPS_ROOT}/media/${partnershipId}/logo-${randomUUID().slice(0, 8)}.${ext}`;
