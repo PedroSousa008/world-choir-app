@@ -875,6 +875,17 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   margin-right: 6px;
 }
 
+.owner-dap-logo--solo {
+  max-height: 28px;
+  max-width: 72px;
+  margin-right: 0;
+}
+
+.owner-dap-company {
+  width: 88px;
+  white-space: nowrap;
+}
+
 .owner-dap-detail-head {
   display: flex;
   align-items: center;

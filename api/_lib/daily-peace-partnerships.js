@@ -137,8 +137,8 @@ async function getLiveSponsorshipForAct(actId) {
   return publicSponsorship(live);
 }
 
-function publicSponsorship(partnership) {
-  if (!partnership || !isPartnershipLive(partnership)) return null;
+function sponsorshipRecord(partnership) {
+  if (!partnership) return null;
   return {
     partnershipId: partnership.id,
     companyName: partnership.companyName,
@@ -147,6 +147,11 @@ function publicSponsorship(partnership) {
     partnershipType: partnership.partnershipType,
     assignmentMethod: partnership.assignmentMethod,
   };
+}
+
+function publicSponsorship(partnership) {
+  if (!partnership || !isPartnershipLive(partnership)) return null;
+  return sponsorshipRecord(partnership);
 }
 
 async function readCompanyAct(actId) {
@@ -478,8 +483,11 @@ async function resolveLivePartnership(row) {
 }
 
 async function getSponsorshipForAssignmentRow(row) {
-  const partnership = await resolveLivePartnership(row);
-  return publicSponsorship(partnership);
+  if (row?.partnership_id) {
+    const linked = await getPartnershipById(row.partnership_id);
+    if (linked && linked.status !== 'draft') return sponsorshipRecord(linked);
+  }
+  return getLiveSponsorshipForAct(row?.act_id);
 }
 
 async function recordSponsorEvent({
@@ -1126,7 +1134,13 @@ async function setPartnershipStatus(id, status) {
   if (!STATUSES.has(status)) throw new Error('Invalid status');
   const p = await getPartnershipById(id);
   if (!p) throw new Error('Partnership not found');
-  const updated = { ...p, status, updatedAt: new Date().toISOString() };
+  const now = new Date().toISOString();
+  const updated = {
+    ...p,
+    status,
+    updatedAt: now,
+    pausedAt: status === 'paused' ? (p.pausedAt || now) : null,
+  };
   await writeJson(partnershipPath(id), updated, { overwrite: true });
   await invalidatePartnershipsCache();
   await appendAuditLog('partnership_status_changed', id, { status });
@@ -1338,6 +1352,7 @@ module.exports = {
   resolveLivePartnership,
   getLiveSponsorshipForAct,
   publicSponsorship,
+  sponsorshipRecord,
   recordSponsorEvent,
   aggregatePartnershipAnalytics,
   buildOwnerPartnershipsLibrary,

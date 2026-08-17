@@ -131,8 +131,15 @@ const OwnerDailyPeacePartnerships = (() => {
     `;
   }
 
+  function formatDayMonthYear(isoDate) {
+    const s = String(isoDate || '').trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return s || '—';
+    return `${m[3]}-${m[2]}-${m[1]}`;
+  }
+
   function renderPartnershipList(state, helpers) {
-    const { esc } = helpers;
+    const { esc, money } = helpers;
     const lib = state.dapLibrary || { partnerships: [] };
     const partnerships = lib.partnerships || [];
 
@@ -152,7 +159,17 @@ const OwnerDailyPeacePartnerships = (() => {
         <div class="owner-table-wrap">
           <table class="owner-table">
             <thead>
-              <tr><th>Company</th><th>Act</th><th>Type</th><th>Period</th><th>Status</th><th>Reach</th><th>Views</th><th></th></tr>
+              <tr>
+                <th>Company</th>
+                <th>Act</th>
+                <th>Type</th>
+                <th>Period</th>
+                <th>Status</th>
+                <th>Reach</th>
+                <th>Views</th>
+                <th>Contract Amount</th>
+                <th></th>
+              </tr>
             </thead>
             <tbody>
               ${partnerships.length ? partnerships.map((p) => {
@@ -160,17 +177,20 @@ const OwnerDailyPeacePartnerships = (() => {
                 const a = p.analytics || {};
                 return `
                   <tr>
-                    <td>${p.companyLogoUrl ? `<img src="${esc(p.companyLogoUrl)}" alt="" class="owner-dap-logo">` : ''} ${esc(p.companyName)}</td>
+                    <td class="owner-dap-company">${p.companyLogoUrl
+                      ? `<img src="${esc(p.companyLogoUrl)}" alt="${esc(p.companyName)}" title="${esc(p.companyName)}" class="owner-dap-logo owner-dap-logo--solo">`
+                      : `<span class="owner-muted">${esc(p.companyName)}</span>`}</td>
                     <td>${esc(act?.text?.slice(0, 48) || p.actId)}</td>
                     <td>${p.partnershipType === 'company_created' ? 'Company-Created' : 'Sponsored Standard'}</td>
-                    <td>${esc(p.startDate)} → ${esc(p.endDate)}</td>
+                    <td>${esc(formatDayMonthYear(p.startDate))} → ${esc(formatDayMonthYear(p.endDate))}</td>
                     <td>${esc(statusLabel(p.status))}</td>
                     <td>${Number(a.reach || 0).toLocaleString()}</td>
                     <td>${Number(a.views || 0).toLocaleString()}</td>
+                    <td>${money(p.contractedAmount, p.currency)}</td>
                     <td><button type="button" class="owner-btn-ghost" data-dap-open-partnership="${esc(p.id)}">Details</button></td>
                   </tr>
                 `;
-              }).join('') : `<tr><td colspan="8" class="owner-empty">No partnerships yet.</td></tr>`}
+              }).join('') : `<tr><td colspan="9" class="owner-empty">No partnerships yet.</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -195,7 +215,7 @@ const OwnerDailyPeacePartnerships = (() => {
           <div>
             <h2 class="owner-h1">${esc(p.companyName)}</h2>
             <p class="owner-muted">${esc(statusLabel(p.status))} · ${p.partnershipType === 'company_created' ? 'Company-Created Act' : 'Sponsored Standard Act'}</p>
-            <p class="owner-muted">${esc(p.startDate)} → ${esc(p.endDate)} · ${money(p.contractedAmount, p.currency)}</p>
+            <p class="owner-muted">${esc(formatDayMonthYear(p.startDate))} → ${esc(formatDayMonthYear(p.endDate))} · ${money(p.contractedAmount, p.currency)}</p>
           </div>
         </div>
       </section>
@@ -266,6 +286,7 @@ const OwnerDailyPeacePartnerships = (() => {
           ${p.status === 'paused' ? `<button type="button" class="owner-btn" data-dap-resume-partnership="${esc(p.id)}">Resume</button>` : ''}
           <a class="owner-btn-ghost" href="/api/admin?action=daily-peace-partnership-export&id=${encodeURIComponent(p.id)}" download>Export Report</a>
         </div>
+        <p class="owner-muted" style="margin-top:12px">Pause stops Featured by on new Daily Acts. Acts that already showed this partner keep it when someone opens them later.</p>
       </section>
     `;
   }

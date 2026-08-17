@@ -931,15 +931,23 @@ async function getJourney(deviceId, todayInput) {
 
   await getOrAssignDailyAct(deviceId, todayDate);
 
-  const { getAllActsById, loadAllPartnerships, publicSponsorship } = require('./daily-peace-partnerships');
+  const { getAllActsById, loadAllPartnerships, publicSponsorship, sponsorshipRecord } = require('./daily-peace-partnerships');
   const actsById = await getAllActsById();
   const catalog = [...actsById.values()];
   const rows = await listUserAssignmentRows(user.id);
   const liveByActId = new Map();
+  const partnershipById = new Map();
   try {
     for (const p of await loadAllPartnerships()) {
+      partnershipById.set(p.id, p);
       const live = publicSponsorship(p);
-      if (live && p.actId) liveByActId.set(p.actId, live);
+      if (live && p.actId) {
+        liveByActId.set(p.actId, {
+          ...live,
+          startDate: p.startDate || null,
+          endDate: p.endDate || null,
+        });
+      }
     }
   } catch {
     /* partnerships optional */
@@ -1035,8 +1043,23 @@ async function getJourney(deviceId, todayInput) {
       act: mapAct(act),
     };
 
-    const sponsorship = liveByActId.get(act.id);
-    if (sponsorship) journeyItem.sponsorship = sponsorship;
+    const linked = row.partnership_id ? partnershipById.get(row.partnership_id) : null;
+    const historical = linked && linked.status !== 'draft' ? sponsorshipRecord(linked) : null;
+    const live = liveByActId.get(act.id);
+    const liveInWindow = live
+      && (!live.startDate || row.date >= live.startDate)
+      && (!live.endDate || row.date <= live.endDate);
+    const sponsorship = historical || (liveInWindow ? live : null);
+    if (sponsorship) {
+      journeyItem.sponsorship = {
+        partnershipId: sponsorship.partnershipId,
+        companyName: sponsorship.companyName,
+        companyLogoUrl: sponsorship.companyLogoUrl || null,
+        companyWebsiteUrl: sponsorship.companyWebsiteUrl || null,
+        partnershipType: sponsorship.partnershipType,
+        assignmentMethod: sponsorship.assignmentMethod,
+      };
+    }
 
     journey.push(journeyItem);
   }

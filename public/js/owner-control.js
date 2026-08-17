@@ -1942,7 +1942,7 @@ const OwnerControl = (() => {
           state.dapLibrary = null;
           await ensureDapLibraryLoaded();
           await loadPartnershipDetail(state.dapPartnershipId);
-          setFlash('Partnership paused.');
+          setFlash('Partnership paused. Featured by stays on Daily Acts that already showed it.');
         } catch (err) {
           setFlash(err.message, 'err');
         }
