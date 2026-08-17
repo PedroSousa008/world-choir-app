@@ -1242,8 +1242,9 @@ const OwnerControl = (() => {
     `;
   }
 
-  async function ensureDapLibraryLoaded() {
-    if (state.dapLibrary || state.dapLibraryBusy) return;
+  async function ensureDapLibraryLoaded(force = false) {
+    if (state.dapLibraryBusy) return;
+    if (state.dapLibrary && !force) return;
     state.dapLibraryBusy = true;
     try {
       state.dapLibrary = await api('daily-peace-partnerships');
@@ -1767,6 +1768,9 @@ const OwnerControl = (() => {
         state.dapPartnershipDetail = null;
         state.dapFormMode = false;
         state.dapForm = null;
+        if (state.dapView === 'library' || state.dapView === 'partnerships') {
+          state.dapLibrary = null;
+        }
         render();
       });
     });
@@ -1778,6 +1782,9 @@ const OwnerControl = (() => {
           state.dapPartnershipId = null;
           state.dapPartnershipDetail = null;
           state.dapFormMode = false;
+          if (view === 'library' || view === 'partnerships') {
+            state.dapLibrary = null;
+          }
         } else {
           state.dailyPeaceView = view;
           state.dapView = 'engagement';
@@ -1832,7 +1839,19 @@ const OwnerControl = (() => {
     root().querySelectorAll('[data-dap-refresh-library]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         state.dapLibrary = null;
-        await ensureDapLibraryLoaded();
+        await ensureDapLibraryLoaded(true);
+        render();
+      });
+    });
+    root().querySelectorAll('[data-dap-refresh-partnership]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!state.dapPartnershipId) return;
+        state.dapPartnershipDetail = null;
+        try {
+          await loadPartnershipDetail(state.dapPartnershipId);
+        } catch (err) {
+          setFlash(err.message, 'err');
+        }
         render();
       });
     });

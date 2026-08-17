@@ -132,7 +132,7 @@ const OwnerDailyPeacePartnerships = (() => {
   }
 
   function renderPartnershipList(state, helpers) {
-    const { esc, money } = helpers;
+    const { esc } = helpers;
     const lib = state.dapLibrary || { partnerships: [] };
     const partnerships = lib.partnerships || [];
 
@@ -152,20 +152,21 @@ const OwnerDailyPeacePartnerships = (() => {
         <div class="owner-table-wrap">
           <table class="owner-table">
             <thead>
-              <tr><th>Company</th><th>Act</th><th>Type</th><th>Assignment</th><th>Period</th><th>Amount</th><th>Status</th><th></th></tr>
+              <tr><th>Company</th><th>Act</th><th>Type</th><th>Period</th><th>Status</th><th>Reach</th><th>Views</th><th></th></tr>
             </thead>
             <tbody>
               ${partnerships.length ? partnerships.map((p) => {
                 const act = (state.dapLibrary?.acts || []).find((a) => a.actId === p.actId);
+                const a = p.analytics || {};
                 return `
                   <tr>
                     <td>${p.companyLogoUrl ? `<img src="${esc(p.companyLogoUrl)}" alt="" class="owner-dap-logo">` : ''} ${esc(p.companyName)}</td>
                     <td>${esc(act?.text?.slice(0, 48) || p.actId)}</td>
                     <td>${p.partnershipType === 'company_created' ? 'Company-Created' : 'Sponsored Standard'}</td>
-                    <td>${p.assignmentMethod === 'specific_date' ? esc(p.specificDate) : `Random ${p.randomMinDay}–${p.randomMaxDay}`}</td>
                     <td>${esc(p.startDate)} → ${esc(p.endDate)}</td>
-                    <td>${money(p.contractedAmount, p.currency)}</td>
                     <td>${esc(statusLabel(p.status))}</td>
+                    <td>${Number(a.reach || 0).toLocaleString()}</td>
+                    <td>${Number(a.views || 0).toLocaleString()}</td>
                     <td><button type="button" class="owner-btn-ghost" data-dap-open-partnership="${esc(p.id)}">Details</button></td>
                   </tr>
                 `;
@@ -187,7 +188,8 @@ const OwnerDailyPeacePartnerships = (() => {
 
     return `
       <section class="owner-section">
-        <button type="button" class="owner-btn-ghost" data-dap-back-library>← Back to library</button>
+        <button type="button" class="owner-btn-ghost" data-dap-back-library>← Back to partnerships</button>
+        <button type="button" class="owner-btn-ghost" data-dap-refresh-partnership>Refresh impact</button>
         <div class="owner-dap-detail-head" style="margin-top:16px">
           ${p.companyLogoUrl ? `<img src="${esc(p.companyLogoUrl)}" alt="" class="owner-dap-detail-logo">` : ''}
           <div>

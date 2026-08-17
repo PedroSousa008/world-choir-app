@@ -456,13 +456,30 @@ async function getPartnershipById(id) {
   }
 }
 
-async function getSponsorshipForAssignmentRow(row) {
+async function resolveLivePartnership(row) {
+  let partnership = null;
   if (row?.partnership_id) {
-    const partnership = await getPartnershipById(row.partnership_id);
-    const live = publicSponsorship(partnership);
-    if (live) return live;
+    const existing = await getPartnershipById(row.partnership_id);
+    if (existing && isPartnershipLive(existing)) partnership = existing;
   }
-  return getLiveSponsorshipForAct(row?.act_id);
+  if (!partnership) {
+    const live = await getLiveSponsorshipForAct(row?.act_id);
+    if (live?.partnershipId) partnership = await getPartnershipById(live.partnershipId);
+  }
+  if (!partnership) return null;
+  const date = row?.date;
+  if (date) {
+    const start = normalizeDate(partnership.startDate) || partnership.startDate;
+    const end = normalizeDate(partnership.endDate) || partnership.endDate;
+    if (start && date < start) return null;
+    if (end && date > end) return null;
+  }
+  return partnership;
+}
+
+async function getSponsorshipForAssignmentRow(row) {
+  const partnership = await resolveLivePartnership(row);
+  return publicSponsorship(partnership);
 }
 
 async function recordSponsorEvent({
@@ -502,7 +519,11 @@ async function recordSponsorEvent({
   };
 
   await writeJson(sponsorEventPath(partnershipId, eventId), event, { overwrite: false });
-  await incrementDailyAnalytics(partnershipId, event.date, eventType, userId, meta);
+  await incrementDailyAnalytics(partnershipId, event.date, eventType, userId, {
+    city: event.city,
+    country: event.country,
+    ...meta,
+  });
   return event;
 }
 
@@ -551,7 +572,7 @@ async function incrementDailyAnalytics(partnershipId, date, eventType, userId, m
   if (eventType === 'sponsor_logo_impression') {
     row.logoImpressions = Number(row.logoImpressions || 0) + 1;
   }
-  if (eventType === 'sponsor_logo_clicked' || eventType === 'external_destination_opened') {
+  if (eventType === 'sponsor_logo_clicked') {
     row.totalLogoClicks = Number(row.totalLogoClicks || 0) + 1;
     uClicked.add(userId);
   }
@@ -672,6 +693,273 @@ async function aggregatePartnershipAnalytics(partnershipId) {
   delete totals.uniqueUsersClicked;
 
   return totals;
+}
+
+function mergeGeo(into, from) {
+  for (const [country, stats] of Object.entries(from || {})) {
+    into[country] = into[country] || { reached: 0, viewed: 0, completed: 0, clicks: 0 };
+    into[country].reached = Math.max(into[country].reached, stats.reached || 0);
+    into[country].viewed = Math.max(into[country].viewed, stats.viewed || 0);
+    into[country].completed = Math.max(into[country].completed, stats.completed || 0);
+    into[country].clicks = Math.max(into[country].clicks, stats.clicks || 0);
+  }
+}
+
+function partnershipReportingWindow(partnership) {
+  const start = normalizeDate(partnership.startDate) || partnership.startDate || '';
+  const end = normalizeDate(partnership.endDate) || partnership.endDate || '9999-12-31';
+  const published = partnership.publishedAt ? String(partnership.publishedAt).slice(0, 10) : '';
+  const from = [start, published].filter(Boolean).sort().pop() || start;
+  return { from, end };
+}
+
+function assignmentCountsTowardPartnership(row, date, partnership) {
+  if (!row || !date || !partnership) return false;
+  if (row.partnership_id && row.partnership_id === partnership.id) {
+    const { from, end } = partnershipReportingWindow(partnership);
+    if (from && date < from) return false;
+    if (end && date > end) return false;
+    return true;
+  }
+  if (!partnership.actId || row.act_id !== partnership.actId) return false;
+  if (['draft', 'cancelled', 'paused'].includes(partnership.status)) return false;
+  const { from, end } = partnershipReportingWindow(partnership);
+  if (from && date < from) return false;
+  if (end && date > end) return false;
+  return true;
+}
+
+function emptyAssignmentAnalytics() {
+  return {
+    reach: 0,
+    views: 0,
+    completions: 0,
+    logoImpressions: 0,
+    uniqueLogoClicks: 0,
+    totalLogoClicks: 0,
+    completionRate: 0,
+    ctrUnique: 0,
+    ctrTotal: 0,
+    actOpenRate: 0,
+    daily: [],
+    countries: {},
+    cities: {},
+  };
+}
+
+function finalizeAssignmentAnalytics(state) {
+  const countries = {};
+  for (const [country, sets] of Object.entries(state.countryUsers || {})) {
+    countries[country] = {
+      reached: sets.reached.size,
+      viewed: sets.viewed.size,
+      completed: sets.completed.size,
+      clicks: 0,
+    };
+  }
+  const cities = {};
+  for (const [key, sets] of Object.entries(state.cityUsers || {})) {
+    cities[key] = {
+      city: sets.city,
+      country: sets.country,
+      reached: sets.reached.size,
+      viewed: sets.viewed.size,
+      completed: sets.completed.size,
+      clicks: 0,
+    };
+  }
+  const reach = state.usersReached.size;
+  const views = state.usersViewed.size;
+  const completions = state.usersCompleted.size;
+  const logoImpressions = Math.max(state.usersImpressed.size, views);
+  return {
+    reach,
+    views,
+    completions,
+    logoImpressions,
+    uniqueLogoClicks: 0,
+    totalLogoClicks: 0,
+    completionRate: views ? (completions / views) * 100 : 0,
+    ctrUnique: 0,
+    ctrTotal: 0,
+    actOpenRate: reach ? (views / reach) * 100 : 0,
+    daily: [...state.dailyMap.values()].sort((a, b) => String(a.date).localeCompare(String(b.date))),
+    countries,
+    cities,
+  };
+}
+
+function createAssignmentAnalyticsState() {
+  return {
+    usersReached: new Set(),
+    usersViewed: new Set(),
+    usersCompleted: new Set(),
+    usersImpressed: new Set(),
+    dailyMap: new Map(),
+    countryUsers: {},
+    cityUsers: {},
+  };
+}
+
+async function collectAssignmentAnalyticsForPartnership(partnership) {
+  const map = await collectAssignmentAnalyticsForPartnerships([partnership]);
+  return map.get(partnership.id) || emptyAssignmentAnalytics();
+}
+
+async function collectAssignmentAnalyticsForPartnerships(partnerships) {
+  assertBlobConfigured();
+  const { list } = require('@vercel/blob');
+  const { buildOwnerDatabaseRows } = require('./store');
+  const list_ = Array.isArray(partnerships) ? partnerships.filter(Boolean) : [];
+  const states = new Map(list_.map((p) => [p.id, createAssignmentAnalyticsState()]));
+  if (!list_.length) return new Map();
+
+  const [{ blobs }, choirDb] = await Promise.all([
+    list({ prefix: 'wc-data/daily-peace/assignments/', limit: 5000 }),
+    buildOwnerDatabaseRows().catch(() => ({ rows: [] })),
+  ]);
+  const identityByUser = new Map((choirDb.rows || []).map((r) => [r.userId, r]));
+
+  const bumpDaily = (state, date, field) => {
+    const row = state.dailyMap.get(date) || {
+      date,
+      reached: 0,
+      viewed: 0,
+      completed: 0,
+      logoImpressions: 0,
+      uniqueClicks: 0,
+      totalClicks: 0,
+    };
+    row[field] += 1;
+    state.dailyMap.set(date, row);
+  };
+
+  const placeSets = (state, userId) => {
+    const ident = identityByUser.get(userId);
+    const country = ident?.country || null;
+    const city = ident?.city || null;
+    if (country) {
+      state.countryUsers[country] = state.countryUsers[country] || {
+        reached: new Set(),
+        viewed: new Set(),
+        completed: new Set(),
+      };
+    }
+    if (city && country) {
+      const key = `${city}|${country}`;
+      state.cityUsers[key] = state.cityUsers[key] || {
+        city,
+        country,
+        reached: new Set(),
+        viewed: new Set(),
+        completed: new Set(),
+      };
+    }
+    return { country, city };
+  };
+
+  for (const blob of blobs) {
+    if (!blob.pathname.endsWith('.json')) continue;
+    let row;
+    try {
+      row = await readBlobJson(blob.pathname);
+    } catch {
+      continue;
+    }
+    if (!row) continue;
+    const pathDate = String(blob.pathname).match(/(\d{4}-\d{2}-\d{2})\.json$/);
+    const date = pathDate ? pathDate[1] : row.date;
+    if (!date) continue;
+    const userId = row.user_id;
+    if (!userId) continue;
+
+    for (const partnership of list_) {
+      if (!assignmentCountsTowardPartnership(row, date, partnership)) continue;
+      const state = states.get(partnership.id);
+      const { country, city } = placeSets(state, userId);
+      state.usersReached.add(userId);
+      bumpDaily(state, date, 'reached');
+      if (country) state.countryUsers[country].reached.add(userId);
+      if (city && country) state.cityUsers[`${city}|${country}`].reached.add(userId);
+
+      const opened = !!(row.viewed || row.completed || row.sponsor_impression_logged);
+      if (opened) {
+        state.usersViewed.add(userId);
+        bumpDaily(state, date, 'viewed');
+        bumpDaily(state, date, 'logoImpressions');
+        state.usersImpressed.add(userId);
+        if (country) state.countryUsers[country].viewed.add(userId);
+        if (city && country) state.cityUsers[`${city}|${country}`].viewed.add(userId);
+      }
+      if (row.completed) {
+        state.usersCompleted.add(userId);
+        bumpDaily(state, date, 'completed');
+        if (country) state.countryUsers[country].completed.add(userId);
+        if (city && country) state.cityUsers[`${city}|${country}`].completed.add(userId);
+      }
+    }
+  }
+
+  return new Map([...states.entries()].map(([id, state]) => [id, finalizeAssignmentAnalytics(state)]));
+}
+
+function mergePartnershipAnalytics(eventStats, assignmentStats) {
+  const dailyByDate = new Map();
+  for (const row of eventStats.daily || []) dailyByDate.set(row.date, { ...row });
+  for (const row of assignmentStats.daily || []) {
+    const prev = dailyByDate.get(row.date) || {
+      date: row.date,
+      reached: 0,
+      viewed: 0,
+      completed: 0,
+      logoImpressions: 0,
+      uniqueClicks: 0,
+      totalClicks: 0,
+    };
+    dailyByDate.set(row.date, {
+      date: row.date,
+      reached: Math.max(prev.reached || 0, row.reached || 0),
+      viewed: Math.max(prev.viewed || 0, row.viewed || 0),
+      completed: Math.max(prev.completed || 0, row.completed || 0),
+      logoImpressions: Math.max(prev.logoImpressions || 0, row.logoImpressions || 0),
+      uniqueClicks: Math.max(prev.uniqueClicks || 0, row.uniqueClicks || 0),
+      totalClicks: Math.max(prev.totalClicks || 0, row.totalClicks || 0),
+    });
+  }
+
+  const countries = { ...(eventStats.countries || {}) };
+  mergeGeo(countries, assignmentStats.countries);
+  const cities = { ...(eventStats.cities || {}) };
+  for (const [key, stats] of Object.entries(assignmentStats.cities || {})) {
+    cities[key] = cities[key] || { ...stats, reached: 0, viewed: 0, completed: 0, clicks: 0 };
+    cities[key].reached = Math.max(cities[key].reached, stats.reached || 0);
+    cities[key].viewed = Math.max(cities[key].viewed, stats.viewed || 0);
+    cities[key].completed = Math.max(cities[key].completed, stats.completed || 0);
+    cities[key].clicks = Math.max(cities[key].clicks, stats.clicks || 0);
+  }
+
+  const reach = Math.max(eventStats.reach || 0, assignmentStats.reach || 0);
+  const views = Math.max(eventStats.views || 0, assignmentStats.views || 0);
+  const completions = Math.max(eventStats.completions || 0, assignmentStats.completions || 0);
+  const logoImpressions = Math.max(eventStats.logoImpressions || 0, assignmentStats.logoImpressions || 0);
+  const uniqueLogoClicks = eventStats.uniqueLogoClicks || 0;
+  const totalLogoClicks = eventStats.totalLogoClicks || 0;
+
+  return {
+    reach,
+    views,
+    completions,
+    logoImpressions,
+    uniqueLogoClicks,
+    totalLogoClicks,
+    completionRate: views ? (completions / views) * 100 : 0,
+    ctrUnique: logoImpressions ? (uniqueLogoClicks / logoImpressions) * 100 : 0,
+    ctrTotal: logoImpressions ? (totalLogoClicks / logoImpressions) * 100 : 0,
+    actOpenRate: reach ? (views / reach) * 100 : 0,
+    daily: [...dailyByDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date))),
+    countries,
+    cities,
+  };
 }
 
 async function writeCompanyAct(partnership) {
@@ -932,10 +1220,16 @@ async function buildOwnerPartnershipsLibrary() {
     });
   }
 
+  const assignmentStats = await collectAssignmentAnalyticsForPartnerships(partnerships).catch(() => new Map());
+
   return {
     catalogCount: catalog.length,
     totalActs: acts.length,
-    partnerships: partnerships.map(summarizePartnership),
+    partnerships: partnerships.map((p) => {
+      const summary = summarizePartnership(p);
+      const stats = assignmentStats.get(p.id);
+      return stats ? { ...summary, analytics: stats } : summary;
+    }),
     acts,
     themes: [...THEME_IDS],
   };
@@ -972,7 +1266,13 @@ function summarizePartnership(p) {
 async function getPartnershipDetail(id) {
   const partnership = await getPartnershipById(id);
   if (!partnership) throw new Error('Partnership not found');
-  const analytics = await aggregatePartnershipAnalytics(id);
+  const [eventStats, assignmentStats] = await Promise.all([
+    aggregatePartnershipAnalytics(id),
+    collectAssignmentAnalyticsForPartnership(partnership).catch(() => null),
+  ]);
+  const analytics = assignmentStats
+    ? mergePartnershipAnalytics(eventStats, assignmentStats)
+    : eventStats;
   const actsById = await getAllActsById();
   const act = actsById.get(partnership.actId) || partnership.companyAct;
   return {
@@ -1035,6 +1335,7 @@ module.exports = {
   findSpecificDateConflict,
   resolveSponsorshipForNewAssignment,
   getSponsorshipForAssignmentRow,
+  resolveLivePartnership,
   getLiveSponsorshipForAct,
   publicSponsorship,
   recordSponsorEvent,
