@@ -1388,6 +1388,7 @@ const OwnerControl = (() => {
                 <tr>
                   <th>Assignment</th>
                   <th>Act</th>
+                  <th>Partner</th>
                   <th>Category</th>
                   <th>Status</th>
                   <th>Completed</th>
@@ -1400,13 +1401,74 @@ const OwnerControl = (() => {
                   <tr>
                     <td>${esc(h.assignmentDate || '—')}</td>
                     <td>${esc(h.actText || h.actId)}</td>
+                    <td>${esc(h.companyName || '—')}</td>
                     <td>${esc(h.category || '—')}</td>
                     <td>${esc(h.status === 'completed' ? 'Completed' : 'Still Open')}</td>
                     <td>${esc(h.completedAt ? when(h.completedAt) : '—')}</td>
                     <td>${h.status === 'completed' ? (h.completedOnAssignedDay ? 'Yes' : 'No') : '—'}</td>
-                    <td>${h.reflection ? `<button type="button" class="owner-btn-ghost" data-dap-reflection="${esc(h.reflection)}">${esc(h.reflection.slice(0, 48))}${h.reflection.length > 48 ? '…' : ''}</button>` : '—'}</td>
+                    <td>${h.reflection ? `<blockquote class="owner-dap-review">${esc(h.reflection)}</blockquote>` : '—'}</td>
                   </tr>
-                `).join('') : `<tr><td colspan="7">No matching history.</td></tr>`}
+                `).join('') : `<tr><td colspan="8">No matching history.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+
+    if (state.dailyPeaceView === 'reflections') {
+      const reviews = [];
+      for (const u of data.users || []) {
+        for (const h of u.history || []) {
+          if (!h.reflection) continue;
+          reviews.push({
+            ...h,
+            voiceName: u.voiceName,
+            voiceNumber: u.voiceNumber,
+            city: u.city,
+            country: u.country,
+            userId: u.userId,
+          });
+        }
+      }
+      reviews.sort((a, b) => String(b.assignmentDate || '').localeCompare(String(a.assignmentDate || '')));
+      const filtered = q
+        ? reviews.filter((r) => `${r.reflection} ${r.actText} ${r.companyName || ''} ${r.voiceName || ''} ${r.city || ''} ${r.country || ''}`.toLowerCase().includes(q))
+        : reviews;
+      return `
+        <section class="owner-section">
+          <p class="owner-section__label">Daily Acts</p>
+          <h2 class="owner-h1" style="font-size:1.35rem;margin-bottom:8px">Reflections</h2>
+          <p class="owner-sub">Written messages from people who completed a Daily Act of Peace, including sponsored acts.</p>
+          <div class="owner-chips" style="margin:14px 0">
+            <button type="button" class="owner-chip" data-dap-view="users">Users</button>
+            <button type="button" class="owner-chip" data-dap-view="acts">Act performance</button>
+            <button type="button" class="owner-chip is-active" data-dap-view="reflections">Reflections</button>
+          </div>
+          <input class="owner-input" type="search" placeholder="Search reflections, acts, partners…" value="${esc(state.dailyPeaceQuery)}" data-dap-query style="margin-bottom:12px">
+          <div class="owner-table-wrap">
+            <table class="owner-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Person</th>
+                  <th>Place</th>
+                  <th>Act</th>
+                  <th>Partner</th>
+                  <th>Reflection</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filtered.length ? filtered.map((r) => `
+                  <tr>
+                    <td>${esc(r.assignmentDate || '—')}</td>
+                    <td>${esc(r.voiceName || r.userId)}${r.voiceNumber != null ? ` · #${esc(r.voiceNumber)}` : ''}</td>
+                    <td>${esc(r.city || '—')}${r.country ? `, ${esc(r.country)}` : ''}</td>
+                    <td>${esc(r.actText || r.actId)}</td>
+                    <td>${esc(r.companyName || '—')}</td>
+                    <td><blockquote class="owner-dap-review">${esc(r.reflection)}</blockquote></td>
+                  </tr>
+                `).join('') : `<tr><td colspan="6" class="owner-empty">No reflections recorded yet.</td></tr>`}
               </tbody>
             </table>
           </div>
@@ -1427,6 +1489,7 @@ const OwnerControl = (() => {
           <div class="owner-chips" style="margin:14px 0">
             <button type="button" class="owner-chip" data-dap-view="users">Users</button>
             <button type="button" class="owner-chip is-active" data-dap-view="acts">Act performance</button>
+            <button type="button" class="owner-chip" data-dap-view="reflections">Reflections</button>
           </div>
           <input class="owner-input" type="search" placeholder="Search acts…" value="${esc(state.dailyPeaceQuery)}" data-dap-query style="margin-bottom:12px">
           <div class="owner-table-wrap">
@@ -1489,6 +1552,7 @@ const OwnerControl = (() => {
           <button type="button" class="owner-chip" data-dap-main-view="partnerships">Partnerships</button>
           <button type="button" class="owner-chip is-active" data-dap-view="users">Users</button>
           <button type="button" class="owner-chip" data-dap-view="acts">Act performance</button>
+          <button type="button" class="owner-chip" data-dap-view="reflections">Reflections</button>
           <button type="button" class="owner-chip" data-dap-refresh>Refresh</button>
         </div>
         <input class="owner-input" type="search" placeholder="Search users…" value="${esc(state.dailyPeaceQuery)}" data-dap-query style="margin-bottom:12px">
@@ -2142,11 +2206,6 @@ const OwnerControl = (() => {
         state.dailyPeace = null;
         await ensureDailyPeaceLoaded();
         render();
-      });
-    });
-    root().querySelectorAll('[data-dap-reflection]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        alert(btn.getAttribute('data-dap-reflection') || '');
       });
     });
     root().querySelectorAll('[data-foundation-view]').forEach((btn) => {

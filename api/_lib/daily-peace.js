@@ -696,7 +696,8 @@ async function saveReflection(deviceId, assignmentDateInput, todayInput, reflect
   const row = await readUserDailyAct(user.id, assignmentDate);
   if (!row) throw new Error('no daily act found');
 
-  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const { getAllActsById } = require('./daily-peace-partnerships');
+  const actsById = await getAllActsById();
   const act = actsById.get(row.act_id);
   if (!act) throw new Error('assigned act not found in catalog');
 
@@ -907,7 +908,8 @@ async function updateReflection(deviceId, assignmentDateInput, todayInput, refle
   if (!row) throw new Error('no daily act found');
   if (!row.completed) throw new Error('act must be completed before editing reflection');
 
-  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const { getAllActsById } = require('./daily-peace-partnerships');
+  const actsById = await getAllActsById();
   const act = actsById.get(row.act_id);
   if (!act) throw new Error('assigned act not found in catalog');
 
@@ -1089,11 +1091,14 @@ async function buildDailyPeaceOwnerIntel() {
   assertBlobConfigured();
   const { list } = require('@vercel/blob');
   const { buildOwnerDatabaseRows } = require('./store');
-  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
-  const [{ blobs }, choirDb] = await Promise.all([
+  const { getAllActsById, loadAllPartnerships } = require('./daily-peace-partnerships');
+  const [actsById, partnerships, { blobs }, choirDb] = await Promise.all([
+    getAllActsById(),
+    loadAllPartnerships().catch(() => []),
     list({ prefix: `${ROOT}/assignments/`, limit: 5000 }),
     buildOwnerDatabaseRows().catch(() => ({ rows: [] })),
   ]);
+  const partnershipById = new Map((partnerships || []).map((p) => [p.id, p]));
 
   const identityByUser = new Map(
     (choirDb.rows || []).map((r) => [r.userId, r])
@@ -1127,6 +1132,7 @@ async function buildDailyPeaceOwnerIntel() {
     }
     const u = byUser.get(userId);
     const act = actsById.get(row.act_id);
+    const partnership = row.partnership_id ? partnershipById.get(row.partnership_id) : null;
     const entry = {
       assignmentDate: row.date,
       actId: row.act_id,
@@ -1136,7 +1142,10 @@ async function buildDailyPeaceOwnerIntel() {
       completedAt: row.completed_at,
       completedOnAssignedDay: row.completed_on_assigned_day,
       reflection: row.reflection,
+      reflectionAt: row.reflection_at,
       completionSource: row.completion_source,
+      partnershipId: row.partnership_id || null,
+      companyName: partnership?.companyName || null,
     };
     u.history.push(entry);
 

@@ -886,6 +886,15 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   white-space: nowrap;
 }
 
+.owner-dap-review {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #f2efe8;
+  white-space: pre-wrap;
+  max-width: 440px;
+}
+
 .owner-dap-detail-head {
   display: flex;
   align-items: center;

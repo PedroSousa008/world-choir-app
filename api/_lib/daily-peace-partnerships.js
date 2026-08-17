@@ -752,6 +752,7 @@ function emptyAssignmentAnalytics() {
     daily: [],
     countries: {},
     cities: {},
+    reviews: [],
   };
 }
 
@@ -794,6 +795,7 @@ function finalizeAssignmentAnalytics(state) {
     daily: [...state.dailyMap.values()].sort((a, b) => String(a.date).localeCompare(String(b.date))),
     countries,
     cities,
+    reviews: (state.reviews || []).sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))),
   };
 }
 
@@ -806,6 +808,7 @@ function createAssignmentAnalyticsState() {
     dailyMap: new Map(),
     countryUsers: {},
     cityUsers: {},
+    reviews: [],
   };
 }
 
@@ -905,6 +908,18 @@ async function collectAssignmentAnalyticsForPartnerships(partnerships) {
         if (country) state.countryUsers[country].completed.add(userId);
         if (city && country) state.cityUsers[`${city}|${country}`].completed.add(userId);
       }
+      const reflection = typeof row.reflection === 'string' ? row.reflection.trim() : '';
+      if (reflection) {
+        const ident = identityByUser.get(userId);
+        state.reviews.push({
+          date,
+          city: ident?.city || city || null,
+          country: ident?.country || country || null,
+          voiceName: ident?.voiceName || null,
+          voiceNumber: ident?.voiceNumber ?? null,
+          reflection,
+        });
+      }
     }
   }
 
@@ -967,6 +982,7 @@ function mergePartnershipAnalytics(eventStats, assignmentStats) {
     daily: [...dailyByDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date))),
     countries,
     cities,
+    reviews: assignmentStats.reviews || eventStats.reviews || [],
   };
 }
 
@@ -1329,7 +1345,17 @@ function exportPartnershipReportCsv(detail) {
   const geoCities = Object.values(a.cities || {})
     .map((s) => `${s.city}, ${s.country}:${s.reached}/${s.completed}/${s.clicks}`)
     .join('; ');
-  return `${headers.join(',')}\n${row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')}\nCountries,"${geoCountries.replace(/"/g, '""')}"\nCities,"${geoCities.replace(/"/g, '""')}"\n`;
+  const reviewHeaders = ['Date', 'City', 'Country', 'Review'];
+  const reviewRows = (detail.analytics?.reviews || []).map((r) => [
+    r.date || '',
+    r.city || '',
+    r.country || '',
+    r.reflection || '',
+  ]);
+  const reviewCsv = reviewRows.length
+    ? `\nUser reviews\n${reviewHeaders.join(',')}\n${reviewRows.map((cols) => cols.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')}\n`
+    : '\nUser reviews\n"No written reviews yet."\n';
+  return `${headers.join(',')}\n${row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')}\nCountries,"${geoCountries.replace(/"/g, '""')}"\nCities,"${geoCities.replace(/"/g, '""')}"\n${reviewCsv}`;
 }
 
 module.exports = {

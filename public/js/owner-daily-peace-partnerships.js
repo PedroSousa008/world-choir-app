@@ -255,6 +255,10 @@ const OwnerDailyPeacePartnerships = (() => {
             <span class="owner-metric__value">${(a.ctrUnique || 0).toFixed(2)}%</span>
             <span class="owner-metric__label">CTR</span>
           </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${Number((a.reviews || []).length).toLocaleString()}</span>
+            <span class="owner-metric__label">Reviews</span>
+          </div>
         </div>
       </section>
       <section class="owner-section">
@@ -273,6 +277,25 @@ const OwnerDailyPeacePartnerships = (() => {
               ${Object.entries(a.countries || {}).length ? Object.entries(a.countries).map(([country, s]) => `
                 <tr><td>${esc(country)}</td><td>${s.reached || 0}</td><td>${s.completed || 0}</td><td>${s.clicks || 0}</td></tr>
               `).join('') : `<tr><td colspan="4" class="owner-empty">No geographic data yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="owner-section">
+        <p class="owner-section__label">User reviews</p>
+        <p class="owner-muted" style="margin-bottom:12px">Written reflections from people who completed this sponsored Daily Act. These are included when you export the report.</p>
+        <div class="owner-table-wrap">
+          <table class="owner-table">
+            <thead><tr><th>Date</th><th>Place</th><th>Person</th><th>Review</th></tr></thead>
+            <tbody>
+              ${(a.reviews || []).length ? a.reviews.map((r) => `
+                <tr>
+                  <td>${esc(r.date || '—')}</td>
+                  <td>${esc(r.city || '—')}${r.country ? `, ${esc(r.country)}` : ''}</td>
+                  <td>${esc(r.voiceName || 'Choir member')}${r.voiceNumber != null ? ` · #${esc(r.voiceNumber)}` : ''}</td>
+                  <td><blockquote class="owner-dap-review">${esc(r.reflection)}</blockquote></td>
+                </tr>
+              `).join('') : `<tr><td colspan="4" class="owner-empty">No written reviews yet.</td></tr>`}
             </tbody>
           </table>
         </div>
