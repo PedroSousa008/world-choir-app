@@ -117,8 +117,8 @@ function normalizeUrl(url) {
 function effectiveStatus(partnership, today = getUtcDateString()) {
   const status = partnership.status || 'draft';
   if (status === 'cancelled' || status === 'paused' || status === 'draft') return status;
-  const start = partnership.startDate;
-  const end = partnership.endDate;
+  const start = normalizeDate(partnership.startDate) || partnership.startDate;
+  const end = normalizeDate(partnership.endDate) || partnership.endDate;
   if (end && end < today) return 'expired';
   if (start && start > today) return 'scheduled';
   if (status === 'scheduled' || status === 'active') return 'active';
@@ -127,6 +127,14 @@ function effectiveStatus(partnership, today = getUtcDateString()) {
 
 function isPartnershipLive(partnership, today = getUtcDateString()) {
   return effectiveStatus(partnership, today) === 'active';
+}
+
+async function getLiveSponsorshipForAct(actId) {
+  const id = String(actId || '').trim();
+  if (!id) return null;
+  const all = await loadAllPartnerships();
+  const live = all.find((p) => p.actId === id && isPartnershipLive(p));
+  return publicSponsorship(live);
 }
 
 function publicSponsorship(partnership) {
@@ -449,9 +457,12 @@ async function getPartnershipById(id) {
 }
 
 async function getSponsorshipForAssignmentRow(row) {
-  if (!row?.partnership_id) return null;
-  const partnership = await getPartnershipById(row.partnership_id);
-  return publicSponsorship(partnership);
+  if (row?.partnership_id) {
+    const partnership = await getPartnershipById(row.partnership_id);
+    const live = publicSponsorship(partnership);
+    if (live) return live;
+  }
+  return getLiveSponsorshipForAct(row?.act_id);
 }
 
 async function recordSponsorEvent({
@@ -1024,6 +1035,7 @@ module.exports = {
   findSpecificDateConflict,
   resolveSponsorshipForNewAssignment,
   getSponsorshipForAssignmentRow,
+  getLiveSponsorshipForAct,
   publicSponsorship,
   recordSponsorEvent,
   aggregatePartnershipAnalytics,

@@ -123,9 +123,16 @@ function userHistoryPrefix(userId) {
   return `${ROOT}/assignments/${userId}/`;
 }
 
+function assignmentDateFromPath(pathname) {
+  const match = String(pathname || '').match(/(\d{4}-\d{2}-\d{2})\.json$/);
+  return match ? match[1] : null;
+}
+
 async function readUserDailyAct(userId, date) {
   try {
-    return await readBlobJson(userDailyActPath(userId, date));
+    const row = await readBlobJson(userDailyActPath(userId, date));
+    if (row && !row.date) row.date = date;
+    return row;
   } catch {
     return null;
   }
@@ -141,7 +148,11 @@ async function listUserAssignmentRows(userId, { limit = HISTORY_LIST_LIMIT } = {
       .filter((b) => b.pathname.endsWith('.json'))
       .map(async (blob) => {
         try {
-          return await readBlobJson(blob.pathname);
+          const row = await readBlobJson(blob.pathname);
+          if (!row) return null;
+          const pathDate = assignmentDateFromPath(blob.pathname);
+          if (pathDate) row.date = pathDate;
+          return row;
         } catch {
           return null;
         }
@@ -238,7 +249,6 @@ function normalizeRow(row) {
 }
 
 async function attachSponsorshipToMapped(mapped, row) {
-  if (!row?.partnership_id) return mapped;
   try {
     const { getSponsorshipForAssignmentRow } = require('./daily-peace-partnerships');
     const sponsorship = await getSponsorshipForAssignmentRow(row);
@@ -267,7 +277,7 @@ function mapUserDailyAct(row, act, { todayDate = null } = {}) {
       completedOnAssignedDay: n.completed_on_assigned_day,
       completionSource: n.completion_source,
       assignedAt: n.assigned_at,
-      revealedAt: n.assigned_at,
+      revealedAt: n.date,
       notificationDismissed,
       notificationDismissedAt: n.notification_dismissed_at,
       viewed: n.viewed,
@@ -875,9 +885,19 @@ async function getJourney(deviceId, todayInput) {
 
   await getOrAssignDailyAct(deviceId, todayDate);
 
-  const catalog = loadCatalog();
-  const actsById = new Map(catalog.map((act) => [act.id, act]));
+  const { getAllActsById, loadAllPartnerships, publicSponsorship } = require('./daily-peace-partnerships');
+  const actsById = await getAllActsById();
+  const catalog = [...actsById.values()];
   const rows = await listUserAssignmentRows(user.id);
+  const liveByActId = new Map();
+  try {
+    for (const p of await loadAllPartnerships()) {
+      const live = publicSponsorship(p);
+      if (live && p.actId) liveByActId.set(p.actId, live);
+    }
+  } catch {
+    /* partnerships optional */
+  }
 
   // Best assignment per act (prefer completed, then latest date).
   const byActId = new Map();
@@ -960,7 +980,7 @@ async function getJourney(deviceId, todayInput) {
       categoryLabel: theme.categoryLabel,
       assignment: {
         id: row.id,
-        revealedAt: row.assigned_at,
+        revealedAt: row.date,
         completedAt: row.completed_at,
         reflection: row.reflection,
         reflectionAt: row.reflection_at,
@@ -969,15 +989,8 @@ async function getJourney(deviceId, todayInput) {
       act: mapAct(act),
     };
 
-    if (row.partnership_id) {
-      try {
-        const { getSponsorshipForAssignmentRow } = require('./daily-peace-partnerships');
-        const sponsorship = await getSponsorshipForAssignmentRow(normalizeRow(row));
-        if (sponsorship) journeyItem.sponsorship = sponsorship;
-      } catch {
-        /* ignore */
-      }
-    }
+    const sponsorship = liveByActId.get(act.id);
+    if (sponsorship) journeyItem.sponsorship = sponsorship;
 
     journey.push(journeyItem);
   }

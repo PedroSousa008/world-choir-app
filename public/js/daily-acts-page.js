@@ -154,7 +154,7 @@ const DailyActsPage = (() => {
         date: item.date,
         completed: item.status === 'completed',
         completedAt: item.assignment?.completedAt,
-        revealedAt: item.assignment?.revealedAt,
+        revealedAt: item.date,
         reflection: item.assignment?.reflection,
         reflectionAt: item.assignment?.reflectionAt,
       },
@@ -162,8 +162,8 @@ const DailyActsPage = (() => {
   }
 
   function renderSponsorMeta(sponsorship, revealedDate, assignmentDate) {
-    if (!sponsorship?.companyLogoUrl) return '';
-    const logo = sponsorship.companyLogoUrl;
+    if (!sponsorship?.companyName && !sponsorship?.companyLogoUrl) return '';
+    const logo = sponsorship.companyLogoUrl || '';
     const name = sponsorship.companyName || 'Partner';
     return `
       <div class="dap-sheet__meta-row">
@@ -173,11 +173,13 @@ const DailyActsPage = (() => {
         </div>
         <div class="dap-sheet__meta-block dap-sheet__meta-block--inline dap-sheet__meta-block--sponsor">
           <p class="dap-sheet__meta-label">Featured by</p>
-          <button type="button" class="dap-sponsor-logo" id="dap-sponsor-logo"
-            data-assignment-date="${esc(assignmentDate)}"
-            aria-label="Visit ${esc(name)} website">
-            <img src="${esc(logo)}" alt="${esc(name)}" loading="lazy" decoding="async">
-          </button>
+          ${logo ? `
+            <button type="button" class="dap-sponsor-logo" id="dap-sponsor-logo"
+              data-assignment-date="${esc(assignmentDate)}"
+              aria-label="Visit ${esc(name)} website">
+              <img src="${esc(logo)}" alt="${esc(name)}" loading="lazy" decoding="async">
+            </button>
+          ` : `<p class="dap-sheet__meta-value">${esc(name)}</p>`}
         </div>
       </div>
     `;
@@ -356,11 +358,11 @@ const DailyActsPage = (() => {
     const sponsorship = item.sponsorship || null;
     const completed = !!uda.completed;
     const revealedMeta = sponsorship
-      ? renderSponsorMeta(sponsorship, uda.revealedAt || uda.date, uda.date)
+      ? renderSponsorMeta(sponsorship, uda.date, uda.date)
       : `
         <div class="dap-sheet__meta-block">
           <p class="dap-sheet__meta-label">Revealed</p>
-          <p class="dap-sheet__meta-value">${esc(formatLongDate(uda.revealedAt || uda.date))}</p>
+          <p class="dap-sheet__meta-value">${esc(formatLongDate(uda.date))}</p>
         </div>
       `;
 
@@ -706,6 +708,9 @@ const DailyActsPage = (() => {
     const sponsorship = view.item?.sponsorship;
     if (sponsorship && view.item?.userDailyAct?.date) {
       const assignmentDate = view.item.userDailyAct.date;
+      document.querySelector('#dap-sponsor-logo img')?.addEventListener('error', (ev) => {
+        ev.currentTarget.style.display = 'none';
+      });
       apiFetch('/api/daily-peace', {
         method: 'POST',
         body: JSON.stringify({
