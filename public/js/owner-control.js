@@ -30,6 +30,7 @@ const OwnerControl = (() => {
     section: 'overview',
     flash: null,
     error: null,
+    inventory: null,
     busy: false,
     searchOpen: false,
     searchQuery: '',
@@ -179,6 +180,8 @@ const OwnerControl = (() => {
     if (!res.ok) {
       const err = new Error((data && data.error) || 'Request failed');
       err.status = res.status;
+      err.storageUnavailable = !!(data && data.storageUnavailable);
+      err.inventory = data && data.inventory;
       throw err;
     }
     return data;
@@ -251,7 +254,10 @@ const OwnerControl = (() => {
         state.data = null;
         state.error = 'Session expired. Please sign in again.';
       } else {
-        state.error = err.message || 'Failed to load control center';
+        state.error = err.storageUnavailable
+          ? (err.message || 'World Choir records are temporarily unavailable. Nothing has been deleted.')
+          : (err.message || 'Failed to load control center');
+        state.inventory = err.inventory || null;
       }
     } finally {
       state.busy = false;
@@ -2926,7 +2932,14 @@ const OwnerControl = (() => {
       return;
     }
     if (!state.data) {
-      root().innerHTML = `<p class="owner-boot">${state.busy ? 'Loading Owner Control Center…' : 'No data loaded.'}</p>`;
+      const inventory = state.inventory;
+      const inventoryHtml = inventory
+        ? `<p class="owner-muted" style="margin-top:14px">Stored records still present: ${esc(num(inventory.voices))} voices · ${esc(num(inventory.users))} users · ${esc(num(inventory.files))} files</p>`
+        : '';
+      root().innerHTML = `
+        <p class="owner-boot">${state.busy ? 'Loading Owner Control Center…' : esc(state.error || 'No data loaded.')}</p>
+        ${!state.busy && state.error ? `<p class="owner-muted" style="max-width:28em;margin:12px auto 0;text-transform:none;letter-spacing:0;font-size:0.88rem;line-height:1.5">${esc(state.error)}</p>${inventoryHtml}` : ''}
+      `;
       return;
     }
     syncOwnerRoute();

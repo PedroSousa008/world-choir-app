@@ -1,4 +1,4 @@
-const { findUserByDevice, readPledge, mapPledgeRow } = require('./_lib/store');
+const { findUserByDevice, readPledge, mapPledgeRow, jsonStorageError } = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -26,6 +26,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ pledge: mapPledgeRow(pledge) });
   } catch (err) {
     console.error('api/my-pledge error:', err);
-    return res.status(503).json({ error: err.message || 'Service unavailable' });
+    const payload = await jsonStorageError(err);
+    return res.status(503).json(payload);
   }
 };

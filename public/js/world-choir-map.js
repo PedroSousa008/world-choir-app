@@ -135,7 +135,7 @@ const WorldChoirMap = (() => {
 
     if (loadingText) {
       loadingText.textContent = mapDataState === 'error'
-        ? 'Could not load voices. Please try again.'
+        ? 'World Choir records are temporarily unavailable. Voices have not been deleted.'
         : '';
     }
   }

@@ -1,4 +1,4 @@
-const { ensureUser, setUserOnboardingCompleted } = require('./_lib/store');
+const { ensureUser, setUserOnboardingCompleted, jsonStorageError } = require('./_lib/store');
 
 function publicUser(user) {
   if (!user) return null;
@@ -34,6 +34,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ user: publicUser(user) });
   } catch (err) {
     console.error('api/user error:', err);
-    return res.status(503).json({ error: err.message || 'Service unavailable' });
+    const payload = await jsonStorageError(err);
+    return res.status(503).json(payload);
   }
 };

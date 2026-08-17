@@ -2,6 +2,47 @@ const { put, list, get } = require('@vercel/blob');
 const { randomUUID } = require('crypto');
 
 const ROOT = 'wc-data';
+const STORAGE_UNAVAILABLE_MESSAGE =
+  'World Choir records are temporarily unavailable. Nothing has been deleted.';
+
+function isBlobUnavailable(err) {
+  const msg = String(err?.message || err || '');
+  const code = err?.status || err?.statusCode || err?.code;
+  return (
+    code === 403 ||
+    err?.code === 'STORAGE_UNAVAILABLE' ||
+    /403|forbidden|suspended|store is blocked|this store has been suspended/i.test(msg)
+  );
+}
+
+function wrapBlobError(err) {
+  if (!isBlobUnavailable(err)) return err;
+  if (err && err.code === 'STORAGE_UNAVAILABLE') return err;
+  const wrapped = new Error(STORAGE_UNAVAILABLE_MESSAGE);
+  wrapped.code = 'STORAGE_UNAVAILABLE';
+  wrapped.cause = err;
+  wrapped.statusCode = 503;
+  wrapped.storageUnavailable = true;
+  return wrapped;
+}
+
+async function jsonStorageError(err) {
+  const wrapped = wrapBlobError(err);
+  const payload = {
+    error: wrapped.code === 'STORAGE_UNAVAILABLE'
+      ? STORAGE_UNAVAILABLE_MESSAGE
+      : (wrapped.message || 'Service unavailable'),
+    storageUnavailable: wrapped.code === 'STORAGE_UNAVAILABLE',
+  };
+  if (payload.storageUnavailable) {
+    try {
+      payload.inventory = await buildStorageInventory();
+    } catch {
+      /* listing can also be blocked */
+    }
+  }
+  return payload;
+}
 
 function mapPledgeRow(pledge) {
   if (!pledge) return null;
@@ -36,20 +77,68 @@ async function streamToText(stream) {
 }
 
 async function readBlobJson(pathname) {
-  const result = await get(pathname, { access: 'private' });
-  if (!result || result.statusCode === 304 || !result.stream) {
-    throw new Error(`Blob not found: ${pathname}`);
+  try {
+    const result = await get(pathname, { access: 'private' });
+    if (!result || result.statusCode === 304 || !result.stream) {
+      throw new Error(`Blob not found: ${pathname}`);
+    }
+    return JSON.parse(await streamToText(result.stream));
+  } catch (err) {
+    throw wrapBlobError(err);
   }
-  return JSON.parse(await streamToText(result.stream));
+}
+
+async function listBlobs(prefix) {
+  const out = [];
+  let cursor;
+  do {
+    const result = await list({ prefix, limit: 1000, cursor });
+    out.push(...(result.blobs || []));
+    cursor = result.hasMore ? result.cursor : null;
+  } while (cursor);
+  return out;
+}
+
+function buildInventoryFromBlobs(blobs) {
+  const paths = (blobs || []).map((b) => b.pathname);
+  return {
+    files: paths.length,
+    voices: paths.filter((p) => p.includes('/pledges/') && p.endsWith('.json')).length,
+    users: paths.filter((p) => p.includes('/users-by-device/')).length,
+    foundations: paths.some((p) => p.endsWith('members/influencers.json')) ? 1 : 0,
+    donationsLedger: paths.some((p) => p.endsWith('members/donations-ledger.json')),
+    dailyActs: paths.filter((p) => p.includes('/daily-peace/assignments/')).length,
+  };
+}
+
+async function buildStorageInventory() {
+  const blobs = await listBlobs(`${ROOT}/`);
+  return buildInventoryFromBlobs(blobs);
+}
+
+async function readJsonBlobs(blobs) {
+  const rows = [];
+  for (const blob of blobs) {
+    try {
+      rows.push(await readBlobJson(blob.pathname));
+    } catch (err) {
+      if (isBlobUnavailable(err)) throw wrapBlobError(err);
+    }
+  }
+  return rows.filter(Boolean);
 }
 
 async function writeJson(pathname, data, { overwrite = true } = {}) {
-  await put(pathname, JSON.stringify(data), {
-    access: 'private',
-    addRandomSuffix: false,
-    allowOverwrite: overwrite,
-    contentType: 'application/json',
-  });
+  try {
+    await put(pathname, JSON.stringify(data), {
+      access: 'private',
+      addRandomSuffix: false,
+      allowOverwrite: overwrite,
+      contentType: 'application/json',
+    });
+  } catch (err) {
+    throw wrapBlobError(err);
+  }
 }
 
 /**
@@ -68,18 +157,22 @@ async function putPrivateBinary(pathname, body, contentType, { overwrite = true 
 
 async function readPrivateBinary(pathname) {
   assertBlobConfigured();
-  const result = await get(pathname, { access: 'private' });
-  if (!result || result.statusCode === 304 || !result.stream) {
-    throw new Error(`Blob not found: ${pathname}`);
+  try {
+    const result = await get(pathname, { access: 'private' });
+    if (!result || result.statusCode === 304 || !result.stream) {
+      throw new Error(`Blob not found: ${pathname}`);
+    }
+    const chunks = [];
+    for await (const chunk of result.stream) {
+      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    }
+    return {
+      buffer: Buffer.concat(chunks),
+      contentType: result.contentType || 'application/octet-stream',
+    };
+  } catch (err) {
+    throw wrapBlobError(err);
   }
-  const chunks = [];
-  for await (const chunk of result.stream) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-  }
-  return {
-    buffer: Buffer.concat(chunks),
-    contentType: result.contentType || 'application/octet-stream',
-  };
 }
 
 /** Build a stable app URL that proxies private foundation media. */
@@ -152,7 +245,8 @@ async function readCounter(eventId) {
   try {
     const data = await readBlobJson(counterPath(eventId));
     return Number(data.counter) || 0;
-  } catch {
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
     return 0;
   }
 }
@@ -193,12 +287,14 @@ async function ensureUser(deviceId) {
       try {
         await writeJson(probePath, upgraded, { overwrite: true });
         return upgraded;
-      } catch {
+      } catch (err) {
+        if (isBlobUnavailable(err)) throw wrapBlobError(err);
         return { ...existing, hasCompletedWorldChoirOnboarding: true };
       }
     }
     return existing;
-  } catch {
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
     const user = {
       id: randomUUID(),
       anonymous_device_id: trimmed,
@@ -208,7 +304,8 @@ async function ensureUser(deviceId) {
     try {
       await writeJson(probePath, user, { overwrite: false });
       return user;
-    } catch {
+    } catch (err) {
+      if (isBlobUnavailable(err)) throw wrapBlobError(err);
       return readBlobJson(probePath);
     }
   }
@@ -236,7 +333,8 @@ async function findUserByDevice(deviceId) {
   if (!trimmed) return null;
   try {
     return await readBlobJson(`${ROOT}/users-by-device/${encodeURIComponent(trimmed)}.json`);
-  } catch {
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
     return null;
   }
 }
@@ -244,7 +342,8 @@ async function findUserByDevice(deviceId) {
 async function readPledge(eventId, userId) {
   try {
     return await readBlobJson(pledgePath(eventId, userId));
-  } catch {
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
     return null;
   }
 }
@@ -313,53 +412,25 @@ async function updatePledgeLocation({ deviceId, eventId, city, country, latitude
 async function listPledges(eventId) {
   assertBlobConfigured();
   const prefix = `${eventPrefix(eventId)}/pledges/`;
-  const { blobs } = await list({ prefix, limit: 1000 });
-  const pledges = await Promise.all(
-    blobs.map(async (blob) => {
-      try {
-        return await readBlobJson(blob.pathname);
-      } catch {
-        return null;
-      }
-    })
-  );
-  return pledges
-    .filter(Boolean)
-    .sort((a, b) => a.voice_number - b.voice_number);
+  const blobs = await listBlobs(prefix);
+  const pledges = await readJsonBlobs(blobs);
+  return pledges.sort((a, b) => a.voice_number - b.voice_number);
 }
 
 async function listAllUsers() {
   assertBlobConfigured();
-  const prefix = `${ROOT}/users-by-device/`;
-  const { blobs } = await list({ prefix, limit: 1000 });
-  const users = await Promise.all(
-    blobs.map(async (blob) => {
-      try {
-        return await readBlobJson(blob.pathname);
-      } catch {
-        return null;
-      }
-    })
-  );
-  return users.filter(Boolean);
+  const blobs = await listBlobs(`${ROOT}/users-by-device/`);
+  return readJsonBlobs(blobs);
 }
 
 async function listAllPledges() {
   assertBlobConfigured();
-  const { blobs } = await list({ prefix: `${ROOT}/`, limit: 1000 });
+  const blobs = await listBlobs(`${ROOT}/`);
   const pledgeBlobs = blobs.filter(
     (b) => b.pathname.includes('/pledges/') && b.pathname.endsWith('.json')
   );
-  const pledges = await Promise.all(
-    pledgeBlobs.map(async (blob) => {
-      try {
-        return await readBlobJson(blob.pathname);
-      } catch {
-        return null;
-      }
-    })
-  );
-  return pledges.filter(Boolean).sort((a, b) => {
+  const pledges = await readJsonBlobs(pledgeBlobs);
+  return pledges.sort((a, b) => {
     if (a.event_id !== b.event_id) return a.event_id.localeCompare(b.event_id);
     return a.voice_number - b.voice_number;
   });
@@ -397,25 +468,16 @@ async function savePromise({ userId, eventId, promiseText, city, country, voiceN
 async function readPromise(userId, eventId) {
   try {
     return await readBlobJson(promisePath(userId, eventId));
-  } catch {
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
     return null;
   }
 }
 
 async function listAllPromises() {
   assertBlobConfigured();
-  const prefix = `${ROOT}/promises/`;
-  const { blobs } = await list({ prefix, limit: 1000 });
-  const promises = await Promise.all(
-    blobs.map(async (blob) => {
-      try {
-        return await readBlobJson(blob.pathname);
-      } catch {
-        return null;
-      }
-    })
-  );
-  return promises.filter(Boolean);
+  const blobs = await listBlobs(`${ROOT}/promises/`);
+  return readJsonBlobs(blobs);
 }
 
 async function buildOwnerDatabaseRows() {
@@ -514,4 +576,9 @@ module.exports = {
   readPrivateBinary,
   mediaProxyUrl,
   assertBlobConfigured,
+  isBlobUnavailable,
+  wrapBlobError,
+  jsonStorageError,
+  buildStorageInventory,
+  STORAGE_UNAVAILABLE_MESSAGE,
 };

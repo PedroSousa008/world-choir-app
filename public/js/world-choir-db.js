@@ -57,7 +57,11 @@ const WorldChoirDB = (() => {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.error || `Request failed (${res.status})`);
+      const err = new Error(data.error || `Request failed (${res.status})`);
+      err.status = res.status;
+      err.storageUnavailable = !!data.storageUnavailable;
+      err.inventory = data.inventory || null;
+      throw err;
     }
     return data;
   }

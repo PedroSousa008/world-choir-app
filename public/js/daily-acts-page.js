@@ -944,7 +944,16 @@ const DailyActsPage = (() => {
         paint();
       });
     } catch (err) {
-      root().innerHTML = `<p class="dap-error">${esc(err.message || 'Could not load Daily Acts of Peace.')}</p>`;
+      const inventory = err.inventory;
+      const extra = inventory
+        ? `<p class="owner-muted" style="margin-top:12px">Stored records still present: ${esc(inventory.voices)} voices · ${esc(inventory.users)} users · ${esc(inventory.files)} files</p>`
+        : '';
+      root().innerHTML = `
+        <p class="dap-error">${esc(err.storageUnavailable || /temporarily unavailable|nothing has been deleted/i.test(err.message || '')
+          ? (err.message || 'World Choir records are temporarily unavailable. Nothing has been deleted.')
+          : 'Could not load Daily Acts of Peace.')}</p>
+        ${extra}
+      `;
     }
   }
 

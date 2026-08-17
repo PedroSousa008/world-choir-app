@@ -24,19 +24,19 @@ const WorldChoirNav = (() => {
       'css/home.css?v=20270707h',
       'js/world-choir-home.js?v=20260816a',
       'js/world-choir-onboarding.js?v=20260816a',
-      'js/world-choir-db.js?v=20260816a',
+      'js/world-choir-db.js?v=20260817j',
     ],
     map: [
       'map.html',
       'css/map.css?v=20260811d',
-      'js/world-choir-map.js?v=20260811d',
+      'js/world-choir-map.js?v=20260817j',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
     ],
     donate: [
       'donate.html',
       'css/donate.css?v=20260813y',
-      'js/donate/creator-foundations-store.js?v=20260812m',
+      'js/donate/creator-foundations-store.js?v=20260817j',
       'js/donate/donation-flow.js?v=20260812n',
       'js/donate/donate-page.js?v=20260817g',
       '/api/creator-foundations',
@@ -49,7 +49,7 @@ const WorldChoirNav = (() => {
       'js/profile/daily-acts-peace.js?v=20260810i',
       'js/profile/daily-acts-button.js?v=20260810i',
       'js/world-choir-onboarding.js?v=20260816a',
-      'js/world-choir-db.js?v=20260816a',
+      'js/world-choir-db.js?v=20260817j',
     ],
     memory: [
       'memory.html',
@@ -57,7 +57,7 @@ const WorldChoirNav = (() => {
     'daily-acts': [
       'daily-acts.html',
       'css/daily-acts-page.css?v=20260817b',
-      'js/daily-acts-page.js?v=20260817g',
+      'js/daily-acts-page.js?v=20260817j',
     ],
   };
 

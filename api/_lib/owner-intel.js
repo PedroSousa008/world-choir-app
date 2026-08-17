@@ -8,14 +8,14 @@ const {
   listAllPromises,
   buildOwnerDatabaseRows,
   assertBlobConfigured,
+  readBlobJson,
+  isBlobUnavailable,
 } = require('./store');
 const {
-  listInfluencers,
   listInfluencersOwnerView,
   getOperationsOverview,
   PLATFORM_FEE_PERCENT,
 } = require('./members-store');
-const { readBlobJson } = require('./store');
 
 const SUCCESS_STATUSES = new Set(['succeeded', 'completed', 'paid']);
 const EXCLUDED_STATUSES = new Set([
@@ -66,7 +66,8 @@ async function readDonationsLedgerSafe() {
     assertBlobConfigured();
     const data = await readBlobJson('wc-data/members/donations-ledger.json');
     return Array.isArray(data.donations) ? data.donations : [];
-  } catch {
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw err;
     return [];
   }
 }

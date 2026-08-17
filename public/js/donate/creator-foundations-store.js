@@ -93,8 +93,16 @@ const CreatorFoundationsStore = (() => {
       } else {
         try {
           const res = await fetch(PRODUCTION_URL, { cache: 'no-store', credentials: 'omit' });
-          if (res.ok) data = await res.json();
-        } catch {
+          if (res.ok) {
+            data = await res.json();
+          } else if (res.status === 503) {
+            const payload = await res.json().catch(() => ({}));
+            const err = new Error(payload.error || 'World Choir records are temporarily unavailable. Nothing has been deleted.');
+            err.storageUnavailable = true;
+            throw err;
+          }
+        } catch (err) {
+          if (err && err.storageUnavailable) throw err;
           data = null;
         }
 

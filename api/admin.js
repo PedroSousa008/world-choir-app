@@ -10,7 +10,7 @@ const {
   getSessionFromRequest,
   getEffectiveOwnerEmail,
 } = require('./_lib/auth');
-const { buildOwnerDatabaseRows } = require('./_lib/store');
+const { buildOwnerDatabaseRows, jsonStorageError } = require('./_lib/store');
 const {
   buildOwnerControlCenter,
   searchOwnerControlCenter,
@@ -218,6 +218,8 @@ module.exports = async function handler(req, res) {
     return res.status(404).json({ error: 'Unknown admin action' });
   } catch (err) {
     console.error(`api/admin (${action}) error:`, err);
-    return res.status(500).json({ error: err.message || 'Request failed' });
+    const payload = await jsonStorageError(err);
+    const status = payload.storageUnavailable ? 503 : 500;
+    return res.status(status).json(payload);
   }
 };

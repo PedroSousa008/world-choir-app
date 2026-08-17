@@ -1,6 +1,6 @@
 const { randomUUID } = require('crypto');
 const bcrypt = require('bcryptjs');
-const { readBlobJson, writeJson, assertBlobConfigured } = require('./store');
+const { readBlobJson, writeJson, assertBlobConfigured, isBlobUnavailable } = require('./store');
 const { MIN_PASSWORD_LENGTH } = require('./auth');
 const {
   FOUNDATION_CAUSES,
@@ -22,7 +22,8 @@ async function readInfluencersDoc() {
       version: data.version || 1,
       influencers: Array.isArray(data.influencers) ? data.influencers : [],
     };
-  } catch {
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw err;
     return { version: 1, influencers: [] };
   }
 }
@@ -40,7 +41,8 @@ async function readDonationsLedger() {
   try {
     const data = await readBlobJson(DONATIONS_LEDGER_PATH);
     return Array.isArray(data.donations) ? data.donations : [];
-  } catch {
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw err;
     return [];
   }
 }

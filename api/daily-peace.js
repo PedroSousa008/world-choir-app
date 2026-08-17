@@ -16,6 +16,7 @@ const {
   resolveDate,
   parseDateStrict,
 } = require('./_lib/daily-peace');
+const { jsonStorageError } = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -138,6 +139,10 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('api/daily-peace error:', err);
+    const payload = await jsonStorageError(err);
+    if (payload.storageUnavailable) {
+      return res.status(503).json(payload);
+    }
     const message = err.message || 'Service unavailable';
     const status = message.includes('user not found')
       ? 404
