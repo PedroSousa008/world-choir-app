@@ -117,6 +117,18 @@
   flex-direction: column;
 }
 
+.fcc-nav__brand-block {
+  margin: 0 0 22px;
+}
+
+.fcc-nav__logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  display: block;
+  margin: 0 0 12px;
+}
+
 .fcc-nav__brand {
   margin: 0 0 4px;
   font-size: 0.62rem;
@@ -133,7 +145,7 @@
 }
 
 .fcc-nav__foundation {
-  margin: 0 0 18px;
+  margin: 0;
   font-size: 0.78rem;
   color: #8a8d97;
   line-height: 1.35;
@@ -669,6 +681,325 @@
 
 .fcc-link-metric:hover .fcc-link-metric__label {
   color: var(--accent-aurora);
+}
+
+/* ── Overview redesign ── */
+
+.fcc-ov {
+  display: grid;
+  gap: 22px;
+}
+
+.fcc-ov-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 240px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(120% 90% at 80% 20%, rgba(78, 197, 232, 0.16), transparent 55%),
+    linear-gradient(165deg, #081018 0%, #05080c 48%, #000 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px 32px;
+  padding: 32px 32px 30px;
+}
+
+.fcc-ov-hero__bg {
+  /* This is the global Foundation Overview hero background used for every Foundation Control Center. */
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 40%;
+  background-repeat: no-repeat;
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.fcc-ov-hero__shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.58) 46%, rgba(0, 0, 0, 0.28) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.fcc-ov-hero__body,
+.fcc-ov-hero__mark {
+  position: relative;
+  z-index: 1;
+}
+
+.fcc-ov-hero__name {
+  margin: 0 0 8px;
+  font-size: clamp(1.7rem, 4vw, 2.55rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.12;
+}
+
+.fcc-ov-hero__byline {
+  margin: 0;
+  color: #c4c8d4;
+  font-size: 0.95rem;
+}
+
+.fcc-ov-hero__mission {
+  margin: 14px 0 0;
+  max-width: 38em;
+  color: #a8abb8;
+  font-size: 0.98rem;
+  font-style: italic;
+  line-height: 1.55;
+}
+
+.fcc-ov-hero__mark {
+  width: 148px;
+  height: 148px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  padding: 5px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(78, 197, 232, 0.35), transparent 62%),
+    conic-gradient(from 210deg, rgba(78, 197, 232, 0.95), rgba(78, 197, 232, 0.2), rgba(78, 197, 232, 0.95));
+  box-shadow: 0 0 0 1px rgba(78, 197, 232, 0.28), 0 12px 40px rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.fcc-ov-hero__photo,
+.fcc-ov-hero__fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+  object-fit: cover;
+  background: #0b1016;
+}
+
+.fcc-ov-hero__fallback {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  font-weight: 600;
+  color: var(--accent-aurora);
+  background:
+    radial-gradient(circle at 50% 40%, rgba(78, 197, 232, 0.18), #0b1016 70%);
+}
+
+.fcc-ov-hero__mark.is-fallback .fcc-ov-hero__photo {
+  display: none;
+}
+
+.fcc-ov-hero__mark.is-fallback .fcc-ov-hero__fallback,
+.fcc-ov-hero__mark:not(:has(.fcc-ov-hero__photo)) .fcc-ov-hero__fallback {
+  display: flex;
+}
+
+.fcc-ov-grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 840px) {
+  .fcc-ov-grid {
+    grid-template-columns: 1.15fr 1fr;
+    align-items: stretch;
+  }
+}
+
+.fcc-ov-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(14, 16, 20, 0.92), rgba(6, 7, 9, 0.94));
+  padding: 22px 22px 20px;
+  min-width: 0;
+}
+
+.fcc-ov-card__kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a8d97;
+}
+
+.fcc-ov-raised__value {
+  margin: 10px 0 0;
+  font-size: clamp(2rem, 5vw, 2.7rem);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.fcc-ov-spark {
+  display: block;
+  width: 100%;
+  height: 64px;
+  margin-top: 18px;
+}
+
+.fcc-ov-spark__line {
+  stroke: var(--accent-aurora);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fcc-ov-spark__area {
+  fill: rgba(78, 197, 232, 0.12);
+}
+
+.fcc-ov-spark__dot {
+  fill: var(--accent-aurora);
+}
+
+.fcc-ov-raised__empty {
+  margin: 18px 0 0;
+  color: #8a8d97;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.fcc-ov-audience {
+  display: grid;
+  gap: 0;
+  padding: 8px 6px;
+}
+
+.fcc-ov-audience__primary {
+  padding: 16px 16px 18px;
+}
+
+.fcc-ov-audience__primary .fcc-ov-stat__value {
+  font-size: clamp(2rem, 4.4vw, 2.45rem);
+}
+
+.fcc-ov-audience__split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fcc-ov-audience__split .fcc-ov-stat {
+  padding: 16px 16px 14px;
+}
+
+.fcc-ov-audience__split .fcc-ov-stat + .fcc-ov-stat {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fcc-ov-stat {
+  min-width: 0;
+}
+
+.fcc-ov-stat__value {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.fcc-ov-stat__label {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f2efe8;
+}
+
+.fcc-ov-stat__copy {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: #8a8d97;
+  line-height: 1.4;
+}
+
+.fcc-ov-thanks {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(80% 120% at 0% 50%, rgba(78, 197, 232, 0.1), transparent 55%),
+    linear-gradient(180deg, rgba(12, 14, 18, 0.96), rgba(5, 6, 8, 0.96));
+  padding: 22px 24px;
+}
+
+.fcc-ov-thanks__icon {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(78, 197, 232, 0.35);
+  display: grid;
+  place-items: center;
+  color: var(--accent-aurora);
+  background: rgba(78, 197, 232, 0.06);
+}
+
+.fcc-ov-thanks__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.fcc-ov-thanks__copy h2 {
+  margin: 0 0 6px;
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.fcc-ov-thanks__copy p {
+  margin: 0;
+  color: #8a8d97;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.fcc-ov-thanks__copy p + p {
+  margin-top: 2px;
+}
+
+@media (max-width: 839px) {
+  .fcc-ov-hero {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    padding: 24px 20px 22px;
+    min-height: 0;
+  }
+
+  .fcc-ov-hero__mark {
+    width: 112px;
+    height: 112px;
+    order: -1;
+  }
+
+  .fcc-ov-thanks {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .fcc-ov-audience__split {
+    grid-template-columns: 1fr;
+  }
+
+  .fcc-ov-audience__split .fcc-ov-stat + .fcc-ov-stat {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .fcc-ov-hero__mark {
+    width: 96px;
+    height: 96px;
+  }
 }
 
 /* ── Today strip ── */

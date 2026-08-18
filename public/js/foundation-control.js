@@ -12,6 +12,10 @@ const FoundationControl = (() => {
     { id: 'settings', label: 'Settings' },
   ];
   const RETIRED_SECTIONS = new Set(['projects', 'insights', 'updates']);
+  const WORLD_CHOIR_LOGO = 'images/world-choir-logo.png?v=20270706';
+  // This is the global Foundation Overview hero background used for every Foundation Control Center.
+  // Replace public/images/foundation/foundation-overview-hero-background.jpg to update every Overview.
+  const OVERVIEW_HERO_BACKGROUND = 'images/foundation/foundation-overview-hero-background.jpg?v=1';
 
   const RANGES = [
     { id: 'all', label: 'All time' },
@@ -240,7 +244,7 @@ const FoundationControl = (() => {
     destroyMap();
     root().innerHTML = `
       <div class="fcc-login">
-        <img class="fcc-login__logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir">
+        <img class="fcc-login__logo" src="${WORLD_CHOIR_LOGO}" alt="World Choir">
         <p class="fcc-kicker">Creator Foundations</p>
         <h1>Influencer login</h1>
         <p class="fcc-login__sub">
@@ -343,9 +347,12 @@ const FoundationControl = (() => {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
           </div>
-          <p class="fcc-nav__brand fcc-nav__brand--desk">World Choir</p>
-          <p class="fcc-nav__title">Foundation Control Center</p>
-          <p class="fcc-nav__foundation">${esc(f.name || 'Your Foundation')}</p>
+          <div class="fcc-nav__brand-block">
+            <img class="fcc-nav__logo" src="${WORLD_CHOIR_LOGO}" alt="World Choir" width="1024" height="1024" decoding="async">
+            <p class="fcc-nav__brand">World Choir</p>
+            <p class="fcc-nav__title">Foundation Control Center</p>
+            <p class="fcc-nav__foundation">${esc(f.name || 'Your Foundation')}</p>
+          </div>
           <ul class="fcc-nav__list">
             ${SECTIONS.map((s) => `
               <li>
@@ -459,102 +466,139 @@ const FoundationControl = (() => {
     `;
   }
 
+  function renderRaisedSparkline(series = []) {
+    const amounts = (series || [])
+      .map((s) => Number(s.amount ?? s.value ?? 0))
+      .filter((n) => Number.isFinite(n));
+    if (amounts.length < 2) return '';
+    let running = 0;
+    const cumulative = amounts.map((n) => {
+      running += Math.max(0, n);
+      return running;
+    });
+    const max = Math.max(...cumulative);
+    if (max <= 0) return '';
+
+    const w = 360;
+    const h = 64;
+    const padX = 4;
+    const padY = 6;
+    const lastX = cumulative.length - 1;
+    const coords = cumulative.map((v, i) => {
+      const x = padX + (i / lastX) * (w - padX * 2);
+      const y = h - padY - (v / max) * (h - padY * 2);
+      return [x, y];
+    });
+    const line = coords
+      .map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`)
+      .join(' ');
+    const area = `${line} L${coords[coords.length - 1][0].toFixed(1)} ${h} L${coords[0][0].toFixed(1)} ${h} Z`;
+    const [endX, endY] = coords[coords.length - 1];
+
+    return `
+      <svg class="fcc-ov-spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="Verified donation history for the selected range">
+        <path class="fcc-ov-spark__area" d="${area}"></path>
+        <path class="fcc-ov-spark__line" d="${line}" fill="none"></path>
+        <circle class="fcc-ov-spark__dot" cx="${endX.toFixed(1)}" cy="${endY.toFixed(1)}" r="3.2"></circle>
+      </svg>
+    `;
+  }
+
+  function overviewStat(value, label, copy) {
+    return `
+      <div class="fcc-ov-stat">
+        <p class="fcc-ov-stat__value">${esc(value)}</p>
+        <p class="fcc-ov-stat__label">${esc(label)}</p>
+        <p class="fcc-ov-stat__copy">${esc(copy)}</p>
+      </div>
+    `;
+  }
+
   /* ─── Overview ─── */
 
   function renderOverview() {
-    const d = state.data;
+    const d = state.data || {};
     const o = d.overview || {};
     const f = d.foundation || {};
-    const today = d.today || {};
     const growth = d.growth || {};
-    const series = (growth.series && growth.series[state.growthMetric]) || [];
-    if (!['all', 'donations', 'foundation'].includes(state.activityFilter)) {
-      state.activityFilter = 'all';
-    }
-    const activity = (d.activity || []).filter((a) =>
-      state.activityFilter === 'all' || a.type === state.activityFilter
-    );
-    const cmp = growth.comparison || {};
+    const series = (growth.series && growth.series.amount) || [];
+    const name = f.name || 'Your Foundation';
+    const founder = f.creatorName || '';
+    const country = f.country || '';
+    const mission = pickFilled(f.mission, f.cardShortMission, f.shortDescription);
+    const cover = String(f.coverImage || '').trim();
+    const raised = o.rangedRaised != null ? o.rangedRaised : (o.totalRaised || 0);
+    const supporters = o.rangedSupporters != null ? o.rangedSupporters : (o.totalSupporters || 0);
+    const countries = o.countriesReached || 0;
+    const cities = o.citiesReached || 0;
+    const spark = renderRaisedSparkline(series);
+    const foundedBits = [
+      founder ? `Founded by ${founder}` : '',
+      country,
+    ].filter(Boolean);
+    const initial = (name || 'F').trim().charAt(0).toUpperCase() || 'F';
 
     return `
-      <section class="fcc-section">
-        <p class="fcc-kicker">Foundation Control Center</p>
-        <h2 class="fcc-foundation-name">${esc(f.name || 'Your Foundation')}</h2>
-        <p class="fcc-foundation-byline">
-          Founded by ${esc(f.creatorName || '—')}
-          ${f.country ? ` · ${esc(f.country)}` : ''}
-        </p>
-
-        <div class="fcc-hero" style="margin-top:28px">
-          <button type="button" class="fcc-hero__primary" data-nav="donations">
-            <span class="fcc-hero__value">${esc(money(o.totalRaised || 0, currency()))}</span>
-            <span class="fcc-hero__label">Total raised</span>
-          </button>
-          <div class="fcc-hero__secondary">
-            ${metricBtn(num(o.totalSupporters || 0), 'Supporters', 'community')}
-            ${metricBtn(num(o.countriesReached || 0), 'Countries', 'donations')}
-            ${metricBtn(num(o.citiesReached || 0), 'Cities', 'donations')}
+      <section class="fcc-ov" aria-label="Foundation overview">
+        <article class="fcc-ov-hero">
+          <div
+            class="fcc-ov-hero__bg"
+            aria-hidden="true"
+            style="background-image: url('${esc(OVERVIEW_HERO_BACKGROUND)}')"
+          ></div>
+          <div class="fcc-ov-hero__shade" aria-hidden="true"></div>
+          <div class="fcc-ov-hero__body">
+            <p class="fcc-kicker">Foundation Control Center</p>
+            <h2 class="fcc-ov-hero__name">${esc(name)}</h2>
+            ${foundedBits.length ? `<p class="fcc-ov-hero__byline">${esc(foundedBits.join(' · '))}</p>` : ''}
+            ${mission ? `<p class="fcc-ov-hero__mission">${esc(mission)}</p>` : ''}
           </div>
-        </div>
-
-        <div class="fcc-today">
-          <p class="fcc-section__label">Today</p>
-          ${today.empty
-            ? emptyNote(today.message || 'No new Foundation activity today.')
-            : `<div class="fcc-today__items">
-                ${(today.items || []).map((item) => `
-                  <div class="fcc-today__item">
-                    <strong>${item.key === 'raised' ? esc(money(item.value, currency())) : esc(num(item.value))}</strong>
-                    <span>${esc(item.label)}</span>
-                  </div>
-                `).join('')}
-              </div>`}
-        </div>
-
-        <div class="fcc-section__head">
-          <h2>Growth</h2>
-          <div class="fcc-seg" data-seg="growth">
-            <button type="button" data-growth="amount" class="${state.growthMetric === 'amount' ? 'is-active' : ''}">Raised</button>
-            <button type="button" data-growth="donations" class="${state.growthMetric === 'donations' ? 'is-active' : ''}">Donations</button>
-            <button type="button" data-growth="supporters" class="${state.growthMetric === 'supporters' ? 'is-active' : ''}">Supporters</button>
+          <div class="fcc-ov-hero__mark ${cover ? '' : 'is-fallback'}">
+            <span class="fcc-ov-hero__fallback" aria-hidden="true">${esc(initial)}</span>
+            ${cover ? `
+              <img
+                class="fcc-ov-hero__photo"
+                src="${esc(cover)}"
+                alt="${esc(name)} cover image"
+                width="320"
+                height="320"
+                decoding="async"
+              >
+            ` : ''}
           </div>
+        </article>
+
+        <div class="fcc-ov-grid">
+          <article class="fcc-ov-card fcc-ov-raised">
+            <p class="fcc-ov-card__kicker">Total raised</p>
+            <p class="fcc-ov-raised__value">${esc(money(raised, currency()))}</p>
+            ${spark || '<p class="fcc-ov-raised__empty">Donation history will appear here as verified gifts are recorded.</p>'}
+          </article>
+
+          <article class="fcc-ov-card fcc-ov-audience" aria-label="Audience">
+            <div class="fcc-ov-audience__primary">
+              ${overviewStat(num(supporters), 'Supporters', 'People supporting your foundation')}
+            </div>
+            <div class="fcc-ov-audience__split">
+              ${overviewStat(num(countries), 'Countries', 'Countries represented')}
+              ${overviewStat(num(cities), 'Cities', 'Cities represented')}
+            </div>
+          </article>
         </div>
-        ${renderChart(series, 'value')}
-        <div class="fcc-chart-meta">
-          <span>Range: ${esc(RANGES.find((r) => r.id === state.range)?.label || state.range)} · ${esc(money(o.rangedRaised || 0, currency()))} · ${esc(num(o.rangedSupporters || 0))} supporters</span>
-          <span>${cmp.available
-            ? `vs prior: raised ${cmp.raisedChangePct != null ? cmp.raisedChangePct + '%' : '—'} · supporters ${cmp.supportersChangePct != null ? cmp.supportersChangePct + '%' : '—'}`
-            : esc(cmp.reason || 'Not enough historical data.')}</span>
-        </div>
+
+        <article class="fcc-ov-thanks">
+          <div class="fcc-ov-thanks__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 21s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 11c0 5.5-7 10-7 10z"/>
+            </svg>
+          </div>
+          <div class="fcc-ov-thanks__copy">
+            <h2>Thank you for being part of World Choir</h2>
+            <p>Your foundation is part of a global movement of love and unity.</p>
+            <p>Together, we create a world where every voice matters.</p>
+          </div>
+        </article>
       </section>
-
-      <section class="fcc-section">
-        <div class="fcc-section__head">
-          <h2>Activity</h2>
-          <div class="fcc-seg" data-seg="activity">
-            ${['all', 'donations', 'foundation'].map((f) => `
-              <button type="button" data-activity="${f}" class="${state.activityFilter === f ? 'is-active' : ''}">${esc(f)}</button>
-            `).join('')}
-          </div>
-        </div>
-        ${!activity.length
-          ? emptyNote('Activity will appear as donations and workspace events are recorded.')
-          : `<ul class="fcc-feed">
-              ${activity.slice(0, 40).map((a) => `
-                <li class="fcc-feed__item">
-                  <div>
-                    <p class="fcc-feed__label">${esc(a.label)}</p>
-                    ${a.detail ? `<p class="fcc-feed__detail">${esc(a.detail)}${a.actor ? ` · ${esc(a.actor)}` : ''}</p>` : ''}
-                  </div>
-                  <div class="fcc-feed__meta">${esc(when(a.at))}</div>
-                </li>
-              `).join('')}
-            </ul>`}
-      </section>
-
-      ${(d.unavailableCapabilities || []).length ? `
-        <p class="fcc-note">${esc((d.unavailableCapabilities || []).slice(0, 3).join(' · '))}</p>
-      ` : ''}
     `;
   }
 
@@ -1444,6 +1488,12 @@ const FoundationControl = (() => {
     bindImageUploads();
     root().querySelectorAll('[data-nav]').forEach((btn) => {
       btn.addEventListener('click', () => go(btn.getAttribute('data-nav')));
+    });
+    root().querySelectorAll('.fcc-ov-hero__photo').forEach((img) => {
+      img.addEventListener('error', () => {
+        img.hidden = true;
+        img.closest('.fcc-ov-hero__mark')?.classList.add('is-fallback');
+      });
     });
 
     document.getElementById('fcc-range')?.addEventListener('change', async (e) => {
