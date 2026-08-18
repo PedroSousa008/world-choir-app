@@ -818,12 +818,46 @@
   min-width: 0;
 }
 
+.fcc-ov-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .fcc-ov-card__kicker {
   margin: 0;
   font-size: 0.68rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #8a8d97;
+}
+
+.fcc-ov-view {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--accent-aurora);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 0;
+  flex-shrink: 0;
+}
+
+.fcc-ov-view:hover,
+.fcc-ov-view:focus-visible {
+  color: #f2efe8;
+}
+
+.fcc-ov-stat__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .fcc-ov-raised__value {

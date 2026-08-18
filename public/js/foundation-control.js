@@ -14,8 +14,8 @@ const FoundationControl = (() => {
   const RETIRED_SECTIONS = new Set(['projects', 'insights', 'updates']);
   const WORLD_CHOIR_LOGO = 'images/world-choir-logo.png?v=20270706';
   // This is the global Foundation Overview hero background used for every Foundation Control Center.
-  // Replace public/images/foundation/foundation-overview-hero-background.jpg to update every Overview.
-  const OVERVIEW_HERO_BACKGROUND = 'images/foundation/foundation-overview-hero-background.jpg?v=1';
+  // Replace public/images/foundation/foundation-overview-hero-background.png to update every Overview.
+  const OVERVIEW_HERO_BACKGROUND = 'images/foundation/foundation-overview-hero-background.png?v=20260819b';
 
   const RANGES = [
     { id: 'all', label: 'All time' },
@@ -504,10 +504,21 @@ const FoundationControl = (() => {
     `;
   }
 
-  function overviewStat(value, label, copy) {
+  function overviewViewBtn(section, label) {
+    return `
+      <button type="button" class="fcc-ov-view" data-nav="${esc(section)}" aria-label="View ${esc(label)}">
+        View
+      </button>
+    `;
+  }
+
+  function overviewStat(value, label, copy, section) {
     return `
       <div class="fcc-ov-stat">
-        <p class="fcc-ov-stat__value">${esc(value)}</p>
+        <div class="fcc-ov-stat__top">
+          <p class="fcc-ov-stat__value">${esc(value)}</p>
+          ${overviewViewBtn(section, label)}
+        </div>
         <p class="fcc-ov-stat__label">${esc(label)}</p>
         <p class="fcc-ov-stat__copy">${esc(copy)}</p>
       </div>
@@ -570,18 +581,21 @@ const FoundationControl = (() => {
 
         <div class="fcc-ov-grid">
           <article class="fcc-ov-card fcc-ov-raised">
-            <p class="fcc-ov-card__kicker">Total raised</p>
+            <div class="fcc-ov-card__head">
+              <p class="fcc-ov-card__kicker">Total raised</p>
+              ${overviewViewBtn('donations', 'Total raised')}
+            </div>
             <p class="fcc-ov-raised__value">${esc(money(raised, currency()))}</p>
             ${spark || '<p class="fcc-ov-raised__empty">Donation history will appear here as verified gifts are recorded.</p>'}
           </article>
 
           <article class="fcc-ov-card fcc-ov-audience" aria-label="Audience">
             <div class="fcc-ov-audience__primary">
-              ${overviewStat(num(supporters), 'Supporters', 'People supporting your foundation')}
+              ${overviewStat(num(supporters), 'Supporters', 'People supporting your foundation', 'community')}
             </div>
             <div class="fcc-ov-audience__split">
-              ${overviewStat(num(countries), 'Countries', 'Countries represented')}
-              ${overviewStat(num(cities), 'Cities', 'Cities represented')}
+              ${overviewStat(num(countries), 'Countries', 'Countries represented', 'donations')}
+              ${overviewStat(num(cities), 'Cities', 'Cities represented', 'donations')}
             </div>
           </article>
         </div>
