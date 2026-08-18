@@ -122,11 +122,11 @@
 }
 
 .fcc-nav__logo {
-  width: 48px;
-  height: 48px;
+  width: 104px;
+  height: 104px;
   object-fit: contain;
   display: block;
-  margin: 0 0 12px;
+  margin: 0 auto 16px;
 }
 
 .fcc-nav__brand {

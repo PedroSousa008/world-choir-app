@@ -349,7 +349,6 @@ const FoundationControl = (() => {
           </div>
           <div class="fcc-nav__brand-block">
             <img class="fcc-nav__logo" src="${WORLD_CHOIR_LOGO}" alt="World Choir" width="1024" height="1024" decoding="async">
-            <p class="fcc-nav__brand">World Choir</p>
             <p class="fcc-nav__title">Foundation Control Center</p>
             <p class="fcc-nav__foundation">${esc(f.name || 'Your Foundation')}</p>
           </div>
