@@ -38,7 +38,7 @@ const WorldChoirNav = (() => {
       'css/donate.css?v=20260813y',
       'js/donate/creator-foundations-store.js?v=20260817j',
       'js/donate/donation-flow.js?v=20260812n',
-      'js/donate/donate-page.js?v=20260817g',
+      'js/donate/donate-page.js?v=20260818a',
       '/api/creator-foundations',
       '/api/donations?action=config',
     ],

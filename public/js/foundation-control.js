@@ -7,13 +7,11 @@ const FoundationControl = (() => {
   const SECTIONS = [
     { id: 'overview', label: 'Overview' },
     { id: 'foundation', label: 'Foundation' },
-    { id: 'projects', label: 'Projects' },
     { id: 'donations', label: 'Donations' },
     { id: 'community', label: 'Community' },
-    { id: 'insights', label: 'Insights' },
-    { id: 'updates', label: 'Updates' },
     { id: 'settings', label: 'Settings' },
   ];
+  const RETIRED_SECTIONS = new Set(['projects', 'insights', 'updates']);
 
   const RANGES = [
     { id: 'all', label: 'All time' },
@@ -44,8 +42,6 @@ const FoundationControl = (() => {
     foundationTab: 'page',
     foundationDirty: false,
     foundationForm: null,
-    projectEdit: null,
-    updateEdit: null,
     drill: null,
     settingsTab: 'foundation',
   };
@@ -55,6 +51,10 @@ const FoundationControl = (() => {
   function applyRoute() {
     const parts = String(window.location.hash || '').replace(/^#/, '').split('/').filter(Boolean);
     if (!parts.length) return;
+    if (RETIRED_SECTIONS.has(parts[0])) {
+      state.section = 'overview';
+      return;
+    }
     if (!SECTION_IDS.has(parts[0])) return;
     state.section = parts[0];
     if (parts[1] && parts[0] === 'settings') state.settingsTab = parts[1];
@@ -410,18 +410,15 @@ const FoundationControl = (() => {
     const map = {
       overview: `Command view for ${f}.`,
       foundation: 'Edit page, card, and public information with live preview.',
-      projects: 'Create and manage Foundation projects.',
       donations: 'Verified donations for this Foundation only.',
       community: 'Supporters and where they gather.',
-      insights: 'Growth and location leaders from real data.',
-      updates: 'Publish updates to your supporters.',
       settings: 'Foundation, team, financial, and security.',
     };
     return map[state.section] || '';
   }
 
   function go(section, opts = {}) {
-    state.section = section;
+    state.section = SECTION_IDS.has(section) ? section : 'overview';
     state.navOpen = false;
     if (opts.drill !== undefined) state.drill = opts.drill;
     if (opts.foundationTab) state.foundationTab = opts.foundationTab;
@@ -471,6 +468,9 @@ const FoundationControl = (() => {
     const today = d.today || {};
     const growth = d.growth || {};
     const series = (growth.series && growth.series[state.growthMetric]) || [];
+    if (!['all', 'donations', 'foundation'].includes(state.activityFilter)) {
+      state.activityFilter = 'all';
+    }
     const activity = (d.activity || []).filter((a) =>
       state.activityFilter === 'all' || a.type === state.activityFilter
     );
@@ -494,7 +494,6 @@ const FoundationControl = (() => {
             ${metricBtn(num(o.totalSupporters || 0), 'Supporters', 'community')}
             ${metricBtn(num(o.countriesReached || 0), 'Countries', 'donations')}
             ${metricBtn(num(o.citiesReached || 0), 'Cities', 'donations')}
-            ${metricBtn(num(o.activeProjects || 0), 'Active projects', 'projects')}
           </div>
         </div>
 
@@ -533,7 +532,7 @@ const FoundationControl = (() => {
         <div class="fcc-section__head">
           <h2>Activity</h2>
           <div class="fcc-seg" data-seg="activity">
-            ${['all', 'donations', 'projects', 'updates', 'foundation'].map((f) => `
+            ${['all', 'donations', 'foundation'].map((f) => `
               <button type="button" data-activity="${f}" class="${state.activityFilter === f ? 'is-active' : ''}">${esc(f)}</button>
             `).join('')}
           </div>
@@ -958,107 +957,6 @@ const FoundationControl = (() => {
     }
   }
 
-  /* ─── Projects ─── */
-
-  function renderProjects() {
-    const projects = state.data?.projects || [];
-    const edit = state.projectEdit;
-
-    return `
-      <section class="fcc-section">
-        <div class="fcc-section__head">
-          <h2>${edit ? (edit.id ? 'Edit project' : 'New project') : 'Projects'}</h2>
-          ${can('createProjects') && !edit ? `
-            <button type="button" class="fcc-btn" data-action="project-new">Create project</button>
-          ` : ''}
-        </div>
-
-        ${edit ? renderProjectForm(edit) : ''}
-
-        ${!projects.length && !edit
-          ? emptyNote('No projects yet. Create one when you are ready.')
-          : `<ul class="fcc-list">
-              ${projects.map((p) => `
-                <li class="fcc-row">
-                  <div>
-                    <p class="fcc-row__title">${esc(p.title)} <span class="fcc-pill is-${esc(p.status)}">${esc(p.status)}</span></p>
-                    <p class="fcc-row__meta">
-                      ${esc(p.shortDescription || p.description || '—')}
-                      <br>${esc(money(p.fundingRaised || 0, currency()))} raised
-                      ${p.fundingGoal != null ? ` of ${esc(money(p.fundingGoal, currency()))}` : ''}
-                      ${p.location || p.country ? ` · ${esc([p.location, p.country].filter(Boolean).join(', '))}` : ''}
-                    </p>
-                  </div>
-                  <div class="fcc-row__actions">
-                    ${can('createProjects') ? `
-                      <button type="button" class="fcc-btn-ghost" data-action="project-edit" data-id="${esc(p.id)}">Edit</button>
-                      ${p.status !== 'active' ? `<button type="button" class="fcc-btn-ghost" data-action="project-status" data-id="${esc(p.id)}" data-status="active">Activate</button>` : ''}
-                      ${p.status === 'active' ? `<button type="button" class="fcc-btn-ghost" data-action="project-status" data-id="${esc(p.id)}" data-status="paused">Pause</button>` : ''}
-                      ${p.status !== 'completed' ? `<button type="button" class="fcc-btn-ghost" data-action="project-status" data-id="${esc(p.id)}" data-status="completed">Complete</button>` : ''}
-                      ${p.status !== 'archived' ? `<button type="button" class="fcc-btn-ghost is-danger" data-action="project-status" data-id="${esc(p.id)}" data-status="archived">Archive</button>` : ''}
-                    ` : ''}
-                  </div>
-                </li>
-              `).join('')}
-            </ul>`}
-      </section>
-    `;
-  }
-
-  function renderProjectForm(p) {
-    return `
-      <form class="fcc-form wide" id="fcc-project-form" style="margin-bottom:28px">
-        ${p.id ? `<input type="hidden" name="id" value="${esc(p.id)}">` : ''}
-        <div class="fcc-field">
-          <label for="pj-title">Title</label>
-          <input id="pj-title" name="title" required value="${esc(p.title || '')}">
-        </div>
-        <div class="fcc-field">
-          <label for="pj-short">Short description</label>
-          <textarea id="pj-short" name="shortDescription">${esc(p.shortDescription || '')}</textarea>
-        </div>
-        <div class="fcc-field">
-          <label for="pj-desc">Description</label>
-          <textarea id="pj-desc" name="description">${esc(p.description || '')}</textarea>
-        </div>
-        <div class="fcc-form two-col" style="max-width:none;padding:0;border:0;background:transparent">
-          <div class="fcc-field">
-            <label for="pj-loc">Location</label>
-            <input id="pj-loc" name="location" value="${esc(p.location || '')}">
-          </div>
-          <div class="fcc-field">
-            <label for="pj-country">Country</label>
-            <input id="pj-country" name="country" value="${esc(p.country || '')}">
-          </div>
-          <div class="fcc-field">
-            <label for="pj-cat">Category</label>
-            <input id="pj-cat" name="category" value="${esc(p.category || '')}">
-          </div>
-          <div class="fcc-field">
-            <label for="pj-goal">Funding goal (EUR)</label>
-            <input id="pj-goal" name="fundingGoal" type="number" min="0" step="0.01" value="${esc(p.fundingGoal ?? '')}">
-          </div>
-          <div class="fcc-field">
-            <label for="pj-start">Start date</label>
-            <input id="pj-start" name="startDate" type="date" value="${esc((p.startDate || '').slice(0, 10))}">
-          </div>
-          <div class="fcc-field">
-            <label for="pj-end">Expected completion</label>
-            <input id="pj-end" name="expectedCompletionDate" type="date" value="${esc((p.expectedCompletionDate || '').slice(0, 10))}">
-          </div>
-        </div>
-        <div class="fcc-field">
-          <label for="pj-cover">Cover image URL</label>
-          <input id="pj-cover" name="coverImage" value="${esc(p.coverImage || '')}">
-        </div>
-        <div class="fcc-form-actions">
-          <button class="fcc-btn" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Saving…' : 'Save project'}</button>
-          <button class="fcc-btn-ghost" type="button" data-action="project-cancel">Cancel</button>
-        </div>
-      </form>
-    `;
-  }
-
   /* ─── Donations ─── */
 
   function renderDonations() {
@@ -1278,127 +1176,6 @@ const FoundationControl = (() => {
     `;
   }
 
-  /* ─── Insights ─── */
-
-  function renderInsights() {
-    const ins = state.data?.insights || {};
-    const funnel = ins.conversionFunnel || {};
-    const content = ins.contentPerformance || {};
-    const bySup = ins.locationLeaders?.bySupporters || [];
-    const byRaised = ins.locationLeaders?.byRaised || [];
-
-    return `
-      <section class="fcc-section">
-        <div class="fcc-section__head"><h2>Growth</h2></div>
-        ${renderChart(ins.growth || [], 'amount')}
-      </section>
-
-      <section class="fcc-section fcc-split">
-        <div>
-          <h2 class="fcc-section__label" style="margin-bottom:12px">Leaders by supporters</h2>
-          ${renderCityTable(bySup)}
-        </div>
-        <div>
-          <h2 class="fcc-section__label" style="margin-bottom:12px">Leaders by raised</h2>
-          ${renderCityTable(byRaised)}
-        </div>
-      </section>
-
-      <section class="fcc-section">
-        <h2 class="fcc-section__label">Conversion funnel</h2>
-        ${funnel.available
-          ? ''
-          : `
-            <p class="fcc-note">${esc(funnel.note || 'Funnel stages are not tracked yet.')}</p>
-            <div class="fcc-funnel">
-              <div class="fcc-funnel__stage">Page views — unavailable</div>
-              <div class="fcc-funnel__stage">Donation starts — unavailable</div>
-              <div class="fcc-funnel__stage">Completed donations — use Donations section</div>
-            </div>
-          `}
-      </section>
-
-      <section class="fcc-section">
-        <h2 class="fcc-section__label">Content performance</h2>
-        ${emptyNote(content.note || 'Content performance tracking is not connected yet.')}
-      </section>
-    `;
-  }
-
-  /* ─── Updates ─── */
-
-  function renderUpdates() {
-    const updates = state.data?.updates || [];
-    const edit = state.updateEdit;
-    return `
-      <section class="fcc-section">
-        <div class="fcc-section__head">
-          <h2>${edit ? (edit.id ? 'Edit update' : 'New update') : 'Updates'}</h2>
-          ${can('publishUpdates') && !edit ? `
-            <button type="button" class="fcc-btn" data-action="update-new">Create update</button>
-          ` : ''}
-        </div>
-
-        ${edit ? `
-          <form class="fcc-form wide" id="fcc-update-form" style="margin-bottom:28px">
-            ${edit.id ? `<input type="hidden" name="id" value="${esc(edit.id)}">` : ''}
-            <div class="fcc-field">
-              <label for="up-title">Title</label>
-              <input id="up-title" name="title" required value="${esc(edit.title || '')}">
-            </div>
-            <div class="fcc-field">
-              <label for="up-body">Body</label>
-              <textarea id="up-body" name="body" required>${esc(edit.body || '')}</textarea>
-            </div>
-            <div class="fcc-form two-col" style="max-width:none;padding:0;border:0;background:transparent">
-              <div class="fcc-field">
-                <label for="up-type">Type</label>
-                <select id="up-type" name="type">
-                  ${['foundation', 'project', 'milestone'].map((t) => `
-                    <option value="${t}" ${(edit.type || 'foundation') === t ? 'selected' : ''}>${t}</option>
-                  `).join('')}
-                </select>
-              </div>
-              <div class="fcc-field">
-                <label for="up-status">Status</label>
-                <select id="up-status" name="status">
-                  ${['draft', 'published'].map((t) => `
-                    <option value="${t}" ${(edit.status || 'draft') === t ? 'selected' : ''}>${t}</option>
-                  `).join('')}
-                </select>
-              </div>
-            </div>
-            <div class="fcc-form-actions">
-              <button class="fcc-btn" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Saving…' : 'Save update'}</button>
-              <button class="fcc-btn-ghost" type="button" data-action="update-cancel">Cancel</button>
-            </div>
-          </form>
-        ` : ''}
-
-        ${!updates.length && !edit
-          ? emptyNote('No updates yet.')
-          : `<ul class="fcc-list">
-              ${updates.map((u) => `
-                <li class="fcc-row">
-                  <div>
-                    <p class="fcc-row__title">${esc(u.title)} <span class="fcc-pill is-${esc(u.status)}">${esc(u.status)}</span></p>
-                    <p class="fcc-row__meta">${esc((u.body || '').slice(0, 160))}${(u.body || '').length > 160 ? '…' : ''}
-                      <br>${esc(when(u.publishedAt || u.updatedAt || u.createdAt))} · ${esc(u.type || 'foundation')}
-                    </p>
-                  </div>
-                  <div class="fcc-row__actions">
-                    ${can('publishUpdates') ? `
-                      <button type="button" class="fcc-btn-ghost" data-action="update-edit" data-id="${esc(u.id)}">Edit</button>
-                      ${u.status !== 'published' ? `<button type="button" class="fcc-btn-ghost" data-action="update-publish" data-id="${esc(u.id)}">Publish</button>` : ''}
-                    ` : ''}
-                  </div>
-                </li>
-              `).join('')}
-            </ul>`}
-      </section>
-    `;
-  }
-
   /* ─── Settings ─── */
 
   function renderSettings() {
@@ -1548,8 +1325,6 @@ const FoundationControl = (() => {
   function renderSearchOverlay() {
     const res = state.searchResults;
     const groups = res ? [
-      { key: 'projects', label: 'Projects', section: 'projects' },
-      { key: 'updates', label: 'Updates', section: 'updates' },
       { key: 'cities', label: 'Cities', section: 'community' },
       { key: 'countries', label: 'Countries', section: 'donations' },
       { key: 'team', label: 'Team', section: 'settings' },
@@ -1560,7 +1335,7 @@ const FoundationControl = (() => {
         <div class="fcc-overlay__backdrop" data-action="close-search"></div>
         <div class="fcc-search__panel" role="dialog" aria-label="Search">
           <input class="fcc-search__input" id="fcc-search-input" type="search"
-            placeholder="Search projects, updates, cities…" value="${esc(state.searchQuery)}" autocomplete="off">
+            placeholder="Search cities, countries, team…" value="${esc(state.searchQuery)}" autocomplete="off">
           ${!res ? `<p class="fcc-muted" style="margin-top:14px">Type to search this Foundation.</p>` : ''}
           ${groups.map((g) => {
             const items = res[g.key] || [];
@@ -1634,11 +1409,8 @@ const FoundationControl = (() => {
     const map = {
       overview: renderOverview,
       foundation: renderFoundation,
-      projects: renderProjects,
       donations: renderDonations,
       community: renderCommunity,
-      insights: renderInsights,
-      updates: renderUpdates,
       settings: renderSettings,
     };
     const fn = map[state.section] || renderOverview;
@@ -1728,43 +1500,6 @@ const FoundationControl = (() => {
         }
       });
     }
-
-    document.getElementById('fcc-project-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const body = Object.fromEntries(fd.entries());
-      if (body.fundingGoal === '') delete body.fundingGoal;
-      state.busy = true;
-      render();
-      try {
-        await api('project-upsert', { method: 'POST', body });
-        state.projectEdit = null;
-        setFlash('Project saved');
-        await loadCenter();
-      } catch (err) {
-        setFlash(err.message || 'Failed to save project', 'err');
-        state.busy = false;
-        render();
-      }
-    });
-
-    document.getElementById('fcc-update-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const body = Object.fromEntries(fd.entries());
-      state.busy = true;
-      render();
-      try {
-        await api('update-upsert', { method: 'POST', body });
-        state.updateEdit = null;
-        setFlash(body.status === 'published' ? 'Update published' : 'Update saved');
-        await loadCenter();
-      } catch (err) {
-        setFlash(err.message || 'Failed to save update', 'err');
-        state.busy = false;
-        render();
-      }
-    });
 
     document.getElementById('fcc-team-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -1885,65 +1620,6 @@ const FoundationControl = (() => {
       return;
     }
     if (action === 'save-foundation') return saveFoundation();
-    if (action === 'project-new') {
-      state.projectEdit = { title: '', status: 'draft' };
-      render();
-      return;
-    }
-    if (action === 'project-cancel') {
-      state.projectEdit = null;
-      render();
-      return;
-    }
-    if (action === 'project-edit') {
-      const p = (state.data?.projects || []).find((x) => x.id === t.getAttribute('data-id'));
-      state.projectEdit = p ? { ...p } : null;
-      render();
-      return;
-    }
-    if (action === 'project-status') {
-      const id = t.getAttribute('data-id');
-      const status = t.getAttribute('data-status');
-      if (!confirm(`Set project status to “${status}”?`)) return;
-      try {
-        await api('project-status', { method: 'POST', body: { id, status } });
-        setFlash(`Project ${status}`);
-        await loadCenter();
-      } catch (err) {
-        setFlash(err.message || 'Status update failed', 'err');
-        render();
-      }
-      return;
-    }
-    if (action === 'update-new') {
-      state.updateEdit = { title: '', body: '', type: 'foundation', status: 'draft' };
-      render();
-      return;
-    }
-    if (action === 'update-cancel') {
-      state.updateEdit = null;
-      render();
-      return;
-    }
-    if (action === 'update-edit') {
-      const u = (state.data?.updates || []).find((x) => x.id === t.getAttribute('data-id'));
-      state.updateEdit = u ? { ...u } : null;
-      render();
-      return;
-    }
-    if (action === 'update-publish') {
-      const u = (state.data?.updates || []).find((x) => x.id === t.getAttribute('data-id'));
-      if (!u || !confirm('Publish this update?')) return;
-      try {
-        await api('update-upsert', { method: 'POST', body: { ...u, status: 'published' } });
-        setFlash('Update published');
-        await loadCenter();
-      } catch (err) {
-        setFlash(err.message || 'Publish failed', 'err');
-        render();
-      }
-      return;
-    }
     if (action === 'team-remove') {
       if (!confirm('Remove this team member?')) return;
       try {
@@ -2009,7 +1685,7 @@ const FoundationControl = (() => {
       else if (country && !city) state.drill = { type: 'country', country };
       else state.drill = null;
       if (section === 'settings') state.settingsTab = 'team';
-      go(section || 'overview');
+      go(SECTION_IDS.has(section) ? section : 'overview');
     }
   }
 

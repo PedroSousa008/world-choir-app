@@ -235,10 +235,6 @@ const WorldChoirDonate = (() => {
           <span class="df-metric__label">Supporters</span>
           <span class="df-metric__value">${esc(formatCount(foundation.uniqueSupporters || 0))}</span>
         </div>
-        <div>
-          <span class="df-metric__label">Active projects</span>
-          <span class="df-metric__value">${esc(formatCount(foundation.activeProjectCount || 0))}</span>
-        </div>
       </div>
     `;
   }
@@ -740,13 +736,10 @@ const WorldChoirDonate = (() => {
     const tags = causeTags(foundation);
     const mission = shortMission(foundation, 160);
     let statusLine = '';
-    if (foundation.activeProjectCount > 0) {
-      statusLine = `${formatCount(foundation.activeProjectCount)} active project${foundation.activeProjectCount === 1 ? '' : 's'}`;
-      if (foundation.raisedKnown && foundation.totalRaised > 0) {
-        statusLine += ` · ${formatMoney(foundation.totalRaised, CreatorFoundationsStore.getCurrency())} raised`;
-      }
-    } else if (isNewFoundation(foundation)) {
-      statusLine = 'First project coming soon.';
+    if (isNewFoundation(foundation)) {
+      statusLine = 'New Foundation.';
+    } else if (foundation.raisedKnown && foundation.totalRaised > 0) {
+      statusLine = `${formatMoney(foundation.totalRaised, CreatorFoundationsStore.getCurrency())} raised`;
     } else {
       statusLine = 'Be among the first to support this foundation.';
     }
@@ -910,42 +903,7 @@ const WorldChoirDonate = (() => {
   }
 
   function renderHappeningNow() {
-    const projects = CreatorFoundationsStore.listActiveProjects(12);
-    if (!projects.length) return '';
-
-    return `
-      <section class="df-now df-rise df-rise-delay-3" aria-labelledby="df-now-label">
-        <div class="df-now__head">
-          <div>
-            <p class="df-section-label" id="df-now-label">Happening now</p>
-            <p class="df-now__copy">Discover the projects currently creating change.</p>
-          </div>
-          <button type="button" class="df-now__link" id="df-see-projects">See all projects <span aria-hidden="true">→</span></button>
-        </div>
-        <div class="df-now__rail">
-          ${projects.map((p) => {
-            const img = p.coverImage || p.foundationCover || '';
-            const cat = CreatorFoundationsStore.normalizeCause(p.category)
-              || p.foundationCategory
-              || '';
-            return `
-              <button type="button" class="df-pcard" data-open-foundation="${esc(p.foundationId)}" data-project-id="${esc(p.id)}">
-                <span class="df-pcard__media ${img ? 'has-image' : ''}" aria-hidden="true">
-                  ${img
-                    ? `<img src="${esc(img)}" alt="">`
-                    : `<span class="df-pcard__glyph">${esc(initials(p.foundationName))}</span>`}
-                </span>
-                <span class="df-pcard__body">
-                  <span class="df-pcard__foundation">${esc(p.foundationName)}</span>
-                  <span class="df-pcard__title">${esc(p.title)}</span>
-                  ${cat ? `<span class="df-pcard__cat">${esc(cat)}</span>` : ''}
-                </span>
-              </button>
-            `;
-          }).join('')}
-        </div>
-      </section>
-    `;
+    return '';
   }
 
   function renderDiscoveryChrome() {
@@ -1303,7 +1261,6 @@ const WorldChoirDonate = (() => {
   }
 
   function renderProfile(foundation) {
-    const activeProjects = (foundation.projects || []).filter((p) => p.status === 'active');
     const values = (foundation.coreValues || []).filter(Boolean);
     const valuesHtml = values.length
       ? `<div class="df-chips">${values.map((v) => `<span class="df-chip">${esc(v)}</span>`).join('')}</div>`
@@ -1353,19 +1310,6 @@ const WorldChoirDonate = (() => {
         ${storySections.length ? `
           <section class="df-fp-block df-fp-stories" aria-label="Foundation story">
             ${storySections.map((s, i) => renderStorySection({ ...s, open: i === 0 })).join('')}
-          </section>
-        ` : ''}
-
-        ${activeProjects.length ? `
-          <section class="df-fp-block df-fp-projects">
-            <p class="df-fp-kicker">Active Projects</p>
-            <div class="df-fp-projects__scroller" role="list">
-              ${activeProjects.map((p) => `
-                <div class="df-fp-projects__item" role="listitem">
-                  ${renderProjectCard(p, foundation)}
-                </div>
-              `).join('')}
-            </div>
           </section>
         ` : ''}
 
@@ -1724,7 +1668,7 @@ const WorldChoirDonate = (() => {
         <h1 class="df-confirm__title">Thank you for supporting ${esc(firstName)}'s mission.</h1>
         <p class="df-confirm__copy">
           Your generosity helps transform compassion into action.
-          You'll be able to follow the progress of the projects you helped make possible.
+          You'll be able to follow the progress of the work you helped make possible.
         </p>
         <p class="df-confirm__meta">${formatMoney(amount)} · ${esc(foundation.foundationName)}</p>
         <p class="df-confirm__note">
