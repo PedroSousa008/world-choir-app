@@ -58,8 +58,8 @@ const WorldChoirNav = (() => {
     ],
     'daily-acts': [
       'daily-acts.html',
-      'css/daily-acts-page.css?v=20260819b',
-      'js/daily-acts-page.js?v=20260819b',
+      'css/daily-acts-page.css?v=20260819c',
+      'js/daily-acts-page.js?v=20260819c',
     ],
   };
 

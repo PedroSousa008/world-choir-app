@@ -347,6 +347,8 @@ const DailyActsPage = (() => {
           class="dap-sheet__panel-bg-image"
           src="/images/daily-acts/daily-act-background.jpg"
           alt=""
+          width="1200"
+          height="750"
           decoding="async"
           loading="lazy"
           onerror="this.hidden=true"

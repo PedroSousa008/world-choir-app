@@ -409,7 +409,10 @@
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-/* ── Atmospheric act card background ── */
+/* ── Atmospheric act card background ──
+   Asset: /images/daily-acts/daily-act-background.jpg
+   Export: 1200 × 750 px (3:2), JPG/WebP ~150–350 KB
+   Compose focal point at horizontal center, ~62% from top; keep edges dark/soft. */
 
 .dap-sheet--atmospheric .dap-sheet__panel {
   display: flex;
@@ -430,9 +433,10 @@
 .dap-sheet__panel-bg-image {
   position: absolute;
   left: 50%;
-  top: 34%;
-  width: 120%;
-  height: 56%;
+  top: 32%;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  height: auto;
   transform: translateX(-50%);
   object-fit: cover;
   object-position: center 62%;
@@ -482,7 +486,6 @@
 @media (max-width: 480px) {
   .dap-sheet__panel-bg-image {
     top: 28%;
-    height: 62%;
     opacity: 0.6;
   }
 
