@@ -213,11 +213,31 @@ const WorldChoirMap = (() => {
       maxBoundsViscosity: 1.0,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+    const tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+    const tileOpts = {
       subdomains: 'abcd',
-      maxZoom: 19,
       noWrap: true,
       bounds: [[-85, -180], [85, 180]],
+    };
+
+    // Always-on low-res underlay: during zoom-out, gaps show map tiles instead of black.
+    L.tileLayer(tileUrl, {
+      ...tileOpts,
+      minZoom: 2,
+      maxZoom: 2,
+      className: 'map-tile-layer map-tile-layer--base',
+      updateWhenZooming: false,
+      updateWhenIdle: true,
+    }).addTo(map);
+
+    L.tileLayer(tileUrl, {
+      ...tileOpts,
+      minZoom: 2,
+      maxZoom: 19,
+      className: 'map-tile-layer map-tile-layer--detail',
+      updateWhenZooming: true,
+      updateWhenIdle: true,
+      keepBuffer: 4,
     }).addTo(map);
 
     cityLightsLayer = L.layerGroup().addTo(map);
