@@ -321,18 +321,20 @@
   color: var(--accent-aurora);
 }
 
-/* =========================================================
-   Practice Mode — full-screen cinematic redesign
-   ========================================================= */
+/* ═══════════════════════════════════════════════════════════════════
+   PRACTICE MODE — Premium World Choir visual redesign
+   All functional logic is preserved in the JS layer.
+   Only the visual presentation is updated here.
+   ═══════════════════════════════════════════════════════════════════ */
 
+/* ─── Overlay container ─── */
 .practice-mode {
   position: fixed;
   inset: 0;
   z-index: 300;
-  background: #000e1a;
+  background: #020508;
   display: none;
   flex-direction: column;
-  align-items: stretch;
   overflow: hidden;
 }
 
@@ -340,118 +342,41 @@
   display: flex;
 }
 
-/* Background image layer */
+/* Ambient keeps the existing JS-injected element intact (no-op visually now) */
 .practice-mode__ambient {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background-image: url('/images/practice/practice-song-background.webp');
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
+  display: none;
 }
 
-/* Dark atmospheric overlay — always present so UI stays legible even without image */
-.practice-mode__ambient::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(to bottom,
-      rgba(0, 8, 20, 0.72) 0%,
-      rgba(0, 8, 20, 0.45) 30%,
-      rgba(0, 8, 20, 0.50) 60%,
-      rgba(0, 8, 20, 0.92) 100%
-    ),
-    radial-gradient(ellipse 70% 50% at 50% 38%, rgba(61, 124, 255, 0.10) 0%, transparent 70%);
-}
-
-/* ---- World Choir logo header ---- */
-.practice-logo {
-  position: absolute;
-  top: max(env(safe-area-inset-top, 0px), 12px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  pointer-events: none;
-}
-
-.practice-logo__img {
-  width: min(56px, 14vw);
-  height: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 0 16px rgba(61, 124, 255, 0.35));
-}
-
-.practice-logo__wordmark {
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(244, 244, 246, 0.55);
-}
-
-/* ---- Content area (lyrics mount point) ---- */
-#practice-mode-content {
-  position: relative;
-  z-index: 1;
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-}
-
-/* ---- Controls mount point ---- */
-#practice-controls {
-  position: relative;
-  z-index: 2;
-  flex: 0 0 auto;
-}
-
-/* ---- practice-ui wrapper (injected by showControls) ---- */
-.practice-ui {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-/* ---- Close button ---- */
-.practice-close-btn {
-  position: absolute;
-  top: max(env(safe-area-inset-top, 0px), 10px);
-  right: max(env(safe-area-inset-right, 0px), 16px);
-  z-index: 10;
+/* ─── Close X (floated top-right, injected by JS) ─── */
+.pm-close-x {
+  position: fixed;
+  top: max(env(safe-area-inset-top, 16px), 16px);
+  right: max(env(safe-area-inset-right, 20px), 20px);
+  z-index: 400;
   width: 44px;
   height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  background: none;
   border: none;
-  color: rgba(244, 244, 246, 0.65);
   cursor: pointer;
-  transition: color 0.25s ease, opacity 0.25s ease;
+  color: rgba(244, 244, 246, 0.55);
   padding: 0;
+  transition: color 0.2s ease, opacity 0.2s ease;
 }
 
-.practice-close-btn:hover,
-.practice-close-btn:focus-visible {
+.pm-close-x:hover,
+.pm-close-x:focus-visible {
   color: var(--text-primary);
   outline: none;
 }
 
-.practice-close-btn:active {
-  opacity: 0.6;
+.pm-close-x:active {
+  opacity: 0.5;
 }
 
-/* ---- Countdown ---- */
+/* ─── Countdown ─── */
 .practice-countdown {
   position: relative;
   z-index: 1;
@@ -459,7 +384,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 100%;
+  flex: 1;
 }
 
 .practice-countdown__number {
@@ -468,286 +393,391 @@
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
   text-shadow:
-    0 0 60px rgba(61, 124, 255, 0.55),
-    0 0 120px rgba(107, 92, 231, 0.35);
+    0 0 60px rgba(61, 124, 255, 0.5),
+    0 0 120px rgba(107, 92, 231, 0.3);
   animation: countdownPulse 1s ease-in-out;
 }
 
 @keyframes countdownPulse {
-  0%   { opacity: 0; transform: scale(0.6); }
-  30%  { opacity: 1; transform: scale(1.05); }
-  70%  { opacity: 1; transform: scale(1); }
+  0% { opacity: 0; transform: scale(0.6); }
+  30% { opacity: 1; transform: scale(1.05); }
+  70% { opacity: 1; transform: scale(1); }
   100% { opacity: 0.3; transform: scale(0.95); }
 }
 
-/* ---- Lyrics playing view ---- */
+/* ─── Playing shell ─── */
 .practice-playing {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   width: 100%;
-  height: 100%;
-  padding: 96px 28px 24px;
+  min-height: 100%;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-.lyrics-display {
-  text-align: center;
-  max-width: 420px;
+/* ─── Background image ─── */
+.pm-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: url('/images/practice/practice-song-background.webp');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  /* Fallback when image is missing: deep navy atmosphere */
+  background-color: #020810;
+}
+
+.pm-bg__overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom,
+      rgba(2, 5, 12, 0.72) 0%,
+      rgba(2, 5, 12, 0.45) 30%,
+      rgba(2, 5, 12, 0.45) 60%,
+      rgba(2, 5, 12, 0.88) 85%,
+      rgba(2, 5, 12, 0.97) 100%
+    );
+}
+
+/* ─── Header / Logo ─── */
+.pm-header {
+  position: relative;
+  z-index: 2;
   width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 20px 60px 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.pm-logo {
+  display: block;
+  width: min(100px, 26vw);
+  height: auto;
+  object-fit: contain;
+  opacity: 0.9;
+}
+
+/* ─── Lyrics hero ─── */
+.pm-lyrics {
+  position: relative;
+  z-index: 2;
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  justify-content: center;
+  width: 100%;
+  padding: 24px 40px;
+  box-sizing: border-box;
+  text-align: center;
+  min-height: 0;
 }
 
-/* Row containing waveforms + active lyric */
-.lyrics-display__row {
+/* Very subtle radial blue illumination behind active lyric */
+.pm-lyrics__radial {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 40% at 50% 50%, rgba(61, 124, 255, 0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Row: waveform accent + current lyric + waveform accent */
+.pm-lyrics__row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 12px;
   width: 100%;
-  margin: 12px 0;
+  margin: 10px 0;
 }
 
-.lyrics-display__wave {
-  color: var(--accent-blue);
-  opacity: 0.55;
-  flex-shrink: 0;
+/* ─── Decorative waveform accents ─── */
+.pm-waveform {
   display: flex;
   align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.pm-waveform--left {
+  flex-direction: row-reverse;
+}
+
+.pm-waveform__bar {
+  display: block;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent-blue);
+  opacity: 0.45;
+}
+
+/* Three bars at different heights (purely decorative) */
+.pm-waveform__bar:nth-child(1) { height: 10px; }
+.pm-waveform__bar:nth-child(2) { height: 16px; opacity: 0.6; }
+.pm-waveform__bar:nth-child(3) { height: 8px; }
+
+/* ─── Lyric typography ─── */
+.lyrics-display__current {
+  font-size: clamp(1.3rem, 4.5vw, 1.85rem);
+  font-weight: 600;
+  color: var(--accent-blue);
+  line-height: 1.35;
+  min-height: 2.7em;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-shadow:
+    0 0 28px rgba(61, 124, 255, 0.45),
+    0 0 60px rgba(61, 124, 255, 0.2);
+  transition: opacity 0.3s ease;
+}
+
+.lyrics-display__current.is-active {
+  animation: lyricFadeIn 0.45s ease;
+}
+
+@keyframes lyricFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .lyrics-display__prev,
 .lyrics-display__next {
-  font-size: clamp(0.9rem, 2.5vw, 1.05rem);
-  font-weight: 400;
-  color: var(--text-muted);
-  opacity: 0.45;
+  font-size: clamp(0.85rem, 2.8vw, 1.05rem);
+  color: var(--text-secondary);
+  opacity: 0.38;
   line-height: 1.5;
   min-height: 1.5em;
+  width: 100%;
   transition: opacity 0.4s ease;
-  padding: 0 8px;
 }
 
-.lyrics-display__current {
-  flex: 1;
-  font-size: clamp(1.35rem, 4.5vw, 1.85rem);
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.35;
-  min-height: 2.6em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
+.lyrics-display__prev { margin-bottom: 2px; }
+.lyrics-display__next { margin-top: 2px; }
 
-.lyrics-display__current.is-active {
-  color: var(--accent-blue);
-  text-shadow:
-    0 0 28px rgba(61, 124, 255, 0.55),
-    0 0 56px rgba(61, 124, 255, 0.25);
-  animation: lyricFadeIn 0.5s ease;
-}
-
-@keyframes lyricFadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ---- Player panel (progress + song info + controls) ---- */
-.practice-player-panel {
-  width: 100%;
-  padding: 16px 24px calc(8px + env(safe-area-inset-bottom, 0px));
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-/* Progress bar */
-.practice-progress {
-  width: 100%;
-}
-
-.practice-progress__track {
+/* ─── Progress bar ─── */
+.pm-progress-wrap {
   position: relative;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 2px;
-  margin-bottom: 8px;
-}
-
-.practice-progress__fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  background: var(--accent-blue);
-  border-radius: 2px;
-  width: 0%;
-  transition: width 0.25s linear;
-}
-
-.practice-progress__thumb {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
-  background: var(--text-primary);
-  border: 2px solid var(--accent-blue);
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(61, 124, 255, 0.5);
-  left: 0%;
-  transition: left 0.25s linear;
-}
-
-.practice-progress__times {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-}
-
-/* Song info */
-.practice-song-info {
-  text-align: center;
-}
-
-.practice-song-info__title {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-  margin-bottom: 2px;
-}
-
-.practice-song-info__artist {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  font-weight: 400;
-}
-
-/* Playback controls */
-.practice-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 28px;
-}
-
-.practice-controls__btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: rgba(244, 244, 246, 0.7);
-  cursor: pointer;
-  transition: color 0.25s ease, transform 0.2s ease;
-  padding: 0;
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: 50%;
-}
-
-.practice-controls__btn--secondary {
-  width: 44px;
-  height: 44px;
-}
-
-.practice-controls__btn--secondary:hover,
-.practice-controls__btn--secondary:focus-visible {
-  color: var(--text-primary);
-  outline: none;
-}
-
-.practice-controls__btn--primary {
-  width: 64px;
-  height: 64px;
-  background: rgba(61, 124, 255, 0.08);
-  border: 1.5px solid rgba(61, 124, 255, 0.45);
-  box-shadow: 0 0 18px rgba(61, 124, 255, 0.2);
-  color: var(--text-primary);
-}
-
-.practice-controls__btn--primary:hover,
-.practice-controls__btn--primary:focus-visible {
-  background: rgba(61, 124, 255, 0.16);
-  border-color: rgba(61, 124, 255, 0.7);
-  box-shadow: 0 0 28px rgba(61, 124, 255, 0.35);
-  outline: none;
-}
-
-.practice-controls__btn:active {
-  transform: scale(0.92);
-}
-
-/* ---- Bottom community panel ---- */
-.practice-panel {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
-  background: rgba(0, 8, 20, 0.72);
-  border-top: 1px solid rgba(61, 124, 255, 0.10);
-  backdrop-filter: blur(12px);
-}
-
-.practice-panel__waveform {
-  color: var(--accent-blue);
-  opacity: 0.6;
+  z-index: 2;
+  width: 100%;
+  padding: 0 28px;
+  box-sizing: border-box;
   flex-shrink: 0;
 }
 
-.practice-panel__text {
+.pm-progress-bar {
+  position: relative;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: visible;
+  cursor: default;
+}
+
+.pm-progress-bar__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: var(--accent-blue);
+  border-radius: 3px;
+  transition: width 0.25s linear;
+}
+
+.pm-progress-bar__thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px rgba(61, 124, 255, 0.6);
+  transition: left 0.25s linear;
+}
+
+.pm-progress-times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.pm-time {
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ─── Song info ─── */
+.pm-song-info {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 14px 28px 4px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.pm-song-info__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin: 0 0 3px;
+}
+
+.pm-song-info__artist {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Playback controls ─── */
+.pm-controls {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 16px 28px 12px;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pm-controls__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.pm-controls__btn--secondary {
+  color: rgba(244, 244, 246, 0.5);
+}
+
+.pm-controls__btn--secondary:hover,
+.pm-controls__btn--secondary:focus-visible {
+  color: var(--text-primary);
+  outline: none;
+}
+
+.pm-controls__btn--secondary:active {
+  opacity: 0.5;
+}
+
+.pm-controls__btn--primary {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 1px solid rgba(61, 124, 255, 0.4);
+  background: rgba(61, 124, 255, 0.08);
+  color: var(--accent-blue);
+  box-shadow: 0 0 20px rgba(61, 124, 255, 0.2);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pm-controls__btn--primary:hover,
+.pm-controls__btn--primary:focus-visible {
+  background: rgba(61, 124, 255, 0.18);
+  box-shadow: 0 0 30px rgba(61, 124, 255, 0.35);
+  outline: none;
+}
+
+.pm-controls__btn--primary:active {
+  opacity: 0.7;
+}
+
+/* ─── Bottom community panel ─── */
+.pm-community {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 24px max(env(safe-area-inset-bottom, 16px), 16px);
+  box-sizing: border-box;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.pm-community__left {
+  flex-shrink: 0;
+  color: var(--accent-blue);
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+}
+
+.pm-community__center {
   flex: 1;
   min-width: 0;
 }
 
-.practice-panel__label {
-  font-size: 0.78rem;
+.pm-community__title {
+  font-size: 0.7rem;
   font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: 0.02em;
-  margin-bottom: 1px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+  opacity: 0.7;
+  margin: 0 0 2px;
 }
 
-.practice-panel__sub {
+.pm-community__primary {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 0 1px;
+}
+
+.pm-community__secondary {
   font-size: 0.72rem;
   color: var(--text-muted);
-  line-height: 1.4;
+  margin: 0;
 }
 
-.practice-panel__voices {
+.pm-community__right {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  color: var(--accent-aurora);
+  gap: 3px;
+  color: var(--text-muted);
 }
 
-.practice-panel__voices-text {
+.pm-community__count {
   font-size: 0.72rem;
-  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
-  text-align: center;
-  white-space: nowrap;
+  font-weight: 500;
 }
 
-.practice-panel__voices-loading {
-  opacity: 0.5;
-}
-
-/* ---- Practice complete ---- */
+/* ─── Practice complete ─── */
 .practice-complete {
   position: relative;
   z-index: 1;
@@ -776,7 +806,7 @@
   margin: 0 auto;
 }
 
-/* ---- Practice error ---- */
+/* ─── Practice error ─── */
 .practice-error {
   position: relative;
   z-index: 1;
