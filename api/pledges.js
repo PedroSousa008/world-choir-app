@@ -1,4 +1,4 @@
-const { listPledges, mapPledgeRow, jsonStorageError } = require('./_lib/store');
+const { listPledges, getPledgesMeta, mapPledgeRow, jsonStorageError } = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -11,6 +11,12 @@ module.exports = async function handler(req, res) {
 
   try {
     const eventId = req.query.eventId || 'world-choir-2027';
+
+    if (req.query.meta === '1') {
+      const meta = await getPledgesMeta(eventId);
+      return res.status(200).json(meta);
+    }
+
     const pledges = await listPledges(eventId);
 
     return res.status(200).json({

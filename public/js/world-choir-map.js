@@ -7,6 +7,25 @@ const WorldChoirMap = (() => {
   let cityLightsLayer = null;
   let gatheringLayer = null;
   let pulseCityKey = null;
+  let pulseClearTimer = null;
+
+  function pulseCity(key, durationMs = 3000) {
+    if (!key) return;
+    pulseCityKey = key;
+    refreshMapData();
+    if (pulseClearTimer) clearTimeout(pulseClearTimer);
+    pulseClearTimer = setTimeout(() => {
+      if (pulseCityKey === key) {
+        pulseCityKey = null;
+        refreshMapData();
+      }
+    }, durationMs);
+  }
+
+  function pickPulseCity(detail = {}) {
+    const { newCityKeys = [], grownCityKeys = [] } = detail;
+    return newCityKeys[0] || grownCityKeys[0] || null;
+  }
 
   function clamp(v, min, max) {
     return Math.max(min, Math.min(max, v));
@@ -289,9 +308,7 @@ const WorldChoirMap = (() => {
     updateCountdown();
     setInterval(updateCountdown, 1000);
 
-    setInterval(() => {
-      WorldChoirDB.syncAllPledges().then(refreshMapData).catch(() => refreshMapData());
-    }, 15000);
+    WorldChoirDB.startLiveSync({ intervalMs: 2000 });
 
     WorldChoirParticipation.init({
       onSuccess: onParticipationSuccess,
@@ -312,19 +329,16 @@ const WorldChoirMap = (() => {
     });
 
     window.addEventListener('wc-pledge-added', (e) => {
-      const key = `${e.detail?.city}|${e.detail?.country}`;
-      pulseCityKey = key;
-      refreshMapData();
-      setTimeout(() => {
-        if (pulseCityKey === key) {
-          pulseCityKey = null;
-          refreshMapData();
-        }
-      }, 3000);
+      pulseCity(`${e.detail?.city}|${e.detail?.country}`);
     });
     window.addEventListener('wc-pledge-updated', refreshMapData);
     window.addEventListener('wc-pledges-synced', refreshMapData);
     window.addEventListener('wc-map-data-state', refreshMapData);
+    window.addEventListener('wc-voices-live-update', (e) => {
+      const key = pickPulseCity(e.detail);
+      if (key) pulseCity(key);
+      else refreshMapData();
+    });
 
     checkVoiceJoinedFromSession();
   }

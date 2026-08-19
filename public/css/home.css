@@ -46,9 +46,19 @@
   animation: homeVoicesPulse 1.6s ease-in-out infinite;
 }
 
+.home-voices-counter--bump {
+  animation: homeVoicesBump 0.55s ease-out;
+}
+
 @keyframes homeVoicesPulse {
   0%, 100% { opacity: 0.42; }
   50% { opacity: 0.68; }
+}
+
+@keyframes homeVoicesBump {
+  0% { transform: scale(1); opacity: 1; }
+  35% { transform: scale(1.06); opacity: 1; color: var(--accent-blue); }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .home-brand {

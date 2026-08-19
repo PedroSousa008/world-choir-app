@@ -108,8 +108,15 @@ const WorldChoirHome = (() => {
     if (!el || !isPreEvent() || LiveEventMode.isActive()) return;
 
     const { text, loading } = getVoicesCounterContent();
+    const prev = el.textContent;
     el.textContent = text;
     el.classList.toggle('home-voices-counter--loading', loading);
+
+    if (!loading && text !== prev && prev !== 'LOADING VOICES') {
+      el.classList.remove('home-voices-counter--bump');
+      void el.offsetWidth;
+      el.classList.add('home-voices-counter--bump');
+    }
   }
 
   function renderPledgeButton() {
@@ -302,6 +309,9 @@ const WorldChoirHome = (() => {
     window.addEventListener('wc-pledges-synced', updateVoicesCounter);
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
     window.addEventListener('wc-pledge-added', updateVoicesCounter);
+    window.addEventListener('wc-voices-live-update', updateVoicesCounter);
+
+    WorldChoirDB.startLiveSync({ intervalMs: 2000 });
 
     LiveEventMode.init();
     render();

@@ -513,6 +513,34 @@ async function listPledges(eventId) {
   return reconcilePledges(trimmedEvent);
 }
 
+/** Lightweight change detector for live sync — avoids full pledge payloads when nothing changed. */
+async function getPledgesMeta(eventId) {
+  assertBlobConfigured();
+  const trimmedEvent = String(eventId).trim();
+  try {
+    const index = await readBlobJson(pledgesIndexPath(trimmedEvent));
+    if (index && typeof index.count === 'number') {
+      return {
+        count: index.count,
+        updated_at: index.updated_at || null,
+      };
+    }
+    if (Array.isArray(index?.pledges)) {
+      return {
+        count: index.pledges.length,
+        updated_at: index.updated_at || null,
+      };
+    }
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+  }
+  const pledges = await listPledges(trimmedEvent);
+  return {
+    count: pledges.length,
+    updated_at: new Date().toISOString(),
+  };
+}
+
 async function listAllUsers() {
   assertBlobConfigured();
   const blobs = await listBlobs(`${ROOT}/users-by-device/`);
@@ -646,6 +674,7 @@ module.exports = {
   joinWorldChoir,
   updatePledgeLocation,
   listPledges,
+  getPledgesMeta,
   findUserByDevice,
   readPledge,
   savePromise,

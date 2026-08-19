@@ -17,6 +17,14 @@ const WorldChoirDB = (() => {
   let cachedPledges = undefined;
   let pledgesLoadError = null;
   let bootstrapPromise = null;
+  let liveSyncTimer = null;
+  let liveSyncStarted = false;
+  let liveSyncInFlight = false;
+  let lastMetaSignature = null;
+  let lastCitySnapshot = null;
+  let lastVoiceCount = null;
+
+  const LIVE_SYNC_INTERVAL_MS = 2000;
 
   function apiBase() {
     return '';
@@ -88,6 +96,8 @@ const WorldChoirDB = (() => {
       const data = await apiFetch(`/api/pledges?eventId=${encodeURIComponent(eventId)}`);
       cachedPledges = data.pledges || [];
       pledgesLoadError = null;
+      lastCitySnapshot = buildCitySnapshot(eventId);
+      lastVoiceCount = getMapStats(eventId)?.voices ?? cachedPledges.length;
       window.dispatchEvent(new CustomEvent('wc-pledges-synced', { detail: cachedPledges }));
       window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
       return cachedPledges;
@@ -98,6 +108,109 @@ const WorldChoirDB = (() => {
       }
       throw err;
     }
+  }
+
+  function buildCitySnapshot(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const map = new Map();
+    if (!isPledgesLoaded()) return map;
+    getAggregatedCities(eventId).forEach((c) => {
+      map.set(`${c.city}|${c.country}`, c.count);
+    });
+    return map;
+  }
+
+  function metaSignature(meta) {
+    if (!meta) return '';
+    return `${meta.count}|${meta.updated_at || ''}`;
+  }
+
+  async function fetchPledgesMeta(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    return apiFetch(`/api/pledges?eventId=${encodeURIComponent(eventId)}&meta=1`);
+  }
+
+  function dispatchLiveUpdate(prevSnapshot, nextSnapshot, eventId, prevVoiceCount) {
+    if (!prevSnapshot || !nextSnapshot) return;
+
+    const newCityKeys = [];
+    const grownCityKeys = [];
+    nextSnapshot.forEach((count, key) => {
+      if (!prevSnapshot.has(key)) newCityKeys.push(key);
+      else if (count > prevSnapshot.get(key)) grownCityKeys.push(key);
+    });
+
+    const stats = getMapStats(eventId);
+    const voices = stats?.voices ?? null;
+    const voiceDelta = voices != null && prevVoiceCount != null ? voices - prevVoiceCount : 0;
+
+    if (!newCityKeys.length && !grownCityKeys.length && voiceDelta <= 0) return;
+
+    window.dispatchEvent(new CustomEvent('wc-voices-live-update', {
+      detail: {
+        newCityKeys,
+        grownCityKeys,
+        stats,
+        voiceDelta,
+      },
+    }));
+  }
+
+  async function syncAllPledgesIfChanged(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const meta = await fetchPledgesMeta(eventId);
+    const sig = metaSignature(meta);
+    if (sig === lastMetaSignature && isPledgesLoaded()) {
+      return { changed: false };
+    }
+
+    const prevSnapshot = lastCitySnapshot ? new Map(lastCitySnapshot) : null;
+    const prevVoiceCount = lastVoiceCount;
+    lastMetaSignature = sig;
+    await syncAllPledges(eventId);
+    dispatchLiveUpdate(prevSnapshot, lastCitySnapshot, eventId, prevVoiceCount);
+    return { changed: true };
+  }
+
+  function startLiveSync(options = {}) {
+    const intervalMs = options.intervalMs ?? LIVE_SYNC_INTERVAL_MS;
+    if (liveSyncStarted) return;
+    liveSyncStarted = true;
+
+    const tick = () => {
+      if (document.hidden || liveSyncInFlight) return;
+      liveSyncInFlight = true;
+      syncAllPledgesIfChanged()
+        .catch(() => {})
+        .finally(() => { liveSyncInFlight = false; });
+    };
+
+    const arm = () => {
+      tick();
+      liveSyncTimer = setInterval(tick, intervalMs);
+    };
+
+    ready()
+      .then(async () => {
+        try {
+          const meta = await fetchPledgesMeta();
+          lastMetaSignature = metaSignature(meta);
+        } catch {
+          /* first full sync will establish signature */
+        }
+        lastCitySnapshot = buildCitySnapshot();
+        lastVoiceCount = getMapStats()?.voices ?? null;
+        arm();
+      })
+      .catch(arm);
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) tick();
+    });
+  }
+
+  function stopLiveSync() {
+    if (liveSyncTimer) clearInterval(liveSyncTimer);
+    liveSyncTimer = null;
+    liveSyncStarted = false;
+    liveSyncInFlight = false;
   }
 
   async function bootstrap() {
@@ -565,6 +678,9 @@ const WorldChoirDB = (() => {
     ready,
     bootstrap,
     syncAllPledges,
+    syncAllPledgesIfChanged,
+    startLiveSync,
+    stopLiveSync,
     syncMyPledge,
     getDeviceId,
     getOrCreateUser,
