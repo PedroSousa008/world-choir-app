@@ -12,6 +12,41 @@ const FoundationControl = (() => {
     { id: 'settings', label: 'Settings' },
   ];
   const RETIRED_SECTIONS = new Set(['projects', 'insights', 'updates']);
+  const FOUNDATION_TABS = new Set(['page', 'card', 'information']);
+  const FOUNDATION_CAUSES = ['Food & Hunger', 'Health', 'Education', 'Humanitarian Aid', 'Environment'];
+  const COUNTRIES = [
+    'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Belgium',
+    'Brazil', 'Canada', 'Chile', 'China', 'Colombia', 'Croatia', 'Czech Republic',
+    'Denmark', 'Egypt', 'Finland', 'France', 'Germany', 'Greece', 'Hungary',
+    'India', 'Indonesia', 'Ireland', 'Israel', 'Italy', 'Japan', 'Kenya',
+    'Mexico', 'Morocco', 'Netherlands', 'New Zealand', 'Nigeria', 'Norway',
+    'Philippines', 'Poland', 'Portugal', 'Romania', 'Russia', 'Saudi Arabia',
+    'Singapore', 'South Africa', 'South Korea', 'Spain', 'Sweden', 'Switzerland',
+    'Thailand', 'Turkey', 'Ukraine', 'United Arab Emirates', 'United Kingdom',
+    'United States', 'Vietnam',
+  ];
+  const CAUSE_DETAILS = {
+    'Food & Hunger': {
+      icon: 'food',
+      description: 'Nourishing people and communities facing scarcity.',
+    },
+    Health: {
+      icon: 'health',
+      description: 'Supporting care, healing, and wellbeing.',
+    },
+    Education: {
+      icon: 'education',
+      description: 'Opening doors to learning and opportunity.',
+    },
+    'Humanitarian Aid': {
+      icon: 'aid',
+      description: 'Providing immediate relief and long-term support to communities in need.',
+    },
+    Environment: {
+      icon: 'env',
+      description: 'Protecting the living world we share.',
+    },
+  };
   const WORLD_CHOIR_LOGO = 'images/world-choir-logo.png?v=20270706';
   // This is the global Foundation Overview hero background used for every Foundation Control Center.
   // Replace public/images/foundation/foundation-overview-hero-background.png to update every Overview.
@@ -62,7 +97,9 @@ const FoundationControl = (() => {
     if (!SECTION_IDS.has(parts[0])) return;
     state.section = parts[0];
     if (parts[1] && parts[0] === 'settings') state.settingsTab = parts[1];
-    if (parts[1] && parts[0] === 'foundation') state.foundationTab = parts[1];
+    if (parts[1] && parts[0] === 'foundation') {
+      state.foundationTab = FOUNDATION_TABS.has(parts[1]) ? parts[1] : 'page';
+    }
   }
 
   function syncRoute() {
@@ -151,7 +188,7 @@ const FoundationControl = (() => {
 
   function flashHtml() {
     if (!state.flash) return '';
-    return `<div class="fcc-flash is-${esc(state.flash.type)}">${esc(state.flash.message)}</div>`;
+    return `<div class="fcc-flash is-${esc(state.flash.type)}" role="status">${esc(state.flash.message)}</div>`;
   }
 
   function currency() {
@@ -415,7 +452,7 @@ const FoundationControl = (() => {
     const f = state.data?.foundation?.name || 'your Foundation';
     const map = {
       overview: `Command view for ${f}.`,
-      foundation: 'Edit page, card, and public information with live preview.',
+      foundation: "Shape your foundation's story and public profile.",
       donations: 'Verified donations for this Foundation only.',
       community: 'Supporters and where they gather.',
       settings: 'Foundation, team, financial, and security.',
@@ -427,7 +464,9 @@ const FoundationControl = (() => {
     state.section = SECTION_IDS.has(section) ? section : 'overview';
     state.navOpen = false;
     if (opts.drill !== undefined) state.drill = opts.drill;
-    if (opts.foundationTab) state.foundationTab = opts.foundationTab;
+    if (opts.foundationTab) {
+      state.foundationTab = FOUNDATION_TABS.has(opts.foundationTab) ? opts.foundationTab : 'page';
+    }
     if (opts.settingsTab) state.settingsTab = opts.settingsTab;
     if (!opts.keepMap) state.mapOpen = false;
     state.flash = null;
@@ -617,94 +656,217 @@ const FoundationControl = (() => {
 
   /* ─── Foundation editor ─── */
 
+  function causeIconSvg(kind) {
+    const common = 'viewBox="0 0 24 24" aria-hidden="true"';
+    const icons = {
+      food: `<svg ${common}><path d="M8 3v8a4 4 0 008 0V3"/><path d="M12 11v10" stroke-linecap="round"/></svg>`,
+      health: `<svg ${common}><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 11c0 5.5-7 10-7 10z"/></svg>`,
+      education: `<svg ${common}><path d="M3 9l9-5 9 5-9 5-9-5z"/><path d="M7 12v5c0 1.5 2.5 3 5 3s5-1.5 5-3v-5"/></svg>`,
+      aid: `<svg ${common}><path d="M12 3v18M3 12h18" stroke-linecap="round"/><circle cx="12" cy="12" r="8"/></svg>`,
+      env: `<svg ${common}><path d="M12 21c4-4 6-7.5 6-11a6 6 0 10-12 0c0 3.5 2 7 6 11z"/><path d="M12 10v4" stroke-linecap="round"/></svg>`,
+    };
+    return icons[kind] || icons.aid;
+  }
+
+  function countryOptions(current) {
+    const list = COUNTRIES.slice();
+    const value = String(current || '').trim();
+    if (value && !list.includes(value)) list.unshift(value);
+    return list;
+  }
+
+  function previewFoundation() {
+    const form = state.foundationForm || {};
+    const persisted = state.data?.foundation || {};
+    const overview = state.data?.overview || {};
+    const donations = state.data?.donations || {};
+    const category = form.category || persisted.category || persisted.primaryCategory || '';
+    const totalRaised = Number(overview.totalRaised ?? donations.totalRaised ?? 0);
+    const uniqueSupporters = Number(overview.totalSupporters ?? donations.totalSupporters ?? 0);
+    return {
+      id: persisted.id,
+      foundationName: form.foundationName,
+      creatorName: form.creatorName,
+      country: form.country,
+      mission: form.mission,
+      primaryCategory: category,
+      categories: category ? [category] : [],
+      coverImage: form.coverImage,
+      profileImage: form.profileImage,
+      totalRaised,
+      uniqueSupporters,
+      raisedKnown: totalRaised > 0,
+      activeProjectCount: 0,
+      currency: state.data?.currency || 'EUR',
+    };
+  }
+
+  function renderLivePreviewCard() {
+    if (typeof FoundationPublicCard === 'undefined') return '';
+    return FoundationPublicCard.render(previewFoundation(), {
+      interactive: false,
+      currency: state.data?.currency || 'EUR',
+    });
+  }
+
+  function refreshLivePreview() {
+    const card = document.getElementById('fcc-live-preview-card');
+    if (!card || state.foundationTab !== 'page') return;
+    card.innerHTML = renderLivePreviewCard();
+  }
+
   function renderFoundation() {
     const form = state.foundationForm || {};
-    const tab = state.foundationTab;
+    const tab = FOUNDATION_TABS.has(state.foundationTab) ? state.foundationTab : 'page';
     const dirty = state.foundationDirty;
-
     const tabs = [
       { id: 'page', label: 'Page' },
       { id: 'card', label: 'Card' },
       { id: 'information', label: 'Information' },
-      { id: 'preview', label: 'Preview' },
     ];
 
     return `
-      <section class="fcc-section">
+      <section class="fcc-section fcc-foundation-editor">
         <div class="fcc-section__head">
-          <div class="fcc-tabs">
+          <div class="fcc-tabs" role="tablist" aria-label="Foundation editor">
             ${tabs.map((t) => `
-              <button type="button" class="fcc-tab ${tab === t.id ? 'is-active' : ''}" data-ftab="${t.id}">${esc(t.label)}</button>
+              <button type="button" class="fcc-tab ${tab === t.id ? 'is-active' : ''}" data-ftab="${t.id}"
+                role="tab" aria-selected="${tab === t.id ? 'true' : 'false'}">${esc(t.label)}</button>
             `).join('')}
           </div>
           <div class="fcc-actions">
             ${dirty ? '<span class="fcc-unsaved">Unsaved changes</span>' : ''}
             ${can('editFoundation') ? `
-              <button type="button" class="fcc-btn" data-action="save-foundation" ${state.busy ? 'disabled' : ''}>
+              <button type="button" class="fcc-btn" data-action="save-foundation" ${state.busy || !dirty ? 'disabled' : ''}>
                 ${state.busy ? 'Saving…' : 'Save'}
               </button>
             ` : '<span class="fcc-muted">Your role cannot edit Foundation content.</span>'}
           </div>
         </div>
 
-        <div class="fcc-editor-grid ${tab === 'preview' ? '' : 'has-preview'}">
-          <div>
-            ${tab === 'page' ? renderFoundationPageFields(form) : ''}
+        ${tab === 'page' ? `
+          <div class="fcc-page-editor">
+            <div class="fcc-page-editor__form">
+              ${renderFoundationPageFields(form)}
+            </div>
+            <aside class="fcc-live-preview" aria-hidden="true">
+              <p class="fcc-live-preview__label">Live preview</p>
+              <div id="fcc-live-preview-card">${renderLivePreviewCard()}</div>
+            </aside>
+          </div>
+        ` : `
+          <div class="fcc-editor-grid">
             ${tab === 'card' ? renderFoundationCardFields(form) : ''}
             ${tab === 'information' ? renderFoundationInfoFields(form) : ''}
-            ${tab === 'preview' ? renderFoundationPreview(form, true) : ''}
           </div>
-          ${tab !== 'preview' ? `<div>${renderFoundationPreview(form, false)}</div>` : ''}
-        </div>
+        `}
       </section>
     `;
   }
 
-  function renderFoundationPageFields(form) {
+  function renderCausePicker(form, locked) {
+    const selected = form.category || '';
+    const detail = CAUSE_DETAILS[selected];
     return `
-      <form class="fcc-form wide" id="fcc-foundation-form" data-part="page">
+      <div class="fcc-field fcc-cause-field">
+        <span class="fcc-field__label" id="fcc-cause-label">Primary cause</span>
+        <input type="hidden" id="ff-category" name="category" value="${esc(selected)}">
+        <div class="fcc-cause-picker" id="fcc-cause-picker">
+          <button type="button" class="fcc-cause-trigger ${selected ? 'has-value' : ''}" id="fcc-cause-trigger"
+            aria-haspopup="listbox" aria-expanded="false" aria-labelledby="fcc-cause-label fcc-cause-value"
+            ${locked ? 'disabled' : ''}>
+            <span class="fcc-cause-trigger__icon" aria-hidden="true">${causeIconSvg(detail?.icon || 'aid')}</span>
+            <span class="fcc-cause-trigger__copy">
+              <span class="fcc-cause-trigger__name" id="fcc-cause-value">${esc(selected || 'Select a cause')}</span>
+              ${detail ? `<span class="fcc-cause-trigger__desc">${esc(detail.description)}</span>` : ''}
+            </span>
+            <span class="fcc-cause-trigger__chevron" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </button>
+          <ul class="fcc-cause-menu" id="fcc-cause-menu" role="listbox" aria-labelledby="fcc-cause-label" hidden>
+            ${FOUNDATION_CAUSES.map((cause) => {
+              const item = CAUSE_DETAILS[cause];
+              const isSelected = cause === selected;
+              return `
+                <li role="option" class="fcc-cause-option ${isSelected ? 'is-selected' : ''}"
+                  data-cause="${esc(cause)}" aria-selected="${isSelected ? 'true' : 'false'}" tabindex="-1">
+                  <span class="fcc-cause-option__icon" aria-hidden="true">${causeIconSvg(item.icon)}</span>
+                  <span class="fcc-cause-option__copy">
+                    <span class="fcc-cause-option__name">${esc(cause)}</span>
+                    <span class="fcc-cause-option__desc">${esc(item.description)}</span>
+                  </span>
+                </li>
+              `;
+            }).join('')}
+          </ul>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderFoundationPageFields(form) {
+    const locked = !can('editFoundation');
+    const countries = countryOptions(form.country);
+    return `
+      <form class="fcc-form fcc-page-form" id="fcc-foundation-form" data-part="page">
+        <p class="fcc-page-kicker">Basics</p>
         <div class="fcc-field">
           <label for="ff-name">Foundation name</label>
-          <input id="ff-name" name="foundationName" value="${esc(form.foundationName)}" ${can('editFoundation') ? '' : 'readonly'}>
+          <input id="ff-name" name="foundationName" value="${esc(form.foundationName)}" autocomplete="organization" ${locked ? 'readonly' : ''}>
         </div>
-        <div class="fcc-field">
-          <label for="ff-creator">Founded by</label>
-          <input id="ff-creator" name="creatorName" value="${esc(form.creatorName)}" ${can('editFoundation') ? '' : 'readonly'}>
-        </div>
-        <div class="fcc-form two-col" style="max-width:none;padding:0;border:0;background:transparent">
+        <div class="fcc-page-split">
+          <div class="fcc-field">
+            <label for="ff-creator">Founded by</label>
+            <input id="ff-creator" name="creatorName" value="${esc(form.creatorName)}" autocomplete="name" ${locked ? 'readonly' : ''}>
+          </div>
           <div class="fcc-field">
             <label for="ff-country">Country</label>
-            <input id="ff-country" name="country" value="${esc(form.country)}" ${can('editFoundation') ? '' : 'readonly'}>
-          </div>
-          <div class="fcc-field">
-            <label for="ff-category">Primary cause</label>
-            <select id="ff-category" name="category" ${can('editFoundation') ? '' : 'disabled'}>
-              <option value="">Select a cause</option>
-              ${['Food & Hunger', 'Health', 'Education', 'Humanitarian Aid', 'Environment'].map((c) => `
-                <option value="${esc(c)}" ${form.category === c ? 'selected' : ''}>${esc(c)}</option>
-              `).join('')}
-            </select>
+            <div class="fcc-select-wrap">
+              <select id="ff-country" name="country" class="fcc-select" ${locked ? 'disabled' : ''}>
+                <option value="">Select a country</option>
+                ${countries.map((c) => `
+                  <option value="${esc(c)}" ${form.country === c ? 'selected' : ''}>${esc(c)}</option>
+                `).join('')}
+              </select>
+            </div>
           </div>
         </div>
+        ${renderCausePicker(form, locked)}
+
+        <p class="fcc-page-kicker">Mission</p>
         <div class="fcc-field">
-          <label for="ff-mission">Mission</label>
-          <textarea id="ff-mission" name="mission" ${can('editFoundation') ? '' : 'readonly'}>${esc(form.mission)}</textarea>
+          <label class="sr-only" for="ff-mission">Mission</label>
+          <textarea id="ff-mission" name="mission" class="fcc-textarea--story" rows="6"
+            placeholder="What does this foundation exist to do?" ${locked ? 'readonly' : ''}>${esc(form.mission)}</textarea>
         </div>
+
+        <p class="fcc-page-kicker">Why it started</p>
         <div class="fcc-field">
-          <label for="ff-bio">Biography</label>
-          <textarea id="ff-bio" name="biography" ${can('editFoundation') ? '' : 'readonly'}>${esc(form.biography)}</textarea>
+          <label class="sr-only" for="ff-why">Why it started</label>
+          <textarea id="ff-why" name="whyStarted" class="fcc-textarea--story" rows="6"
+            placeholder="What first made this work necessary?" ${locked ? 'readonly' : ''}>${esc(form.whyStarted)}</textarea>
         </div>
+
+        <p class="fcc-page-kicker">How it works</p>
         <div class="fcc-field">
-          <label for="ff-why">Why it started</label>
-          <textarea id="ff-why" name="whyStarted" ${can('editFoundation') ? '' : 'readonly'}>${esc(form.whyStarted)}</textarea>
+          <label class="sr-only" for="ff-how">How it works</label>
+          <textarea id="ff-how" name="howItWorks" class="fcc-textarea--story" rows="6"
+            placeholder="How does support become action?" ${locked ? 'readonly' : ''}>${esc(form.howItWorks)}</textarea>
         </div>
+
+        <p class="fcc-page-kicker">Story</p>
         <div class="fcc-field">
-          <label for="ff-how">How it works</label>
-          <textarea id="ff-how" name="howItWorks" ${can('editFoundation') ? '' : 'readonly'}>${esc(form.howItWorks)}</textarea>
+          <label class="sr-only" for="ff-story">Story</label>
+          <textarea id="ff-story" name="story" class="fcc-textarea--story" rows="7"
+            placeholder="The longer story behind this foundation." ${locked ? 'readonly' : ''}>${esc(form.story)}</textarea>
         </div>
+
+        <p class="fcc-page-kicker">Biography</p>
         <div class="fcc-field">
-          <label for="ff-story">Story</label>
-          <textarea id="ff-story" name="story" ${can('editFoundation') ? '' : 'readonly'}>${esc(form.story)}</textarea>
+          <label class="sr-only" for="ff-bio">Biography</label>
+          <textarea id="ff-bio" name="biography" class="fcc-textarea--story" rows="6"
+            placeholder="A personal biography, if you want it on the public page." ${locked ? 'readonly' : ''}>${esc(form.biography)}</textarea>
         </div>
       </form>
     `;
@@ -784,33 +946,6 @@ const FoundationControl = (() => {
     `;
   }
 
-  function renderFoundationPreview(form, full) {
-    const mark = form.profileImage
-      ? `<img src="${esc(form.profileImage)}" alt="">`
-      : (form.foundationName || 'F').slice(0, 1).toUpperCase();
-    const mission = form.mission || form.cardShortMission || '';
-    return `
-      <div class="fcc-preview">
-        <p class="fcc-preview__label">${full ? 'Public preview' : 'Live preview'}</p>
-        <p class="fcc-kicker" style="margin-bottom:10px">Featured Foundation</p>
-        <h2 class="fcc-df-featured__title">${esc(form.foundationName || 'Foundation name')}</h2>
-        <p class="fcc-df-featured__byline">Founded by ${esc(form.creatorName || '—')}</p>
-        ${form.country ? `<p class="fcc-df-featured__place">${esc(form.country)}</p>` : ''}
-        <p class="fcc-df-featured__mission">${esc(mission || 'Mission details will appear as they are published.')}</p>
-        <span class="fcc-df-cta">Support this Foundation</span>
-
-        <div class="fcc-df-row">
-          <span class="fcc-df-row__mark">${mark}</span>
-          <div>
-            <h3 class="fcc-df-row__name">${esc(form.foundationName || 'Foundation name')}</h3>
-            <p class="fcc-df-row__meta">${esc([form.creatorName, form.country].filter(Boolean).join(' · ') || '—')}</p>
-            <p class="fcc-df-row__mission">${esc(form.cardShortMission || form.shortDescription || mission || 'Short mission for the donate list.')}</p>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
   function readFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -865,6 +1000,122 @@ const FoundationControl = (() => {
       state.busy = false;
       render();
     }
+  }
+
+  function markFoundationDirty() {
+    state.foundationDirty = true;
+    const head = root().querySelector('.fcc-section__head .fcc-actions');
+    if (head && !root().querySelector('.fcc-unsaved')) {
+      const span = document.createElement('span');
+      span.className = 'fcc-unsaved';
+      span.textContent = 'Unsaved changes';
+      head.prepend(span);
+    }
+    const saveBtn = root().querySelector('[data-action="save-foundation"]');
+    if (saveBtn && !state.busy) saveBtn.disabled = false;
+  }
+
+  function closeCauseMenu() {
+    const trigger = document.getElementById('fcc-cause-trigger');
+    const menu = document.getElementById('fcc-cause-menu');
+    if (!trigger || !menu) return;
+    menu.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+    document.getElementById('fcc-cause-picker')?.classList.remove('is-open');
+  }
+
+  function openCauseMenu() {
+    const trigger = document.getElementById('fcc-cause-trigger');
+    const menu = document.getElementById('fcc-cause-menu');
+    if (!trigger || !menu || trigger.disabled) return;
+    menu.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+    document.getElementById('fcc-cause-picker')?.classList.add('is-open');
+    const selected = menu.querySelector('.fcc-cause-option.is-selected') || menu.querySelector('.fcc-cause-option');
+    selected?.focus();
+  }
+
+  function applyCauseSelection(cause) {
+    const input = document.getElementById('ff-category');
+    if (input) input.value = cause;
+    if (state.foundationForm) state.foundationForm.category = cause;
+    markFoundationDirty();
+    closeCauseMenu();
+    const trigger = document.getElementById('fcc-cause-trigger');
+    const detail = CAUSE_DETAILS[cause];
+    if (trigger && detail) {
+      trigger.classList.add('has-value');
+      const icon = trigger.querySelector('.fcc-cause-trigger__icon');
+      const name = trigger.querySelector('.fcc-cause-trigger__name');
+      let desc = trigger.querySelector('.fcc-cause-trigger__desc');
+      if (icon) icon.innerHTML = causeIconSvg(detail.icon);
+      if (name) name.textContent = cause;
+      if (!desc) {
+        desc = document.createElement('span');
+        desc.className = 'fcc-cause-trigger__desc';
+        trigger.querySelector('.fcc-cause-trigger__copy')?.appendChild(desc);
+      }
+      desc.textContent = detail.description;
+    }
+    document.querySelectorAll('.fcc-cause-option').forEach((opt) => {
+      const isSelected = opt.getAttribute('data-cause') === cause;
+      opt.classList.toggle('is-selected', isSelected);
+      opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    });
+    refreshLivePreview();
+    trigger?.focus();
+  }
+
+  function bindCausePicker() {
+    const picker = document.getElementById('fcc-cause-picker');
+    const trigger = document.getElementById('fcc-cause-trigger');
+    const menu = document.getElementById('fcc-cause-menu');
+    if (!picker || !trigger || !menu) return;
+
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (menu.hidden) openCauseMenu();
+      else closeCauseMenu();
+    });
+
+    trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openCauseMenu();
+      }
+    });
+
+    menu.querySelectorAll('.fcc-cause-option').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        applyCauseSelection(opt.getAttribute('data-cause') || '');
+      });
+      opt.addEventListener('keydown', (e) => {
+        const options = [...menu.querySelectorAll('.fcc-cause-option')];
+        const index = options.indexOf(opt);
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          options[(index + 1) % options.length]?.focus();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          options[(index - 1 + options.length) % options.length]?.focus();
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          options[0]?.focus();
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          options[options.length - 1]?.focus();
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          applyCauseSelection(opt.getAttribute('data-cause') || '');
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeCauseMenu();
+          trigger.focus();
+        } else if (e.key === 'Tab') {
+          closeCauseMenu();
+        }
+      });
+    });
   }
 
   function bindImageUploads() {
@@ -935,7 +1186,7 @@ const FoundationControl = (() => {
   }
 
   async function saveFoundation() {
-    if (!can('editFoundation')) return;
+    if (!can('editFoundation') || state.busy) return;
     readFoundationFormIntoState();
     if (!state.foundationForm) syncFoundationForm();
     const f = state.foundationForm;
@@ -1499,6 +1750,7 @@ const FoundationControl = (() => {
 
   function bindApp() {
     bindImageUploads();
+    bindCausePicker();
     root().querySelectorAll('[data-nav]').forEach((btn) => {
       btn.addEventListener('click', () => go(btn.getAttribute('data-nav')));
     });
@@ -1531,7 +1783,8 @@ const FoundationControl = (() => {
     root().querySelectorAll('[data-ftab]').forEach((btn) => {
       btn.addEventListener('click', () => {
         readFoundationFormIntoState();
-        state.foundationTab = btn.getAttribute('data-ftab');
+        const next = btn.getAttribute('data-ftab');
+        state.foundationTab = FOUNDATION_TABS.has(next) ? next : 'page';
         render();
       });
     });
@@ -1547,20 +1800,13 @@ const FoundationControl = (() => {
     if (fForm) {
       fForm.addEventListener('input', () => {
         readFoundationFormIntoState();
-        const unsaved = root().querySelector('.fcc-unsaved');
-        if (!unsaved && state.foundationDirty) {
-          const head = root().querySelector('.fcc-section__head .fcc-actions');
-          if (head) {
-            const span = document.createElement('span');
-            span.className = 'fcc-unsaved';
-            span.textContent = 'Unsaved changes';
-            head.prepend(span);
-          }
-        }
-        const preview = root().querySelector('.fcc-editor-grid > div:last-child');
-        if (preview && state.foundationTab !== 'preview') {
-          preview.innerHTML = renderFoundationPreview(state.foundationForm, false);
-        }
+        markFoundationDirty();
+        refreshLivePreview();
+      });
+      fForm.addEventListener('change', () => {
+        readFoundationFormIntoState();
+        markFoundationDirty();
+        refreshLivePreview();
       });
     }
 
@@ -1761,6 +2007,12 @@ const FoundationControl = (() => {
       document.getElementById('fcc-search-input')?.focus();
     }
     if (e.key === 'Escape') {
+      const causeMenu = document.getElementById('fcc-cause-menu');
+      if (causeMenu && !causeMenu.hidden) {
+        closeCauseMenu();
+        document.getElementById('fcc-cause-trigger')?.focus();
+        return;
+      }
       if (state.searchOpen) {
         state.searchOpen = false;
         render();
@@ -1775,6 +2027,11 @@ const FoundationControl = (() => {
   async function init() {
     document.addEventListener('keydown', onKeydown);
     root()?.addEventListener('click', onClick);
+    document.addEventListener('mousedown', (e) => {
+      const picker = document.getElementById('fcc-cause-picker');
+      if (!picker || !picker.classList.contains('is-open')) return;
+      if (!picker.contains(e.target)) closeCauseMenu();
+    });
     window.addEventListener('hashchange', () => {
       if (!state.authenticated || !state.data) return;
       applyRoute();

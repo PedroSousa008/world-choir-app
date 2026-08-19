@@ -732,48 +732,13 @@ const WorldChoirDonate = (() => {
   }
 
   function renderFoundationCard(foundation) {
-    const img = visualUrl(foundation);
-    const tags = causeTags(foundation);
-    const mission = shortMission(foundation, 160);
-    let statusLine = '';
-    if (isNewFoundation(foundation)) {
-      statusLine = 'New Foundation.';
-    } else if (foundation.raisedKnown && foundation.totalRaised > 0) {
-      statusLine = `${formatMoney(foundation.totalRaised, CreatorFoundationsStore.getCurrency())} raised`;
-    } else {
-      statusLine = 'Be among the first to support this foundation.';
-    }
-
-    return `
-      <li>
-        <button type="button" class="df-fcard" data-open-foundation="${esc(foundation.id)}">
-          <span class="df-fcard__media ${img ? 'has-image' : ''}" aria-hidden="true">
-            ${img
-              ? `<img src="${esc(img)}" alt="">`
-              : `<span class="df-fcard__glyph">${esc(identityGlyph(foundation))}</span>`}
-          </span>
-          <span class="df-fcard__body">
-            ${isNewFoundation(foundation)
-              ? `<span class="df-fcard__badge">New to World Choir</span>`
-              : ''}
-            <h3 class="df-fcard__name">${esc(foundation.foundationName)}</h3>
-            <p class="df-fcard__meta">
-              ${esc(foundation.creatorName)}${foundation.country ? ` · ${esc(foundation.country)}` : ''}
-            </p>
-            ${mission ? `<p class="df-fcard__mission">${esc(mission)}</p>` : ''}
-            ${tags.length ? `
-              <span class="df-fcard__tags">
-                ${tags.map((t) => `<span class="df-fcard__tag">${esc(t)}</span>`).join('')}
-              </span>
-            ` : ''}
-            <span class="df-fcard__foot">
-              <span class="df-fcard__status">${esc(statusLine)}</span>
-              <span class="df-fcard__arrow" aria-hidden="true">${arrowSvg()}</span>
-            </span>
-          </span>
-        </button>
-      </li>
-    `;
+    const card = typeof FoundationPublicCard !== 'undefined'
+      ? FoundationPublicCard.render(foundation, {
+          interactive: true,
+          currency: CreatorFoundationsStore.getCurrency(),
+        })
+      : '';
+    return `<li>${card}</li>`;
   }
 
   function renderEmptyResults() {
