@@ -15,14 +15,32 @@ const LyricsDisplay = (() => {
   }
 
   function renderShell() {
-    const { title, artist } = WorldChoirPracticeConfig.PRACTICE_SONG;
     return `
       <div class="practice-playing" id="practice-playing">
         <div class="lyrics-display" id="lyrics-display">
+          <div class="lyrics-display__row" aria-hidden="true">
+            <span class="lyrics-display__wave lyrics-display__wave--left">
+              <svg width="28" height="40" viewBox="0 0 28 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0"  y="14" width="4" height="12" rx="2" fill="currentColor"/>
+                <rect x="6"  y="8"  width="4" height="24" rx="2" fill="currentColor"/>
+                <rect x="12" y="4"  width="4" height="32" rx="2" fill="currentColor"/>
+                <rect x="18" y="10" width="4" height="20" rx="2" fill="currentColor"/>
+                <rect x="24" y="16" width="4" height="8"  rx="2" fill="currentColor"/>
+              </svg>
+            </span>
+            <p class="lyrics-display__current" id="lyric-current">&nbsp;</p>
+            <span class="lyrics-display__wave lyrics-display__wave--right">
+              <svg width="28" height="40" viewBox="0 0 28 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0"  y="16" width="4" height="8"  rx="2" fill="currentColor"/>
+                <rect x="6"  y="10" width="4" height="20" rx="2" fill="currentColor"/>
+                <rect x="12" y="4"  width="4" height="32" rx="2" fill="currentColor"/>
+                <rect x="18" y="8"  width="4" height="24" rx="2" fill="currentColor"/>
+                <rect x="24" y="14" width="4" height="12" rx="2" fill="currentColor"/>
+              </svg>
+            </span>
+          </div>
           <p class="lyrics-display__prev" id="lyric-prev">&nbsp;</p>
-          <p class="lyrics-display__current" id="lyric-current">&nbsp;</p>
           <p class="lyrics-display__next" id="lyric-next">&nbsp;</p>
-          <p class="lyrics-display__song">${title} · ${artist}</p>
         </div>
       </div>
     `;
