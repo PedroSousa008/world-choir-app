@@ -15,6 +15,7 @@ const WorldChoirMap = (() => {
   const DEFAULT_ZOOM = 2;
   const USER_HOME_ZOOM = 5;
   const MAP_HOME_STORAGE_KEY = 'wc_map_user_home';
+  const MAP_HEADER_STORAGE_KEY = 'wc_map_header_minimized';
 
   function pulseCity(key, durationMs = 3000) {
     if (!key) return;
@@ -358,6 +359,47 @@ const WorldChoirMap = (() => {
     document.getElementById('map-info-sheet').classList.toggle('visible');
   }
 
+  function isMapHeaderMinimized() {
+    try {
+      return localStorage.getItem(MAP_HEADER_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function syncMapHeaderUi(minimized) {
+    const header = document.getElementById('map-header');
+    if (!header) return;
+    header.classList.toggle('map-header--minimized', minimized);
+    header.setAttribute('aria-expanded', minimized ? 'false' : 'true');
+    header.setAttribute(
+      'aria-label',
+      minimized ? 'The Earth Breathes — tap to expand' : 'The Earth Breathes — tap to minimize'
+    );
+  }
+
+  function persistMapHeaderMinimized(minimized) {
+    try {
+      localStorage.setItem(MAP_HEADER_STORAGE_KEY, minimized ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function setMapHeaderMinimized(minimized) {
+    syncMapHeaderUi(minimized);
+    persistMapHeaderMinimized(minimized);
+  }
+
+  function initMapHeader() {
+    const header = document.getElementById('map-header');
+    if (!header) return;
+    syncMapHeaderUi(isMapHeaderMinimized());
+    header.addEventListener('click', () => {
+      setMapHeaderMinimized(!header.classList.contains('map-header--minimized'));
+    });
+  }
+
   async function runVoiceJoinedAnimation(data) {
     if (!data?.lat || !data?.lng) return;
 
@@ -433,6 +475,7 @@ const WorldChoirMap = (() => {
     const hasVoiceJoinedSession = !!sessionStorage.getItem('wc_voice_joined');
 
     initMap();
+    initMapHeader();
     refreshMapData();
     WorldChoirPledgeState.subscribe(() => updateEmptyState());
     updateCountdown();

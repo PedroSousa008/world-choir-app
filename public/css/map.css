@@ -157,23 +157,101 @@ body.map-page {
   box-shadow: 0 0 10px rgba(201, 169, 98, 0.7);
 }
 
-/* Header */
+/* Header — tap to minimize to a dot (top-right), state persisted per device */
 .map-header {
   position: absolute;
   top: 12px;
   left: 12px;
   right: 12px;
   z-index: 500;
+  display: block;
+  width: auto;
+  margin: 0;
   background: rgba(8, 10, 18, 0.78);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 14px 16px;
   backdrop-filter: blur(20px);
   text-align: center;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    top 0.3s ease,
+    right 0.3s ease,
+    left 0.3s ease,
+    width 0.3s ease,
+    height 0.3s ease,
+    padding 0.3s ease,
+    border-radius 0.3s ease,
+    background 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.map-header:focus-visible {
+  outline: 2px solid var(--accent-aurora);
+  outline-offset: 2px;
+}
+
+.map-header__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: opacity 0.2s ease;
+}
+
+.map-header__dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  opacity: 0;
   pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(200, 230, 255, 0.95) 0%,
+    rgba(126, 184, 255, 0.75) 45%,
+    rgba(61, 124, 255, 0.35) 70%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px rgba(126, 184, 255, 0.85), 0 0 24px rgba(61, 124, 255, 0.45);
+  transition: opacity 0.25s ease;
+}
+
+.map-header--minimized {
+  top: 12px;
+  right: 12px;
+  left: auto;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(8, 10, 18, 0.55);
+  border-color: rgba(126, 184, 255, 0.35);
+  box-shadow: 0 0 16px rgba(61, 124, 255, 0.35);
+}
+
+.map-header--minimized .map-header__content {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.map-header--minimized .map-header__dot {
+  opacity: 1;
 }
 
 .map-header__title {
+  display: block;
   font-size: 0.95rem;
   font-weight: 600;
   margin-bottom: 2px;
@@ -181,6 +259,7 @@ body.map-page {
 }
 
 .map-header__subtitle {
+  display: block;
   font-size: 0.72rem;
   color: var(--text-muted);
   margin-bottom: 6px;
@@ -188,6 +267,7 @@ body.map-page {
 }
 
 .map-header__countdown {
+  display: block;
   font-size: 0.68rem;
   color: var(--accent-aurora);
   font-variant-numeric: tabular-nums;
@@ -540,10 +620,19 @@ body.map-page {
 
 @media (max-width: 480px) {
   .map-header {
-    top: 8px;
+    top: max(8px, env(safe-area-inset-top, 0px));
     left: 10px;
     right: 10px;
     padding: 10px 12px;
+  }
+
+  .map-header--minimized {
+    top: max(8px, env(safe-area-inset-top, 0px));
+    right: 10px;
+    left: auto;
+    width: 14px;
+    height: 14px;
+    padding: 0;
   }
 
   .map-header__title {
