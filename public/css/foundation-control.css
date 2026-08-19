@@ -2145,3 +2145,673 @@
     max-height: 60vh;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   SETTINGS — Premium redesign: Account → Team & Access → Security
+   ═══════════════════════════════════════════════════════════════════ */
+
+.fcc-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding-bottom: 64px;
+}
+
+.fcc-settings__header {
+  padding: 0 0 8px;
+}
+
+/* ─── Settings Card ─── */
+.fcc-set-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.fcc-set-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.fcc-set-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba(61, 124, 255, 0.12);
+  color: #3d7cff;
+  margin-top: 1px;
+}
+
+.fcc-set-card__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f4f4f6;
+  letter-spacing: -0.01em;
+  margin: 0 0 3px;
+}
+
+.fcc-set-card__sub {
+  font-size: 0.82rem;
+  color: #6b6f7d;
+  margin: 0;
+}
+
+/* ─── Account card ─── */
+.fcc-set-card--account .fcc-set-card__head {
+  background: linear-gradient(135deg,
+    rgba(61, 124, 255, 0.06) 0%,
+    rgba(107, 92, 231, 0.04) 50%,
+    transparent 100%);
+}
+
+.fcc-set-account-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 28px;
+  padding: 24px 28px;
+  align-items: flex-start;
+}
+
+.fcc-set-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.fcc-set-avatar__img,
+.fcc-set-avatar__initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(61, 124, 255, 0.25);
+  background: rgba(61, 124, 255, 0.1);
+  color: #3d7cff;
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+
+.fcc-set-avatar__note {
+  font-size: 0.68rem;
+  color: #4a4e5c;
+  text-align: center;
+  max-width: 90px;
+  line-height: 1.35;
+}
+
+.fcc-set-account-form {
+  padding: 0;
+}
+
+/* ─── Readonly field ─── */
+.fcc-field--readonly label {
+  color: #6b6f7d;
+}
+
+.fcc-readonly-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  color: #a8abb8;
+  font-size: 0.9rem;
+}
+
+.fcc-readonly-note {
+  font-size: 0.72rem;
+  color: #4a4e5c;
+  flex-shrink: 0;
+}
+
+/* ─── Team & Access card ─── */
+.fcc-set-add-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.fcc-btn--sm {
+  padding: 7px 14px;
+  font-size: 0.8rem;
+}
+
+.fcc-set-team-body {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 300px;
+}
+
+.fcc-set-members {
+  padding: 16px 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  overflow-y: auto;
+}
+
+.fcc-set-members__label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: #4a4e5c;
+  padding: 0 20px 10px;
+  text-transform: uppercase;
+}
+
+/* ─── Member rows ─── */
+.fcc-set-member-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.fcc-set-member-row:hover,
+.fcc-set-member-row:focus-within {
+  background: rgba(255, 255, 255, 0.04);
+  outline: none;
+}
+
+.fcc-set-member-row.is-selected {
+  background: rgba(61, 124, 255, 0.07);
+}
+
+.fcc-set-member-row.is-selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #3d7cff;
+  border-radius: 0 2px 2px 0;
+}
+
+.fcc-set-member-row--owner {
+  cursor: default;
+  opacity: 0.9;
+}
+
+.fcc-set-member-row--owner:hover {
+  background: none;
+}
+
+.fcc-set-member-avatar {
+  flex-shrink: 0;
+}
+
+.fcc-set-member-avatar .fcc-set-avatar__img,
+.fcc-set-member-avatar .fcc-set-avatar__initials {
+  width: 36px;
+  height: 36px;
+  font-size: 0.85rem;
+  border-width: 1px;
+}
+
+.fcc-set-member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fcc-set-member-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #f4f4f6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0 0 2px;
+}
+
+.fcc-set-member-meta {
+  font-size: 0.72rem;
+  color: #6b6f7d;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fcc-set-member-remove {
+  background: none;
+  border: none;
+  color: #4a4e5c;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.fcc-set-member-row:hover .fcc-set-member-remove,
+.fcc-set-member-row.is-selected .fcc-set-member-remove {
+  opacity: 1;
+}
+
+.fcc-set-member-remove:hover {
+  color: #ff4757;
+}
+
+/* ─── Badges ─── */
+.fcc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fcc-badge--owner {
+  background: rgba(61, 124, 255, 0.15);
+  color: #3d7cff;
+}
+
+.fcc-badge--member {
+  background: rgba(255, 255, 255, 0.06);
+  color: #a8abb8;
+}
+
+/* ─── Empty team state ─── */
+.fcc-set-empty-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 20px;
+  text-align: center;
+  color: #4a4e5c;
+}
+
+.fcc-set-empty-team svg {
+  color: #3d3f4a;
+}
+
+.fcc-set-empty-team__title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #a8abb8;
+  margin: 4px 0 0;
+}
+
+.fcc-set-empty-team__sub {
+  font-size: 0.75rem;
+  color: #6b6f7d;
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+/* ─── Permissions panel ─── */
+.fcc-set-perms {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.fcc-set-perms__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fcc-set-perms__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f4f4f6;
+  margin: 0;
+}
+
+.fcc-set-perms__sub {
+  font-size: 0.78rem;
+  color: #6b6f7d;
+  margin: -8px 0 0;
+}
+
+.fcc-set-perm-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fcc-set-perm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.15s ease;
+}
+
+.fcc-set-perm-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.fcc-set-perm-icon {
+  color: #3d7cff;
+  opacity: 0.7;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.fcc-set-perm-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.fcc-set-perm-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #f4f4f6;
+  margin: 0 0 2px;
+}
+
+.fcc-set-perm-desc {
+  font-size: 0.73rem;
+  color: #6b6f7d;
+  margin: 0;
+}
+
+.fcc-set-perms__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 8px;
+  color: #4a4e5c;
+  text-align: center;
+  padding: 32px;
+}
+
+.fcc-set-perms__empty p {
+  font-size: 0.8rem;
+  color: #6b6f7d;
+  margin: 0;
+}
+
+/* ─── Toggle ─── */
+.fcc-toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.fcc-toggle__track {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.fcc-toggle.is-on .fcc-toggle__track {
+  background: #3d7cff;
+  border-color: #3d7cff;
+}
+
+.fcc-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transition: left 0.2s ease, background 0.2s ease;
+}
+
+.fcc-toggle.is-on .fcc-toggle__thumb {
+  left: calc(100% - 19px);
+  background: #fff;
+}
+
+.fcc-toggle:focus-visible {
+  outline: 2px solid #3d7cff;
+  outline-offset: 2px;
+  border-radius: 11px;
+}
+
+/* ─── Modal ─── */
+.fcc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 800;
+}
+
+.fcc-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 810;
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  padding: 0 0 8px;
+}
+
+.fcc-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.fcc-modal__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f4f4f6;
+  margin: 0;
+}
+
+.fcc-modal .fcc-form {
+  padding: 20px 24px;
+}
+
+.fcc-field__hint {
+  font-size: 0.72rem;
+  color: #6b6f7d;
+  margin: 4px 0 0;
+}
+
+/* ─── Security card ─── */
+.fcc-set-sec-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.fcc-set-sec-row:last-of-type {
+  border-bottom: none;
+}
+
+.fcc-set-sec-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #a8abb8;
+  flex-shrink: 0;
+}
+
+.fcc-set-sec-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.fcc-set-sec-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #f4f4f6;
+  margin: 0 0 2px;
+}
+
+.fcc-set-sec-desc {
+  font-size: 0.78rem;
+  color: #6b6f7d;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fcc-set-sec-form {
+  padding: 4px 28px 16px;
+}
+
+.fcc-set-sec-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  font-size: 0.75rem;
+  color: #4a4e5c;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* ─── Locked / blurred states for restricted data ─── */
+.fcc-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #4a4e5c;
+  font-size: 0.82rem;
+}
+
+.fcc-locked__dots {
+  letter-spacing: 0.1em;
+  color: #3d3f4a;
+}
+
+.fcc-locked-block {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #4a4e5c;
+  font-size: 0.78rem;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 760px) {
+  .fcc-set-account-body {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .fcc-set-avatar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .fcc-set-avatar__img,
+  .fcc-set-avatar__initials {
+    width: 56px;
+    height: 56px;
+  }
+
+  .fcc-set-team-body {
+    grid-template-columns: 1fr;
+  }
+
+  .fcc-set-members {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .fcc-set-card__head {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .fcc-set-add-btn {
+    margin-left: 0;
+    width: 100%;
+    text-align: center;
+  }
+
+  .fcc-set-sec-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .fcc-set-perms {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fcc-settings {
+    gap: 20px;
+  }
+
+  .fcc-set-card__head {
+    padding: 18px 18px 14px;
+  }
+
+  .fcc-set-account-body {
+    padding: 18px;
+  }
+
+  .fcc-set-sec-row {
+    padding: 14px 18px;
+  }
+
+  .fcc-set-sec-form {
+    padding: 4px 18px 14px;
+  }
+
+  .fcc-set-sec-note {
+    padding: 12px 18px;
+  }
+}

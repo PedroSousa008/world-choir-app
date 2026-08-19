@@ -49,12 +49,15 @@ const {
   upsertUpdate,
   upsertTeamMember,
   removeTeamMember,
+  findTeamLoginAcrossFoundations,
+  updateTeamPermissions,
   markNotificationRead,
   markAllNotificationsRead,
   saveDrafts,
   appendActivity,
   rolePermissions,
 } = require('./_lib/foundation-workspace');
+const { listInfluencerIds } = require('./_lib/members-store');
 
 function requireFoundationSession(req, res) {
   const session = requireMembersSession(req, res);
@@ -103,21 +106,40 @@ module.exports = async function handler(req, res) {
       }
 
       const influencerResult = await verifyInfluencerCredentials({ email, password });
-      if (!influencerResult.ok) {
-        return res.status(401).json({ error: influencerResult.error || 'Invalid credentials' });
+      if (influencerResult.ok) {
+        setMembersSessionCookie(res, {
+          role: 'influencer',
+          influencerId: influencerResult.influencer.id,
+          email: influencerResult.influencer.email,
+        });
+        return res.status(200).json({
+          ok: true,
+          role: 'influencer',
+          influencer: influencerResult.influencer,
+        });
       }
 
-      setMembersSessionCookie(res, {
-        role: 'influencer',
-        influencerId: influencerResult.influencer.id,
-        email: influencerResult.influencer.email,
-      });
+      // Try team member login across all foundations
+      const allIds = await listInfluencerIds();
+      const teamResult = await findTeamLoginAcrossFoundations(normalizedEmail, password, allIds);
+      if (teamResult.ok) {
+        setMembersSessionCookie(res, {
+          role: 'influencer',
+          influencerId: teamResult.foundationId,
+          email: teamResult.member.email,
+          teamMemberId: teamResult.member.id,
+          teamRole: 'team_member',
+        });
+        return res.status(200).json({
+          ok: true,
+          role: 'team_member',
+          influencer: null,
+          teamMember: teamResult.member,
+          foundationId: teamResult.foundationId,
+        });
+      }
 
-      return res.status(200).json({
-        ok: true,
-        role: 'influencer',
-        influencer: influencerResult.influencer,
-      });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     if (action === 'logout' && req.method === 'POST') {
@@ -145,8 +167,10 @@ module.exports = async function handler(req, res) {
 
       return res.status(200).json({
         authenticated: true,
-        role: 'influencer',
+        role: session.teamRole || 'influencer',
         influencer: publicInfluencer(influencer),
+        teamMemberId: session.teamMemberId || null,
+        teamRole: session.teamRole || null,
       });
     }
 
@@ -157,7 +181,11 @@ module.exports = async function handler(req, res) {
       if (!session) return;
       const range = String(req.query.range || 'all');
       const role = session.teamRole || 'owner';
-      const data = await buildFoundationControlCenter(session.influencerId, { range, role });
+      const data = await buildFoundationControlCenter(session.influencerId, {
+        range,
+        role,
+        teamMemberId: session.teamMemberId || null,
+      });
       if (!data.ok) return res.status(404).json({ error: data.error || 'Not found' });
       return res.status(200).json(data);
     }
@@ -339,6 +367,29 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(result);
     }
 
+    if (action === 'team-permissions' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (session.teamRole) {
+        return res.status(403).json({ error: 'Only the Foundation owner can manage permissions' });
+      }
+      const { memberId, permissions } = req.body || {};
+      if (!memberId || !permissions) {
+        return res.status(400).json({ error: 'Member id and permissions required' });
+      }
+      const result = await updateTeamPermissions(session.influencerId, memberId, permissions);
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      await appendActivity(session.influencerId, {
+        action: 'team_permissions_updated',
+        label: 'Team permissions updated',
+        detail: result.member.name || result.member.email,
+        actor: actorLabel(session),
+        relatedType: 'team',
+        relatedId: memberId,
+      });
+      return res.status(200).json(result);
+    }
+
     if (action === 'notifications-read' && req.method === 'POST') {
       const session = requireFoundationSession(req, res);
       if (!session) return;
@@ -349,6 +400,39 @@ module.exports = async function handler(req, res) {
       const result = await markNotificationRead(session.influencerId, req.body?.id);
       if (!result.ok) return res.status(400).json({ error: result.error });
       return res.status(200).json(result);
+    }
+
+    if (action === 'team-member-change-password' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (!session.teamMemberId) {
+        return res.status(403).json({ error: 'This action is for team members only. Owners use influencer-change-password.' });
+      }
+      const { currentPassword, newPassword, confirmPassword } = req.body || {};
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return res.status(400).json({ error: 'All password fields are required' });
+      }
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({ error: 'New passwords do not match' });
+      }
+      if (String(newPassword).length < 8) {
+        return res.status(400).json({ error: 'New password must be at least 8 characters' });
+      }
+      const bcrypt = require('bcryptjs');
+      const { readWorkspace, writeWorkspace } = require('./_lib/foundation-workspace');
+      const ws = await readWorkspace(session.influencerId);
+      const member = ws.team.find((t) => t.id === session.teamMemberId);
+      if (!member || !member.passwordHash) {
+        return res.status(404).json({ error: 'Team member not found' });
+      }
+      const currentMatch = await bcrypt.compare(String(currentPassword), member.passwordHash);
+      if (!currentMatch) {
+        return res.status(400).json({ error: 'Current password is incorrect' });
+      }
+      member.passwordHash = await bcrypt.hash(String(newPassword), 12);
+      member.updatedAt = new Date().toISOString();
+      await writeWorkspace(ws);
+      return res.status(200).json({ ok: true });
     }
 
     if (action === 'influencer-change-password' && req.method === 'POST') {

@@ -412,7 +412,7 @@ function buildActivityFeed(donations, workspace) {
 /**
  * Build full Foundation Control Center payload for ONE foundation.
  */
-async function buildFoundationControlCenter(foundationId, { range = 'all', role = 'owner' } = {}) {
+async function buildFoundationControlCenter(foundationId, { range = 'all', role = 'owner', teamMemberId = null } = {}) {
   if (!foundationId) {
     return { ok: false, error: 'Foundation id required' };
   }
@@ -489,6 +489,21 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
   // Platform-owned verification — never editable by Foundation
   const verificationStatus = influencer.verificationStatus || 'unverified';
 
+  // Resolve team member permissions (owner gets everything)
+  let teamPermissions = null;
+  if (teamMemberId) {
+    const member = (workspace.team || []).find((t) => t.id === teamMemberId);
+    if (member) {
+      const { defaultTeamPermissions } = require('./foundation-workspace');
+      teamPermissions = { ...defaultTeamPermissions(), ...(member.permissions || {}) };
+    }
+  }
+  const isOwner = !teamMemberId;
+  const canViewAmounts = isOwner || (teamPermissions?.viewDonationAmounts !== false);
+  const canViewDetails = isOwner || (teamPermissions?.viewDonationDetails !== false);
+  const canViewSupporters = isOwner || (teamPermissions?.viewSupporterInfo !== false);
+  const canViewCommunity = isOwner || (teamPermissions?.viewCommunity !== false);
+
   const unavailable = [];
   if (!foundationDonations.length) {
     unavailable.push('Donation analytics will populate when verified payments are recorded.');
@@ -532,16 +547,18 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
       updatedAt: profile.updatedAt,
     },
     overview: {
-      totalRaised: allTimeRaised,
-      totalSupporters: allTimeSupporters,
-      totalDonations: foundationDonations.length,
+      totalRaised: canViewAmounts ? allTimeRaised : null,
+      totalSupporters: canViewSupporters ? allTimeSupporters : null,
+      totalDonations: canViewDetails ? foundationDonations.length : null,
       activeProjects: activeProjects.length,
       countriesReached: geography.countries.length,
       citiesReached: geography.cities.length,
-      rangedRaised: totalRaised,
-      rangedSupporters: totalSupporters,
-      rangedDonations: ranged.length,
+      rangedRaised: canViewAmounts ? totalRaised : null,
+      rangedSupporters: canViewSupporters ? totalSupporters : null,
+      rangedDonations: canViewDetails ? ranged.length : null,
     },
+    teamPermissions: teamPermissions || null,
+    isOwner,
     today,
     growth: {
       series: {
@@ -556,29 +573,37 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
     },
     activity,
     donations: {
-      totalRaised: allTimeRaised,
-      totalSupporters: allTimeSupporters,
-      totalDonations: foundationDonations.length,
-      newSupporters,
-      repeatSupporters,
-      averageDonation: average(amounts) != null ? Math.round(average(amounts) * 100) / 100 : null,
-      medianDonation: median(amounts) != null ? Math.round(median(amounts) * 100) / 100 : null,
+      totalRaised: canViewAmounts ? allTimeRaised : null,
+      totalSupporters: canViewSupporters ? allTimeSupporters : null,
+      totalDonations: canViewDetails ? foundationDonations.length : null,
+      newSupporters: canViewSupporters ? newSupporters : null,
+      repeatSupporters: canViewSupporters ? repeatSupporters : null,
+      averageDonation: canViewAmounts ? (average(amounts) != null ? Math.round(average(amounts) * 100) / 100 : null) : null,
+      medianDonation: canViewAmounts ? (median(amounts) != null ? Math.round(median(amounts) * 100) / 100 : null) : null,
       conversionRate: null,
       conversionNote: 'Conversion rate requires Foundation page view tracking.',
-      timeline: bucketSeries(ranged, 'amount'),
-      explorer: ranged
+      timeline: canViewAmounts ? bucketSeries(ranged, 'amount') : [],
+      explorer: canViewDetails ? ranged
         .slice()
         .sort((a, b) => String(donationDate(b) || 0).localeCompare(String(donationDate(a) || 0)))
         .slice(0, 100)
-        .map(privacySafeDonation),
+        .map((d, i) => {
+          const safe = privacySafeDonation(d, i);
+          if (!canViewAmounts) safe.amount = null;
+          if (!canViewSupporters) safe.supporterLabel = 'Hidden';
+          return safe;
+        }) : [],
       platformFeePercent: PLATFORM_FEE_PERCENT,
       foundationSharePercent: 100 - PLATFORM_FEE_PERCENT,
+      canViewAmounts,
+      canViewDetails,
+      canViewSupporters,
     },
     geography,
-    community: {
-      totalSupporters: allTimeSupporters,
-      newSupporters,
-      returningSupporters: repeatSupporters,
+    community: canViewCommunity ? {
+      totalSupporters: canViewSupporters ? allTimeSupporters : null,
+      newSupporters: canViewSupporters ? newSupporters : null,
+      returningSupporters: canViewSupporters ? repeatSupporters : null,
       countriesReached: geography.countries.length,
       citiesReached: geography.cities.length,
       topCountries: geography.countries.slice(0, 8),
@@ -588,6 +613,10 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
         note: 'Discovery attribution is not tracked yet.',
         sources: [],
       },
+      restricted: false,
+    } : {
+      restricted: true,
+      note: 'Community access is restricted by the Foundation owner.',
     },
     insights: {
       growth: bucketSeries(foundationDonations, 'amount'),

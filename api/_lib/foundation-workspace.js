@@ -61,14 +61,24 @@ async function writeWorkspace(doc) {
   return next;
 }
 
+function defaultTeamPermissions() {
+  return {
+    viewDonationAmounts: true,
+    viewDonationDetails: true,
+    viewSupporterInfo: true,
+    viewCommunity: true,
+  };
+}
+
 function publicTeamMember(row) {
   if (!row) return null;
   return {
     id: row.id,
     email: row.email,
     name: row.name || '',
-    role: row.role || 'editor',
+    role: row.role || 'team_member',
     active: row.active !== false,
+    permissions: { ...defaultTeamPermissions(), ...(row.permissions || {}) },
     createdAt: row.createdAt || null,
     updatedAt: row.updatedAt || null,
   };
@@ -379,9 +389,60 @@ async function removeTeamMember(foundationId, memberId, actor = 'Foundation Owne
   return { ok: true };
 }
 
-async function findTeamLogin(email, password) {
-  // Scan is bounded — workspaces are per foundation; list known influencers externally.
-  return { ok: false, error: 'Use foundation owner credentials, or ask the owner to provision team login.' };
+async function findTeamLogin(email, foundationId) {
+  if (!email || !foundationId) {
+    return { ok: false, error: 'Email and Foundation required' };
+  }
+  const ws = await readWorkspace(foundationId);
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const member = ws.team.find(
+    (t) => t.email === normalizedEmail && t.active !== false
+  );
+  if (!member || !member.passwordHash) {
+    return { ok: false, error: 'No team account found' };
+  }
+  return { ok: true, member };
+}
+
+async function findTeamLoginAcrossFoundations(email, password, allFoundationIds) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail || !password) {
+    return { ok: false, error: 'Email and password are required' };
+  }
+  for (const foundationId of allFoundationIds) {
+    const ws = await readWorkspace(foundationId);
+    const member = ws.team.find(
+      (t) => t.email === normalizedEmail && t.active !== false && t.passwordHash
+    );
+    if (!member) continue;
+    const match = await bcrypt.compare(String(password), member.passwordHash);
+    if (match) {
+      return {
+        ok: true,
+        member: publicTeamMember(member),
+        foundationId,
+        rawMember: member,
+      };
+    }
+  }
+  return { ok: false, error: 'Invalid credentials' };
+}
+
+async function updateTeamPermissions(foundationId, memberId, permissions) {
+  const ws = await readWorkspace(foundationId);
+  const index = ws.team.findIndex((t) => t.id === memberId);
+  if (index === -1) return { ok: false, error: 'Team member not found' };
+  const row = ws.team[index];
+  const defaults = defaultTeamPermissions();
+  const cleaned = {};
+  for (const key of Object.keys(defaults)) {
+    cleaned[key] = permissions[key] === true;
+  }
+  row.permissions = cleaned;
+  row.updatedAt = new Date().toISOString();
+  ws.team[index] = row;
+  await writeWorkspace(ws);
+  return { ok: true, member: publicTeamMember(row) };
 }
 
 async function markNotificationRead(foundationId, notificationId) {
@@ -451,6 +512,9 @@ module.exports = {
   upsertTeamMember,
   removeTeamMember,
   findTeamLogin,
+  findTeamLoginAcrossFoundations,
+  updateTeamPermissions,
+  defaultTeamPermissions,
   markNotificationRead,
   markAllNotificationsRead,
   saveDrafts,

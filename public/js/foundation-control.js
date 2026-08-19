@@ -83,7 +83,11 @@ const FoundationControl = (() => {
     foundationForm: null,
     uploadingField: null,
     drill: null,
-    settingsTab: 'foundation',
+    settingsTab: 'overview',
+    selectedTeamMember: null,
+    teamAddOpen: false,
+    pwFormOpen: false,
+    emailFormOpen: false,
   };
 
   const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
@@ -97,7 +101,7 @@ const FoundationControl = (() => {
     }
     if (!SECTION_IDS.has(parts[0])) return;
     state.section = parts[0];
-    if (parts[1] && parts[0] === 'settings') state.settingsTab = parts[1];
+    // Settings no longer has subtabs — ignore any legacy /settings/* hash
     if (parts[1] && parts[0] === 'foundation') {
       state.foundationTab = FOUNDATION_TABS.has(parts[1]) ? parts[1] : 'page';
     }
@@ -106,9 +110,7 @@ const FoundationControl = (() => {
   function syncRoute() {
     if (!state.authenticated) return;
     const parts = [state.section || 'overview'];
-    if (state.section === 'settings' && state.settingsTab && state.settingsTab !== 'foundation') {
-      parts.push(state.settingsTab);
-    } else if (state.section === 'foundation' && state.foundationTab && state.foundationTab !== 'page') {
+    if (state.section === 'foundation' && state.foundationTab && state.foundationTab !== 'page') {
       parts.push(state.foundationTab);
     }
     const hash = parts[0] === 'overview' && parts.length === 1 ? '' : `#${parts.join('/')}`;
@@ -457,7 +459,7 @@ const FoundationControl = (() => {
       foundation: "Shape your foundation's story and public profile.",
       donations: 'Verified donations for this Foundation only.',
       community: 'Supporters and where they gather.',
-      settings: 'Foundation, team, financial, and security.',
+      settings: 'Manage your account, team access, and security.',
     };
     return map[state.section] || '';
   }
@@ -469,7 +471,7 @@ const FoundationControl = (() => {
     if (opts.foundationTab) {
       state.foundationTab = FOUNDATION_TABS.has(opts.foundationTab) ? opts.foundationTab : 'page';
     }
-    if (opts.settingsTab) state.settingsTab = opts.settingsTab;
+    // settings subtabs removed
     if (!opts.keepMap) state.mapOpen = false;
     state.flash = null;
     render();
@@ -578,8 +580,12 @@ const FoundationControl = (() => {
     const country = f.country || '';
     const mission = pickFilled(f.mission, f.cardShortMission, f.shortDescription);
     const cover = String(f.coverImage || '').trim();
-    const raised = o.rangedRaised != null ? o.rangedRaised : (o.totalRaised || 0);
-    const supporters = o.rangedSupporters != null ? o.rangedSupporters : (o.totalSupporters || 0);
+    const canViewAmounts = state.data?.donations?.canViewAmounts !== false;
+    const canViewSupporters = state.data?.donations?.canViewSupporters !== false;
+    const rawRaised = o.rangedRaised != null ? o.rangedRaised : o.totalRaised;
+    const rawSupporters = o.rangedSupporters != null ? o.rangedSupporters : o.totalSupporters;
+    const raised = canViewAmounts && rawRaised != null ? rawRaised : null;
+    const supporters = canViewSupporters && rawSupporters != null ? rawSupporters : null;
     const countries = o.countriesReached || 0;
     const cities = o.citiesReached || 0;
     const spark = renderRaisedSparkline(series);
@@ -625,13 +631,22 @@ const FoundationControl = (() => {
               <p class="fcc-ov-card__kicker">Total raised</p>
               ${overviewViewBtn('donations', 'Total raised')}
             </div>
-            <p class="fcc-ov-raised__value">${esc(money(raised, currency()))}</p>
-            ${spark || '<p class="fcc-ov-raised__empty">Donation history will appear here as verified gifts are recorded.</p>'}
+            ${raised != null
+              ? `<p class="fcc-ov-raised__value">${esc(money(raised, currency()))}</p>`
+              : `<p class="fcc-ov-raised__value fcc-locked"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span class="fcc-locked__dots">••••••</span></p>`
+            }
+            ${raised != null
+              ? (spark || '<p class="fcc-ov-raised__empty">Donation history will appear here as verified gifts are recorded.</p>')
+              : '<p class="fcc-ov-raised__empty" style="color:#4a4e5c">Hidden by Foundation owner.</p>'
+            }
           </article>
 
           <article class="fcc-ov-card fcc-ov-audience" aria-label="Audience">
             <div class="fcc-ov-audience__primary">
-              ${overviewStat(num(supporters), 'Supporters', 'People supporting your foundation', 'community')}
+              ${supporters != null
+                ? overviewStat(num(supporters), 'Supporters', 'People supporting your foundation', 'community')
+                : overviewStat('••', 'Supporters', 'Hidden by Foundation owner', 'community')
+              }
             </div>
             <div class="fcc-ov-audience__split">
               ${overviewStat(num(countries), 'Countries', 'Countries represented', 'donations')}
@@ -1566,147 +1581,336 @@ const FoundationControl = (() => {
     `;
   }
 
-  /* ─── Settings ─── */
+  /* ─── Settings (redesigned: Account → Team & Access → Security, no subtabs) ─── */
+
+  function settingsAvatar(name, profileImage) {
+    if (profileImage) {
+      return `<img class="fcc-set-avatar__img" src="${esc(profileImage)}" alt="${esc(name || 'Profile')}" loading="lazy">`;
+    }
+    const initials = (name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+    return `<span class="fcc-set-avatar__initials">${esc(initials)}</span>`;
+  }
 
   function renderSettings() {
     const f = state.data?.foundation || {};
     const team = state.data?.team || [];
-    const fin = state.data?.financial || {};
-    const sec = state.data?.security || {};
-    const tabs = [
-      { id: 'foundation', label: 'Foundation' },
-      { id: 'team', label: 'Team' },
-      { id: 'financial', label: 'Financial' },
-      { id: 'security', label: 'Security' },
-    ];
-    if (!tabs.some((t) => t.id === state.settingsTab)) {
-      state.settingsTab = 'foundation';
-    }
-    const tab = state.settingsTab;
+    const isOwner = state.data?.isOwner !== false && !state.data?.teamPermissions;
+    const selectedMemberId = state.selectedTeamMember || null;
+    const selectedMember = selectedMemberId ? team.find((m) => m.id === selectedMemberId) : null;
+
+    // Account identity from the current influencer profile
+    const accountName = f.creatorName || '';
+    const accountCountry = f.country || '';
+    const foundationName = f.name || '';
+    const profileImage = f.profileImage || '';
+    const signedInEmail = state.email || f.email || '';
 
     return `
-      <section class="fcc-section">
-        <div class="fcc-tabs">
-          ${tabs.map((t) => `
-            <button type="button" class="fcc-tab ${tab === t.id ? 'is-active' : ''}" data-stab="${t.id}">${esc(t.label)}</button>
-          `).join('')}
+      <div class="fcc-settings">
+
+        <!-- ─── Page header ─── -->
+        <div class="fcc-settings__header">
+          <p class="fcc-kicker">SETTINGS</p>
+          <h1 class="fcc-h1">Settings</h1>
+          <p class="fcc-sub">Manage your account, team access, and security.</p>
         </div>
 
-        ${tab === 'foundation' ? `
-          <div class="fcc-block">
-            <h3>${esc(f.name || 'Foundation')}</h3>
-            <p class="fcc-muted">Founded by ${esc(f.creatorName || '—')} · ${esc(f.country || '—')} · ${esc(f.category || '—')}</p>
-            <p class="fcc-muted" style="margin-top:8px">${esc(f.mission || 'No mission published yet.')}</p>
-            <div class="fcc-form-actions" style="margin-top:14px">
-              <button type="button" class="fcc-btn-ghost" data-nav="foundation">Edit Foundation content</button>
+        <!-- ═══════════════════════════════ ACCOUNT ═══════════════════════════════ -->
+        <div class="fcc-set-card fcc-set-card--account">
+          <div class="fcc-set-card__head">
+            <span class="fcc-set-card__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </span>
+            <div>
+              <h2 class="fcc-set-card__title">Account</h2>
+              <p class="fcc-set-card__sub">Your foundation account information.</p>
             </div>
           </div>
-        ` : ''}
+          <div class="fcc-set-account-body">
+            <div class="fcc-set-avatar" aria-label="Profile image (edit in Foundation → Card)">
+              ${settingsAvatar(accountName, profileImage)}
+              <p class="fcc-set-avatar__note">Profile image is set from Foundation → Card</p>
+            </div>
+            <form class="fcc-form fcc-set-account-form" id="fcc-account-form">
+              <div class="fcc-field">
+                <label for="acc-name">Your Name</label>
+                <input id="acc-name" name="displayName" type="text"
+                  value="${esc(accountName)}" autocomplete="name" placeholder="Your display name">
+              </div>
+              <div class="fcc-field">
+                <label for="acc-country">Country</label>
+                <select id="acc-country" name="country">
+                  <option value="">Select country</option>
+                  ${COUNTRIES.map((c) => `<option value="${esc(c)}" ${accountCountry === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+                </select>
+              </div>
+              <div class="fcc-field fcc-field--readonly">
+                <label>Foundation</label>
+                <div class="fcc-readonly-value">
+                  <span>${esc(foundationName || '—')}</span>
+                  <span class="fcc-readonly-note">This is the foundation you manage.</span>
+                </div>
+              </div>
+              <div class="fcc-form-actions">
+                <button class="fcc-btn" type="submit" id="fcc-account-save-btn">Save account</button>
+              </div>
+            </form>
+          </div>
+        </div>
 
-        ${tab === 'team' ? `
-          <div class="fcc-block">
-            <h3>Team</h3>
-            ${!team.length ? emptyNote('No team members yet.') : `
-              <ul class="fcc-list">
-                ${team.map((m) => `
-                  <li class="fcc-row">
-                    <div>
-                      <p class="fcc-row__title">${esc(m.name || m.email)}</p>
-                      <p class="fcc-row__meta">${esc(m.email)} · ${esc(m.role || 'member')}</p>
-                    </div>
-                    <div class="fcc-row__actions">
-                      ${can('manageTeam') ? `
-                        <button type="button" class="fcc-btn-ghost is-danger" data-action="team-remove" data-id="${esc(m.id)}">Remove</button>
-                      ` : ''}
-                    </div>
-                  </li>
-                `).join('')}
-              </ul>
-            `}
-            ${can('manageTeam') ? `
-              <form class="fcc-form" id="fcc-team-form" style="margin-top:22px">
-                <div class="fcc-field">
-                  <label for="tm-name">Name</label>
-                  <input id="tm-name" name="name" required>
+        <!-- ═══════════════════════════ TEAM & ACCESS ════════════════════════════ -->
+        <div class="fcc-set-card fcc-set-card--team">
+          <div class="fcc-set-card__head">
+            <span class="fcc-set-card__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </span>
+            <div>
+              <h2 class="fcc-set-card__title">Team &amp; Access</h2>
+              <p class="fcc-set-card__sub">Manage who can access your Foundation Control Center.</p>
+            </div>
+            ${isOwner ? `
+              <button type="button" class="fcc-btn fcc-btn--sm fcc-set-add-btn" data-action="team-add-open" aria-label="Add team member">
+                + Add team member
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="fcc-set-team-body">
+            <!-- Left: member list -->
+            <div class="fcc-set-members">
+              <p class="fcc-set-members__label">TEAM MEMBERS</p>
+
+              <!-- Owner row (always shown) -->
+              <div class="fcc-set-member-row fcc-set-member-row--owner">
+                <div class="fcc-set-member-avatar">
+                  ${settingsAvatar(accountName, profileImage)}
                 </div>
-                <div class="fcc-field">
-                  <label for="tm-email">Email</label>
-                  <input id="tm-email" name="email" type="email" required>
+                <div class="fcc-set-member-info">
+                  <p class="fcc-set-member-name">${esc(accountName || signedInEmail || 'Foundation Owner')}</p>
+                  <p class="fcc-set-member-meta"><span class="fcc-badge fcc-badge--owner">OWNER</span> Full access</p>
                 </div>
-                <div class="fcc-field">
-                  <label for="tm-role">Role</label>
-                  <select id="tm-role" name="role">
-                    ${['admin', 'editor', 'finance', 'analyst'].map((r) => `<option value="${r}">${r}</option>`).join('')}
-                  </select>
+              </div>
+
+              ${!team.length ? `
+                <div class="fcc-set-empty-team">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <p class="fcc-set-empty-team__title">Invite your first team member</p>
+                  <p class="fcc-set-empty-team__sub">Share access to help you manage your foundation together.</p>
+                  ${isOwner ? `<button type="button" class="fcc-btn" data-action="team-add-open">Add team member</button>` : ''}
                 </div>
-                <div class="fcc-form-actions">
-                  <button class="fcc-btn" type="submit">Add member</button>
+              ` : team.map((m) => `
+                <div class="fcc-set-member-row ${selectedMemberId === m.id ? 'is-selected' : ''}"
+                  data-action="select-member" data-member-id="${esc(m.id)}" role="button" tabindex="0"
+                  aria-selected="${selectedMemberId === m.id ? 'true' : 'false'}">
+                  <div class="fcc-set-member-avatar">
+                    ${settingsAvatar(m.name)}
+                  </div>
+                  <div class="fcc-set-member-info">
+                    <p class="fcc-set-member-name">${esc(m.name || m.email)}</p>
+                    <p class="fcc-set-member-meta">${esc(m.email)} · <span class="fcc-badge fcc-badge--member">Team member</span></p>
+                  </div>
+                  ${isOwner ? `
+                    <button type="button" class="fcc-set-member-remove" data-action="team-remove"
+                      data-id="${esc(m.id)}" aria-label="Remove ${esc(m.name || m.email)} from foundation"
+                      title="Remove from foundation">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  ` : ''}
                 </div>
-              </form>
-            ` : '<p class="fcc-muted">Your role cannot manage the team.</p>'}
+              `).join('')}
+            </div>
+
+            <!-- Right: permission editor -->
+            <div class="fcc-set-perms">
+              ${selectedMember && isOwner ? `
+                <div class="fcc-set-perms__inner">
+                  <h3 class="fcc-set-perms__title">${esc(selectedMember.name || selectedMember.email)}'s access</h3>
+                  <p class="fcc-set-perms__sub">Choose what this team member can see and manage.</p>
+                  <div class="fcc-set-perm-rows" id="fcc-perm-rows" data-member-id="${esc(selectedMember.id)}">
+                    ${[
+                      {
+                        key: 'viewDonationAmounts',
+                        icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+                        label: 'Donation amounts',
+                        desc: 'See amounts raised, donation totals, and monetary values.',
+                      },
+                      {
+                        key: 'viewDonationDetails',
+                        icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+                        label: 'Donation details',
+                        desc: 'Access individual donation records.',
+                      },
+                      {
+                        key: 'viewSupporterInfo',
+                        icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+                        label: 'Supporter information',
+                        desc: 'View supporter names, cities, and countries.',
+                      },
+                      {
+                        key: 'viewCommunity',
+                        icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+                        label: 'Community',
+                        desc: 'Access the Community section.',
+                      },
+                    ].map((p) => {
+                      const enabled = selectedMember.permissions?.[p.key] !== false;
+                      return `
+                        <div class="fcc-set-perm-row">
+                          <span class="fcc-set-perm-icon" aria-hidden="true">${p.icon}</span>
+                          <div class="fcc-set-perm-text">
+                            <p class="fcc-set-perm-label">${esc(p.label)}</p>
+                            <p class="fcc-set-perm-desc">${esc(p.desc)}</p>
+                          </div>
+                          <button
+                            type="button"
+                            class="fcc-toggle ${enabled ? 'is-on' : ''}"
+                            data-action="toggle-permission"
+                            data-perm="${esc(p.key)}"
+                            aria-label="${esc(p.label)}: ${enabled ? 'enabled' : 'disabled'}"
+                            aria-pressed="${enabled ? 'true' : 'false'}">
+                            <span class="fcc-toggle__track"></span>
+                            <span class="fcc-toggle__thumb"></span>
+                          </button>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              ` : `
+                <div class="fcc-set-perms__empty">
+                  ${team.length > 0 ? `
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <p>Select a team member to manage their access.</p>
+                  ` : `
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <p>Access permissions will appear here when you add a team member.</p>
+                  `}
+                </div>
+              `}
+            </div>
+          </div>
+        </div>
+
+        <!-- Add team member modal -->
+        ${state.teamAddOpen ? `
+          <div class="fcc-modal-backdrop" data-action="team-add-close" aria-hidden="true"></div>
+          <div class="fcc-modal" role="dialog" aria-modal="true" aria-labelledby="fcc-add-modal-title">
+            <div class="fcc-modal__head">
+              <h2 class="fcc-modal__title" id="fcc-add-modal-title">Add team member</h2>
+              <button type="button" class="fcc-icon-btn" data-action="team-add-close" aria-label="Close">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <form class="fcc-form" id="fcc-team-form">
+              <div class="fcc-field">
+                <label for="tm-name">Name</label>
+                <input id="tm-name" name="name" type="text" required autocomplete="off" placeholder="Full name">
+              </div>
+              <div class="fcc-field">
+                <label for="tm-email">Email</label>
+                <input id="tm-email" name="email" type="email" required autocomplete="off" placeholder="their@email.com">
+              </div>
+              <div class="fcc-field">
+                <label for="tm-password">Temporary password</label>
+                <input id="tm-password" name="password" type="password" required autocomplete="new-password"
+                  placeholder="At least 8 characters" minlength="8">
+                <p class="fcc-field__hint">They can change this after logging in.</p>
+              </div>
+              <div class="fcc-form-actions">
+                <button class="fcc-btn" type="submit">Create team account</button>
+                <button type="button" class="fcc-btn-ghost" data-action="team-add-close">Cancel</button>
+              </div>
+            </form>
           </div>
         ` : ''}
 
-        ${tab === 'financial' ? `
-          <div class="fcc-block">
-            <h3>Financial</h3>
-            ${fin.available
-              ? ''
-              : emptyNote(fin.note || 'Payout accounts and balances are not connected yet.')}
+        <!-- ═══════════════════════════════ SECURITY ══════════════════════════════ -->
+        <div class="fcc-set-card fcc-set-card--security">
+          <div class="fcc-set-card__head">
+            <span class="fcc-set-card__icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </span>
+            <div>
+              <h2 class="fcc-set-card__title">Security</h2>
+              <p class="fcc-set-card__sub">Keep your account secure and protected.</p>
+            </div>
           </div>
-        ` : ''}
 
-        ${tab === 'security' ? `
-          <div class="fcc-block">
-            <h3>Account</h3>
-            <p class="fcc-muted">Signed in as ${esc(state.email || f.email || '—')}</p>
+          <!-- Change password row -->
+          <div class="fcc-set-sec-row">
+            <div class="fcc-set-sec-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div class="fcc-set-sec-text">
+              <p class="fcc-set-sec-label">Password</p>
+              <p class="fcc-set-sec-desc">Update your password to keep your account secure.</p>
+            </div>
+            <button type="button" class="fcc-btn-ghost fcc-btn--sm" data-action="toggle-pw-form" aria-expanded="${state.pwFormOpen ? 'true' : 'false'}">
+              ${state.pwFormOpen ? 'Cancel' : 'Change password'}
+            </button>
           </div>
-          <div class="fcc-block">
-            <h3>Change password</h3>
-            <form class="fcc-form" id="fcc-password-form">
+          ${state.pwFormOpen ? `
+            <form class="fcc-form fcc-set-sec-form" id="fcc-password-form">
               <div class="fcc-field">
                 <label for="pw-cur">Current password</label>
                 <input id="pw-cur" name="currentPassword" type="password" required autocomplete="current-password">
               </div>
               <div class="fcc-field">
                 <label for="pw-new">New password</label>
-                <input id="pw-new" name="newPassword" type="password" required autocomplete="new-password">
+                <input id="pw-new" name="newPassword" type="password" required autocomplete="new-password" minlength="8">
               </div>
               <div class="fcc-field">
-                <label for="pw-confirm">Confirm password</label>
+                <label for="pw-confirm">Confirm new password</label>
                 <input id="pw-confirm" name="confirmPassword" type="password" required autocomplete="new-password">
               </div>
               <div class="fcc-form-actions">
                 <button class="fcc-btn" type="submit">Update password</button>
               </div>
             </form>
+          ` : ''}
+
+          ${isOwner ? `
+            <!-- Change email row (owner only) -->
+            <div class="fcc-set-sec-row">
+              <div class="fcc-set-sec-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              </div>
+              <div class="fcc-set-sec-text">
+                <p class="fcc-set-sec-label">Email address</p>
+                <p class="fcc-set-sec-desc">${esc(signedInEmail || '—')}</p>
+              </div>
+              <button type="button" class="fcc-btn-ghost fcc-btn--sm" data-action="toggle-email-form" aria-expanded="${state.emailFormOpen ? 'true' : 'false'}">
+                ${state.emailFormOpen ? 'Cancel' : 'Change email'}
+              </button>
+            </div>
+            ${state.emailFormOpen ? `
+              <form class="fcc-form fcc-set-sec-form" id="fcc-email-form">
+                <div class="fcc-field">
+                  <label for="em-cur">Current password</label>
+                  <input id="em-cur" name="currentPassword" type="password" required autocomplete="current-password">
+                </div>
+                <div class="fcc-field">
+                  <label for="em-new">New email</label>
+                  <input id="em-new" name="newEmail" type="email" required autocomplete="email">
+                </div>
+                <div class="fcc-field">
+                  <label for="em-confirm">Confirm email</label>
+                  <input id="em-confirm" name="confirmEmail" type="email" required autocomplete="email">
+                </div>
+                <div class="fcc-form-actions">
+                  <button class="fcc-btn" type="submit">Update email</button>
+                </div>
+              </form>
+            ` : ''}
+          ` : ''}
+
+          <div class="fcc-set-sec-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Your account access is protected through the application's secure authentication system.
           </div>
-          <div class="fcc-block">
-            <h3>Change email</h3>
-            <form class="fcc-form" id="fcc-email-form">
-              <div class="fcc-field">
-                <label for="em-cur">Current password</label>
-                <input id="em-cur" name="currentPassword" type="password" required>
-              </div>
-              <div class="fcc-field">
-                <label for="em-new">New email</label>
-                <input id="em-new" name="newEmail" type="email" required>
-              </div>
-              <div class="fcc-field">
-                <label for="em-confirm">Confirm email</label>
-                <input id="em-confirm" name="confirmEmail" type="email" required>
-              </div>
-              <div class="fcc-form-actions">
-                <button class="fcc-btn" type="submit">Update email</button>
-              </div>
-            </form>
-          </div>
-          <div class="fcc-block">
-            <h3>Two-factor authentication</h3>
-            ${emptyNote(sec.twoFactorNote || 'Two-factor authentication is not enabled yet.')}
-          </div>
-        ` : ''}
-      </section>
+        </div>
+
+      </div>
     `;
   }
 
@@ -1890,12 +2094,7 @@ const FoundationControl = (() => {
       });
     });
 
-    root().querySelectorAll('[data-stab]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        state.settingsTab = btn.getAttribute('data-stab');
-        render();
-      });
-    });
+    // Settings subtabs removed — no [data-stab] wiring needed
 
     const fForm = document.getElementById('fcc-foundation-form');
     if (fForm) {
@@ -1914,12 +2113,36 @@ const FoundationControl = (() => {
     document.getElementById('fcc-team-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
+      const btn = e.target.querySelector('[type=submit]');
+      if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
       try {
-        await api('team-upsert', { method: 'POST', body: Object.fromEntries(fd.entries()) });
-        setFlash('Team member added');
+        const body = Object.fromEntries(fd.entries());
+        // role is always team_member for this form
+        body.role = 'editor';
+        await api('team-upsert', { method: 'POST', body });
+        state.teamAddOpen = false;
+        setFlash('Team member added. They can now log in with their email and password.');
         await loadCenter();
       } catch (err) {
-        setFlash(err.message || 'Failed to add member', 'err');
+        setFlash(err.message || 'Failed to add team member', 'err');
+        if (btn) { btn.disabled = false; btn.textContent = 'Create team account'; }
+        render();
+      }
+    });
+
+    document.getElementById('fcc-account-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const btn = document.getElementById('fcc-account-save-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+      try {
+        const body = { displayName: fd.get('displayName'), country: fd.get('country') };
+        await api('influencer-update-profile', { method: 'POST', body });
+        setFlash('Account updated');
+        await loadCenter();
+      } catch (err) {
+        setFlash(err.message || 'Failed to save account', 'err');
+        if (btn) { btn.disabled = false; btn.textContent = 'Save account'; }
         render();
       }
     });
@@ -1985,6 +2208,66 @@ const FoundationControl = (() => {
     const action = t.getAttribute('data-action');
 
     if (action === 'logout') return logout();
+
+    // ─── Settings actions ───
+    if (action === 'team-add-open') {
+      state.teamAddOpen = true;
+      render();
+      setTimeout(() => document.getElementById('tm-name')?.focus(), 50);
+      return;
+    }
+    if (action === 'team-add-close') {
+      state.teamAddOpen = false;
+      render();
+      return;
+    }
+    if (action === 'select-member') {
+      const id = t.getAttribute('data-member-id');
+      state.selectedTeamMember = state.selectedTeamMember === id ? null : id;
+      render();
+      return;
+    }
+    if (action === 'toggle-permission') {
+      const rows = document.getElementById('fcc-perm-rows');
+      const memberId = rows?.getAttribute('data-member-id');
+      const permKey = t.getAttribute('data-perm');
+      if (!memberId || !permKey) return;
+      const member = (state.data?.team || []).find((m) => m.id === memberId);
+      if (!member) return;
+      const current = member.permissions?.[permKey] !== false;
+      const newVal = !current;
+      // Optimistically update UI
+      if (!member.permissions) member.permissions = {};
+      member.permissions[permKey] = newVal;
+      t.classList.toggle('is-on', newVal);
+      t.setAttribute('aria-pressed', String(newVal));
+      // Save to server
+      const permissions = { ...(member.permissions || {}), [permKey]: newVal };
+      api('team-permissions', { method: 'POST', body: { memberId, permissions } })
+        .then(() => loadCenter())
+        .catch((err) => {
+          setFlash(err.message || 'Failed to save permission', 'err');
+          // Revert
+          member.permissions[permKey] = current;
+          render();
+        });
+      return;
+    }
+    if (action === 'toggle-pw-form') {
+      state.pwFormOpen = !state.pwFormOpen;
+      state.emailFormOpen = false;
+      render();
+      setTimeout(() => document.getElementById('pw-cur')?.focus(), 50);
+      return;
+    }
+    if (action === 'toggle-email-form') {
+      state.emailFormOpen = !state.emailFormOpen;
+      state.pwFormOpen = false;
+      render();
+      setTimeout(() => document.getElementById('em-cur')?.focus(), 50);
+      return;
+    }
+
     if (action === 'open-nav') {
       state.navOpen = true;
       render();
@@ -2031,10 +2314,14 @@ const FoundationControl = (() => {
     }
     if (action === 'save-foundation') return saveFoundation();
     if (action === 'team-remove') {
-      if (!confirm('Remove this team member?')) return;
+      const memberName = t.closest('.fcc-set-member-row')?.querySelector('.fcc-set-member-name')?.textContent || 'this team member';
+      if (!confirm(`Remove ${memberName} from the foundation? They will no longer be able to log in.`)) return;
       try {
         await api('team-remove', { method: 'POST', body: { id: t.getAttribute('data-id') } });
-        setFlash('Team member removed');
+        if (state.selectedTeamMember === t.getAttribute('data-id')) {
+          state.selectedTeamMember = null;
+        }
+        setFlash('Team member removed from foundation');
         await loadCenter();
       } catch (err) {
         setFlash(err.message || 'Remove failed', 'err');
@@ -2094,12 +2381,22 @@ const FoundationControl = (() => {
       if (city) state.drill = { type: 'city', city, country };
       else if (country && !city) state.drill = { type: 'country', country };
       else state.drill = null;
-      if (section === 'settings') state.settingsTab = 'team';
+      // Settings no longer uses subtabs
       go(SECTION_IDS.has(section) ? section : 'overview');
     }
   }
 
   function onKeydown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      const t = e.target.closest('[data-action="select-member"]');
+      if (t) {
+        e.preventDefault();
+        const id = t.getAttribute('data-member-id');
+        state.selectedTeamMember = state.selectedTeamMember === id ? null : id;
+        render();
+        return;
+      }
+    }
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
       if (!state.authenticated) return;
@@ -2108,6 +2405,11 @@ const FoundationControl = (() => {
       document.getElementById('fcc-search-input')?.focus();
     }
     if (e.key === 'Escape') {
+      if (state.teamAddOpen) {
+        state.teamAddOpen = false;
+        render();
+        return;
+      }
       const causeMenu = document.getElementById('fcc-cause-menu');
       if (causeMenu && !causeMenu.hidden) {
         closeCauseMenu();

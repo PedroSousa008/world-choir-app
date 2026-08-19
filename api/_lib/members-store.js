@@ -83,6 +83,11 @@ async function listInfluencers() {
     .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 }
 
+async function listInfluencerIds() {
+  const doc = await readInfluencersDoc();
+  return doc.influencers.filter((r) => r.active !== false).map((r) => r.id);
+}
+
 async function findInfluencerByEmail(email) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return null;
@@ -530,6 +535,7 @@ module.exports = {
   normalizePrimaryCategory,
   isApprovedCause,
   listInfluencers,
+  listInfluencerIds,
   listInfluencersOwnerView,
   findInfluencerByEmail,
   findInfluencerById,
