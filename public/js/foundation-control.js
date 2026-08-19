@@ -81,6 +81,7 @@ const FoundationControl = (() => {
     foundationTab: 'page',
     foundationDirty: false,
     foundationForm: null,
+    uploadingField: null,
     drill: null,
     settingsTab: 'foundation',
   };
@@ -360,6 +361,7 @@ const FoundationControl = (() => {
       data: null,
       foundationForm: null,
       foundationDirty: false,
+      uploadingField: null,
       searchOpen: false,
       mapOpen: false,
       flash: null,
@@ -754,12 +756,13 @@ const FoundationControl = (() => {
               <div id="fcc-live-preview-card">${renderLivePreviewCard()}</div>
             </aside>
           </div>
-        ` : `
+        ` : ''}
+        ${tab === 'card' ? renderFoundationCardEditor(form) : ''}
+        ${tab === 'information' ? `
           <div class="fcc-editor-grid">
-            ${tab === 'card' ? renderFoundationCardFields(form) : ''}
-            ${tab === 'information' ? renderFoundationInfoFields(form) : ''}
+            ${renderFoundationInfoFields(form)}
           </div>
-        `}
+        ` : ''}
       </section>
     `;
   }
@@ -872,45 +875,115 @@ const FoundationControl = (() => {
     `;
   }
 
-  function renderImageUpload(field, label, value, disabled) {
-    const has = !!value;
+  function imageActionIcon() {
     return `
-      <div class="fcc-field fcc-upload" data-image-field="${esc(field)}">
-        <label>${esc(label)}</label>
-        <input type="hidden" name="${esc(field)}" value="${esc(value || '')}">
-        <div class="fcc-upload__box ${has ? 'has-image' : ''}">
-          <div class="fcc-upload__preview" aria-hidden="${has ? 'false' : 'true'}">
-            ${has ? `<img src="${esc(value)}" alt="">` : '<span class="fcc-upload__placeholder">No image yet</span>'}
-          </div>
-          <div class="fcc-upload__actions">
-            ${disabled ? '' : `
-              <label class="fcc-btn fcc-upload__pick">
-                ${has ? 'Replace from device' : 'Choose from device'}
-                <input type="file" accept="image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.svg,.ico,.jfif" hidden data-image-input="${esc(field)}">
-              </label>
-              ${has ? `<button type="button" class="fcc-btn-ghost" data-action="clear-image" data-field="${esc(field)}">Remove</button>` : ''}
-            `}
-          </div>
-          <p class="fcc-upload__hint">Any image from your device · max 4 MB</p>
-        </div>
-      </div>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="5.5" width="17" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <circle cx="9" cy="10.5" r="1.4" fill="currentColor"/>
+        <path d="M6.5 16.5l4.2-4.2 2.3 2.3 2.6-3.2 4.4 5.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     `;
   }
 
-  function renderFoundationCardFields(form) {
+  function renderCardImageField(field, form, locked) {
+    const isCover = field === 'coverImage';
+    const value = isCover ? form.coverImage : form.profileImage;
+    const has = !!String(value || '').trim();
+    const loading = state.uploadingField === field;
+    const name = form.foundationName || 'Foundation';
+    const title = isCover ? 'Cover image' : 'Profile image';
+    const copy = isCover
+      ? 'Used as the wide visual on Donate cards, your public Foundation page, and Overview.'
+      : 'Used as your foundation’s portrait in search, support checkout, and on your public Foundation page.';
+    const emptyTitle = isCover ? 'Add a cover image' : 'Add a profile image';
+    const emptyCopy = isCover
+      ? 'A wide image generally works best, though any aspect ratio can be uploaded.'
+      : 'A clear, recognizable square image generally works best.';
+    const hint = isCover
+      ? 'Recommended: Wide image · JPG, PNG, WebP, HEIC, and other images · Max 4 MB'
+      : 'Recommended: Square image (1:1) · JPG, PNG, WebP, HEIC, and other images · Max 4 MB';
+    const alt = `${name} ${isCover ? 'cover' : 'profile'} image`;
+    const pickLabel = has ? 'Replace' : 'Add image';
+
+    return `
+      <section class="fcc-card-image ${has ? 'has-image' : ''} ${loading ? 'is-loading' : ''}" data-image-field="${esc(field)}">
+        <div class="fcc-card-image__head">
+          <h3 class="fcc-card-image__title">${esc(title)}</h3>
+          <p class="fcc-card-image__copy">${esc(copy)}</p>
+        </div>
+        <input type="hidden" name="${esc(field)}" value="${esc(value || '')}">
+        <div class="fcc-card-image__stage ${isCover ? 'is-cover' : 'is-profile'}">
+          ${has ? `
+            <img class="fcc-card-image__img" src="${esc(value)}" alt="${esc(alt)}" decoding="async">
+          ` : `
+            <div class="fcc-card-image__empty">
+              <span class="fcc-card-image__empty-icon" aria-hidden="true">${imageActionIcon()}</span>
+              <p class="fcc-card-image__empty-title">${esc(emptyTitle)}</p>
+              <p class="fcc-card-image__empty-copy">${esc(emptyCopy)}</p>
+            </div>
+          `}
+          ${loading ? '<div class="fcc-card-image__skel" aria-hidden="true"></div>' : ''}
+        </div>
+        ${locked ? '' : `
+          <div class="fcc-card-image__actions">
+            <label class="fcc-btn fcc-upload__pick" tabindex="0">
+              <span class="fcc-card-image__pick-icon" aria-hidden="true">${imageActionIcon()}</span>
+              ${esc(pickLabel)}
+              <input type="file" accept="image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.svg,.ico,.jfif" hidden data-image-input="${esc(field)}" aria-label="${esc(pickLabel)} ${esc(title)}">
+            </label>
+            ${has ? `<button type="button" class="fcc-btn-ghost is-danger" data-action="clear-image" data-field="${esc(field)}" aria-label="Remove ${esc(title)}">Remove</button>` : ''}
+          </div>
+        `}
+        <p class="fcc-card-image__hint">${esc(hint)}</p>
+      </section>
+    `;
+  }
+
+  function renderFoundationCardEditor(form) {
     const locked = !can('editFoundation');
     return `
-      <form class="fcc-form wide" id="fcc-foundation-form" data-part="card">
-        <div class="fcc-field">
-          <label for="ff-card-mission">Short mission (card)</label>
-          <textarea id="ff-card-mission" name="cardShortMission" ${locked ? 'readonly' : ''}>${esc(form.cardShortMission)}</textarea>
+      <form class="fcc-card-editor" id="fcc-foundation-form" data-part="card">
+        <div class="fcc-card-editor__images">
+          <p class="fcc-page-kicker">Card images</p>
+          <p class="fcc-card-editor__lede">These images represent your foundation across World Choir.</p>
+          ${renderCardImageField('profileImage', form, locked)}
+          ${renderCardImageField('coverImage', form, locked)}
         </div>
-        <div class="fcc-field">
-          <label for="ff-short">Short description</label>
-          <textarea id="ff-short" name="shortDescription" ${locked ? 'readonly' : ''}>${esc(form.shortDescription)}</textarea>
-        </div>
-        ${renderImageUpload('profileImage', 'Profile image', form.profileImage, locked)}
-        ${renderImageUpload('coverImage', 'Cover image', form.coverImage, locked)}
+        <aside class="fcc-card-editor__aside">
+          <section class="fcc-card-tips">
+            <div class="fcc-card-tips__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18h6"/>
+                <path d="M10 22h4"/>
+                <path d="M12 2a7 7 0 017 7c0 2.6-1.3 4.4-3.1 5.7-.5.4-.9 1.1-.9 1.8v.5H9v-.5c0-.7-.4-1.4-.9-1.8C6.3 13.4 5 11.6 5 9a7 7 0 017-7z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="fcc-card-tips__title">Tips for great images</h3>
+              <ul class="fcc-card-tips__list">
+                <li>Use high-quality images that reflect your foundation’s identity and mission.</li>
+                <li>Choose a clear, recognizable Profile Image.</li>
+                <li>Wide images generally work best for the Cover Image.</li>
+                <li>Avoid important text or faces extremely close to the edges — some placements may crop responsively.</li>
+              </ul>
+            </div>
+          </section>
+          <p class="fcc-page-kicker">Card content</p>
+          <div class="fcc-field">
+            <label for="ff-card-mission">Short mission (card)</label>
+            <p class="fcc-card-field-help">A concise version of your mission for compact Foundation experiences, and a fallback when the full mission is empty.</p>
+            <textarea id="ff-card-mission" name="cardShortMission" class="fcc-textarea--card" rows="5"
+              placeholder="A short mission for compact Foundation experiences."
+              ${locked ? 'readonly' : ''}>${esc(form.cardShortMission)}</textarea>
+          </div>
+          <div class="fcc-field">
+            <label for="ff-short">Short description</label>
+            <p class="fcc-card-field-help">A short introduction for places that need a little more context than the card mission.</p>
+            <textarea id="ff-short" name="shortDescription" class="fcc-textarea--card" rows="6"
+              placeholder="A brief introduction to your foundation."
+              ${locked ? 'readonly' : ''}>${esc(form.shortDescription)}</textarea>
+          </div>
+        </aside>
       </form>
     `;
   }
@@ -981,6 +1054,7 @@ const FoundationControl = (() => {
 
     const kind = field === 'coverImage' ? 'cover' : 'profile';
     state.busy = true;
+    state.uploadingField = field;
     state.error = null;
     setFlash(`Uploading ${kind} image…`);
     render();
@@ -998,6 +1072,7 @@ const FoundationControl = (() => {
       setFlash(err.message || 'Upload failed', 'err');
     } finally {
       state.busy = false;
+      state.uploadingField = null;
       render();
     }
   }
@@ -1125,6 +1200,13 @@ const FoundationControl = (() => {
         const file = input.files && input.files[0];
         input.value = '';
         await uploadImageFromDevice(field, file);
+      });
+      const pick = input.closest('label');
+      pick?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          input.click();
+        }
       });
     });
   }
@@ -1748,8 +1830,27 @@ const FoundationControl = (() => {
     renderApp();
   }
 
+  function bindCardImagePreviews() {
+    root().querySelectorAll('.fcc-card-image__img').forEach((img) => {
+      const stage = img.closest('.fcc-card-image__stage');
+      const markBroken = () => {
+        img.hidden = true;
+        stage?.classList.add('is-broken');
+        if (stage && !stage.querySelector('.fcc-card-image__broken')) {
+          const note = document.createElement('p');
+          note.className = 'fcc-card-image__broken';
+          note.textContent = 'This image could not be displayed. Replace it to choose another.';
+          stage.appendChild(note);
+        }
+      };
+      img.addEventListener('error', markBroken);
+      if (img.complete && img.naturalWidth === 0) markBroken();
+    });
+  }
+
   function bindApp() {
     bindImageUploads();
+    bindCardImagePreviews();
     bindCausePicker();
     root().querySelectorAll('[data-nav]').forEach((btn) => {
       btn.addEventListener('click', () => go(btn.getAttribute('data-nav')));
