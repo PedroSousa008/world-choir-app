@@ -340,12 +340,42 @@ const DailyActsPage = (() => {
     `;
   }
 
-  function renderSheet(content, { className = '' } = {}) {
+  function renderSheet(content, { className = '', atmosphericBg = false } = {}) {
+    const bgLayers = `
+      <div class="dap-sheet__panel-bg" aria-hidden="true">
+        <img
+          class="dap-sheet__panel-bg-image"
+          src="/images/daily-acts/daily-act-background.jpg"
+          alt=""
+          decoding="async"
+          loading="lazy"
+          onerror="this.hidden=true"
+        />
+        <div class="dap-sheet__panel-bg-fade"></div>
+      </div>
+    `;
+
+    let panelContent = content;
+    if (atmosphericBg) {
+      const closeMatch = content.match(
+        /^\s*(<button type="button" class="dap-sheet__close"[\s\S]*?<\/button>)([\s\S]*)$/
+      );
+      if (closeMatch) {
+        panelContent = `
+          ${bgLayers}
+          ${closeMatch[1]}
+          <div class="dap-sheet__panel-scroll">${closeMatch[2]}</div>
+        `;
+      } else {
+        panelContent = `${bgLayers}<div class="dap-sheet__panel-scroll">${content}</div>`;
+      }
+    }
+
     return `
-      <div class="dap-sheet ${className}" role="dialog" aria-modal="true">
+      <div class="dap-sheet ${className}${atmosphericBg ? ' dap-sheet--atmospheric' : ''}" role="dialog" aria-modal="true">
         <button type="button" class="dap-sheet__backdrop" id="dap-sheet-close" aria-label="Close"></button>
         <div class="dap-sheet__panel">
-          ${content}
+          ${panelContent}
         </div>
       </div>
     `;
@@ -429,7 +459,7 @@ const DailyActsPage = (() => {
           </button>
         </div>
       `}
-    `, { className: completed ? 'dap-sheet--completed' : '' });
+    `, { className: completed ? 'dap-sheet--completed' : '', atmosphericBg: true });
   }
 
   function renderCompleteMoment() {

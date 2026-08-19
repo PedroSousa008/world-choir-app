@@ -409,6 +409,89 @@
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
+/* ── Atmospheric act card background ── */
+
+.dap-sheet--atmospheric .dap-sheet__panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.dap-sheet__panel-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dap-sheet__panel-bg-image {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 120%;
+  height: 56%;
+  transform: translateX(-50%);
+  object-fit: cover;
+  object-position: center 62%;
+  opacity: 0.68;
+}
+
+.dap-sheet__panel-bg-fade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(18, 20, 28, 1) 0%,
+      rgba(18, 20, 28, 0.94) 12%,
+      rgba(12, 13, 18, 0.72) 26%,
+      rgba(8, 8, 12, 0.38) 42%,
+      rgba(8, 8, 12, 0.24) 52%,
+      rgba(8, 8, 12, 0.42) 64%,
+      rgba(8, 8, 12, 0.82) 78%,
+      rgba(8, 8, 12, 0.97) 90%,
+      rgba(8, 8, 12, 1) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(8, 8, 12, 0.94) 0%,
+      rgba(8, 8, 12, 0.18) 20%,
+      rgba(8, 8, 12, 0.18) 80%,
+      rgba(8, 8, 12, 0.94) 100%
+    );
+}
+
+.dap-sheet--atmospheric .dap-sheet__panel-scroll {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 28px 22px;
+  padding-top: 52px;
+}
+
+.dap-sheet--atmospheric .dap-sheet__close {
+  z-index: 3;
+}
+
+@media (max-width: 480px) {
+  .dap-sheet__panel-bg-image {
+    top: 28%;
+    height: 62%;
+    opacity: 0.6;
+  }
+
+  .dap-sheet--atmospheric .dap-sheet__panel-scroll {
+    padding: 24px 18px;
+    padding-top: 48px;
+  }
+}
+
 .dap-sheet--moment .dap-sheet__panel {
   text-align: center;
   padding-top: 48px;
