@@ -8,6 +8,13 @@ const WorldChoirMap = (() => {
   let gatheringLayer = null;
   let pulseCityKey = null;
   let pulseClearTimer = null;
+  let voiceJoinedAnimating = false;
+  let lastAppliedHomeKey = null;
+
+  const DEFAULT_CENTER = [20, 0];
+  const DEFAULT_ZOOM = 2;
+  const USER_HOME_ZOOM = 5;
+  const MAP_HOME_STORAGE_KEY = 'wc_map_user_home';
 
   function pulseCity(key, durationMs = 3000) {
     if (!key) return;
@@ -33,6 +40,103 @@ const WorldChoirMap = (() => {
 
   function cityKey(c) {
     return `${c.city}|${c.country}`;
+  }
+
+  function readCachedUserMapHome() {
+    try {
+      const raw = localStorage.getItem(MAP_HOME_STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (typeof data?.lat === 'number' && typeof data?.lng === 'number') {
+        return { lat: data.lat, lng: data.lng };
+      }
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }
+
+  function cacheUserMapHome(lat, lng) {
+    try {
+      localStorage.setItem(MAP_HOME_STORAGE_KEY, JSON.stringify({ lat, lng }));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function clampMapCenter(lat, lng) {
+    return {
+      lat: clamp(lat, -85, 85),
+      lng: clamp(((lng + 180) % 360 + 360) % 360 - 180, -180, 180),
+    };
+  }
+
+  function getUserMapCenter() {
+    const pledge = typeof WorldChoirDB !== 'undefined'
+      ? WorldChoirDB.getPledgeForCurrentUser?.()
+      : null;
+
+    if (pledge?.latitude != null && pledge?.longitude != null) {
+      return { lat: pledge.latitude, lng: pledge.longitude, zoom: USER_HOME_ZOOM };
+    }
+
+    if (pledge?.city && pledge?.country && typeof WorldChoirDB.getAggregatedCities === 'function') {
+      const match = WorldChoirDB.getAggregatedCities().find(
+        (city) => city.city === pledge.city && city.country === pledge.country
+      );
+      if (match?.latitude != null && match?.longitude != null) {
+        return { lat: match.latitude, lng: match.longitude, zoom: USER_HOME_ZOOM };
+      }
+    }
+
+    const user = typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.getCurrentUser?.() : null;
+    if (user?.latitude != null && user?.longitude != null) {
+      return { lat: user.latitude, lng: user.longitude, zoom: USER_HOME_ZOOM };
+    }
+
+    const cached = readCachedUserMapHome();
+    if (cached) {
+      return { lat: cached.lat, lng: cached.lng, zoom: USER_HOME_ZOOM };
+    }
+
+    return null;
+  }
+
+  function userHomeKey(center) {
+    if (!center) return null;
+    return `${center.lat.toFixed(4)}|${center.lng.toFixed(4)}`;
+  }
+
+  function getInitialMapView() {
+    const center = getUserMapCenter();
+    if (center) {
+      const { lat, lng } = clampMapCenter(center.lat, center.lng);
+      return { center: [lat, lng], zoom: center.zoom ?? USER_HOME_ZOOM };
+    }
+    return { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM };
+  }
+
+  function applyUserHomeCenter(options = {}) {
+    if (!map || voiceJoinedAnimating) return false;
+
+    const center = getUserMapCenter();
+    if (!center) return false;
+
+    const key = userHomeKey(center);
+    if (!options.force && key === lastAppliedHomeKey && !options.animate) return true;
+
+    const { lat, lng } = clampMapCenter(center.lat, center.lng);
+    const zoom = center.zoom ?? USER_HOME_ZOOM;
+    cacheUserMapHome(lat, lng);
+
+    if (options.animate) {
+      map.flyTo([lat, lng], zoom, { duration: options.duration ?? 1.2, easeLinearity: 0.22 });
+    } else {
+      map.setView([lat, lng], zoom, { animate: false });
+    }
+
+    lastAppliedHomeKey = key;
+    return true;
   }
 
   function glowSize(count) {
@@ -96,9 +200,10 @@ const WorldChoirMap = (() => {
   }
 
   function initMap() {
+    const view = getInitialMapView();
     map = L.map('world-map', {
-      center: [20, 0],
-      zoom: 2,
+      center: view.center,
+      zoom: view.zoom,
       minZoom: 2,
       maxZoom: 10,
       zoomControl: true,
@@ -236,6 +341,7 @@ const WorldChoirMap = (() => {
   async function runVoiceJoinedAnimation(data) {
     if (!data?.lat || !data?.lng) return;
 
+    voiceJoinedAnimating = true;
     pulseCityKey = `${data.city}|${data.country}`;
     refreshMapData();
 
@@ -246,7 +352,14 @@ const WorldChoirMap = (() => {
     await wait(2200);
     overlay.classList.remove('active');
 
-    await flyTo(20, 0, 2, 1.8);
+    cacheUserMapHome(data.lat, data.lng);
+    lastAppliedHomeKey = userHomeKey({ lat: data.lat, lng: data.lng });
+
+    const home = getUserMapCenter() || { lat: data.lat, lng: data.lng, zoom: USER_HOME_ZOOM };
+    const { lat, lng } = clampMapCenter(home.lat, home.lng);
+    await flyTo(lat, lng, home.zoom ?? USER_HOME_ZOOM, 1.8);
+
+    voiceJoinedAnimating = false;
     pulseCityKey = null;
     refreshMapData();
     sessionStorage.removeItem('wc_voice_joined');
@@ -283,24 +396,21 @@ const WorldChoirMap = (() => {
         city: pledge.city,
         country: pledge.country,
       });
+      return;
     }
+    applyUserHomeCenter({ force: true, animate: true });
   }
 
   function init() {
     // Start the map UI immediately — don't wait on pledge/network bootstrap.
     startMap();
-    WorldChoirPledgeState.init().then(() => {
-      refreshMapData();
-      updateEmptyState();
-    }).catch((err) => {
-      console.error('Failed to connect to World Choir database:', err);
-      refreshMapData();
-    });
   }
 
   function startMap() {
     document.body.classList.add('map-page');
     WorldChoirNav.startWatcher('map');
+
+    const hasVoiceJoinedSession = !!sessionStorage.getItem('wc_voice_joined');
 
     initMap();
     refreshMapData();
@@ -330,14 +440,36 @@ const WorldChoirMap = (() => {
 
     window.addEventListener('wc-pledge-added', (e) => {
       pulseCity(`${e.detail?.city}|${e.detail?.country}`);
+      if (e.detail?.latitude != null && e.detail?.longitude != null) {
+        cacheUserMapHome(e.detail.latitude, e.detail.longitude);
+      }
     });
-    window.addEventListener('wc-pledge-updated', refreshMapData);
+    window.addEventListener('wc-pledge-updated', (e) => {
+      refreshMapData();
+      if (e.detail?.latitude != null && e.detail?.longitude != null) {
+        applyUserHomeCenter({ force: true, animate: true });
+      }
+    });
     window.addEventListener('wc-pledges-synced', refreshMapData);
     window.addEventListener('wc-map-data-state', refreshMapData);
     window.addEventListener('wc-voices-live-update', (e) => {
       const key = pickPulseCity(e.detail);
       if (key) pulseCity(key);
       else refreshMapData();
+    });
+
+    WorldChoirPledgeState.init().then(() => {
+      refreshMapData();
+      updateEmptyState();
+      if (!hasVoiceJoinedSession) {
+        applyUserHomeCenter({ animate: false });
+      }
+    }).catch((err) => {
+      console.error('Failed to connect to World Choir database:', err);
+      refreshMapData();
+      if (!hasVoiceJoinedSession) {
+        applyUserHomeCenter({ animate: false });
+      }
     });
 
     checkVoiceJoinedFromSession();
