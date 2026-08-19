@@ -130,7 +130,7 @@ const WorldChoirMap = (() => {
     cacheUserMapHome(lat, lng);
 
     if (options.animate) {
-      map.flyTo([lat, lng], zoom, { duration: options.duration ?? 1.2, easeLinearity: 0.22 });
+      animateMapView(lat, lng, zoom, { duration: options.duration ?? 1.2 });
     } else {
       map.setView([lat, lng], zoom, { animate: false });
     }
@@ -211,6 +211,9 @@ const WorldChoirMap = (() => {
       worldCopyJump: false,
       maxBounds: [[-85, -180], [85, 180]],
       maxBoundsViscosity: 1.0,
+      zoomAnimation: false,
+      fadeAnimation: true,
+      markerZoomAnimation: false,
     });
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
@@ -218,6 +221,9 @@ const WorldChoirMap = (() => {
       maxZoom: 19,
       noWrap: true,
       bounds: [[-85, -180], [85, 180]],
+      updateWhenZooming: true,
+      updateWhenIdle: true,
+      keepBuffer: 8,
     }).addTo(map);
 
     cityLightsLayer = L.layerGroup().addTo(map);
@@ -357,7 +363,7 @@ const WorldChoirMap = (() => {
 
     const home = getUserMapCenter() || { lat: data.lat, lng: data.lng, zoom: USER_HOME_ZOOM };
     const { lat, lng } = clampMapCenter(home.lat, home.lng);
-    await flyTo(lat, lng, home.zoom ?? USER_HOME_ZOOM, 1.8);
+    await animateMapView(lat, lng, home.zoom ?? USER_HOME_ZOOM, { duration: 1.8, zoomOut: true });
 
     voiceJoinedAnimating = false;
     pulseCityKey = null;
@@ -366,8 +372,20 @@ const WorldChoirMap = (() => {
   }
 
   function flyTo(lat, lng, zoom, durationSec) {
+    return animateMapView(lat, lng, zoom, { duration: durationSec, zoomOut: false, useFly: true });
+  }
+
+  function animateMapView(lat, lng, zoom, options = {}) {
+    const duration = options.duration ?? 1.2;
+    const zoomOut = options.zoomOut === true || (map && map.getZoom() > zoom);
+    const useFly = options.useFly === true && !zoomOut;
+
     return new Promise((resolve) => {
-      map.flyTo([lat, lng], zoom, { duration: durationSec, easeLinearity: 0.22 });
+      if (useFly && typeof map.flyTo === 'function') {
+        map.flyTo([lat, lng], zoom, { duration, easeLinearity: 0.22 });
+      } else {
+        map.setView([lat, lng], zoom, { animate: true, duration, easeLinearity: 0.22 });
+      }
       map.once('moveend', resolve);
     });
   }

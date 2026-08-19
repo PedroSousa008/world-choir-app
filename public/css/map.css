@@ -2,7 +2,7 @@
 
 body.map-page {
   overflow: hidden;
-  background: #000000;
+  background: #0c1018;
   height: 100dvh;
   height: 100vh; /* fallback */
   width: 100%;
@@ -15,15 +15,7 @@ body.map-page {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: #000000;
-}
-
-.map-page__vignette {
-  position: fixed;
-  inset: 0;
-  z-index: 400;
-  pointer-events: none;
-  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.65);
+  background: #0c1018;
 }
 
 .map-shell {
@@ -31,21 +23,38 @@ body.map-page {
   height: calc(100dvh - var(--nav-height) - env(safe-area-inset-bottom, 0px));
   height: calc(100vh - var(--nav-height) - env(safe-area-inset-bottom, 0px)); /* fallback */
   z-index: 1;
+  overflow: hidden;
 }
 
 #world-map {
   width: 100%;
   height: 100%;
-  background: #000000;
+  background: #0c1018;
+  overflow: hidden;
 }
 
 .leaflet-container {
-  background: #000000 !important;
+  background: #0c1018 !important;
   font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+.leaflet-pane,
+.leaflet-map-pane,
+.leaflet-tile-pane {
+  background: transparent;
 }
 
 .leaflet-tile-pane {
   filter: brightness(1.15) contrast(1.08) saturate(0.85);
+}
+
+.leaflet-fade-anim .leaflet-tile {
+  will-change: opacity;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .leaflet-control-zoom {
