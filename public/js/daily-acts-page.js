@@ -345,7 +345,7 @@ const DailyActsPage = (() => {
       <div class="dap-sheet__panel-bg" aria-hidden="true">
         <img
           class="dap-sheet__panel-bg-image"
-          src="/images/daily-acts/daily-act-background.jpg"
+          src="/images/daily-acts/daily-act-background.jpg?v=20260819d"
           alt=""
           width="1200"
           height="750"

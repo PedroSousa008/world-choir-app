@@ -432,15 +432,14 @@
 
 .dap-sheet__panel-bg-image {
   position: absolute;
-  left: 50%;
-  top: 32%;
+  inset: 0;
   width: 100%;
-  aspect-ratio: 3 / 2;
-  height: auto;
-  transform: translateX(-50%);
+  height: 100%;
   object-fit: cover;
-  object-position: center 62%;
-  opacity: 0.68;
+  object-position: center 58%;
+  opacity: 1;
+  filter: brightness(1.5) saturate(1.2) contrast(1.06);
+  transform: none;
 }
 
 .dap-sheet__panel-bg-fade {
@@ -450,21 +449,21 @@
     linear-gradient(
       180deg,
       rgba(18, 20, 28, 1) 0%,
-      rgba(18, 20, 28, 0.94) 12%,
-      rgba(12, 13, 18, 0.72) 26%,
-      rgba(8, 8, 12, 0.38) 42%,
-      rgba(8, 8, 12, 0.24) 52%,
-      rgba(8, 8, 12, 0.42) 64%,
-      rgba(8, 8, 12, 0.82) 78%,
-      rgba(8, 8, 12, 0.97) 90%,
+      rgba(18, 20, 28, 0.96) 10%,
+      rgba(18, 20, 28, 0.78) 22%,
+      rgba(12, 13, 18, 0.32) 38%,
+      rgba(8, 8, 12, 0.04) 52%,
+      rgba(8, 8, 12, 0.08) 64%,
+      rgba(8, 8, 12, 0.48) 78%,
+      rgba(8, 8, 12, 0.94) 90%,
       rgba(8, 8, 12, 1) 100%
     ),
     linear-gradient(
       90deg,
-      rgba(8, 8, 12, 0.94) 0%,
-      rgba(8, 8, 12, 0.18) 20%,
-      rgba(8, 8, 12, 0.18) 80%,
-      rgba(8, 8, 12, 0.94) 100%
+      rgba(8, 8, 12, 0.72) 0%,
+      rgba(8, 8, 12, 0) 18%,
+      rgba(8, 8, 12, 0) 82%,
+      rgba(8, 8, 12, 0.72) 100%
     );
 }
 
@@ -485,8 +484,8 @@
 
 @media (max-width: 480px) {
   .dap-sheet__panel-bg-image {
-    top: 28%;
-    opacity: 0.6;
+    object-position: center 56%;
+    filter: brightness(1.55) saturate(1.22) contrast(1.06);
   }
 
   .dap-sheet--atmospheric .dap-sheet__panel-scroll {
