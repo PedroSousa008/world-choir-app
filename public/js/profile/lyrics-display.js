@@ -72,11 +72,12 @@ const LyricsDisplay = (() => {
           >
         </header>
 
-        <!-- Lyrics hero -->
+        <!-- Lyrics hero: prev → CURRENT → next (always this vertical order) -->
         <section class="pm-lyrics" aria-label="Lyrics">
           <div class="pm-lyrics__radial" aria-hidden="true"></div>
-          <div class="pm-lyrics__row" aria-hidden="true">
-            <span class="pm-waveform pm-waveform--left">
+          <p class="lyrics-display__prev" id="lyric-prev">&nbsp;</p>
+          <div class="pm-lyrics__row">
+            <span class="pm-waveform pm-waveform--left" aria-hidden="true">
               <span class="pm-waveform__bar"></span>
               <span class="pm-waveform__bar"></span>
               <span class="pm-waveform__bar"></span>
@@ -88,7 +89,6 @@ const LyricsDisplay = (() => {
               <span class="pm-waveform__bar"></span>
             </span>
           </div>
-          <p class="lyrics-display__prev" id="lyric-prev">&nbsp;</p>
           <p class="lyrics-display__next" id="lyric-next">&nbsp;</p>
         </section>
 
