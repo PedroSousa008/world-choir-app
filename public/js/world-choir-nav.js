@@ -48,7 +48,7 @@ const WorldChoirNav = (() => {
       'profile.html',
       'css/profile.css?v=20260813n',
       'js/profile/profile-page.js?v=20260816a',
-      'js/profile/daily-acts-peace.js?v=20260810i',
+      'js/profile/daily-acts-peace.js?v=20260819a',
       'js/profile/daily-acts-button.js?v=20260810i',
       'js/world-choir-onboarding.js?v=20260816a',
       'js/world-choir-db.js?v=20260817j',

@@ -5,6 +5,7 @@ const DailyActsPeace = (() => {
   let state = null;
   let bannerVisible = false;
   let started = false;
+  const BANNER_DISMISS_PREFIX = 'wc_daily_peace_banner_dismiss_';
 
   function localDateString() {
     const d = new Date();
@@ -16,6 +17,47 @@ const DailyActsPeace = (() => {
 
   function deviceId() {
     return WorldChoirDB.getDeviceId();
+  }
+
+  function bannerDismissKey(date = localDateString()) {
+    return `${BANNER_DISMISS_PREFIX}${date}`;
+  }
+
+  function isBannerDismissedLocally(date = localDateString()) {
+    try {
+      return localStorage.getItem(bannerDismissKey(date)) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function persistBannerDismissed(date = localDateString()) {
+    try {
+      localStorage.setItem(bannerDismissKey(date), '1');
+      pruneOldBannerDismissKeys(date);
+    } catch {
+      /* ignore storage errors */
+    }
+  }
+
+  function pruneOldBannerDismissKeys(today = localDateString()) {
+    try {
+      const keep = bannerDismissKey(today);
+      for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(BANNER_DISMISS_PREFIX) && key !== keep) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch {
+      /* ignore storage errors */
+    }
+  }
+
+  function applyLocalDismissToState(date = localDateString()) {
+    if (!state || !isBannerDismissedLocally(date)) return;
+    state.showNotification = false;
+    if (state.userDailyAct) state.userDailyAct.notificationDismissed = true;
   }
 
   async function apiFetch(path, options = {}) {
@@ -35,6 +77,10 @@ const DailyActsPeace = (() => {
       `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&date=${encodeURIComponent(date)}`
     );
     state = data;
+    if (data?.userDailyAct?.notificationDismissed) {
+      persistBannerDismissed(data.userDailyAct.date || date);
+    }
+    applyLocalDismissToState(date);
     return data;
   }
 
@@ -90,36 +136,45 @@ const DailyActsPeace = (() => {
     }
   }
 
+  function shouldShowBanner() {
+    const onboardingOpen = typeof WorldChoirOnboarding !== 'undefined'
+      && typeof WorldChoirOnboarding.isOpen === 'function'
+      && WorldChoirOnboarding.isOpen();
+    const onDailyActsPage = /daily-acts\.html/i.test(window.location.pathname || '');
+    if (onboardingOpen || onDailyActsPage) return false;
+    if (isBannerDismissedLocally()) return false;
+    return !!state?.showNotification;
+  }
+
   function syncBannerFromState() {
     const titleEl = document.getElementById('daily-peace-banner-title');
     if (titleEl && state?.act?.text) {
       titleEl.textContent = state.act.text;
     }
-    const onboardingOpen = typeof WorldChoirOnboarding !== 'undefined'
-      && typeof WorldChoirOnboarding.isOpen === 'function'
-      && WorldChoirOnboarding.isOpen();
-    const onDailyActsPage = /daily-acts\.html/i.test(window.location.pathname || '');
-    setBannerVisible(!!state?.showNotification && !onboardingOpen && !onDailyActsPage);
+    setBannerVisible(shouldShowBanner());
   }
 
   async function dismissBanner() {
+    const date = localDateString();
+    persistBannerDismissed(date);
+    applyLocalDismissToState(date);
     setBannerVisible(false);
     try {
+      await WorldChoirDB.ready();
       const data = await apiFetch('/api/daily-peace', {
         method: 'POST',
         body: JSON.stringify({
           deviceId: deviceId(),
-          date: localDateString(),
+          date,
           action: 'dismiss-notification',
         }),
       });
       state = data;
+      if (data?.userDailyAct?.notificationDismissed) {
+        persistBannerDismissed(data.userDailyAct.date || date);
+      }
     } catch (err) {
       console.warn('Could not dismiss daily act notification:', err);
-      if (state) {
-        state.showNotification = false;
-        if (state.userDailyAct) state.userDailyAct.notificationDismissed = true;
-      }
     }
   }
 
@@ -169,6 +224,7 @@ const DailyActsPeace = (() => {
     started = true;
     ensureStylesheet();
     ensureBanner();
+    pruneOldBannerDismissKeys();
 
     try {
       await WorldChoirDB.ready();
