@@ -12,7 +12,37 @@ const ProfilePage = (() => {
     dailyActs: 'profile-daily-acts-root',
   };
 
+  function getVoicesCounterContent() {
+    if (typeof WorldChoirDB === 'undefined' || !WorldChoirDB.isPledgesLoaded()) {
+      return { text: 'LOADING VOICES', loading: true };
+    }
+
+    const stats = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
+    const count = stats?.voices ?? 0;
+    const formatted = count.toLocaleString('en-US');
+    const text = count === 1 ? '1 VOICE' : `${formatted} VOICES`;
+    return { text, loading: false };
+  }
+
+  function updateVoicesCounter() {
+    const el = document.getElementById('profile-voices-counter');
+    if (!el) return;
+
+    const { text, loading } = getVoicesCounterContent();
+    const prev = el.textContent;
+    el.textContent = text;
+    el.classList.toggle('profile-voices-counter--loading', loading);
+
+    if (!loading && text !== prev && prev !== 'LOADING VOICES') {
+      el.classList.remove('profile-voices-counter--bump');
+      void el.offsetWidth;
+      el.classList.add('profile-voices-counter--bump');
+    }
+  }
+
   function render() {
+    updateVoicesCounter();
+
     UserIdentityCard.mount(document.getElementById(SECTIONS.identity), {
       onChangeLocation: () => {
         ChangeLocationModal.open({
@@ -71,6 +101,12 @@ const ProfilePage = (() => {
     OwnerAccess.init();
     WorldChoirNav.startWatcher('profile');
     render();
+
+    window.addEventListener('wc-pledges-synced', updateVoicesCounter);
+    window.addEventListener('wc-map-data-state', updateVoicesCounter);
+    window.addEventListener('wc-pledge-added', updateVoicesCounter);
+    window.addEventListener('wc-voices-live-update', updateVoicesCounter);
+    WorldChoirDB.startLiveSync({ intervalMs: 2000 });
 
     WorldChoirPledgeState.init()
       .then(async () => {
