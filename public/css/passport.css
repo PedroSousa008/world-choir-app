@@ -280,7 +280,7 @@
 
 .passport-card__footer {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-top: auto;
@@ -302,7 +302,7 @@
   height: auto;
   aspect-ratio: 1637 / 960;
   object-fit: contain;
-  object-position: right bottom;
+  object-position: right center;
   opacity: 0.92;
   flex-shrink: 0;
   pointer-events: none;
