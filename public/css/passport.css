@@ -279,20 +279,28 @@
 }
 
 .passport-card__footer {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  column-gap: 12px;
   margin-top: auto;
   padding-top: 18px;
 }
 
+.passport-card__since {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-self: center;
+  min-height: 0;
+}
+
 .passport-card__since .passport-field__label {
-  margin-bottom: 4px;
+  margin: 0 0 4px;
 }
 
 .passport-card__since .passport-field__value {
-  margin-bottom: 0;
+  margin: 0;
   font-size: 0.9rem;
   white-space: normal;
 }
@@ -305,6 +313,7 @@
   object-position: right center;
   opacity: 0.92;
   flex-shrink: 0;
+  align-self: center;
   pointer-events: none;
 }
 
