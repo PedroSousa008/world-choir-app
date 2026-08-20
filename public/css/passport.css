@@ -298,7 +298,7 @@
 }
 
 .passport-card__map {
-  width: min(46%, 172px);
+  width: min(52%, 196px);
   height: auto;
   aspect-ratio: 1637 / 960;
   object-fit: contain;
@@ -728,7 +728,7 @@
 }
 
 .passport-export-host .passport-card__map {
-  width: 460px;
+  width: 523px;
 }
 
 .passport-export-host .passport-card__spine {
