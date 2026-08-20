@@ -295,6 +295,11 @@
   padding-top: 18px;
 }
 
+.passport-card__since {
+  position: relative;
+  top: -30px;
+}
+
 .passport-card__since .passport-field__label {
   margin-bottom: 4px;
 }
