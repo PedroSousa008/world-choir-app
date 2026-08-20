@@ -209,6 +209,7 @@
   border-radius: 50%;
   flex-shrink: 0;
   overflow: hidden;
+  margin-top: 38px;
   border: 1px solid rgba(61, 124, 255, 0.28);
   background: linear-gradient(145deg, rgba(61, 124, 255, 0.35), rgba(107, 92, 231, 0.35));
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
@@ -708,6 +709,7 @@
 .passport-export-host .passport-card__portrait {
   width: 320px;
   height: 320px;
+  margin-top: 103px;
 }
 
 .passport-export-host .passport-card__portrait-fallback {
