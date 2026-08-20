@@ -169,6 +169,7 @@
 
 .passport-card__brand-kicker {
   margin: 0;
+  font-family: var(--font-sans);
   font-size: 1.05rem;
   font-weight: 600;
   letter-spacing: 0.22em;
@@ -178,6 +179,7 @@
 
 .passport-card__brand-title {
   margin: 5px 0 0;
+  font-family: var(--font-sans);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.28em;
