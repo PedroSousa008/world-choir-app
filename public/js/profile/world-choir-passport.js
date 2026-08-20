@@ -100,7 +100,13 @@ const WorldChoirPassport = (() => {
 
     return `
       <article class="passport-card" id="${esc(id)}" aria-label="World Choir Passport">
-        <div class="passport-card__spine" aria-hidden="true"></div>
+        <div class="passport-card__spine" aria-hidden="true">
+          <span class="passport-card__spine-edge"></span>
+          <span class="passport-card__spine-curve"></span>
+          <span class="passport-card__spine-highlight"></span>
+          <span class="passport-card__spine-crease"></span>
+          <span class="passport-card__spine-shade"></span>
+        </div>
         <div class="passport-card__texture" aria-hidden="true"></div>
         <div class="passport-card__inner">
           <div class="passport-card__top">
