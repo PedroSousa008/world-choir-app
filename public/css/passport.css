@@ -111,13 +111,18 @@
   overflow: hidden;
   color: var(--text-primary);
   background:
-    linear-gradient(165deg, rgba(16, 16, 24, 0.98) 0%, rgba(10, 10, 14, 0.98) 55%, rgba(8, 8, 12, 1) 100%);
-  border: 1px solid rgba(61, 124, 255, 0.22);
+    radial-gradient(ellipse 78% 68% at 64% 40%, rgba(255, 255, 255, 0.038) 0%, transparent 58%),
+    radial-gradient(ellipse 90% 80% at 50% 100%, rgba(0, 0, 0, 0.28) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 70% at 0% 50%, rgba(0, 0, 0, 0.22) 0%, transparent 70%),
+    linear-gradient(155deg, rgba(18, 20, 30, 1) 0%, rgba(11, 12, 18, 1) 48%, rgba(7, 8, 12, 1) 100%);
+  border: 1px solid rgba(140, 170, 200, 0.14);
   box-shadow:
-    -2px 4px 12px rgba(4, 6, 14, 0.32),
-    0 4px 14px rgba(0, 0, 0, 0.35),
-    0 18px 42px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    -3px 4px 16px rgba(0, 0, 0, 0.4),
+    0 6px 18px rgba(0, 0, 0, 0.48),
+    0 22px 52px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.28),
+    inset 2px 0 10px rgba(0, 0, 0, 0.16);
   transition: transform 0.25s ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -126,117 +131,242 @@
   transform: scale(0.995);
 }
 
-/* Physical passport binding — layered light/shadow only */
+/* Soft center lighting falloff */
+.passport-card__lighting {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 55% at 58% 38%, rgba(255, 255, 255, 0.045) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, transparent 28%, transparent 72%, rgba(0, 0, 0, 0.12) 100%);
+}
+
+/* Dual grain — premium cover material */
+.passport-card__texture {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.065;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  mix-blend-mode: soft-light;
+}
+
+.passport-card__texture--fine {
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.35' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+  background-size: 90px 90px;
+  mix-blend-mode: overlay;
+}
+
+/* Physical passport binding */
 .passport-card__spine {
   position: absolute;
   z-index: 0;
   top: 0;
   left: 0;
   bottom: 0;
-  width: 30px;
+  width: 36px;
   pointer-events: none;
   border-radius: 18px 0 0 18px;
   overflow: hidden;
   -webkit-mask-image: linear-gradient(
     180deg,
     transparent 0%,
-    #000 5.5%,
-    #000 94.5%,
+    #000 7%,
+    #000 93%,
     transparent 100%
   );
   mask-image: linear-gradient(
     180deg,
     transparent 0%,
-    #000 5.5%,
-    #000 94.5%,
+    #000 7%,
+    #000 93%,
     transparent 100%
   );
 }
 
+.passport-card__spine-band,
 .passport-card__spine-edge,
-.passport-card__spine-curve,
+.passport-card__spine-thickness,
 .passport-card__spine-highlight,
 .passport-card__spine-crease,
-.passport-card__spine-shade {
+.passport-card__spine-seam,
+.passport-card__spine-blur,
+.passport-card__spine-shade,
+.passport-card__spine-curve {
   position: absolute;
   top: 0;
   bottom: 0;
   pointer-events: none;
 }
 
-/* Outer left edge depth (~4px) */
+/* Darker binding zone (~16px) */
+.passport-card__spine-band {
+  left: 0;
+  width: 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(3, 4, 8, 0.42) 0%,
+    rgba(3, 4, 8, 0.28) 55%,
+    rgba(3, 4, 8, 0.1) 85%,
+    transparent 100%
+  );
+}
+
+/* Outer cover edge */
 .passport-card__spine-edge {
   left: 0;
-  width: 5px;
+  width: 4px;
   background: linear-gradient(
     90deg,
-    rgba(4, 6, 14, 0.3) 0%,
-    rgba(4, 6, 14, 0.12) 60%,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(0, 0, 0, 0.18) 70%,
     transparent 100%
   );
 }
 
-/* Soft material curvature into the cover (~26px) */
-.passport-card__spine-curve {
-  left: 0;
-  width: 26px;
+/* Material thickness cue */
+.passport-card__spine-thickness {
+  left: 3px;
+  width: 3px;
   background: linear-gradient(
     90deg,
-    rgba(4, 6, 14, 0.12) 0%,
-    rgba(4, 6, 14, 0.05) 42%,
+    rgba(255, 255, 255, 0.04) 0%,
     transparent 100%
   );
 }
 
-/* Tiny highlight immediately left of the crease */
+/* Faint highlight before the fold */
 .passport-card__spine-highlight {
   left: 9px;
-  width: 1px;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.1) 14%,
-    rgba(255, 255, 255, 0.16) 50%,
-    rgba(255, 255, 255, 0.1) 86%,
-    transparent 100%
-  );
-}
-
-/* Recessed binding crease (~10px from outer edge) */
-.passport-card__spine-crease {
-  left: 10px;
   width: 1.5px;
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(4, 6, 14, 0.28) 12%,
-    rgba(4, 6, 14, 0.36) 50%,
-    rgba(4, 6, 14, 0.28) 88%,
+    rgba(255, 255, 255, 0.14) 12%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0.14) 88%,
     transparent 100%
   );
 }
 
-/* Soft inner shadow into the front cover */
-.passport-card__spine-shade {
-  left: 11.5px;
-  width: 15px;
+/* Recessed fold crease */
+.passport-card__spine-crease {
+  left: 11px;
+  width: 1.5px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.42) 10%,
+    rgba(0, 0, 0, 0.58) 50%,
+    rgba(0, 0, 0, 0.42) 90%,
+    transparent 100%
+  );
+}
+
+/* Dark inner seam */
+.passport-card__spine-seam {
+  left: 12.5px;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 12%,
+    rgba(0, 0, 0, 0.48) 50%,
+    rgba(0, 0, 0, 0.35) 88%,
+    transparent 100%
+  );
+}
+
+/* Soft blur around crease */
+.passport-card__spine-blur {
+  left: 10px;
+  width: 8px;
   background: linear-gradient(
     90deg,
-    rgba(4, 6, 14, 0.2) 0%,
-    rgba(4, 6, 14, 0.09) 34%,
-    rgba(4, 6, 14, 0.03) 68%,
+    rgba(0, 0, 0, 0.18) 0%,
+    rgba(0, 0, 0, 0.28) 35%,
+    rgba(0, 0, 0, 0.12) 70%,
+    transparent 100%
+  );
+  filter: blur(0.6px);
+}
+
+/* Shadow fading into front cover */
+.passport-card__spine-shade {
+  left: 13px;
+  width: 18px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.32) 0%,
+    rgba(0, 0, 0, 0.16) 28%,
+    rgba(0, 0, 0, 0.06) 62%,
     transparent 100%
   );
 }
 
-.passport-card__texture {
+/* Cover curvature (~32px) */
+.passport-card__spine-curve {
+  left: 0;
+  width: 32px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.1) 38%,
+    rgba(0, 0, 0, 0.03) 72%,
+    transparent 100%
+  );
+}
+
+/* Interior inset depth */
+.passport-card__inset {
   position: absolute;
   inset: 0;
-  opacity: 0.045;
+  z-index: 0;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
+  border-radius: inherit;
+  box-shadow:
+    inset 3px 0 12px rgba(0, 0, 0, 0.22),
+    inset 0 -4px 14px rgba(0, 0, 0, 0.2),
+    inset 0 2px 10px rgba(0, 0, 0, 0.08),
+    inset -2px 0 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Edge light catch (top / right) */
+.passport-card__edge-light {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset -1px 0 0 rgba(255, 255, 255, 0.055),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.02);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 28%, transparent 72%, rgba(0, 0, 0, 0.08) 100%);
   mix-blend-mode: soft-light;
+}
+
+/* Bottom thickness lip */
+.passport-card__thickness {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 0 0 18px 18px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 100%
+  );
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
 }
 
 .passport-card__inner {
@@ -264,6 +394,9 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--accent-aurora);
+  text-shadow:
+    0 -0.5px 0 rgba(255, 255, 255, 0.22),
+    0 1px 1.5px rgba(0, 0, 0, 0.55);
 }
 
 .passport-card__brand-title {
@@ -274,6 +407,9 @@
   letter-spacing: 0.28em;
   text-transform: uppercase;
   color: #ffffff;
+  text-shadow:
+    0 -0.5px 0 rgba(255, 255, 255, 0.18),
+    0 1px 1.5px rgba(0, 0, 0, 0.5);
 }
 
 .passport-card__logo {
@@ -281,7 +417,10 @@
   height: 68px;
   object-fit: contain;
   flex-shrink: 0;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+  opacity: 0.94;
+  filter:
+    drop-shadow(0 -0.5px 0 rgba(255, 255, 255, 0.2))
+    drop-shadow(0 1.5px 2px rgba(0, 0, 0, 0.45));
 }
 
 .passport-card__identity {
@@ -408,9 +547,13 @@
   aspect-ratio: 1637 / 960;
   object-fit: contain;
   object-position: right bottom;
-  opacity: 0.92;
+  opacity: 0.82;
   flex-shrink: 0;
   pointer-events: none;
+  filter:
+    drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4))
+    drop-shadow(0 0 8px rgba(78, 197, 232, 0.14));
+  mix-blend-mode: soft-light;
 }
 
 /* Skeleton */
@@ -767,11 +910,14 @@
   aspect-ratio: 0.7;
   border-radius: 48px;
   transform: none !important;
+  border: 2px solid rgba(140, 170, 200, 0.14);
   box-shadow:
-    -6px 12px 32px rgba(4, 6, 14, 0.32),
-    0 12px 36px rgba(0, 0, 0, 0.35),
-    0 48px 110px rgba(0, 0, 0, 0.55),
-    inset 0 2px 0 rgba(255, 255, 255, 0.04);
+    -8px 10px 42px rgba(0, 0, 0, 0.4),
+    0 16px 48px rgba(0, 0, 0, 0.48),
+    0 58px 130px rgba(0, 0, 0, 0.58),
+    inset 0 2px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -5px 20px rgba(0, 0, 0, 0.28),
+    inset 5px 0 26px rgba(0, 0, 0, 0.16);
 }
 
 .passport-export-host .passport-card__inner {
@@ -790,6 +936,9 @@
 .passport-export-host .passport-card__logo {
   width: 168px;
   height: 168px;
+  filter:
+    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.2))
+    drop-shadow(0 4px 5px rgba(0, 0, 0, 0.45));
 }
 
 .passport-export-host .passport-card__top {
@@ -843,31 +992,62 @@
 }
 
 .passport-export-host .passport-card__spine {
-  width: 82px;
+  width: 98px;
   border-radius: 48px 0 0 48px;
 }
 
-.passport-export-host .passport-card__spine-edge {
-  width: 14px;
+.passport-export-host .passport-card__spine-band {
+  width: 44px;
 }
 
-.passport-export-host .passport-card__spine-curve {
-  width: 72px;
+.passport-export-host .passport-card__spine-edge {
+  width: 11px;
+}
+
+.passport-export-host .passport-card__spine-thickness {
+  left: 8px;
+  width: 8px;
 }
 
 .passport-export-host .passport-card__spine-highlight {
   left: 24px;
-  width: 2px;
+  width: 4px;
 }
 
 .passport-export-host .passport-card__spine-crease {
-  left: 27px;
+  left: 30px;
+  width: 4px;
+}
+
+.passport-export-host .passport-card__spine-seam {
+  left: 34px;
   width: 3px;
 }
 
+.passport-export-host .passport-card__spine-blur {
+  left: 27px;
+  width: 22px;
+}
+
 .passport-export-host .passport-card__spine-shade {
-  left: 30px;
-  width: 42px;
+  left: 35px;
+  width: 50px;
+}
+
+.passport-export-host .passport-card__spine-curve {
+  width: 88px;
+}
+
+.passport-export-host .passport-card__thickness {
+  height: 8px;
+  border-radius: 0 0 48px 48px;
+}
+
+.passport-export-host .passport-card__brand-kicker,
+.passport-export-host .passport-card__brand-title {
+  text-shadow:
+    0 -1px 0 rgba(255, 255, 255, 0.22),
+    0 2px 3px rgba(0, 0, 0, 0.55);
 }
 
 @media (max-width: 380px) {

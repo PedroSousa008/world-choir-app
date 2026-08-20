@@ -100,14 +100,23 @@ const WorldChoirPassport = (() => {
 
     return `
       <article class="passport-card" id="${esc(id)}" aria-label="World Choir Passport">
+        <div class="passport-card__lighting" aria-hidden="true"></div>
+        <div class="passport-card__texture" aria-hidden="true"></div>
+        <div class="passport-card__texture passport-card__texture--fine" aria-hidden="true"></div>
         <div class="passport-card__spine" aria-hidden="true">
+          <span class="passport-card__spine-band"></span>
           <span class="passport-card__spine-edge"></span>
-          <span class="passport-card__spine-curve"></span>
+          <span class="passport-card__spine-thickness"></span>
           <span class="passport-card__spine-highlight"></span>
           <span class="passport-card__spine-crease"></span>
+          <span class="passport-card__spine-seam"></span>
+          <span class="passport-card__spine-blur"></span>
           <span class="passport-card__spine-shade"></span>
+          <span class="passport-card__spine-curve"></span>
         </div>
-        <div class="passport-card__texture" aria-hidden="true"></div>
+        <div class="passport-card__inset" aria-hidden="true"></div>
+        <div class="passport-card__edge-light" aria-hidden="true"></div>
+        <div class="passport-card__thickness" aria-hidden="true"></div>
         <div class="passport-card__inner">
           <div class="passport-card__top">
             <div>
