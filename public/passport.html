@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20270706a">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20270706b">
   <link rel="stylesheet" href="css/passport.css?v=20260820a">
   <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
 </head>
@@ -22,14 +22,31 @@
     <div id="passport-root" aria-live="polite"></div>
   </main>
 
+  <div class="overlay" id="passport-info-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="passport-info-title">
+      <h2 class="modal-title" id="passport-info-title">Your World Choir Passport</h2>
+      <p class="modal-copy">
+        Your World Choir Passport is a permanent record of your participation in World Choir.
+        It contains your unique Voice Number, your location, your participation history,
+        and milestones from your journey.
+      </p>
+      <div class="actions-row">
+        <button class="btn btn-primary" id="passport-info-close" type="button">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="passport-toast" id="passport-toast" role="status" aria-live="polite" hidden></div>
+
   <div id="nav-root"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="js/world-choir-config.js?v=20260813p"></script>
   <script src="js/world-choir-db.js?v=20260819h"></script>
-  <script src="js/world-choir-nav.js?v=20260820a"></script>
+  <script src="js/world-choir-nav.js?v=20260819d"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260819a"></script>
-  <script src="js/profile/world-choir-passport.js?v=20260820b"></script>
   <script src="js/profile/passport-wallet.js?v=20260820a"></script>
+  <script src="js/profile/world-choir-passport.js?v=20260820a"></script>
   <script src="js/profile/passport-page.js?v=20260820a"></script>
   <script>PassportPage.init();</script>
 </body>

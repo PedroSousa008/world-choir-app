@@ -1,6 +1,7 @@
 /**
- * Passport Wallet API — Apple / Google Wallet pass issuance.
- * Returns 501 until signing credentials and pass templates are configured.
+ * POST /api/passport-wallet
+ * Apple Wallet (.pkpass) / Google Wallet pass issuance.
+ * Signing credentials live server-side; this endpoint is the integration point.
  */
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -23,11 +24,11 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'platform must be apple or google' });
   }
 
-  // Architecture is ready for signed .pkpass / Google Wallet objects.
-  // Connect Apple Pass Type ID + certificates / Google Wallet issuer here.
+  // Wallet certificate / issuer credentials are not configured yet.
+  // Architecture is ready: load passport data for deviceId, sign pass, return URL.
   return res.status(501).json({
-    error: 'Wallet pass generation is not configured yet',
-    code: 'wallet_not_configured',
+    error: 'Wallet pass issuance is not configured yet',
+    code: 501,
     platform,
   });
 };

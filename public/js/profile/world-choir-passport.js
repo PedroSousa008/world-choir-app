@@ -1,5 +1,5 @@
 /**
- * WorldChoirPassport — reusable Passport card + data + image export
+ * WorldChoirPassport — reusable Passport card + data + export
  */
 const WorldChoirPassport = (() => {
   let exportBusy = false;
@@ -10,11 +10,17 @@ const WorldChoirPassport = (() => {
     return div.innerHTML;
   }
 
+  function localDateString() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
   function formatVoiceNumber(n) {
-    if (n == null || n === '') return '—';
-    const num = Number(n);
-    if (!Number.isFinite(num)) return `#${esc(String(n))}`;
-    return `#${num.toLocaleString('en-US')}`;
+    if (n == null || n === '' || Number.isNaN(Number(n))) return '—';
+    return `#${Number(n).toLocaleString('en-US')}`;
   }
 
   function formatMemberSince(iso) {
@@ -28,279 +34,286 @@ const WorldChoirPassport = (() => {
     });
   }
 
-  function portraitInitial(passport) {
-    const name = passport.voiceName || '';
-    const match = name.match(/(\d+)/);
-    if (match) return match[1].slice(-2);
-    if (passport.voiceNumber != null) {
-      return String(passport.voiceNumber).slice(-2);
+  function initialsFrom(data) {
+    const name = String(data.voiceName || data.displayName || data.city || 'WC').trim();
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     }
-    return 'WC';
+    if (/^voice\s+\d+/i.test(name)) {
+      return 'WC';
+    }
+    return name.slice(0, 2).toUpperCase();
   }
 
   function worldMapSvg() {
     // Fine gold dotted engraving — decorative only
+    const dots = [
+      [18, 42], [28, 38], [38, 44], [48, 40], [58, 46], [22, 55], [34, 58], [46, 54],
+      [72, 36], [84, 32], [96, 38], [108, 34], [120, 40], [88, 48], [102, 52], [114, 48],
+      [132, 42], [144, 38], [156, 44], [140, 54], [152, 58],
+      [42, 72], [54, 78], [66, 74], [78, 82], [58, 88], [70, 92],
+      [98, 70], [110, 76], [122, 72], [134, 80], [146, 74], [118, 88], [130, 94],
+      [26, 28], [160, 28], [170, 48], [12, 68], [168, 82], [80, 28], [150, 90],
+      [64, 34], [92, 90], [40, 90], [105, 28], [75, 60], [125, 60],
+    ];
+    const bright = new Set([2, 9, 14, 20, 28, 35, 41]);
+    const circles = dots.map(([x, y], i) => {
+      const r = bright.has(i) ? 1.7 : 1.15;
+      const o = bright.has(i) ? 0.95 : 0.55;
+      return `<circle cx="${x}" cy="${y}" r="${r}" fill="#c9a962" opacity="${o}"/>`;
+    }).join('');
     return `
-      <svg class="wc-passport__map-svg" viewBox="0 0 180 110" aria-hidden="true" focusable="false">
-        <defs>
-          <pattern id="wcPassportDots" width="3.2" height="3.2" patternUnits="userSpaceOnUse">
-            <circle cx="1" cy="1" r="0.55" fill="#c9a962"/>
-          </pattern>
-          <mask id="wcPassportLand">
-            <rect width="180" height="110" fill="black"/>
-            <!-- Simplified continent silhouettes -->
-            <path fill="white" d="M28 28c6-8 16-10 24-7 7 3 10 9 8 16-3 8-12 12-20 11-9-1-15-10-12-20z"/>
-            <path fill="white" d="M58 42c8-2 14 4 13 12-1 7-8 12-15 11-6-1-10-7-8-13 2-5 6-8 10-10z"/>
-            <path fill="white" d="M78 30c11-5 22-2 28 6 5 7 4 16-2 22-7 7-18 8-26 3-9-5-12-16-8-25 2-2 4-4 8-6z"/>
-            <path fill="white" d="M112 36c9-6 20-4 27 3 6 7 6 17 0 24-7 8-19 9-28 3-8-5-11-15-7-23 2-3 4-5 8-7z"/>
-            <path fill="white" d="M146 48c7-4 14-1 16 6 2 6-1 12-7 14-6 2-12-1-14-7-2-5 1-10 5-13z"/>
-            <path fill="white" d="M92 68c5-2 10 1 11 6 1 5-2 9-7 10-5 1-9-2-10-7-1-4 2-8 6-9z"/>
-            <path fill="white" d="M118 74c8-3 15 2 16 9 1 6-4 11-10 12-7 1-13-4-14-10-1-5 3-9 8-11z"/>
-            <path fill="white" d="M42 62c6-3 12 1 13 7 1 5-3 10-8 11-6 1-11-3-12-8-1-5 3-8 7-10z"/>
-          </mask>
-        </defs>
-        <rect width="180" height="110" fill="url(#wcPassportDots)" mask="url(#wcPassportLand)" opacity="0.9"/>
+      <svg class="passport-card__map" viewBox="0 0 180 110" aria-hidden="true" focusable="false">
+        ${circles}
       </svg>
     `;
   }
 
-  function renderCard(passport, { loading = false } = {}) {
-    const voice = loading ? '—' : formatVoiceNumber(passport.voiceNumber);
-    const country = loading ? '—' : (passport.country || '—');
-    const city = loading ? '—' : (passport.city || '—');
-    const since = loading ? '—' : formatMemberSince(passport.memberSince);
-    const initial = portraitInitial(passport);
-    const photo = passport.profileImage
-      ? `<img src="${esc(passport.profileImage)}" alt="" decoding="async">`
-      : `<span class="wc-passport__portrait-fallback">${esc(initial)}</span>`;
+  function field(label, valueHtml, { voice = false } = {}) {
+    return `
+      <div class="passport-field">
+        <p class="passport-field__label">${esc(label)}</p>
+        <p class="passport-field__value${voice ? ' passport-field__value--voice' : ''}">${valueHtml}</p>
+        <span class="passport-field__rule" aria-hidden="true"></span>
+      </div>
+    `;
+  }
+
+  function portraitHtml(data, loading) {
+    if (loading) {
+      return `<div class="passport-card__portrait" aria-hidden="true"><span class="passport-skel passport-skel--portrait"></span></div>`;
+    }
+    if (data.profileImage) {
+      return `
+        <div class="passport-card__portrait">
+          <img src="${esc(data.profileImage)}" alt="" decoding="async">
+        </div>
+      `;
+    }
+    return `
+      <div class="passport-card__portrait" aria-hidden="true">
+        <div class="passport-card__portrait-fallback">${esc(initialsFrom(data))}</div>
+      </div>
+    `;
+  }
+
+  function renderCard(data = {}, { loading = false, id = 'world-choir-passport' } = {}) {
+    const logo = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO
+      ? WorldChoirConfig.LOGO.url
+      : 'images/world-choir-logo.png?v=20270706';
+
+    const voice = loading
+      ? '<span class="passport-skel passport-skel--voice"></span>'
+      : esc(formatVoiceNumber(data.voiceNumber));
+    const country = loading
+      ? '<span class="passport-skel passport-skel--line"></span>'
+      : esc(data.country || '—');
+    const city = loading
+      ? '<span class="passport-skel passport-skel--line"></span>'
+      : esc(data.city || '—');
+    const since = loading
+      ? '<span class="passport-skel passport-skel--line"></span>'
+      : esc(formatMemberSince(data.memberSince));
 
     return `
-      <article class="wc-passport${loading ? ' wc-passport--loading' : ''}" id="wc-passport-card" aria-label="World Choir Passport">
-        <div class="wc-passport__texture" aria-hidden="true"></div>
-        <div class="wc-passport__inner">
-          <header class="wc-passport__top">
+      <article class="passport-card" id="${esc(id)}" aria-label="World Choir Passport">
+        <div class="passport-card__spine" aria-hidden="true"></div>
+        <div class="passport-card__texture" aria-hidden="true"></div>
+        <div class="passport-card__inner">
+          <div class="passport-card__top">
             <div>
-              <p class="wc-passport__brand-label">World Choir</p>
-              <p class="wc-passport__brand-sub">Passport</p>
+              <p class="passport-card__brand-kicker">World Choir</p>
+              <p class="passport-card__brand-title">Passport</p>
             </div>
-            <img
-              class="wc-passport__logo"
-              src="images/world-choir-logo.png?v=20270706"
-              alt="World Choir"
-              width="1024"
-              height="1024"
-              decoding="async"
-            >
-          </header>
-
-          <div class="wc-passport__identity">
-            <div class="wc-passport__portrait">${photo}</div>
-            <div class="wc-passport__fields">
-              <div class="wc-passport__field">
-                <span class="wc-passport__label">Voice Number</span>
-                <span class="wc-passport__value wc-passport__value--voice">${voice}</span>
-                <span class="wc-passport__rule" aria-hidden="true"></span>
-              </div>
-              <div class="wc-passport__field">
-                <span class="wc-passport__label">Country</span>
-                <span class="wc-passport__value">${esc(country)}</span>
-                <span class="wc-passport__rule" aria-hidden="true"></span>
-              </div>
-              <div class="wc-passport__field">
-                <span class="wc-passport__label">City</span>
-                <span class="wc-passport__value">${esc(city)}</span>
-                <span class="wc-passport__rule" aria-hidden="true"></span>
-              </div>
+            <img class="passport-card__logo" src="${esc(logo)}" alt="World Choir" width="1024" height="1024" decoding="async">
+          </div>
+          <div class="passport-card__identity">
+            ${portraitHtml(data, loading)}
+            <div class="passport-card__fields">
+              ${field('Voice Number', voice, { voice: true })}
+              ${field('Country', country)}
+              ${field('City', city)}
             </div>
           </div>
-
-          <footer class="wc-passport__footer">
-            <div class="wc-passport__field wc-passport__member">
-              <span class="wc-passport__label">Member Since</span>
-              <span class="wc-passport__value">${esc(since)}</span>
+          <div class="passport-card__footer">
+            <div class="passport-card__since">
+              <p class="passport-field__label">Member Since</p>
+              <p class="passport-field__value">${since}</p>
             </div>
-            <div class="wc-passport__map">${worldMapSvg()}</div>
-          </footer>
+            ${worldMapSvg()}
+          </div>
         </div>
       </article>
     `;
   }
 
-  async function loadPassportData() {
-    await WorldChoirDB.ready();
-    const user = WorldChoirDB.getCurrentUser();
-    const pledge = WorldChoirDB.getPledgeForCurrentUser();
-    const history = WorldChoirDB.getParticipationHistory();
-    let eventsJoined = history.length;
-    if (eventsJoined === 0 && WorldChoirDB.hasPledged()) eventsJoined = 1;
-
-    let dailyActsCompleted = 0;
+  async function fetchDailyActsCompleted() {
     try {
-      const date = (() => {
-        const d = new Date();
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-      })();
+      const deviceId = WorldChoirDB.getDeviceId();
+      const date = localDateString();
       const res = await fetch(
-        `/api/daily-peace?deviceId=${encodeURIComponent(WorldChoirDB.getDeviceId())}&view=impact&date=${encodeURIComponent(date)}`
+        `/api/daily-peace?deviceId=${encodeURIComponent(deviceId)}&view=impact&date=${encodeURIComponent(date)}`
       );
       const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        dailyActsCompleted = data?.summary?.totalCompleted ?? 0;
-      }
-    } catch (err) {
-      console.warn('Passport daily acts unavailable:', err);
+      if (!res.ok) return 0;
+      return Number(data?.summary?.totalCompleted) || 0;
+    } catch {
+      return 0;
     }
+  }
+
+  async function loadPassportData() {
+    await WorldChoirDB.ready();
+    const user = WorldChoirDB.getCurrentUser() || {};
+    const pledge = WorldChoirDB.getPledgeForCurrentUser();
+    const history = WorldChoirDB.getParticipationHistory?.() || [];
+
+    let eventsJoined = history.length;
+    if (eventsJoined === 0 && WorldChoirDB.hasPledged?.()) {
+      eventsJoined = 1;
+    }
+
+    const dailyActsCompleted = await fetchDailyActsCompleted();
 
     return {
       voiceNumber: pledge?.voiceNumber ?? null,
-      voiceName: pledge?.voiceName || pledge?.display_name || user?.display_name || null,
-      profileImage: null,
-      country: pledge?.country || user?.country || null,
-      city: pledge?.city || user?.city || null,
-      memberSince: pledge?.pledged_at || user?.created_at || null,
+      voiceName: pledge?.voiceName || pledge?.display_name || user.display_name || null,
+      displayName: user.display_name || pledge?.display_name || null,
+      profileImage: user.profileImage || pledge?.profileImage || null,
+      country: pledge?.country || user.country || null,
+      city: pledge?.city || user.city || null,
+      memberSince: user.created_at || pledge?.pledged_at || null,
       eventsJoined,
       dailyActsCompleted,
+      hasJoined: !!pledge || eventsJoined > 0,
     };
   }
 
-  function loadScript(src) {
-    return new Promise((resolve, reject) => {
-      const existing = document.querySelector(`script[src="${src}"]`);
-      if (existing && window.html2canvas) {
-        resolve(window.html2canvas);
-        return;
-      }
-      const s = document.createElement('script');
-      s.src = src;
-      s.async = true;
-      s.onload = () => resolve(window.html2canvas);
-      s.onerror = () => reject(new Error('Failed to load export library'));
-      document.head.appendChild(s);
-    });
+  function showToast(message) {
+    const el = document.getElementById('passport-toast');
+    if (!el) {
+      alert(message);
+      return;
+    }
+    el.hidden = false;
+    el.textContent = message;
+    el.classList.add('is-visible');
+    window.clearTimeout(showToast._timer);
+    showToast._timer = window.setTimeout(() => {
+      el.classList.remove('is-visible');
+      window.setTimeout(() => {
+        el.hidden = true;
+      }, 250);
+    }, 2600);
   }
 
-  async function ensureHtml2Canvas() {
-    if (typeof window.html2canvas === 'function') return window.html2canvas;
-    return loadScript('https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js');
+  async function waitForImages(root) {
+    const imgs = [...root.querySelectorAll('img')];
+    await Promise.all(
+      imgs.map(
+        (img) =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+              })
+      )
+    );
   }
 
-  async function capturePassportBlob(cardEl) {
-    const el = cardEl || document.getElementById('wc-passport-card');
-    if (!el) throw new Error('Passport card not found');
-
-    const html2canvas = await ensureHtml2Canvas();
-    const canvas = await html2canvas(el, {
-      backgroundColor: null,
-      scale: Math.max(2, Math.min(3, window.devicePixelRatio || 2)),
-      useCORS: true,
-      allowTaint: false,
-      logging: false,
-    });
-
-    // Upscale to at least 1080px wide if needed
-    const minWidth = 1080;
-    let out = canvas;
-    if (canvas.width < minWidth) {
-      const ratio = minWidth / canvas.width;
-      const up = document.createElement('canvas');
-      up.width = Math.round(canvas.width * ratio);
-      up.height = Math.round(canvas.height * ratio);
-      const ctx = up.getContext('2d');
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(canvas, 0, 0, up.width, up.height);
-      out = up;
+  async function capturePassportImage(data) {
+    if (typeof html2canvas !== 'function') {
+      throw new Error('Passport export is unavailable on this device.');
     }
 
-    return new Promise((resolve, reject) => {
-      out.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error('Could not create image'))),
-        'image/png'
-      );
-    });
+    const host = document.createElement('div');
+    host.className = 'passport-export-host';
+    host.innerHTML = renderCard(data, { loading: false, id: 'passport-export-card' });
+    document.body.appendChild(host);
+
+    const card = host.querySelector('.passport-card');
+    await waitForImages(host);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    try {
+      const canvas = await html2canvas(card, {
+        backgroundColor: null,
+        scale: 1,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        width: card.offsetWidth,
+        height: card.offsetHeight,
+      });
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not create image'))), 'image/png');
+      });
+      return blob;
+    } finally {
+      host.remove();
+    }
   }
 
-  function isExportBusy() {
-    return exportBusy;
-  }
-
-  async function withExportLock(fn) {
-    if (exportBusy) return null;
+  async function downloadPassport(data) {
+    if (exportBusy) return;
     exportBusy = true;
     try {
-      return await fn();
+      const blob = await capturePassportImage(data);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const voice = data.voiceNumber != null ? `-${data.voiceNumber}` : '';
+      a.href = url;
+      a.download = `world-choir-passport${voice}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast('Passport saved');
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'Could not save Passport');
     } finally {
       exportBusy = false;
     }
   }
 
-  async function downloadPassport(cardEl) {
-    return withExportLock(async () => {
-      const blob = await capturePassportBlob(cardEl);
-      const fileName = 'world-choir-passport.png';
-      const file = new File([blob], fileName, { type: 'image/png' });
-
-      // Prefer native share-to-save on mobile when download is unreliable
-      if (navigator.canShare?.({ files: [file] }) && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        try {
-          await navigator.share({ files: [file], title: 'World Choir Passport' });
-          return { method: 'share' };
-        } catch (err) {
-          if (err?.name === 'AbortError') return { method: 'cancelled' };
-        }
-      }
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-      return { method: 'download' };
-    });
-  }
-
-  async function sharePassport(cardEl) {
-    return withExportLock(async () => {
-      const blob = await capturePassportBlob(cardEl);
+  async function sharePassport(data) {
+    if (exportBusy) return;
+    exportBusy = true;
+    try {
+      const blob = await capturePassportImage(data);
       const file = new File([blob], 'world-choir-passport.png', { type: 'image/png' });
-      const origin = window.location.origin || 'https://world-choir-app.vercel.app';
-      const text = `My voice is part of World Choir.\n${origin}`;
+      const text = 'My voice is part of World Choir.';
+      const url = typeof window !== 'undefined' ? `${window.location.origin}/` : '';
 
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: 'World Choir Passport', text });
-          return { method: 'share' };
-        } catch (err) {
-          if (err?.name === 'AbortError') return { method: 'cancelled' };
-        }
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], text, title: 'World Choir Passport', url });
+        return;
       }
 
       if (navigator.share) {
-        try {
-          await navigator.share({ title: 'World Choir Passport', text });
-          return { method: 'share-text' };
-        } catch (err) {
-          if (err?.name === 'AbortError') return { method: 'cancelled' };
-        }
+        await navigator.share({ text: url ? `${text}\n${url}` : text, title: 'World Choir Passport', url: url || undefined });
+        return;
       }
 
-      // Fallback: download the image
-      const url = URL.createObjectURL(blob);
+      const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = objectUrl;
       a.download = 'world-choir-passport.png';
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-      return { method: 'download-fallback' };
-    });
+      URL.revokeObjectURL(objectUrl);
+      showToast('Passport saved — share it from your photos');
+    } catch (err) {
+      if (err?.name === 'AbortError') return;
+      console.error(err);
+      showToast(err.message || 'Could not share Passport');
+    } finally {
+      exportBusy = false;
+    }
   }
 
   return {
@@ -310,7 +323,7 @@ const WorldChoirPassport = (() => {
     formatMemberSince,
     downloadPassport,
     sharePassport,
-    capturePassportBlob,
-    isExportBusy,
+    showToast,
+    isExportBusy: () => exportBusy,
   };
 })();

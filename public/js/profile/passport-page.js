@@ -1,9 +1,9 @@
 /**
- * PassportPage — World Choir Passport screen
+ * PassportPage — full World Choir Passport experience
  */
 const PassportPage = (() => {
-  let passport = null;
-  let toastTimer = null;
+  let passportData = null;
+  let busyAction = null;
 
   function esc(str) {
     const div = document.createElement('div');
@@ -11,245 +11,268 @@ const PassportPage = (() => {
     return div.innerHTML;
   }
 
-  function showToast(message) {
-    let el = document.getElementById('passport-toast');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'passport-toast';
-      el.className = 'passport-toast';
-      el.setAttribute('role', 'status');
-      document.body.appendChild(el);
-    }
-    el.textContent = message;
-    el.classList.add('is-visible');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('is-visible'), 2600);
-  }
-
-  function setActionsBusy(busy) {
-    document.querySelectorAll('.passport-action').forEach((btn) => {
-      btn.disabled = !!busy;
-    });
-  }
-
-  function renderSkeleton() {
+  function iconPeople() {
     return `
-      <div class="passport-page__body">
-        ${renderHeader()}
-        <div class="wc-passport-wrap">
-          ${WorldChoirPassport.renderCard({}, { loading: true })}
-        </div>
-        ${renderPermanence()}
-        ${renderStats({ eventsJoined: null, dailyActsCompleted: null }, true)}
-        ${renderActions()}
-        ${renderJourneyCard()}
-      </div>
-      ${renderInfoModal()}
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
     `;
   }
 
-  function renderHeader() {
+  function iconStar() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m12 3 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9 7.2 18l.9-5.4L4.2 8.7l5.4-.8L12 3z"/>
+      </svg>
+    `;
+  }
+
+  function iconDownload() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3v12"/>
+        <path d="m7 10 5 5 5-5"/>
+        <path d="M5 21h14"/>
+      </svg>
+    `;
+  }
+
+  function iconWallet() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2" y="6" width="20" height="14" rx="2"/>
+        <path d="M2 10h20"/>
+        <circle cx="17" cy="14" r="1.2" fill="currentColor" stroke="none"/>
+      </svg>
+    `;
+  }
+
+  function iconShare() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="18" cy="5" r="2.5"/>
+        <circle cx="6" cy="12" r="2.5"/>
+        <circle cx="18" cy="19" r="2.5"/>
+        <path d="m8.2 13.2 7.5 4.1"/>
+        <path d="m15.7 6.7-7.5 4.1"/>
+      </svg>
+    `;
+  }
+
+  function iconLock() {
+    return `
+      <svg class="passport-permanence__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="5" y="11" width="14" height="10" rx="2"/>
+        <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+      </svg>
+    `;
+  }
+
+  function iconLaurel() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 21c-4-2.5-6.5-6-6.5-10.5C5.5 6 8.5 3.5 12 3.5"/>
+        <path d="M12 21c4-2.5 6.5-6 6.5-10.5C18.5 6 15.5 3.5 12 3.5"/>
+        <path d="M8 8.5c1 .8 2.2 1.2 3.5 1.2"/>
+        <path d="M16 8.5c-1 .8-2.2 1.2-3.5 1.2"/>
+        <path d="M7.5 13c1.2.7 2.7 1.1 4.5 1.1"/>
+        <path d="M16.5 13c-1.2.7-2.7 1.1-4.5 1.1"/>
+      </svg>
+    `;
+  }
+
+  function setActionBusy(which) {
+    busyAction = which;
+    ['download', 'wallet', 'share'].forEach((key) => {
+      const btn = document.getElementById(`passport-action-${key}`);
+      if (!btn) return;
+      btn.disabled = !!which;
+    });
+  }
+
+  function renderLoading() {
     return `
       <header class="passport-header">
         <div>
-          <button type="button" class="passport-header__back" id="passport-back" aria-label="Back to Profile">← Profile</button>
           <h1 class="passport-header__title">Passport</h1>
           <p class="passport-header__subtitle">Your voice. Your promise. Your place in history.</p>
         </div>
         <button type="button" class="passport-info-btn" id="passport-info-btn" aria-label="About World Choir Passport">i</button>
       </header>
-    `;
-  }
-
-  function renderPermanence() {
-    return `
+      <div class="passport-card-wrap">
+        ${WorldChoirPassport.renderCard({}, { loading: true })}
+      </div>
       <div class="passport-permanence">
-        <svg class="passport-permanence__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M7 11V8a5 5 0 0 1 10 0v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-          <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/>
-        </svg>
-        <p class="passport-permanence__text">This is your unique World Choir Passport.<br>It cannot be changed or transferred.</p>
+        ${iconLock()}
+        <p>This is your unique World Choir Passport.<br>It cannot be changed or transferred.</p>
       </div>
     `;
   }
 
-  function renderStats(data, loading) {
-    const events = loading ? '—' : String(data.eventsJoined ?? 0);
-    const acts = loading ? '—' : String(data.dailyActsCompleted ?? 0);
-    const loadingClass = loading ? ' passport-stat__value--loading' : '';
+  function render(data) {
+    const events = Number(data.eventsJoined) || 0;
+    const acts = Number(data.dailyActsCompleted) || 0;
+
     return `
+      <header class="passport-header">
+        <div>
+          <h1 class="passport-header__title">Passport</h1>
+          <p class="passport-header__subtitle">Your voice. Your promise. Your place in history.</p>
+        </div>
+        <button type="button" class="passport-info-btn" id="passport-info-btn" aria-label="About World Choir Passport">i</button>
+      </header>
+
+      <div class="passport-card-wrap">
+        ${WorldChoirPassport.renderCard(data)}
+      </div>
+
+      <div class="passport-permanence">
+        ${iconLock()}
+        <p>This is your unique World Choir Passport.<br>It cannot be changed or transferred.</p>
+      </div>
+
       <section class="passport-stats" aria-label="Participation statistics">
         <div class="passport-stat">
-          <div class="passport-stat__icon" aria-hidden="true">◎</div>
-          <div class="passport-stat__value${loadingClass}">${esc(events)}</div>
-          <div class="passport-stat__label">Events
-Joined</div>
+          <div class="passport-stat__icon passport-stat__icon--events">${iconPeople()}</div>
+          <p class="passport-stat__value">${esc(String(events))}</p>
+          <p class="passport-stat__label">Events
+Joined</p>
         </div>
         <div class="passport-stat">
-          <div class="passport-stat__icon" aria-hidden="true">✦</div>
-          <div class="passport-stat__value${loadingClass}">${esc(acts)}</div>
-          <div class="passport-stat__label">Daily Acts
-Completed</div>
+          <div class="passport-stat__icon passport-stat__icon--acts">${iconStar()}</div>
+          <p class="passport-stat__value">${esc(String(acts))}</p>
+          <p class="passport-stat__label">Daily Acts
+Completed</p>
         </div>
       </section>
-    `;
-  }
 
-  function renderActions() {
-    return `
       <section class="passport-actions" aria-label="Passport actions">
-        <button type="button" class="passport-action" id="passport-download" aria-label="Download World Choir Passport">
-          <span class="passport-action__icon" aria-hidden="true">↓</span>
+        <button type="button" class="passport-action" id="passport-action-download" aria-label="Download World Choir Passport">
+          <span class="passport-action__icon">${iconDownload()}</span>
           <span class="passport-action__label">Download</span>
         </button>
-        <button type="button" class="passport-action" id="passport-wallet" aria-label="Add World Choir Passport to Wallet">
-          <span class="passport-action__icon" aria-hidden="true">▣</span>
+        <button type="button" class="passport-action" id="passport-action-wallet" aria-label="Add World Choir Passport to Wallet">
+          <span class="passport-action__icon">${iconWallet()}</span>
           <span class="passport-action__label">Add to Wallet</span>
         </button>
-        <button type="button" class="passport-action" id="passport-share" aria-label="Share World Choir Passport">
-          <span class="passport-action__icon" aria-hidden="true">↗</span>
+        <button type="button" class="passport-action" id="passport-action-share" aria-label="Share World Choir Passport">
+          <span class="passport-action__icon">${iconShare()}</span>
           <span class="passport-action__label">Share</span>
         </button>
       </section>
-    `;
-  }
 
-  function renderJourneyCard() {
-    return `
-      <button type="button" class="passport-journey" id="passport-journey-btn" aria-label="View your World Choir journey">
-        <span class="passport-journey__icon" aria-hidden="true">◇</span>
-        <span class="passport-journey__copy">
-          <span class="passport-journey__title">View Your Journey</span>
-          <span class="passport-journey__sub">See your impact and milestones</span>
+      <button type="button" class="passport-journey-card" id="passport-journey-btn" aria-label="View your World Choir journey">
+        <span class="passport-journey-card__icon">${iconLaurel()}</span>
+        <span class="passport-journey-card__body">
+          <p class="passport-journey-card__title">View Your Journey</p>
+          <p class="passport-journey-card__copy">See your impact and milestones</p>
         </span>
-        <span class="passport-journey__chevron" aria-hidden="true">›</span>
+        <span class="passport-journey-card__chevron" aria-hidden="true">›</span>
       </button>
     `;
   }
 
-  function renderInfoModal() {
-    return `
-      <div class="overlay" id="passport-info-overlay" role="dialog" aria-modal="true" aria-labelledby="passport-info-title">
-        <div class="modal">
-          <h2 class="modal-title" id="passport-info-title">Your World Choir Passport</h2>
-          <p class="modal-copy">
-            Your World Choir Passport is a permanent record of your participation in World Choir.
-            It contains your unique Voice Number, your location, your participation history,
-            and milestones from your journey.
-          </p>
-          <button type="button" class="btn btn-primary" id="passport-info-close">Close</button>
-        </div>
-      </div>
-    `;
+  function openInfo() {
+    const overlay = document.getElementById('passport-info-overlay');
+    if (!overlay) return;
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
   }
 
-  function renderLoaded(data) {
-    return `
-      <div class="passport-page__body">
-        ${renderHeader()}
-        <div class="wc-passport-wrap">
-          ${WorldChoirPassport.renderCard(data)}
-        </div>
-        ${renderPermanence()}
-        ${renderStats(data, false)}
-        ${renderActions()}
-        ${renderJourneyCard()}
-      </div>
-      ${renderInfoModal()}
-    `;
+  function closeInfo() {
+    const overlay = document.getElementById('passport-info-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
   }
 
-  function bind() {
-    document.getElementById('passport-back')?.addEventListener('click', () => {
-      window.location.href = 'profile.html';
-    });
-
-    document.getElementById('passport-info-btn')?.addEventListener('click', () => {
-      document.getElementById('passport-info-overlay')?.classList.add('active');
-    });
-
-    const closeInfo = () => document.getElementById('passport-info-overlay')?.classList.remove('active');
+  function bindInteractions() {
+    document.getElementById('passport-info-btn')?.addEventListener('click', openInfo);
     document.getElementById('passport-info-close')?.addEventListener('click', closeInfo);
     document.getElementById('passport-info-overlay')?.addEventListener('click', (e) => {
       if (e.target.id === 'passport-info-overlay') closeInfo();
     });
 
-    document.getElementById('passport-journey-btn')?.addEventListener('click', () => {
-      window.location.href = 'passport-journey.html';
+    document.getElementById('passport-action-download')?.addEventListener('click', async () => {
+      if (!passportData || busyAction) return;
+      setActionBusy('download');
+      await WorldChoirPassport.downloadPassport(passportData);
+      setActionBusy(null);
     });
 
-    document.getElementById('passport-download')?.addEventListener('click', async () => {
-      if (WorldChoirPassport.isExportBusy()) return;
-      setActionsBusy(true);
-      try {
-        const result = await WorldChoirPassport.downloadPassport();
-        if (result?.method === 'cancelled') return;
-        if (result?.method === 'share') showToast('Passport ready to save');
-        else showToast('Passport saved');
-      } catch (err) {
-        console.error(err);
-        showToast('Could not save Passport');
-      } finally {
-        setActionsBusy(false);
-      }
+    document.getElementById('passport-action-share')?.addEventListener('click', async () => {
+      if (!passportData || busyAction) return;
+      setActionBusy('share');
+      await WorldChoirPassport.sharePassport(passportData);
+      setActionBusy(null);
     });
 
-    document.getElementById('passport-share')?.addEventListener('click', async () => {
-      if (WorldChoirPassport.isExportBusy()) return;
-      setActionsBusy(true);
+    document.getElementById('passport-action-wallet')?.addEventListener('click', async () => {
+      if (!passportData || busyAction) return;
+      setActionBusy('wallet');
       try {
-        const result = await WorldChoirPassport.sharePassport();
-        if (result?.method === 'cancelled') return;
-        if (result?.method === 'download-fallback') showToast('Passport saved');
+        await PassportWallet.addToWallet(passportData);
+        WorldChoirPassport.showToast('Opening Wallet…');
       } catch (err) {
-        console.error(err);
-        showToast('Could not share Passport');
-      } finally {
-        setActionsBusy(false);
-      }
-    });
-
-    document.getElementById('passport-wallet')?.addEventListener('click', async () => {
-      setActionsBusy(true);
-      try {
-        await PassportWalletService.addPassportToWallet();
-        showToast('Opening Wallet…');
-      } catch (err) {
-        if (err?.code === 'unsupported') {
-          showToast('Wallet is available on iPhone and Android');
-        } else if (err?.code === 404 || err?.message?.includes('unavailable') || err?.message?.includes('Wallet')) {
-          showToast('Wallet passes coming soon');
+        if (err?.code === 'unsupported' || err?.code === 404 || err?.code === 501) {
+          WorldChoirPassport.showToast(
+            PassportWallet.isSupported()
+              ? 'Wallet passes are being prepared — coming soon.'
+              : 'Add to Wallet works on iPhone and Android.'
+          );
         } else {
-          console.warn('Wallet:', err);
-          showToast('Wallet passes coming soon');
+          WorldChoirPassport.showToast(
+            PassportWallet.isSupported()
+              ? 'Wallet passes are being prepared — coming soon.'
+              : (err.message || 'Could not add to Wallet')
+          );
         }
       } finally {
-        setActionsBusy(false);
+        setActionBusy(null);
       }
+    });
+
+    document.getElementById('passport-journey-btn')?.addEventListener('click', () => {
+      window.location.href = 'passport-journey.html';
     });
   }
 
   async function mount() {
     const root = document.getElementById('passport-root');
+    const page = document.getElementById('passport-page');
     if (!root) return;
 
-    root.innerHTML = renderSkeleton();
-    bind();
+    root.innerHTML = renderLoading();
+    bindInteractions();
 
     try {
       await WorldChoirDB.ready();
-      passport = await WorldChoirPassport.loadPassportData();
-      root.innerHTML = renderLoaded(passport);
-      document.querySelector('.passport-page')?.classList.add('passport-page--enter');
-      bind();
+      passportData = await WorldChoirPassport.loadPassportData();
+      root.innerHTML = render(passportData);
+      bindInteractions();
+      page?.classList.add('is-entering');
+      window.setTimeout(() => page?.classList.remove('is-entering'), 700);
     } catch (err) {
-      console.error('Passport load failed:', err);
-      showToast('Could not load Passport');
+      console.error(err);
+      root.innerHTML = `
+        <header class="passport-header">
+          <div>
+            <h1 class="passport-header__title">Passport</h1>
+            <p class="passport-header__subtitle">Could not load your Passport right now.</p>
+          </div>
+        </header>
+        <button type="button" class="btn btn-primary" id="passport-retry">Try again</button>
+      `;
+      document.getElementById('passport-retry')?.addEventListener('click', () => mount());
     }
   }
 
   function init() {
     WorldChoirNav.startWatcher('profile');
+    if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.start?.();
     mount();
   }
 

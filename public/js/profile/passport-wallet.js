@@ -1,78 +1,72 @@
 /**
- * PassportWalletService — Apple Wallet / Google Wallet integration layer.
- * UI is ready; signed pass generation connects when backend credentials exist.
+ * PassportWallet — Apple Wallet / Google Wallet integration surface
+ * Pass signing happens on the backend; this client only requests and opens passes.
  */
-const PassportWalletService = (() => {
-  function detectPlatform() {
+const PassportWallet = (() => {
+  function platform() {
     const ua = navigator.userAgent || '';
-    if (/iPhone|iPad|iPod/i.test(ua)) return 'ios';
-    if (/Android/i.test(ua)) return 'android';
+    if (/iPhone|iPad|iPod/i.test(ua)) return 'apple';
+    if (/Android/i.test(ua)) return 'google';
     return 'unsupported';
   }
 
   function isSupported() {
-    return detectPlatform() !== 'unsupported';
+    return platform() !== 'unsupported';
   }
 
   /**
-   * Request a signed wallet pass from the backend.
-   * Expected future endpoints:
+   * Request a signed pass from the backend when available.
+   * Endpoints (to be wired):
    *   POST /api/passport-wallet  { deviceId, platform: 'apple' | 'google' }
-   * Apple → .pkpass download / add
-   * Google → save URL / JWT
    */
-  async function requestSignedPass(platform) {
-    const deviceId = WorldChoirDB.getDeviceId();
+  async function requestPass({ deviceId, platform: platformName }) {
     const res = await fetch('/api/passport-wallet', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deviceId,
-        platform: platform === 'ios' ? 'apple' : 'google',
-      }),
+      body: JSON.stringify({ deviceId, platform: platformName }),
     });
-
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const err = new Error(data.error || 'Wallet pass unavailable');
+      const err = new Error(data.error || `Wallet request failed (${res.status})`);
       err.code = data.code || res.status;
-      err.data = data;
       throw err;
     }
     return data;
   }
 
-  async function addPassportToAppleWallet() {
-    const data = await requestSignedPass('ios');
-    if (data.pkpassUrl) {
-      window.location.href = data.pkpassUrl;
+  async function addPassportToAppleWallet(passportData) {
+    const deviceId = WorldChoirDB.getDeviceId();
+    const result = await requestPass({ deviceId, platform: 'apple' });
+    if (result?.passUrl) {
+      window.location.href = result.passUrl;
       return { ok: true };
     }
-    throw new Error('Apple Wallet pass URL missing');
+    throw new Error('Apple Wallet pass is not ready yet.');
   }
 
-  async function addPassportToGoogleWallet() {
-    const data = await requestSignedPass('android');
-    if (data.saveUrl) {
-      window.location.href = data.saveUrl;
+  async function addPassportToGoogleWallet(passportData) {
+    const deviceId = WorldChoirDB.getDeviceId();
+    const result = await requestPass({ deviceId, platform: 'google' });
+    if (result?.saveUrl) {
+      window.location.href = result.saveUrl;
       return { ok: true };
     }
-    throw new Error('Google Wallet save URL missing');
+    throw new Error('Google Wallet pass is not ready yet.');
   }
 
-  async function addPassportToWallet() {
-    const platform = detectPlatform();
-    if (platform === 'ios') return addPassportToAppleWallet();
-    if (platform === 'android') return addPassportToGoogleWallet();
-    const err = new Error('Wallet is available on iPhone and Android devices.');
+  async function addToWallet(passportData) {
+    const kind = platform();
+    if (kind === 'apple') return addPassportToAppleWallet(passportData);
+    if (kind === 'google') return addPassportToGoogleWallet(passportData);
+    const err = new Error('Add to Wallet is available on iPhone and Android.');
     err.code = 'unsupported';
     throw err;
   }
 
   return {
-    detectPlatform,
+    platform,
     isSupported,
-    addPassportToWallet,
+    addToWallet,
     addPassportToAppleWallet,
     addPassportToGoogleWallet,
   };
