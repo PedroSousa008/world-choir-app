@@ -98,7 +98,6 @@ const PassportPage = (() => {
       <header class="passport-header">
         <div>
           <h1 class="passport-header__title">Passport</h1>
-          <p class="passport-header__subtitle">Your voice. Your promise. Your place in history.</p>
         </div>
         <button type="button" class="passport-info-btn" id="passport-info-btn" aria-label="About World Choir Passport">i</button>
       </header>
@@ -120,7 +119,6 @@ const PassportPage = (() => {
       <header class="passport-header">
         <div>
           <h1 class="passport-header__title">Passport</h1>
-          <p class="passport-header__subtitle">Your voice. Your promise. Your place in history.</p>
         </div>
         <button type="button" class="passport-info-btn" id="passport-info-btn" aria-label="About World Choir Passport">i</button>
       </header>

@@ -47,7 +47,7 @@ const WorldChoirPassport = (() => {
   }
 
   function worldMapSvg() {
-    // Fine gold dotted engraving — decorative only
+    // Fine blue dotted engraving — decorative only
     const dots = [
       [18, 42], [28, 38], [38, 44], [48, 40], [58, 46], [22, 55], [34, 58], [46, 54],
       [72, 36], [84, 32], [96, 38], [108, 34], [120, 40], [88, 48], [102, 52], [114, 48],
@@ -61,7 +61,7 @@ const WorldChoirPassport = (() => {
     const circles = dots.map(([x, y], i) => {
       const r = bright.has(i) ? 1.7 : 1.15;
       const o = bright.has(i) ? 0.95 : 0.55;
-      return `<circle cx="${x}" cy="${y}" r="${r}" fill="#c9a962" opacity="${o}"/>`;
+      return `<circle cx="${x}" cy="${y}" r="${r}" fill="#3d7cff" opacity="${o}"/>`;
     }).join('');
     return `
       <svg class="passport-card__map" viewBox="0 0 180 110" aria-hidden="true" focusable="false">
@@ -101,7 +101,7 @@ const WorldChoirPassport = (() => {
   function renderCard(data = {}, { loading = false, id = 'world-choir-passport' } = {}) {
     const emblem = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_EMBLEM
       ? WorldChoirConfig.PASSPORT_EMBLEM.url
-      : 'images/passport/passport-emblem.png?v=20260820a';
+      : 'images/passport/passport-emblem.png?v=20260820b';
     const emblemAlt = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_EMBLEM
       ? WorldChoirConfig.PASSPORT_EMBLEM.alt
       : 'World Choir Passport emblem';
@@ -134,8 +134,8 @@ const WorldChoirPassport = (() => {
               id="passport-card-emblem"
               src="${esc(emblem)}"
               alt="${esc(emblemAlt)}"
-              width="304"
-              height="178"
+              width="1637"
+              height="960"
               decoding="async"
             >
           </div>

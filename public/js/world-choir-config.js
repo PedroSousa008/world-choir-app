@@ -39,7 +39,7 @@ const WorldChoirConfig = (() => {
   /** Shared Passport top-right emblem — replace public/images/passport/passport-emblem.png for all users */
   const PASSPORT_EMBLEM = {
     src: 'images/passport/passport-emblem.png',
-    version: '20260820a',
+    version: '20260820b',
     alt: 'World Choir Passport emblem',
     get url() {
       return `${this.src}?v=${this.version}`;
