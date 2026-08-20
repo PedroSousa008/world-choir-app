@@ -36,11 +36,11 @@ const WorldChoirConfig = (() => {
     },
   };
 
-  /** Shared Passport top-right emblem — replace public/images/passport/passport-emblem.png for all users */
-  const PASSPORT_EMBLEM = {
-    src: 'images/passport/passport-emblem.png',
+  /** Shared Passport bottom-right world map — replace public/images/passport/passport-world-map.png for all users */
+  const PASSPORT_WORLD_MAP = {
+    src: 'images/passport/passport-world-map.png',
     version: '20260820b',
-    alt: 'World Choir Passport emblem',
+    alt: 'World Choir world map',
     get url() {
       return `${this.src}?v=${this.version}`;
     },
@@ -243,7 +243,7 @@ const WorldChoirConfig = (() => {
     ACTIVE_EVENT,
     CURRENT_EVENT,
     LOGO,
-    PASSPORT_EMBLEM,
+    PASSPORT_WORLD_MAP,
     EventState,
     AppState,
     getEventDate: getEventStart,

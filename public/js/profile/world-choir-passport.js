@@ -46,30 +46,6 @@ const WorldChoirPassport = (() => {
     return name.slice(0, 2).toUpperCase();
   }
 
-  function worldMapSvg() {
-    // Fine blue dotted engraving — decorative only
-    const dots = [
-      [18, 42], [28, 38], [38, 44], [48, 40], [58, 46], [22, 55], [34, 58], [46, 54],
-      [72, 36], [84, 32], [96, 38], [108, 34], [120, 40], [88, 48], [102, 52], [114, 48],
-      [132, 42], [144, 38], [156, 44], [140, 54], [152, 58],
-      [42, 72], [54, 78], [66, 74], [78, 82], [58, 88], [70, 92],
-      [98, 70], [110, 76], [122, 72], [134, 80], [146, 74], [118, 88], [130, 94],
-      [26, 28], [160, 28], [170, 48], [12, 68], [168, 82], [80, 28], [150, 90],
-      [64, 34], [92, 90], [40, 90], [105, 28], [75, 60], [125, 60],
-    ];
-    const bright = new Set([2, 9, 14, 20, 28, 35, 41]);
-    const circles = dots.map(([x, y], i) => {
-      const r = bright.has(i) ? 1.7 : 1.15;
-      const o = bright.has(i) ? 0.95 : 0.55;
-      return `<circle cx="${x}" cy="${y}" r="${r}" fill="#3d7cff" opacity="${o}"/>`;
-    }).join('');
-    return `
-      <svg class="passport-card__map" viewBox="0 0 180 110" aria-hidden="true" focusable="false">
-        ${circles}
-      </svg>
-    `;
-  }
-
   function field(label, valueHtml, { voice = false } = {}) {
     return `
       <div class="passport-field">
@@ -99,12 +75,15 @@ const WorldChoirPassport = (() => {
   }
 
   function renderCard(data = {}, { loading = false, id = 'world-choir-passport' } = {}) {
-    const emblem = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_EMBLEM
-      ? WorldChoirConfig.PASSPORT_EMBLEM.url
-      : 'images/passport/passport-emblem.png?v=20260820b';
-    const emblemAlt = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_EMBLEM
-      ? WorldChoirConfig.PASSPORT_EMBLEM.alt
-      : 'World Choir Passport emblem';
+    const logo = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO
+      ? WorldChoirConfig.LOGO.url
+      : 'images/world-choir-logo.png?v=20270706';
+    const mapImg = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_WORLD_MAP
+      ? WorldChoirConfig.PASSPORT_WORLD_MAP.url
+      : 'images/passport/passport-world-map.png?v=20260820b';
+    const mapAlt = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_WORLD_MAP
+      ? WorldChoirConfig.PASSPORT_WORLD_MAP.alt
+      : 'World Choir world map';
 
     const voice = loading
       ? '<span class="passport-skel passport-skel--voice"></span>'
@@ -129,15 +108,7 @@ const WorldChoirPassport = (() => {
               <p class="passport-card__brand-kicker">World Choir</p>
               <p class="passport-card__brand-title">Passport</p>
             </div>
-            <img
-              class="passport-card__emblem"
-              id="passport-card-emblem"
-              src="${esc(emblem)}"
-              alt="${esc(emblemAlt)}"
-              width="1637"
-              height="960"
-              decoding="async"
-            >
+            <img class="passport-card__logo" src="${esc(logo)}" alt="World Choir" width="1024" height="1024" decoding="async">
           </div>
           <div class="passport-card__identity">
             ${portraitHtml(data, loading)}
@@ -152,7 +123,14 @@ const WorldChoirPassport = (() => {
               <p class="passport-field__label">Member Since</p>
               <p class="passport-field__value">${since}</p>
             </div>
-            ${worldMapSvg()}
+            <img
+              class="passport-card__map"
+              src="${esc(mapImg)}"
+              alt="${esc(mapAlt)}"
+              width="1637"
+              height="960"
+              decoding="async"
+            >
           </div>
         </div>
       </article>
