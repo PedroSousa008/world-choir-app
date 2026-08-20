@@ -20,6 +20,9 @@ const ProfilePage = (() => {
           onSuccess: () => refresh(),
         });
       },
+      onOpenPassport: () => {
+        /* Passport feature — wired next */
+      },
     });
 
     ParticipationStatusCard.mount(document.getElementById(SECTIONS.participation), {

@@ -56,6 +56,18 @@
   font-style: italic;
 }
 
+.identity-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.identity-actions .btn-ghost {
+  width: 100%;
+  max-width: 280px;
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--text-secondary);

@@ -14,9 +14,14 @@ const UserIdentityCard = (() => {
       <div class="glass-card identity-card profile-section" id="user-identity-card">
         ${voiceName ? `<h1 class="identity-name">${escapeHtml(voiceName)}</h1>` : ''}
         <p class="identity-location">${locationHtml}</p>
-        <button class="btn btn-ghost" id="change-location-btn" type="button">
-          Change Participation Location
-        </button>
+        <div class="identity-actions">
+          <button class="btn btn-ghost" id="change-location-btn" type="button">
+            Change Participation Location
+          </button>
+          <button class="btn btn-ghost" id="open-passport-btn" type="button">
+            Open your Passport
+          </button>
+        </div>
       </div>
     `;
   }
@@ -27,9 +32,12 @@ const UserIdentityCard = (() => {
     return div.innerHTML;
   }
 
-  function mount(container, { onChangeLocation }) {
+  function mount(container, { onChangeLocation, onOpenPassport }) {
     container.innerHTML = render(WorldChoirDB.getCurrentUser());
     document.getElementById('change-location-btn')?.addEventListener('click', onChangeLocation);
+    document.getElementById('open-passport-btn')?.addEventListener('click', () => {
+      if (typeof onOpenPassport === 'function') onOpenPassport();
+    });
   }
 
   return { render, mount };
