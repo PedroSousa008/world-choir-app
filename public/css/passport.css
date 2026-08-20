@@ -173,7 +173,7 @@
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--accent-blue);
+  color: var(--accent-aurora);
 }
 
 .passport-card__brand-title {
@@ -182,7 +182,7 @@
   font-weight: 600;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--accent-blue);
+  color: #ffffff;
 }
 
 .passport-card__logo {
