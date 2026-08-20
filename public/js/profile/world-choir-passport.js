@@ -269,9 +269,7 @@ const WorldChoirPassport = (() => {
     return withExportLock(async () => {
       const blob = await capturePassportBlob(cardEl);
       const file = new File([blob], 'world-choir-passport.png', { type: 'image/png' });
-      const origin = (typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.getPublicOrigin)
-        ? WorldChoirConfig.getPublicOrigin()
-        : (window.location.origin || 'https://world-choir-app.vercel.app');
+      const origin = window.location.origin || 'https://world-choir-app.vercel.app';
       const text = `My voice is part of World Choir.\n${origin}`;
 
       if (navigator.canShare?.({ files: [file] })) {
