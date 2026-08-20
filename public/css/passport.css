@@ -244,6 +244,14 @@
   margin-bottom: 0;
 }
 
+.passport-field:last-child .passport-field__rule {
+  display: none;
+}
+
+.passport-field:last-child .passport-field__value {
+  margin-bottom: 0;
+}
+
 .passport-field__label {
   margin: 0 0 4px;
   font-size: 8px;
@@ -279,28 +287,20 @@
 }
 
 .passport-card__footer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: auto;
   padding-top: 18px;
 }
 
-.passport-card__since {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-self: center;
-  min-height: 0;
-}
-
 .passport-card__since .passport-field__label {
-  margin: 0 0 4px;
+  margin-bottom: 4px;
 }
 
 .passport-card__since .passport-field__value {
-  margin: 0;
+  margin-bottom: 0;
   font-size: 0.9rem;
   white-space: normal;
 }
@@ -310,10 +310,9 @@
   height: auto;
   aspect-ratio: 1637 / 960;
   object-fit: contain;
-  object-position: right center;
+  object-position: right bottom;
   opacity: 0.92;
   flex-shrink: 0;
-  align-self: center;
   pointer-events: none;
 }
 
