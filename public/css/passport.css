@@ -185,10 +185,13 @@
   color: var(--accent-gold);
 }
 
-.passport-card__logo {
-  width: 52px;
-  height: 52px;
+.passport-card__emblem {
+  width: 78px;
+  height: auto;
+  max-height: 52px;
+  aspect-ratio: 304 / 178;
   object-fit: contain;
+  object-position: right center;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
 }
@@ -681,9 +684,9 @@
   margin-top: 12px;
 }
 
-.passport-export-host .passport-card__logo {
-  width: 140px;
-  height: 140px;
+.passport-export-host .passport-card__emblem {
+  width: 210px;
+  max-height: 140px;
 }
 
 .passport-export-host .passport-card__top {

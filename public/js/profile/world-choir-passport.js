@@ -99,9 +99,12 @@ const WorldChoirPassport = (() => {
   }
 
   function renderCard(data = {}, { loading = false, id = 'world-choir-passport' } = {}) {
-    const logo = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO
-      ? WorldChoirConfig.LOGO.url
-      : 'images/world-choir-logo.png?v=20270706';
+    const emblem = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_EMBLEM
+      ? WorldChoirConfig.PASSPORT_EMBLEM.url
+      : 'images/passport/passport-emblem.png?v=20260820a';
+    const emblemAlt = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_EMBLEM
+      ? WorldChoirConfig.PASSPORT_EMBLEM.alt
+      : 'World Choir Passport emblem';
 
     const voice = loading
       ? '<span class="passport-skel passport-skel--voice"></span>'
@@ -126,7 +129,15 @@ const WorldChoirPassport = (() => {
               <p class="passport-card__brand-kicker">World Choir</p>
               <p class="passport-card__brand-title">Passport</p>
             </div>
-            <img class="passport-card__logo" src="${esc(logo)}" alt="World Choir" width="1024" height="1024" decoding="async">
+            <img
+              class="passport-card__emblem"
+              id="passport-card-emblem"
+              src="${esc(emblem)}"
+              alt="${esc(emblemAlt)}"
+              width="304"
+              height="178"
+              decoding="async"
+            >
           </div>
           <div class="passport-card__identity">
             ${portraitHtml(data, loading)}
