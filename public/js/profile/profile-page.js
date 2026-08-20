@@ -51,7 +51,7 @@ const ProfilePage = (() => {
         });
       },
       onOpenPassport: () => {
-        /* Passport feature — wired next */
+        window.location.href = 'passport.html';
       },
     });
 
