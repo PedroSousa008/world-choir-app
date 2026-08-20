@@ -36,20 +36,12 @@ const ParticipationStatusCard = (() => {
       return renderLoading();
     }
 
-    const pledged = pledgeState === 'pledged';
-    const pledge = WorldChoirDB.getPledgeForCurrentUser();
-    const eventTitle = WorldChoirConfig.ACTIVE_EVENT.title;
-
-    if (pledged && pledge) {
-      return `
-        <div class="glass-card participation-card profile-section" id="participation-status-card">
-          <p class="participation-status">
-            You're singing from <strong>${escapeHtml(pledge.city)}, ${escapeHtml(pledge.country)}</strong>
-          </p>
-          <button class="btn btn-primary pledged" type="button" disabled>You're Singing</button>
-        </div>
-      `;
+    // Once the user has joined, hide this card — location already shows in identity.
+    if (pledgeState === 'pledged') {
+      return '';
     }
+
+    const eventTitle = WorldChoirConfig.ACTIVE_EVENT.title;
 
     return `
       <div class="glass-card participation-card profile-section" id="participation-status-card">
