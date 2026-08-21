@@ -53,9 +53,9 @@ const WorldChoirNav = (() => {
       'js/world-choir-onboarding.js?v=20260816a',
       'js/world-choir-db.js?v=20260819h',
       'passport.html',
-      'css/passport.css?v=20260821o',
-      'js/profile/world-choir-passport.js?v=20260821n',
-      'js/profile/passport-page.js?v=20260820a',
+      'css/passport.css?v=20260821p',
+      'js/profile/world-choir-passport.js?v=20260821p',
+      'js/profile/passport-page.js?v=20260821p',
       'js/profile/passport-wallet.js?v=20260820a',
     ],
     memory: [

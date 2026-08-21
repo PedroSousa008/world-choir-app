@@ -44,13 +44,17 @@ const WorldChoirPassport = (() => {
     `;
   }
 
-  function featureImageHtml(loading) {
+  function featureImageSrc() {
     const cfg = typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig.PASSPORT_FEATURE_IMAGE : null;
-    const src = cfg?.url || 'images/passport/passport-feature.png?v=20260821a';
-    const alt = cfg?.alt || 'World Choir Passport feature';
-    if (loading) {
-      return `<div class="passport-card__feature" aria-hidden="true"><span class="passport-skel passport-skel--feature"></span></div>`;
-    }
+    return {
+      src: cfg?.url || 'images/passport/passport-feature.png?v=20260821b',
+      alt: cfg?.alt || 'World Choir Passport feature',
+    };
+  }
+
+  function featureImageHtml() {
+    const { src, alt } = featureImageSrc();
+    // Always render the real static asset — never a skeleton (avoids square flash on refresh).
     return `
       <div class="passport-card__feature">
         <img
@@ -60,9 +64,22 @@ const WorldChoirPassport = (() => {
           width="512"
           height="512"
           decoding="async"
+          fetchpriority="high"
         >
       </div>
     `;
+  }
+
+  function revealFeatureImages(root = document) {
+    root.querySelectorAll?.('.passport-card__feature-img').forEach((img) => {
+      const mark = () => img.classList.add('is-ready');
+      if (img.complete && img.naturalWidth > 0) {
+        mark();
+        return;
+      }
+      img.addEventListener('load', mark, { once: true });
+      img.addEventListener('error', mark, { once: true });
+    });
   }
 
   function renderCard(data = {}, { loading = false, id = 'world-choir-passport' } = {}) {
@@ -117,7 +134,7 @@ const WorldChoirPassport = (() => {
             <img class="passport-card__logo" src="${esc(logo)}" alt="World Choir" width="1024" height="1024" decoding="async">
           </div>
           <div class="passport-card__identity">
-            ${featureImageHtml(loading)}
+            ${featureImageHtml()}
             <div class="passport-card__fields">
               ${field('Voice Number', voice, { voice: true })}
               ${field('Country', country)}
@@ -226,9 +243,11 @@ const WorldChoirPassport = (() => {
     host.className = 'passport-export-host';
     host.innerHTML = renderCard(data, { loading: false, id: 'passport-export-card' });
     document.body.appendChild(host);
+    revealFeatureImages(host);
 
     const card = host.querySelector('.passport-card');
     await waitForImages(host);
+    host.querySelectorAll('.passport-card__feature-img').forEach((img) => img.classList.add('is-ready'));
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
     try {
@@ -318,6 +337,7 @@ const WorldChoirPassport = (() => {
     downloadPassport,
     sharePassport,
     showToast,
+    revealFeatureImages,
     isExportBusy: () => exportBusy,
   };
 })();

@@ -244,12 +244,14 @@ Completed</p>
     if (!root) return;
 
     root.innerHTML = renderLoading();
+    WorldChoirPassport.revealFeatureImages(root);
     bindInteractions();
 
     try {
       await WorldChoirDB.ready();
       passportData = await WorldChoirPassport.loadPassportData();
       root.innerHTML = render(passportData);
+      WorldChoirPassport.revealFeatureImages(root);
       bindInteractions();
       page?.classList.add('is-entering');
       window.setTimeout(() => page?.classList.remove('is-entering'), 700);

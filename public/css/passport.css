@@ -453,6 +453,13 @@
   display: block;
   padding: 0;
   box-sizing: border-box;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.passport-card__feature-img.is-ready {
+  opacity: 1;
+  visibility: visible;
 }
 
 .passport-card__fields {
