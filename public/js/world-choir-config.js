@@ -53,7 +53,7 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_FEATURE_IMAGE = {
     src: 'images/passport/passport-feature.png',
-    version: '20260821a',
+    version: '20260821b',
     alt: 'World Choir Passport feature',
     get url() {
       return `${this.src}?v=${this.version}`;

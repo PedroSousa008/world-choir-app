@@ -441,16 +441,18 @@
   overflow: hidden;
   margin-top: 38px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(8, 10, 14, 0.85);
+  background: #000000;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .passport-card__feature-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   display: block;
+  padding: 6%;
+  box-sizing: border-box;
 }
 
 .passport-card__fields {
