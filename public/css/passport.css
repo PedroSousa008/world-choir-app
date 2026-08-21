@@ -433,34 +433,24 @@
   min-height: 0;
 }
 
-.passport-card__portrait {
+.passport-card__feature {
   width: 118px;
   height: 118px;
   border-radius: 50%;
   flex-shrink: 0;
   overflow: hidden;
   margin-top: 38px;
-  border: 1px solid rgba(61, 124, 255, 0.28);
-  background: linear-gradient(145deg, rgba(61, 124, 255, 0.35), rgba(107, 92, 231, 0.35));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 10, 14, 0.85);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
-.passport-card__portrait img {
+
+.passport-card__feature-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   display: block;
-}
-
-.passport-card__portrait-fallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.65rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--text-primary);
 }
 
 .passport-card__fields {
@@ -572,7 +562,7 @@
   animation: passportSkel 1.4s ease-in-out infinite;
 }
 
-.passport-skel--portrait {
+.passport-skel--feature {
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -952,14 +942,10 @@
   gap: 56px;
 }
 
-.passport-export-host .passport-card__portrait {
+.passport-export-host .passport-card__feature {
   width: 320px;
   height: 320px;
   margin-top: 103px;
-}
-
-.passport-export-host .passport-card__portrait-fallback {
-  font-size: 4.5rem;
 }
 
 .passport-export-host .passport-field__label {
@@ -1058,7 +1044,7 @@
     aspect-ratio: 0.68;
   }
 
-  .passport-card__portrait {
+  .passport-card__feature {
     width: 96px;
     height: 96px;
   }

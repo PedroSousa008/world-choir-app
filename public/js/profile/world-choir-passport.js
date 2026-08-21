@@ -34,18 +34,6 @@ const WorldChoirPassport = (() => {
     });
   }
 
-  function initialsFrom(data) {
-    const name = String(data.voiceName || data.displayName || data.city || 'WC').trim();
-    const parts = name.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    }
-    if (/^voice\s+\d+/i.test(name)) {
-      return 'WC';
-    }
-    return name.slice(0, 2).toUpperCase();
-  }
-
   function field(label, valueHtml, { voice = false } = {}) {
     return `
       <div class="passport-field">
@@ -56,20 +44,23 @@ const WorldChoirPassport = (() => {
     `;
   }
 
-  function portraitHtml(data, loading) {
+  function featureImageHtml(loading) {
+    const cfg = typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig.PASSPORT_FEATURE_IMAGE : null;
+    const src = cfg?.url || 'images/passport/passport-feature.png?v=20260821a';
+    const alt = cfg?.alt || 'World Choir Passport feature';
     if (loading) {
-      return `<div class="passport-card__portrait" aria-hidden="true"><span class="passport-skel passport-skel--portrait"></span></div>`;
-    }
-    if (data.profileImage) {
-      return `
-        <div class="passport-card__portrait">
-          <img src="${esc(data.profileImage)}" alt="" decoding="async">
-        </div>
-      `;
+      return `<div class="passport-card__feature" aria-hidden="true"><span class="passport-skel passport-skel--feature"></span></div>`;
     }
     return `
-      <div class="passport-card__portrait" aria-hidden="true">
-        <div class="passport-card__portrait-fallback">${esc(initialsFrom(data))}</div>
+      <div class="passport-card__feature">
+        <img
+          class="passport-card__feature-img"
+          src="${esc(src)}"
+          alt="${esc(alt)}"
+          width="512"
+          height="512"
+          decoding="async"
+        >
       </div>
     `;
   }
@@ -126,7 +117,7 @@ const WorldChoirPassport = (() => {
             <img class="passport-card__logo" src="${esc(logo)}" alt="World Choir" width="1024" height="1024" decoding="async">
           </div>
           <div class="passport-card__identity">
-            ${portraitHtml(data, loading)}
+            ${featureImageHtml(loading)}
             <div class="passport-card__fields">
               ${field('Voice Number', voice, { voice: true })}
               ${field('Country', country)}
@@ -184,7 +175,6 @@ const WorldChoirPassport = (() => {
       voiceNumber: pledge?.voiceNumber ?? null,
       voiceName: pledge?.voiceName || pledge?.display_name || user.display_name || null,
       displayName: user.display_name || pledge?.display_name || null,
-      profileImage: user.profileImage || pledge?.profileImage || null,
       country: pledge?.country || user.country || null,
       city: pledge?.city || user.city || null,
       memberSince: user.created_at || pledge?.pledged_at || null,

@@ -46,6 +46,20 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Shared Passport left feature image (replaces the old blue circle).
+   * Drop your asset at: public/images/passport/passport-feature.png
+   * Then bump `version` so all clients refresh the image.
+   */
+  const PASSPORT_FEATURE_IMAGE = {
+    src: 'images/passport/passport-feature.png',
+    version: '20260821a',
+    alt: 'World Choir Passport feature',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -244,6 +258,7 @@ const WorldChoirConfig = (() => {
     CURRENT_EVENT,
     LOGO,
     PASSPORT_WORLD_MAP,
+    PASSPORT_FEATURE_IMAGE,
     EventState,
     AppState,
     getEventDate: getEventStart,
