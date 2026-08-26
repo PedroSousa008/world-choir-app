@@ -626,6 +626,10 @@ body.map-page {
 }
 
 @media (max-width: 480px) {
+  .map-shell {
+    --map-overlay-bottom: 50px;
+  }
+
   .map-header {
     top: max(8px, env(safe-area-inset-top, 0px));
     left: 10px;
@@ -655,12 +659,12 @@ body.map-page {
     font-size: 0.64rem;
   }
 
-  /* Anchored to bottom of map area — sits just above the nav bar */
+  /* Float above nav — balanced clearance without sitting too high */
   .map-stats {
     position: absolute;
     left: 58px;
     right: 10px;
-    bottom: 12px;
+    bottom: var(--map-overlay-bottom);
     z-index: 500;
   }
 
@@ -673,7 +677,8 @@ body.map-page {
   .map-stat {
     flex: 1;
     min-width: 0;
-    padding: 9px 6px;
+    min-height: 54px;
+    padding: 10px 6px 11px;
     border-radius: 10px;
   }
 
@@ -689,7 +694,7 @@ body.map-page {
 
   .map-info-btn {
     position: absolute;
-    bottom: 12px;
+    bottom: var(--map-overlay-bottom);
     left: 10px;
     top: auto;
     right: auto;
@@ -700,7 +705,7 @@ body.map-page {
   }
 
   .map-info-sheet {
-    bottom: 64px;
+    bottom: calc(var(--map-overlay-bottom) + 54px);
     top: auto;
     left: 10px;
     right: 10px;
@@ -708,17 +713,17 @@ body.map-page {
   }
 
   .map-empty {
-    bottom: 74px;
+    bottom: calc(var(--map-overlay-bottom) + 64px);
     max-width: calc(100% - 32px);
     padding: 16px 18px;
   }
 
   .city-card {
-    bottom: 74px;
+    bottom: calc(var(--map-overlay-bottom) + 64px);
     max-width: calc(100% - 32px);
   }
 
   .leaflet-control-zoom {
-    margin-bottom: 58px !important;
+    margin-bottom: calc(var(--map-overlay-bottom) + 48px) !important;
   }
 }
