@@ -23,6 +23,7 @@ body.map-page {
   height: calc(100dvh - var(--nav-height) - env(safe-area-inset-bottom, 0px));
   height: calc(100vh - var(--nav-height) - env(safe-area-inset-bottom, 0px)); /* fallback */
   z-index: 1;
+  --map-stat-block-height: 58px;
 }
 
 #world-map {
@@ -64,6 +65,25 @@ body.map-page {
   color: var(--text-primary) !important;
   border: 1px solid var(--border-subtle) !important;
   backdrop-filter: blur(12px);
+  width: 26px !important;
+  height: calc(var(--map-stat-block-height) / 2) !important;
+  line-height: calc(var(--map-stat-block-height) / 2) !important;
+}
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  font-size: 17px !important;
+}
+
+.leaflet-touch .leaflet-control-zoom a {
+  width: 26px !important;
+  height: calc(var(--map-stat-block-height) / 2) !important;
+  line-height: calc(var(--map-stat-block-height) / 2) !important;
+}
+
+.leaflet-touch .leaflet-control-zoom-in,
+.leaflet-touch .leaflet-control-zoom-out {
+  font-size: 17px !important;
 }
 
 .leaflet-control-zoom a:hover {
@@ -313,6 +333,7 @@ body.map-page {
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   min-width: 72px;
+  min-height: var(--map-stat-block-height);
   text-align: center;
   backdrop-filter: blur(20px);
 }
@@ -557,6 +578,7 @@ body.map-page {
 @media (max-width: 480px) {
   .map-shell {
     --map-overlay-bottom: 50px;
+    --map-stat-block-height: 54px;
   }
 
   .map-header {
@@ -606,7 +628,7 @@ body.map-page {
   .map-stat {
     flex: 1;
     min-width: 0;
-    min-height: 54px;
+    min-height: var(--map-stat-block-height);
     padding: 10px 6px 11px;
     border-radius: 10px;
   }
@@ -628,6 +650,20 @@ body.map-page {
 
   .leaflet-control-zoom {
     margin: 0 !important;
+  }
+
+  .leaflet-control-zoom a,
+  .leaflet-touch .leaflet-control-zoom a {
+    width: 30px !important;
+    height: calc(var(--map-stat-block-height) / 2) !important;
+    line-height: calc(var(--map-stat-block-height) / 2) !important;
+  }
+
+  .leaflet-control-zoom-in,
+  .leaflet-control-zoom-out,
+  .leaflet-touch .leaflet-control-zoom-in,
+  .leaflet-touch .leaflet-control-zoom-out {
+    font-size: 16px !important;
   }
 
   .map-empty {
