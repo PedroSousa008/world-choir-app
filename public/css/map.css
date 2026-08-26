@@ -23,7 +23,6 @@ body.map-page {
   height: calc(100dvh - var(--nav-height) - env(safe-area-inset-bottom, 0px));
   height: calc(100vh - var(--nav-height) - env(safe-area-inset-bottom, 0px)); /* fallback */
   z-index: 1;
-  contain: layout style;
 }
 
 #world-map {
@@ -42,10 +41,6 @@ body.map-page {
 .leaflet-container .maplibregl-canvas {
   background: #000000;
   outline: none;
-}
-
-.leaflet-pane {
-  will-change: transform;
 }
 
 .leaflet-tile-pane .map-tile-layer .leaflet-tile {
@@ -660,12 +655,12 @@ body.map-page {
     font-size: 0.64rem;
   }
 
-  /* Fixed above nav — always visible on mobile, no scroll needed */
+  /* Anchored to bottom of map area — sits just above the nav bar */
   .map-stats {
-    position: fixed;
+    position: absolute;
     left: 58px;
     right: 10px;
-    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 10px);
+    bottom: 12px;
     z-index: 500;
   }
 
@@ -693,8 +688,8 @@ body.map-page {
   }
 
   .map-info-btn {
-    position: fixed;
-    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 10px);
+    position: absolute;
+    bottom: 12px;
     left: 10px;
     top: auto;
     right: auto;
@@ -705,7 +700,7 @@ body.map-page {
   }
 
   .map-info-sheet {
-    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 62px);
+    bottom: 64px;
     top: auto;
     left: 10px;
     right: 10px;
@@ -713,17 +708,17 @@ body.map-page {
   }
 
   .map-empty {
-    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 72px);
+    bottom: 74px;
     max-width: calc(100% - 32px);
     padding: 16px 18px;
   }
 
   .city-card {
-    bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 72px);
+    bottom: 74px;
     max-width: calc(100% - 32px);
   }
 
   .leaflet-control-zoom {
-    margin-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 58px) !important;
+    margin-bottom: 58px !important;
   }
 }
