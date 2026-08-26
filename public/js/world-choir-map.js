@@ -200,7 +200,7 @@ const WorldChoirMap = (() => {
     });
   }
 
-  function initMap() {
+  async function initMap() {
     const view = getInitialMapView();
     map = L.map('world-map', {
       center: view.center,
@@ -214,32 +214,7 @@ const WorldChoirMap = (() => {
       maxBoundsViscosity: 1.0,
     });
 
-    const tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
-    const tileOpts = {
-      subdomains: 'abcd',
-      noWrap: true,
-      bounds: [[-85, -180], [85, 180]],
-    };
-
-    // Always-on low-res underlay: during zoom-out, gaps show map tiles instead of black.
-    L.tileLayer(tileUrl, {
-      ...tileOpts,
-      minZoom: 2,
-      maxZoom: 2,
-      className: 'map-tile-layer map-tile-layer--base',
-      updateWhenZooming: false,
-      updateWhenIdle: true,
-    }).addTo(map);
-
-    L.tileLayer(tileUrl, {
-      ...tileOpts,
-      minZoom: 2,
-      maxZoom: 19,
-      className: 'map-tile-layer map-tile-layer--detail',
-      updateWhenZooming: true,
-      updateWhenIdle: true,
-      keepBuffer: 4,
-    }).addTo(map);
+    await WorldChoirMapTiles.addBasemapLayers(map);
 
     cityLightsLayer = L.layerGroup().addTo(map);
     gatheringLayer = L.layerGroup().addTo(map);
@@ -468,13 +443,13 @@ const WorldChoirMap = (() => {
     startMap();
   }
 
-  function startMap() {
+  async function startMap() {
     document.body.classList.add('map-page');
     WorldChoirNav.startWatcher('map');
 
     const hasVoiceJoinedSession = !!sessionStorage.getItem('wc_voice_joined');
 
-    initMap();
+    await initMap();
     initMapHeader();
     refreshMapData();
     WorldChoirPledgeState.subscribe(() => updateEmptyState());

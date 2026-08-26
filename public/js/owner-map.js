@@ -78,7 +78,7 @@ const OwnerMap = (() => {
     });
   }
 
-  function mount(containerId, cities) {
+  async function mount(containerId, cities) {
     if (typeof L === 'undefined') {
       console.error('Leaflet is required for OwnerMap');
       return;
@@ -101,12 +101,7 @@ const OwnerMap = (() => {
       maxBoundsViscosity: 1.0,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      maxZoom: 19,
-      noWrap: true,
-      bounds: [[-85, -180], [85, 180]],
-    }).addTo(map);
+    await WorldChoirMapTiles.addSingleBasemapLayer(map);
 
     cityLightsLayer = L.layerGroup().addTo(map);
     map.on('click', hideCityCard);
