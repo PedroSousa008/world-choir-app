@@ -228,7 +228,7 @@ const WorldChoirMap = (() => {
       zoom: view.zoom,
       minZoom: 2,
       maxZoom: 10,
-      zoomControl: true,
+      zoomControl: false,
       attributionControl: false,
       worldCopyJump: false,
       maxBounds: [[-85, -180], [85, 180]],
@@ -240,6 +240,8 @@ const WorldChoirMap = (() => {
       wheelDebounceTime: 30,
       preferCanvas: false,
     });
+
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     WorldChoirMapTiles.addBasemapLayers(map);
 
@@ -351,14 +353,6 @@ const WorldChoirMap = (() => {
     }
   }
 
-  function updateInfoSheet() {
-    if (!WorldChoirDB.isPledgesLoaded()) return;
-
-    const gatherings = WorldChoirDB.getGatheringPlaces();
-    const goldRow = document.getElementById('info-gold-row');
-    if (goldRow) goldRow.style.display = gatherings.length > 0 ? 'flex' : 'none';
-  }
-
   function refreshMapData() {
     if (refreshScheduled) return;
     refreshScheduled = true;
@@ -375,7 +369,6 @@ const WorldChoirMap = (() => {
       rebuildMarkers();
       updateStats();
       updateEmptyState();
-      updateInfoSheet();
     });
   }
 
@@ -387,10 +380,6 @@ const WorldChoirMap = (() => {
     } else {
       el.textContent = `Singing in ${WorldChoirConfig.formatCountdownLong(t)}`;
     }
-  }
-
-  function toggleInfoSheet() {
-    document.getElementById('map-info-sheet').classList.toggle('visible');
   }
 
   function isMapHeaderMinimized() {
@@ -524,15 +513,6 @@ const WorldChoirMap = (() => {
     document.getElementById('map-empty-btn')?.addEventListener('click', () => {
       if (WorldChoirPledgeState.isPledged()) return;
       WorldChoirParticipation.open();
-    });
-
-    document.getElementById('map-info-btn')?.addEventListener('click', toggleInfoSheet);
-    document.addEventListener('click', (e) => {
-      const sheet = document.getElementById('map-info-sheet');
-      const btn = document.getElementById('map-info-btn');
-      if (!sheet.contains(e.target) && e.target !== btn) {
-        sheet.classList.remove('visible');
-      }
     });
 
     window.addEventListener('wc-pledge-added', (e) => {
