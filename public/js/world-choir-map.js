@@ -10,6 +10,8 @@ const WorldChoirMap = (() => {
   let pulseClearTimer = null;
   let voiceJoinedAnimating = false;
   let lastAppliedHomeKey = null;
+  let lastMarkersSignature = '';
+  let refreshScheduled = false;
 
   const DEFAULT_CENTER = [20, 0];
   const DEFAULT_ZOOM = 2;
@@ -168,9 +170,28 @@ const WorldChoirMap = (() => {
     });
   }
 
+  function getMarkersSignature() {
+    if (!WorldChoirDB.isPledgesLoaded()) return '';
+
+    const cities = WorldChoirDB.getAggregatedCities();
+    const gatherings = WorldChoirDB.getGatheringPlaces();
+    const citySig = cities
+      .map((city) => `${city.city}|${city.country}:${city.count}:${city.latitude}:${city.longitude}`)
+      .join(';');
+    const gatheringSig = gatherings
+      .map((g) => `${g.latitude}:${g.longitude}`)
+      .join(';');
+
+    return `${citySig}::${gatheringSig}::${pulseCityKey || ''}`;
+  }
+
   function rebuildMarkers() {
     if (!cityLightsLayer || !gatheringLayer) return;
     if (!WorldChoirDB.isPledgesLoaded()) return;
+
+    const signature = getMarkersSignature();
+    if (signature && signature === lastMarkersSignature) return;
+    lastMarkersSignature = signature;
 
     cityLightsLayer.clearLayers();
     gatheringLayer.clearLayers();
@@ -200,7 +221,7 @@ const WorldChoirMap = (() => {
     });
   }
 
-  async function initMap() {
+  function initMap() {
     const view = getInitialMapView();
     map = L.map('world-map', {
       center: view.center,
@@ -212,14 +233,46 @@ const WorldChoirMap = (() => {
       worldCopyJump: false,
       maxBounds: [[-85, -180], [85, 180]],
       maxBoundsViscosity: 1.0,
+      fadeAnimation: false,
+      zoomAnimation: true,
+      inertia: true,
+      inertiaDeceleration: 2800,
+      wheelDebounceTime: 30,
+      preferCanvas: false,
     });
 
-    await WorldChoirMapTiles.addBasemapLayers(map);
+    WorldChoirMapTiles.addBasemapLayers(map);
 
     cityLightsLayer = L.layerGroup().addTo(map);
     gatheringLayer = L.layerGroup().addTo(map);
 
     map.on('click', hideCityCard);
+    bindMapResizeHandlers();
+    scheduleMapResize();
+  }
+
+  function scheduleMapResize() {
+    requestAnimationFrame(() => {
+      map?.invalidateSize({ animate: false, pan: false });
+    });
+    setTimeout(() => map?.invalidateSize({ animate: false, pan: false }), 120);
+  }
+
+  function bindMapResizeHandlers() {
+    let resizeTimer = null;
+
+    const refresh = () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        map?.invalidateSize({ animate: false, pan: false });
+      }, 80);
+    };
+
+    window.addEventListener('resize', refresh, { passive: true });
+    window.addEventListener('orientationchange', refresh, { passive: true });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) scheduleMapResize();
+    });
   }
 
   function showCityCard(city) {
@@ -307,17 +360,23 @@ const WorldChoirMap = (() => {
   }
 
   function refreshMapData() {
-    updateLoadingState();
+    if (refreshScheduled) return;
+    refreshScheduled = true;
 
-    const mapDataState = WorldChoirDB.getMapDataState();
-    if (mapDataState === 'loading' || mapDataState === 'error') {
-      return;
-    }
+    requestAnimationFrame(() => {
+      refreshScheduled = false;
+      updateLoadingState();
 
-    rebuildMarkers();
-    updateStats();
-    updateEmptyState();
-    updateInfoSheet();
+      const mapDataState = WorldChoirDB.getMapDataState();
+      if (mapDataState === 'loading' || mapDataState === 'error') {
+        return;
+      }
+
+      rebuildMarkers();
+      updateStats();
+      updateEmptyState();
+      updateInfoSheet();
+    });
   }
 
   function updateCountdown() {
@@ -439,7 +498,7 @@ const WorldChoirMap = (() => {
   }
 
   function init() {
-    // Start the map UI immediately — don't wait on pledge/network bootstrap.
+    WorldChoirMapTiles.warmBasemap?.();
     startMap();
   }
 
@@ -449,7 +508,7 @@ const WorldChoirMap = (() => {
 
     const hasVoiceJoinedSession = !!sessionStorage.getItem('wc_voice_joined');
 
-    await initMap();
+    initMap();
     initMapHeader();
     refreshMapData();
     WorldChoirPledgeState.subscribe(() => updateEmptyState());

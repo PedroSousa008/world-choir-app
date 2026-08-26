@@ -24,15 +24,30 @@ const WorldChoirMapTiles = (() => {
     return typeof L !== 'undefined' && typeof L.maplibreGL === 'function';
   }
 
+  function isMobileMap() {
+    return window.matchMedia('(max-width: 768px), (pointer: coarse)').matches;
+  }
+
+  function getMapPixelRatio() {
+    const dpr = window.devicePixelRatio || 1;
+    if (isMobileMap()) return Math.min(dpr, 1.5);
+    return Math.min(dpr, 2);
+  }
+
   async function detectMode() {
     if (resolvePromise) return resolvePromise;
 
     resolvePromise = (async () => {
+      if (!canUseMapLibre()) {
+        activeMode = 'raster';
+        return activeMode;
+      }
+
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const timeoutId = setTimeout(() => controller.abort(), 350);
         const res = await fetch('/api/map-config', {
-          cache: 'no-store',
+          cache: 'force-cache',
           signal: controller.signal,
         });
         clearTimeout(timeoutId);
@@ -45,10 +60,10 @@ const WorldChoirMapTiles = (() => {
           }
         }
       } catch {
-        /* use vector */
+        /* vector is the default */
       }
 
-      activeMode = canUseMapLibre() ? 'vector' : 'raster';
+      activeMode = 'vector';
       return activeMode;
     })();
 
@@ -71,7 +86,12 @@ const WorldChoirMapTiles = (() => {
     return L.maplibreGL({
       style: CARTO_DARK_VECTOR_STYLE,
       interactive: false,
-      padding: 0.05,
+      padding: 0.04,
+      antialias: !isMobileMap(),
+      fadeDuration: 0,
+      pixelRatio: getMapPixelRatio(),
+      refreshExpiredTiles: false,
+      maxPitch: 0,
     });
   }
 
@@ -101,60 +121,66 @@ const WorldChoirMapTiles = (() => {
         className: 'map-tile-layer map-tile-layer--detail',
         updateWhenZooming: true,
         updateWhenIdle: true,
-        keepBuffer: 4,
+        keepBuffer: isMobileMap() ? 2 : 4,
       }).addTo(map)
     );
   }
 
-  async function addBasemapLayers(map) {
-    removeBasemapLayers(map);
-    const mode = await detectMode();
-
-    if (mode === 'raster') {
+  function maybeUpgradeToRaster(map) {
+    detectMode().then((mode) => {
+      if (mode !== 'raster' || !map || basemapLayers.length === 0) return;
+      if (activeMode === 'raster' && basemapLayers.some((layer) => layer instanceof L.TileLayer)) return;
+      removeBasemapLayers(map);
       addRasterBasemapLayers(map);
-      return mode;
-    }
-
-    if (!canUseMapLibre()) {
-      addRasterBasemapLayers(map);
-      return 'raster';
-    }
-
-    trackLayer(createVectorLayer().addTo(map));
-    return 'vector';
+    }).catch(() => {});
   }
 
-  async function addSingleBasemapLayer(map) {
+  function addBasemapLayers(map) {
     removeBasemapLayers(map);
-    const mode = await detectMode();
 
-    if (mode === 'raster') {
-      trackLayer(
-        createRasterLayer({
-          minZoom: 2,
-          maxZoom: 19,
-        }).addTo(map)
-      );
-      return mode;
+    if (canUseMapLibre()) {
+      trackLayer(createVectorLayer().addTo(map));
+      maybeUpgradeToRaster(map);
+      return 'vector';
     }
 
-    if (!canUseMapLibre()) {
-      trackLayer(
-        createRasterLayer({
-          minZoom: 2,
-          maxZoom: 19,
-        }).addTo(map)
-      );
-      return 'raster';
+    addRasterBasemapLayers(map);
+    activeMode = 'raster';
+    return 'raster';
+  }
+
+  function addSingleBasemapLayer(map) {
+    removeBasemapLayers(map);
+
+    if (canUseMapLibre()) {
+      trackLayer(createVectorLayer().addTo(map));
+      maybeUpgradeToRaster(map);
+      return 'vector';
     }
 
-    trackLayer(createVectorLayer().addTo(map));
-    return 'vector';
+    trackLayer(
+      createRasterLayer({
+        minZoom: 2,
+        maxZoom: 19,
+      }).addTo(map)
+    );
+    activeMode = 'raster';
+    return 'raster';
+  }
+
+  function warmBasemap() {
+    try {
+      fetch(CARTO_DARK_VECTOR_STYLE, { cache: 'force-cache', mode: 'cors' }).catch(() => {});
+      fetch('/api/map-config', { cache: 'force-cache' }).catch(() => {});
+    } catch {
+      /* ignore */
+    }
   }
 
   return {
     detectMode,
     addBasemapLayers,
     addSingleBasemapLayer,
+    warmBasemap,
   };
 })();

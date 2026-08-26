@@ -28,10 +28,15 @@ const WorldChoirNav = (() => {
     ],
     map: [
       'map.html',
-      'css/map.css?v=20260811d',
-      'js/world-choir-map.js?v=20260817j',
+      'css/map.css?v=20260826d',
+      'js/world-choir-map-tiles.js?v=20260826d',
+      'js/world-choir-map.js?v=20260826d',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+      'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
+      'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js',
+      'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js',
+      'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json',
     ],
     donate: [
       'donate.html',
@@ -110,6 +115,9 @@ const WorldChoirNav = (() => {
     prefetchStarted = true;
 
     const run = () => {
+      if (typeof WorldChoirMapTiles !== 'undefined') {
+        WorldChoirMapTiles.warmBasemap?.();
+      }
       Object.keys(TAB_ASSETS).forEach((id) => {
         if (id === activePage) return;
         if (id === 'memory' && !WorldChoirConfig.isMemoryUnlocked()) return;

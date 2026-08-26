@@ -23,12 +23,14 @@ body.map-page {
   height: calc(100dvh - var(--nav-height) - env(safe-area-inset-bottom, 0px));
   height: calc(100vh - var(--nav-height) - env(safe-area-inset-bottom, 0px)); /* fallback */
   z-index: 1;
+  contain: layout style;
 }
 
 #world-map {
   width: 100%;
   height: 100%;
   background: #000000;
+  touch-action: none;
 }
 
 .leaflet-container {
@@ -40,6 +42,10 @@ body.map-page {
 .leaflet-container .maplibregl-canvas {
   background: #000000;
   outline: none;
+}
+
+.leaflet-pane {
+  will-change: transform;
 }
 
 .leaflet-tile-pane .map-tile-layer .leaflet-tile {
