@@ -16,32 +16,65 @@ const WorldChoirMapTiles = (() => {
     bounds: [[-85, -180], [85, 180]],
   };
 
-  let resolvedProvider = null;
+  let resolvedProvider = 'esri';
   let resolvePromise = null;
+  let fallbackInProgress = false;
 
   async function detectProvider() {
-    if (resolvedProvider) return resolvedProvider;
+    if (resolvePromise) return resolvePromise;
 
-    if (!resolvePromise) {
-      resolvePromise = (async () => {
-        try {
-          const res = await fetch('/api/map-config', { cache: 'no-store' });
-          if (res.ok) {
-            const data = await res.json();
-            if (data?.provider === 'carto') {
-              resolvedProvider = 'carto';
-              return resolvedProvider;
-            }
+    resolvePromise = (async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const res = await fetch('/api/map-config', {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.provider === 'carto') {
+            resolvedProvider = 'carto';
+            return resolvedProvider;
           }
-        } catch {
-          /* fall through to Esri */
         }
-        resolvedProvider = 'esri';
-        return resolvedProvider;
-      })();
-    }
+      } catch {
+        /* fall through to Esri */
+      }
+
+      resolvedProvider = 'esri';
+      return resolvedProvider;
+    })();
 
     return resolvePromise;
+  }
+
+  function isTileLayer(layer) {
+    return layer instanceof L.TileLayer;
+  }
+
+  function removeBasemapLayers(map) {
+    map.eachLayer((layer) => {
+      if (isTileLayer(layer)) map.removeLayer(layer);
+    });
+  }
+
+  async function switchToEsriFallback(map) {
+    if (fallbackInProgress || resolvedProvider === 'esri') return;
+    fallbackInProgress = true;
+    resolvedProvider = 'esri';
+    removeBasemapLayers(map);
+    await addBasemapLayers(map);
+    fallbackInProgress = false;
+  }
+
+  function attachTileFallback(map, layer, provider) {
+    if (provider !== 'carto') return;
+    layer.on('tileerror', () => {
+      switchToEsriFallback(map);
+    });
   }
 
   function getTileUrl(provider) {
@@ -65,15 +98,16 @@ const WorldChoirMapTiles = (() => {
     const provider = await detectProvider();
     const tileUrl = getTileUrl(provider);
 
-    L.tileLayer(tileUrl, getTileOptions(provider, {
+    const baseLayer = L.tileLayer(tileUrl, getTileOptions(provider, {
       minZoom: 2,
       maxZoom: 2,
       className: 'map-tile-layer map-tile-layer--base',
       updateWhenZooming: false,
       updateWhenIdle: true,
     })).addTo(map);
+    attachTileFallback(map, baseLayer, provider);
 
-    L.tileLayer(tileUrl, getTileOptions(provider, {
+    const detailLayer = L.tileLayer(tileUrl, getTileOptions(provider, {
       minZoom: 2,
       maxZoom: provider === 'carto' ? 19 : 16,
       className: 'map-tile-layer map-tile-layer--detail',
@@ -81,6 +115,7 @@ const WorldChoirMapTiles = (() => {
       updateWhenIdle: true,
       keepBuffer: 4,
     })).addTo(map);
+    attachTileFallback(map, detailLayer, provider);
 
     return provider;
   }
@@ -88,10 +123,11 @@ const WorldChoirMapTiles = (() => {
   /** Single detail layer for simpler maps (e.g. owner dashboard). */
   async function addSingleBasemapLayer(map) {
     const provider = await detectProvider();
-    L.tileLayer(getTileUrl(provider), getTileOptions(provider, {
+    const layer = L.tileLayer(getTileUrl(provider), getTileOptions(provider, {
       minZoom: 2,
       maxZoom: provider === 'carto' ? 19 : 16,
     })).addTo(map);
+    attachTileFallback(map, layer, provider);
     return provider;
   }
 
