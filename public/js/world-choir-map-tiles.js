@@ -1,26 +1,30 @@
 /**
  * World Choir — shared map basemap tiles
  *
- * Carto raster tiles now require an API key (watermark without one).
- * We prefer /api/map-tile when CARTO_API_KEY is configured on Vercel;
- * otherwise Esri World Dark Gray Base — free, dark, no labels, no key.
+ * Primary: Carto Dark Matter (no labels) via MapLibre vector — deep black tones, no API key.
+ * Optional: Carto raster via /api/map-tile when CARTO_API_KEY is set on Vercel.
  */
 const WorldChoirMapTiles = (() => {
-  const ESRI_DARK_URL =
-    'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+  const CARTO_DARK_VECTOR_STYLE =
+    'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
 
   const PROXY_URL = '/api/map-tile?z={z}&x={x}&y={y}&r={r}';
 
-  const SHARED_OPTS = {
+  const SHARED_RASTER_OPTS = {
+    subdomains: 'abcd',
     noWrap: true,
     bounds: [[-85, -180], [85, 180]],
   };
 
-  let resolvedProvider = 'esri';
   let resolvePromise = null;
-  let fallbackInProgress = false;
+  let activeMode = 'vector';
+  const basemapLayers = [];
 
-  async function detectProvider() {
+  function canUseMapLibre() {
+    return typeof L !== 'undefined' && typeof L.maplibreGL === 'function';
+  }
+
+  async function detectMode() {
     if (resolvePromise) return resolvePromise;
 
     resolvePromise = (async () => {
@@ -36,103 +40,120 @@ const WorldChoirMapTiles = (() => {
         if (res.ok) {
           const data = await res.json();
           if (data?.provider === 'carto') {
-            resolvedProvider = 'carto';
-            return resolvedProvider;
+            activeMode = 'raster';
+            return activeMode;
           }
         }
       } catch {
-        /* fall through to Esri */
+        /* use vector */
       }
 
-      resolvedProvider = 'esri';
-      return resolvedProvider;
+      activeMode = canUseMapLibre() ? 'vector' : 'raster';
+      return activeMode;
     })();
 
     return resolvePromise;
   }
 
-  function isTileLayer(layer) {
-    return layer instanceof L.TileLayer;
+  function trackLayer(layer) {
+    basemapLayers.push(layer);
+    return layer;
   }
 
   function removeBasemapLayers(map) {
-    map.eachLayer((layer) => {
-      if (isTileLayer(layer)) map.removeLayer(layer);
+    basemapLayers.forEach((layer) => {
+      if (map.hasLayer(layer)) map.removeLayer(layer);
+    });
+    basemapLayers.length = 0;
+  }
+
+  function createVectorLayer() {
+    return L.maplibreGL({
+      style: CARTO_DARK_VECTOR_STYLE,
+      interactive: false,
+      padding: 0.05,
     });
   }
 
-  async function switchToEsriFallback(map) {
-    if (fallbackInProgress || resolvedProvider === 'esri') return;
-    fallbackInProgress = true;
-    resolvedProvider = 'esri';
-    removeBasemapLayers(map);
-    await addBasemapLayers(map);
-    fallbackInProgress = false;
-  }
-
-  function attachTileFallback(map, layer, provider) {
-    if (provider !== 'carto') return;
-    layer.on('tileerror', () => {
-      switchToEsriFallback(map);
+  function createRasterLayer(overrides = {}) {
+    return L.tileLayer(PROXY_URL, {
+      ...SHARED_RASTER_OPTS,
+      ...overrides,
     });
   }
 
-  function getTileUrl(provider) {
-    return provider === 'carto' ? PROXY_URL : ESRI_DARK_URL;
+  function addRasterBasemapLayers(map) {
+    trackLayer(
+      createRasterLayer({
+        minZoom: 2,
+        maxZoom: 2,
+        maxNativeZoom: 19,
+        className: 'map-tile-layer map-tile-layer--base',
+        updateWhenZooming: false,
+        updateWhenIdle: true,
+      }).addTo(map)
+    );
+
+    trackLayer(
+      createRasterLayer({
+        minZoom: 2,
+        maxZoom: 19,
+        className: 'map-tile-layer map-tile-layer--detail',
+        updateWhenZooming: true,
+        updateWhenIdle: true,
+        keepBuffer: 4,
+      }).addTo(map)
+    );
   }
 
-  function getTileOptions(provider, overrides = {}) {
-    const base =
-      provider === 'carto'
-        ? { ...SHARED_OPTS, subdomains: 'abcd', maxZoom: 19 }
-        : { ...SHARED_OPTS, maxZoom: 16 };
-
-    return { ...base, ...overrides };
-  }
-
-  /**
-   * Add the standard World Choir basemap layers (low-res underlay + detail).
-   * Returns a promise so callers can await provider detection before showing the map.
-   */
   async function addBasemapLayers(map) {
-    const provider = await detectProvider();
-    const tileUrl = getTileUrl(provider);
+    removeBasemapLayers(map);
+    const mode = await detectMode();
 
-    const baseLayer = L.tileLayer(tileUrl, getTileOptions(provider, {
-      minZoom: 2,
-      maxZoom: 2,
-      className: 'map-tile-layer map-tile-layer--base',
-      updateWhenZooming: false,
-      updateWhenIdle: true,
-    })).addTo(map);
-    attachTileFallback(map, baseLayer, provider);
+    if (mode === 'raster') {
+      addRasterBasemapLayers(map);
+      return mode;
+    }
 
-    const detailLayer = L.tileLayer(tileUrl, getTileOptions(provider, {
-      minZoom: 2,
-      maxZoom: provider === 'carto' ? 19 : 16,
-      className: 'map-tile-layer map-tile-layer--detail',
-      updateWhenZooming: true,
-      updateWhenIdle: true,
-      keepBuffer: 4,
-    })).addTo(map);
-    attachTileFallback(map, detailLayer, provider);
+    if (!canUseMapLibre()) {
+      addRasterBasemapLayers(map);
+      return 'raster';
+    }
 
-    return provider;
+    trackLayer(createVectorLayer().addTo(map));
+    return 'vector';
   }
 
-  /** Single detail layer for simpler maps (e.g. owner dashboard). */
   async function addSingleBasemapLayer(map) {
-    const provider = await detectProvider();
-    const layer = L.tileLayer(getTileUrl(provider), getTileOptions(provider, {
-      minZoom: 2,
-      maxZoom: provider === 'carto' ? 19 : 16,
-    })).addTo(map);
-    attachTileFallback(map, layer, provider);
-    return provider;
+    removeBasemapLayers(map);
+    const mode = await detectMode();
+
+    if (mode === 'raster') {
+      trackLayer(
+        createRasterLayer({
+          minZoom: 2,
+          maxZoom: 19,
+        }).addTo(map)
+      );
+      return mode;
+    }
+
+    if (!canUseMapLibre()) {
+      trackLayer(
+        createRasterLayer({
+          minZoom: 2,
+          maxZoom: 19,
+        }).addTo(map)
+      );
+      return 'raster';
+    }
+
+    trackLayer(createVectorLayer().addTo(map));
+    return 'vector';
   }
 
   return {
-    detectProvider,
+    detectMode,
     addBasemapLayers,
     addSingleBasemapLayer,
   };
