@@ -614,28 +614,6 @@
   border-top: 1.5px dotted rgba(18, 25, 43, 0.55);
 }
 
-.passport-inside-header__brand {
-  flex-shrink: 0;
-  width: 68px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  position: relative;
-}
-
-/* Exact same display size as cover logo (.passport-card__logo = 68×68) */
-.passport-card__logo--inside {
-  width: 68px;
-  height: 68px;
-  object-fit: contain;
-  flex-shrink: 0;
-  opacity: 1;
-  position: relative;
-  top: -8px;
-  filter: none;
-}
-
 .passport-skel--inside-meta {
   display: inline-block;
   width: 140px;
