@@ -135,9 +135,14 @@
   transform: none;
 }
 
+.passport-card.is-inside {
+  background: #e6e4de;
+}
+
 /* Inside page uses its own full-bleed image — hide cover finish overlays */
 .passport-card.is-inside .passport-card__lighting,
 .passport-card.is-inside .passport-card__texture,
+.passport-card.is-inside .passport-card__spine,
 .passport-card.is-inside .passport-card__inset,
 .passport-card.is-inside .passport-card__edge-light,
 .passport-card.is-inside .passport-card__thickness {

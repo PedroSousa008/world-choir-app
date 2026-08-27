@@ -68,7 +68,7 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_INSIDE_BACKGROUND = {
     src: 'images/passport/passport-inside-bg.png',
-    version: '20260827a',
+    version: '20260827c',
     alt: 'World Choir Passport inside page',
     get url() {
       return `${this.src}?v=${this.version}`;
