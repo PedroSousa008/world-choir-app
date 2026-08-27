@@ -82,7 +82,7 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_INSIDE_LOGO = {
     src: 'images/passport/passport-inside-logo.png',
-    version: '20260827a',
+    version: '20260827b',
     alt: 'World Choir',
     get url() {
       return `${this.src}?v=${this.version}`;

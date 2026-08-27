@@ -162,7 +162,7 @@ const WorldChoirPassport = (() => {
     const src = cfg?.url || 'images/passport/passport-inside-bg.png?v=20260827c';
     const alt = cfg?.alt || 'World Choir Passport inside page';
     const logoCfg = typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig.PASSPORT_INSIDE_LOGO : null;
-    const logo = logoCfg?.url || 'images/passport/passport-inside-logo.png?v=20260827a';
+    const logo = logoCfg?.url || 'images/passport/passport-inside-logo.png?v=20260827b';
     const logoAlt = logoCfg?.alt || 'World Choir';
 
     const voiceRaw = loading
