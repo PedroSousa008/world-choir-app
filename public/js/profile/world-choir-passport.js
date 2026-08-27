@@ -52,11 +52,10 @@ const WorldChoirPassport = (() => {
     };
   }
 
-  function featureImageHtml() {
+  function featureImageHtml({ interactive = true } = {}) {
     const { src, alt } = featureImageSrc();
     // Always render the real static asset — never a skeleton (avoids square flash on refresh).
-    return `
-      <div class="passport-card__feature">
+    const img = `
         <img
           class="passport-card__feature-img"
           src="${esc(src)}"
@@ -66,7 +65,21 @@ const WorldChoirPassport = (() => {
           decoding="async"
           fetchpriority="high"
         >
-      </div>
+    `;
+
+    if (!interactive) {
+      return `<div class="passport-card__feature">${img}</div>`;
+    }
+
+    return `
+      <button
+        type="button"
+        class="passport-card__feature passport-card__feature--btn"
+        id="passport-open-inside"
+        aria-label="Open next Passport page"
+      >
+        ${img}
+      </button>
     `;
   }
 
@@ -82,7 +95,7 @@ const WorldChoirPassport = (() => {
     });
   }
 
-  function renderCard(data = {}, { loading = false, id = 'world-choir-passport' } = {}) {
+  function renderCoverPage(data, { loading = false, interactive = true } = {}) {
     const logo = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO
       ? WorldChoirConfig.LOGO.url
       : 'images/world-choir-logo.png?v=20270706';
@@ -107,24 +120,7 @@ const WorldChoirPassport = (() => {
       : esc(formatMemberSince(data.memberSince));
 
     return `
-      <article class="passport-card" id="${esc(id)}" aria-label="World Choir Passport">
-        <div class="passport-card__lighting" aria-hidden="true"></div>
-        <div class="passport-card__texture" aria-hidden="true"></div>
-        <div class="passport-card__texture passport-card__texture--fine" aria-hidden="true"></div>
-        <div class="passport-card__spine" aria-hidden="true">
-          <span class="passport-card__spine-band"></span>
-          <span class="passport-card__spine-edge"></span>
-          <span class="passport-card__spine-thickness"></span>
-          <span class="passport-card__spine-highlight"></span>
-          <span class="passport-card__spine-crease"></span>
-          <span class="passport-card__spine-seam"></span>
-          <span class="passport-card__spine-blur"></span>
-          <span class="passport-card__spine-shade"></span>
-          <span class="passport-card__spine-curve"></span>
-        </div>
-        <div class="passport-card__inset" aria-hidden="true"></div>
-        <div class="passport-card__edge-light" aria-hidden="true"></div>
-        <div class="passport-card__thickness" aria-hidden="true"></div>
+      <div class="passport-card__page passport-card__page--cover" data-passport-page="cover">
         <div class="passport-card__inner">
           <div class="passport-card__top">
             <div>
@@ -134,7 +130,7 @@ const WorldChoirPassport = (() => {
             <img class="passport-card__logo" src="${esc(logo)}" alt="World Choir" width="1024" height="1024" decoding="async">
           </div>
           <div class="passport-card__identity">
-            ${featureImageHtml()}
+            ${featureImageHtml({ interactive: interactive && !loading })}
             <div class="passport-card__fields">
               ${field('Voice Number', voice, { voice: true })}
               ${field('Country', country)}
@@ -156,8 +152,90 @@ const WorldChoirPassport = (() => {
             >
           </div>
         </div>
+      </div>
+    `;
+  }
+
+  /** Placeholder inside page — same card size; design comes next. */
+  function renderInsidePage() {
+    return `
+      <div class="passport-card__page passport-card__page--inside" data-passport-page="inside" hidden>
+        <div class="passport-card__inner passport-card__inner--inside">
+          <button
+            type="button"
+            class="passport-card__back"
+            id="passport-back-cover"
+            aria-label="Back to Passport cover"
+          >
+            ←
+          </button>
+          <div class="passport-card__inside-placeholder" aria-hidden="true"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCard(data = {}, { loading = false, id = 'world-choir-passport', interactive = true } = {}) {
+    return `
+      <article
+        class="passport-card"
+        id="${esc(id)}"
+        data-page="cover"
+        aria-label="World Choir Passport"
+      >
+        <div class="passport-card__lighting" aria-hidden="true"></div>
+        <div class="passport-card__texture" aria-hidden="true"></div>
+        <div class="passport-card__texture passport-card__texture--fine" aria-hidden="true"></div>
+        <div class="passport-card__spine" aria-hidden="true">
+          <span class="passport-card__spine-band"></span>
+          <span class="passport-card__spine-edge"></span>
+          <span class="passport-card__spine-thickness"></span>
+          <span class="passport-card__spine-highlight"></span>
+          <span class="passport-card__spine-crease"></span>
+          <span class="passport-card__spine-seam"></span>
+          <span class="passport-card__spine-blur"></span>
+          <span class="passport-card__spine-shade"></span>
+          <span class="passport-card__spine-curve"></span>
+        </div>
+        <div class="passport-card__inset" aria-hidden="true"></div>
+        <div class="passport-card__edge-light" aria-hidden="true"></div>
+        <div class="passport-card__thickness" aria-hidden="true"></div>
+        <div class="passport-card__pages">
+          ${renderCoverPage(data, { loading, interactive })}
+          ${interactive && !loading ? renderInsidePage() : ''}
+        </div>
       </article>
     `;
+  }
+
+  function setCardPage(card, page) {
+    if (!card) return;
+    const next = page === 'inside' ? 'inside' : 'cover';
+    card.dataset.page = next;
+    card.classList.toggle('is-inside', next === 'inside');
+
+    const cover = card.querySelector('[data-passport-page="cover"]');
+    const inside = card.querySelector('[data-passport-page="inside"]');
+    if (cover) cover.hidden = next !== 'cover';
+    if (inside) inside.hidden = next !== 'inside';
+  }
+
+  function bindCardPages(root = document) {
+    const card = root.querySelector?.('.passport-card') || root.closest?.('.passport-card');
+    if (!card || card.dataset.pagesBound === '1') return;
+    card.dataset.pagesBound = '1';
+
+    card.querySelector('#passport-open-inside')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setCardPage(card, 'inside');
+    });
+
+    card.querySelector('#passport-back-cover')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setCardPage(card, 'cover');
+    });
   }
 
   async function fetchDailyActsCompleted() {
@@ -241,7 +319,7 @@ const WorldChoirPassport = (() => {
 
     const host = document.createElement('div');
     host.className = 'passport-export-host';
-    host.innerHTML = renderCard(data, { loading: false, id: 'passport-export-card' });
+    host.innerHTML = renderCard(data, { loading: false, id: 'passport-export-card', interactive: false });
     document.body.appendChild(host);
     revealFeatureImages(host);
 
@@ -338,6 +416,8 @@ const WorldChoirPassport = (() => {
     sharePassport,
     showToast,
     revealFeatureImages,
+    bindCardPages,
+    setCardPage,
     isExportBusy: () => exportBusy,
   };
 })();

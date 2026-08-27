@@ -236,6 +236,8 @@ Completed</p>
     document.getElementById('passport-journey-btn')?.addEventListener('click', () => {
       window.location.href = 'passport-journey.html';
     });
+
+    WorldChoirPassport.bindCardPages(document.getElementById('passport-root') || document);
   }
 
   async function mount() {
