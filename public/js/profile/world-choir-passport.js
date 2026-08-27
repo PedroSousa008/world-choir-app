@@ -156,10 +156,23 @@ const WorldChoirPassport = (() => {
     `;
   }
 
-  /** Placeholder inside page — same card size; design comes next. */
+  /** Inside page — shared background image for everyone; cover page keeps its own finish. */
   function renderInsidePage() {
+    const cfg = typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig.PASSPORT_INSIDE_BACKGROUND : null;
+    const src = cfg?.url || 'images/passport/passport-inside-bg.png?v=20260827a';
+    const alt = cfg?.alt || 'World Choir Passport inside page';
+
     return `
       <div class="passport-card__page passport-card__page--inside" data-passport-page="inside" hidden>
+        <img
+          class="passport-card__inside-bg"
+          src="${esc(src)}"
+          alt="${esc(alt)}"
+          width="1080"
+          height="1543"
+          decoding="async"
+          fetchpriority="low"
+        >
         <div class="passport-card__inner passport-card__inner--inside">
           <button
             type="button"
@@ -169,7 +182,6 @@ const WorldChoirPassport = (() => {
           >
             ←
           </button>
-          <div class="passport-card__inside-placeholder" aria-hidden="true"></div>
         </div>
       </div>
     `;

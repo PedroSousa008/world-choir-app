@@ -60,6 +60,21 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Shared Passport inside-page background (shown after tapping the feature image).
+   * Drop your asset at: public/images/passport/passport-inside-bg.png
+   * Recommended size: 1080 × 1543 px (aspect 0.7, same as the card).
+   * Then bump `version` so all clients refresh the image.
+   */
+  const PASSPORT_INSIDE_BACKGROUND = {
+    src: 'images/passport/passport-inside-bg.png',
+    version: '20260827a',
+    alt: 'World Choir Passport inside page',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -259,6 +274,7 @@ const WorldChoirConfig = (() => {
     LOGO,
     PASSPORT_WORLD_MAP,
     PASSPORT_FEATURE_IMAGE,
+    PASSPORT_INSIDE_BACKGROUND,
     EventState,
     AppState,
     getEventDate: getEventStart,
