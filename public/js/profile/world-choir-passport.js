@@ -198,7 +198,6 @@ const WorldChoirPassport = (() => {
             <div class="passport-inside-header__copy">
               <p class="passport-inside-header__kicker">World Choir Passport</p>
               <h2 class="passport-inside-header__title">History</h2>
-              <p class="passport-inside-header__tagline">The moments you were here for.</p>
               <p class="passport-inside-header__meta">${metaHtml}</p>
               <span class="passport-inside-header__rule" aria-hidden="true"></span>
             </div>
@@ -211,8 +210,6 @@ const WorldChoirPassport = (() => {
                 height="1024"
                 decoding="async"
               >
-              <p class="passport-inside-header__brand-name">World Choir</p>
-              <p class="passport-inside-header__brand-app">App</p>
             </div>
           </header>
           <button
