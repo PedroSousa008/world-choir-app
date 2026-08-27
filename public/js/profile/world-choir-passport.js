@@ -156,14 +156,31 @@ const WorldChoirPassport = (() => {
     `;
   }
 
-  /** Inside page — shared background image for everyone; cover page keeps its own finish. */
-  function renderInsidePage() {
+  /** Inside page — shared background + History header; cover page keeps its own finish. */
+  function renderInsidePage(data = {}, { loading = false } = {}) {
     const cfg = typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig.PASSPORT_INSIDE_BACKGROUND : null;
     const src = cfg?.url || 'images/passport/passport-inside-bg.png?v=20260827c';
     const alt = cfg?.alt || 'World Choir Passport inside page';
     const logo = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO
       ? WorldChoirConfig.LOGO.url
       : 'images/world-choir-logo.png?v=20270706';
+
+    const voiceRaw = loading
+      ? null
+      : (data.voiceNumber != null && data.voiceNumber !== '' && !Number.isNaN(Number(data.voiceNumber))
+        ? Number(data.voiceNumber).toLocaleString('en-US')
+        : null);
+    const countryRaw = loading ? null : (data.country || '').trim();
+    const metaParts = [];
+    if (loading) {
+      metaParts.push('<span class="passport-skel passport-skel--line passport-skel--inside-meta"></span>');
+    } else {
+      if (voiceRaw) metaParts.push(`Voice #${esc(voiceRaw)}`);
+      if (countryRaw) metaParts.push(esc(countryRaw));
+    }
+    const metaHtml = metaParts.length
+      ? metaParts.join(' <span class="passport-inside-header__dot" aria-hidden="true">•</span> ')
+      : '—';
 
     return `
       <div class="passport-card__page passport-card__page--inside" data-passport-page="inside" hidden>
@@ -177,13 +194,27 @@ const WorldChoirPassport = (() => {
           fetchpriority="low"
         >
         <div class="passport-card__inner passport-card__inner--inside">
-          <div class="passport-card__top">
-            <div>
-              <p class="passport-card__brand-kicker">World Choir</p>
-              <p class="passport-card__brand-title">Passport</p>
+          <header class="passport-inside-header">
+            <div class="passport-inside-header__copy">
+              <p class="passport-inside-header__kicker">World Choir Passport</p>
+              <h2 class="passport-inside-header__title">History</h2>
+              <p class="passport-inside-header__tagline">The moments you were here for.</p>
+              <p class="passport-inside-header__meta">${metaHtml}</p>
+              <span class="passport-inside-header__rule" aria-hidden="true"></span>
             </div>
-            <img class="passport-card__logo" src="${esc(logo)}" alt="World Choir" width="1024" height="1024" decoding="async">
-          </div>
+            <div class="passport-inside-header__brand">
+              <img
+                class="passport-card__logo passport-card__logo--inside"
+                src="${esc(logo)}"
+                alt="World Choir"
+                width="1024"
+                height="1024"
+                decoding="async"
+              >
+              <p class="passport-inside-header__brand-name">World Choir</p>
+              <p class="passport-inside-header__brand-app">App</p>
+            </div>
+          </header>
           <button
             type="button"
             class="passport-card__back"
@@ -224,7 +255,7 @@ const WorldChoirPassport = (() => {
         <div class="passport-card__thickness" aria-hidden="true"></div>
         <div class="passport-card__pages">
           ${renderCoverPage(data, { loading, interactive })}
-          ${interactive && !loading ? renderInsidePage() : ''}
+          ${interactive && !loading ? renderInsidePage(data, { loading }) : ''}
         </div>
       </article>
     `;
