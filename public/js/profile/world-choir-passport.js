@@ -161,9 +161,9 @@ const WorldChoirPassport = (() => {
     const cfg = typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig.PASSPORT_INSIDE_BACKGROUND : null;
     const src = cfg?.url || 'images/passport/passport-inside-bg.png?v=20260827c';
     const alt = cfg?.alt || 'World Choir Passport inside page';
-    const logo = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO
-      ? WorldChoirConfig.LOGO.url
-      : 'images/world-choir-logo.png?v=20270706';
+    const logoCfg = typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig.PASSPORT_INSIDE_LOGO : null;
+    const logo = logoCfg?.url || 'images/passport/passport-inside-logo.png?v=20260827a';
+    const logoAlt = logoCfg?.alt || 'World Choir';
 
     const voiceRaw = loading
       ? null
@@ -205,7 +205,7 @@ const WorldChoirPassport = (() => {
               <img
                 class="passport-card__logo passport-card__logo--inside"
                 src="${esc(logo)}"
-                alt="World Choir"
+                alt="${esc(logoAlt)}"
                 width="1024"
                 height="1024"
                 decoding="async"

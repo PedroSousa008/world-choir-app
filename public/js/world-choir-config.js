@@ -75,6 +75,20 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Shared Passport inside-page logo (top-right on History page).
+   * Drop your asset at: public/images/passport/passport-inside-logo.png
+   * Displayed at the same size as the cover logo (68×68).
+   */
+  const PASSPORT_INSIDE_LOGO = {
+    src: 'images/passport/passport-inside-logo.png',
+    version: '20260827a',
+    alt: 'World Choir',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -275,6 +289,7 @@ const WorldChoirConfig = (() => {
     PASSPORT_WORLD_MAP,
     PASSPORT_FEATURE_IMAGE,
     PASSPORT_INSIDE_BACKGROUND,
+    PASSPORT_INSIDE_LOGO,
     EventState,
     AppState,
     getEventDate: getEventStart,
