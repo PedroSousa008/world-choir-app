@@ -137,6 +137,11 @@
 
 .passport-card.is-inside {
   background: #e6e4de;
+  border-color: transparent;
+  box-shadow:
+    -3px 4px 16px rgba(0, 0, 0, 0.4),
+    0 6px 18px rgba(0, 0, 0, 0.48),
+    0 22px 52px rgba(0, 0, 0, 0.58);
 }
 
 /* Inside page uses its own full-bleed image — hide cover finish overlays */
