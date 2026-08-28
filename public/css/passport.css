@@ -576,7 +576,7 @@
 }
 
 .passport-stamp {
-  width: 75px;
+  width: 85px;
   text-align: center;
   pointer-events: auto;
 }
@@ -584,8 +584,8 @@
 /* Fixed stamp slot — drop artwork at public/images/passport/stamps/world-choir-2027-i-sang.png */
 .passport-stamp__frame {
   position: relative;
-  width: 75px;
-  height: 75px;
+  width: 85px;
+  height: 85px;
   overflow: hidden;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.08);
