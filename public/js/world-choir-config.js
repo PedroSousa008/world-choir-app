@@ -3,7 +3,7 @@
  */
 const WorldChoirConfig = (() => {
   /** TEMP PREVIEW — set to false before launch to restore real stamp unlock rules */
-  const PASSPORT_STAMPS_PREVIEW_MODE = false;
+  const PASSPORT_STAMPS_PREVIEW_MODE = true;
 
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;

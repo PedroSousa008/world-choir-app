@@ -279,7 +279,9 @@ const WorldChoirPassport = (() => {
       e.stopPropagation();
       setCardPage(card, 'inside');
       if (typeof PassportStamps !== 'undefined') {
-        PassportStamps.bindRevealAnimations(card);
+        window.setTimeout(() => {
+          PassportStamps.bindRevealAnimations(card);
+        }, 320);
       }
     });
 

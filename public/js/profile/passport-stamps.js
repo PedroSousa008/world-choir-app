@@ -145,8 +145,7 @@ const PassportStamps = (() => {
   function resolveAllStatuses(context = {}) {
     return PASSPORT_STAMPS.map((stamp) => {
       const status = evaluateStampUnlock(stamp, context);
-      const shouldReveal = !isPreviewMode()
-        && status.unlocked
+      const shouldReveal = status.unlocked
         && shouldAnimateReveal(stamp.id, context.userId);
       return {
         stamp,
@@ -178,12 +177,15 @@ const PassportStamps = (() => {
 
   function renderStamp(stampStatus, esc) {
     const { stamp, unlocked, shouldReveal } = stampStatus;
-    const image = resolveStampImage(stamp, { unlocked });
+    const slotUnlocked = unlocked && !shouldReveal;
+    const image = resolveStampImage(stamp, { unlocked: slotUnlocked });
     const imgUrl = image?.url || image?.src || '';
     const imgAlt = unlocked ? (image?.alt || stamp.title) : (image?.alt || 'Locked passport stamp');
     const imgW = Number(image?.width) || 512;
     const imgH = Number(image?.height) || 512;
-    const stateClass = unlocked ? 'passport-stamp--unlocked' : 'passport-stamp--locked';
+    const stateClass = unlocked
+      ? (shouldReveal ? 'passport-stamp--locked passport-stamp--reveal-slot' : 'passport-stamp--unlocked')
+      : 'passport-stamp--locked';
     const revealClass = unlocked && shouldReveal ? ' passport-stamp--revealing' : '';
     const lockedMsg = stamp.lockedMessage || 'Locked until your World Choir moment is complete.';
     const ariaLabel = unlocked
@@ -195,6 +197,7 @@ const PassportStamps = (() => {
         class="passport-stamp ${stateClass}${revealClass}"
         data-stamp-id="${esc(stamp.id)}"
         data-stamp-unlocked="${unlocked ? '1' : '0'}"
+        data-should-reveal="${shouldReveal ? '1' : '0'}"
         aria-label="${esc(ariaLabel)}"
         role="listitem"
       >
@@ -224,41 +227,219 @@ const PassportStamps = (() => {
     return `<div class="passport-stamps" role="list">${items}</div>`;
   }
 
-  function bindRevealAnimations(root = document) {
-    const scope = root.querySelector?.('.passport-card') || root.closest?.('.passport-card') || root;
-    if (!scope) return;
+  function prefersReducedMotion() {
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+  }
 
-    const userId = typeof WorldChoirDB !== 'undefined'
+  function getRevealUserId() {
+    return typeof WorldChoirDB !== 'undefined'
       ? (WorldChoirDB.getCurrentUser?.()?.id || WorldChoirDB.getDeviceId?.())
       : 'anonymous';
+  }
 
-    scope.querySelectorAll('.passport-stamp--revealing').forEach((el) => {
-      if (el.dataset.revealBound === '1') return;
-      el.dataset.revealBound = '1';
+  function finishReveal(stampEl, card, stampId, userId, overlay) {
+    const stampDef = PASSPORT_STAMPS.find((entry) => entry.id === stampId);
+    const img = stampEl?.querySelector('.passport-stamp__img');
+    if (stampDef && img) {
+      const unlockedImage = resolveStampImage(stampDef, { unlocked: true });
+      const unlockedSrc = unlockedImage?.url || unlockedImage?.src;
+      if (unlockedSrc) img.src = unlockedSrc;
+    }
 
-      const stampId = el.dataset.stampId;
-      const img = el.querySelector('.passport-stamp__img');
-      const finish = () => {
-        el.classList.remove('passport-stamp--revealing');
-        if (stampId) markRevealSeen(stampId, userId);
+    stampEl?.classList.remove(
+      'passport-stamp--revealing',
+      'passport-stamp--reveal-pending',
+      'passport-stamp--reveal-slot',
+      'passport-stamp--locked'
+    );
+    stampEl?.classList.add('passport-stamp--unlocked');
+    card?.classList.remove('passport-card--stamp-reveal-active');
+    overlay?.remove();
+    if (stampId) markRevealSeen(stampId, userId);
+  }
+
+  function runStampReveal(stampEl, card, userId) {
+    const stampId = stampEl.dataset.stampId;
+    const frame = stampEl.querySelector('.passport-stamp__frame');
+    const img = stampEl.querySelector('.passport-stamp__img');
+    if (!frame || !img) {
+      finishReveal(stampEl, card, stampId, userId, null);
+      return Promise.resolve();
+    }
+
+    if (prefersReducedMotion()) {
+      finishReveal(stampEl, card, stampId, userId, null);
+      return Promise.resolve();
+    }
+
+    const stampDef = PASSPORT_STAMPS.find((entry) => entry.id === stampId);
+    const lockedImage = stampDef ? resolveStampImage(stampDef, { unlocked: false }) : null;
+    const unlockedImage = stampDef ? resolveStampImage(stampDef, { unlocked: true }) : null;
+    const lockedSrc = lockedImage?.url || lockedImage?.src || img.src;
+    const unlockedSrc = unlockedImage?.url || unlockedImage?.src || img.src;
+
+    stampEl.classList.add('passport-stamp--reveal-pending');
+    card.classList.add('passport-card--stamp-reveal-active');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'passport-stamp-reveal-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+
+    const floater = document.createElement('div');
+    floater.className = 'passport-stamp-reveal-floater';
+
+    const floaterImg = document.createElement('img');
+    floaterImg.className = 'passport-stamp-reveal-floater__img';
+    floaterImg.src = lockedSrc;
+    floaterImg.alt = img.alt || '';
+    floaterImg.width = img.width || 512;
+    floaterImg.height = img.height || 512;
+    floaterImg.decoding = 'async';
+    floaterImg.draggable = false;
+
+    floater.appendChild(floaterImg);
+    overlay.appendChild(floater);
+    card.appendChild(overlay);
+
+    const cardRect = card.getBoundingClientRect();
+    const targetRect = frame.getBoundingClientRect();
+    const startSize = Math.min(cardRect.width * 0.58, 240);
+
+    const startLeft = cardRect.left + (cardRect.width - startSize) / 2;
+    const startTop = cardRect.top + (cardRect.height - startSize) / 2;
+    const endLeft = targetRect.left;
+    const endTop = targetRect.top;
+    const endWidth = targetRect.width;
+    const endHeight = targetRect.height;
+
+    Object.assign(floater.style, {
+      left: `${startLeft}px`,
+      top: `${startTop}px`,
+      width: `${startSize}px`,
+      height: `${startSize}px`,
+    });
+
+    floaterImg.style.filter = 'blur(14px)';
+    floaterImg.style.opacity = '0.75';
+    floater.style.opacity = '0';
+
+    const preloadUnlocked = () => new Promise((resolve) => {
+      if (unlockedSrc === lockedSrc) {
+        resolve();
+        return;
+      }
+      const preload = new Image();
+      preload.onload = resolve;
+      preload.onerror = resolve;
+      preload.src = unlockedSrc;
+    });
+
+    return new Promise((resolve) => {
+      let finished = false;
+      const done = () => {
+        if (finished) return;
+        finished = true;
+        finishReveal(stampEl, card, stampId, userId, overlay);
+        resolve();
       };
 
-      if (!img) {
-        finish();
+      window.setTimeout(done, 2800);
+
+      const runFlight = () => {
+        floater.style.opacity = '1';
+
+        const fadeIn = floater.animate(
+          [{ opacity: 0 }, { opacity: 1 }],
+          { duration: 280, easing: 'ease-out', fill: 'forwards' }
+        );
+
+        const lockedPulse = floaterImg.animate(
+          [
+            { filter: 'blur(14px)', opacity: 0.75, transform: 'scale(0.98)' },
+            { filter: 'blur(8px)', opacity: 0.92, transform: 'scale(1)' },
+          ],
+          { duration: 420, easing: 'ease-out', fill: 'forwards', delay: 120 }
+        );
+
+        Promise.all([fadeIn.finished, lockedPulse.finished, preloadUnlocked()]).then(() => {
+          floaterImg.src = unlockedSrc;
+          floaterImg.style.transform = 'scale(1)';
+
+          const reveal = floaterImg.animate(
+            [
+              { filter: 'blur(8px)', opacity: 0.88, transform: 'scale(0.98)' },
+              { filter: 'blur(0px)', opacity: 1, transform: 'scale(1)' },
+            ],
+            { duration: 520, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' }
+          );
+
+          reveal.finished.then(() => {
+            window.setTimeout(() => {
+              const flight = floater.animate(
+                [
+                  {
+                    left: `${startLeft}px`,
+                    top: `${startTop}px`,
+                    width: `${startSize}px`,
+                    height: `${startSize}px`,
+                  },
+                  {
+                    left: `${endLeft}px`,
+                    top: `${endTop}px`,
+                    width: `${endWidth}px`,
+                    height: `${endHeight}px`,
+                  },
+                ],
+                {
+                  duration: 980,
+                  easing: 'cubic-bezier(0.34, 1.08, 0.42, 1)',
+                  fill: 'forwards',
+                }
+              );
+
+              const settle = floaterImg.animate(
+                [
+                  { transform: 'scale(1)' },
+                  { transform: 'scale(1.06)', offset: 0.72 },
+                  { transform: 'scale(1)' },
+                ],
+                {
+                  duration: 980,
+                  easing: 'cubic-bezier(0.34, 1.08, 0.42, 1)',
+                  fill: 'forwards',
+                }
+              );
+
+              Promise.all([flight.finished, settle.finished]).then(done).catch(done);
+            }, 240);
+          }).catch(done);
+        }).catch(done);
+      };
+
+      if (floaterImg.complete && floaterImg.naturalWidth > 0) {
+        requestAnimationFrame(() => requestAnimationFrame(runFlight));
         return;
       }
 
-      const onDone = () => {
-        img.removeEventListener('animationend', onDone);
-        finish();
-      };
-
-      img.addEventListener('animationend', onDone, { once: true });
-
-      window.setTimeout(() => {
-        if (el.classList.contains('passport-stamp--revealing')) finish();
-      }, 900);
+      floaterImg.addEventListener('load', () => {
+        requestAnimationFrame(() => requestAnimationFrame(runFlight));
+      }, { once: true });
+      floaterImg.addEventListener('error', done, { once: true });
     });
+  }
+
+  async function bindRevealAnimations(root = document) {
+    const scope = root.querySelector?.('.passport-card') || root.closest?.('.passport-card') || root;
+    if (!scope) return;
+
+    const userId = getRevealUserId();
+    const queue = [...scope.querySelectorAll('.passport-stamp--revealing')];
+
+    for (const el of queue) {
+      if (el.dataset.revealBound === '1') continue;
+      el.dataset.revealBound = '1';
+      await runStampReveal(el, scope, userId);
+    }
   }
 
   return {

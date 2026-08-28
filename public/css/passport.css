@@ -619,30 +619,53 @@
   transform: scale(1);
 }
 
-.passport-stamp--revealing .passport-stamp__img {
-  animation: passport-stamp-reveal 650ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+.passport-stamp--reveal-pending {
+  pointer-events: none;
 }
 
-@keyframes passport-stamp-reveal {
-  from {
-    filter: blur(6px);
-    opacity: 0.88;
-    transform: scale(0.96);
-  }
+.passport-stamp--reveal-slot .passport-stamp__frame {
+  background: transparent;
+}
 
-  to {
-    filter: blur(0);
-    opacity: 1;
-    transform: scale(1);
-  }
+.passport-card--stamp-reveal-active .passport-stamp-reveal-overlay {
+  opacity: 1;
+}
+
+.passport-stamp-reveal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 280ms ease;
+  background: rgba(18, 25, 43, 0.22);
+}
+
+.passport-stamp-reveal-floater {
+  position: fixed;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.34));
+  will-change: left, top, width, height, opacity;
+}
+
+.passport-stamp-reveal-floater__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform-origin: center;
+  will-change: filter, opacity, transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .passport-stamp--revealing .passport-stamp__img {
-    animation: none;
-    filter: none;
-    opacity: 1;
-    transform: scale(1);
+  .passport-stamp-reveal-overlay,
+  .passport-stamp-reveal-floater {
+    display: none !important;
   }
 }
 
