@@ -117,9 +117,9 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG_LOCKED = {
     src: 'images/passport/stamps/world-choir-2027-i-sang-locked.png',
-    version: '20260828a',
-    width: 1024,
-    height: 946,
+    version: '20260828b',
+    width: 1305,
+    height: 1206,
     alt: 'Locked World Choir 2027 stamp',
     get url() {
       return `${this.src}?v=${this.version}`;
