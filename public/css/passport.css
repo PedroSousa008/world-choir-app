@@ -587,7 +587,7 @@
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.02;
-  color: var(--accent-aurora);
+  color: #0B346B;
 }
 
 .passport-inside-header__meta {
@@ -642,7 +642,7 @@
   min-width: 28px;
   max-width: 56px;
   height: 2px;
-  background-image: radial-gradient(circle, var(--accent-aurora) 1px, transparent 1px);
+  background-image: radial-gradient(circle, #0B346B 1px, transparent 1px);
   background-size: 4px 2px;
   background-repeat: repeat-x;
   background-position: center;
@@ -658,7 +658,7 @@
   letter-spacing: 0.14em;
   line-height: 1;
   text-transform: uppercase;
-  color: var(--accent-aurora);
+  color: #0B346B;
   white-space: nowrap;
 }
 
