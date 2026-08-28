@@ -160,6 +160,7 @@ const PassportStamps = (() => {
   }
 
   function shouldAnimateReveal(stampId, userId) {
+    if (isPreviewMode()) return true;
     try {
       return localStorage.getItem(revealStorageKey(stampId, userId)) !== '1';
     } catch {
@@ -168,6 +169,7 @@ const PassportStamps = (() => {
   }
 
   function markRevealSeen(stampId, userId) {
+    if (isPreviewMode()) return;
     try {
       localStorage.setItem(revealStorageKey(stampId, userId), '1');
     } catch {
