@@ -87,8 +87,21 @@ const PassportStamps = (() => {
     return false;
   }
 
+  function isPreviewMode() {
+    return typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.isPassportStampsPreviewMode?.() === true;
+  }
+
   function evaluateStampUnlock(stamp, context = {}) {
     const event = getEventById(stamp.eventId);
+    if (isPreviewMode()) {
+      return {
+        unlocked: true,
+        pledged: true,
+        unlockDate: getStampUnlockDate(stamp, event),
+        reason: 'preview_mode',
+      };
+    }
+
     const currentDate = context.currentDate instanceof Date ? context.currentDate : new Date();
     const pledged = hasPledgedForEvent(stamp.eventId, context);
 
@@ -127,7 +140,9 @@ const PassportStamps = (() => {
   function resolveAllStatuses(context = {}) {
     return PASSPORT_STAMPS.map((stamp) => {
       const status = evaluateStampUnlock(stamp, context);
-      const shouldReveal = status.unlocked && shouldAnimateReveal(stamp.id, context.userId);
+      const shouldReveal = !isPreviewMode()
+        && status.unlocked
+        && shouldAnimateReveal(stamp.id, context.userId);
       return {
         stamp,
         ...status,
