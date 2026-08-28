@@ -2,8 +2,11 @@
  * World Choir — Event configuration & state machine
  */
 const WorldChoirConfig = (() => {
-  /** TEMP PREVIEW — set to false before launch to restore real stamp unlock rules */
-  const PASSPORT_STAMPS_PREVIEW_MODE = true;
+  /** Design preview — unlocks all stamps without real achievement rules. Agent toggles on when reviewing layout. */
+  const PASSPORT_STAMPS_PREVIEW_MODE = false;
+
+  /** Dev replay — replays the center-to-corner reveal without saving to localStorage. Agent toggles on when reviewing animation. */
+  const PASSPORT_STAMPS_DEV_REPLAY = false;
 
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
@@ -246,6 +249,10 @@ const WorldChoirConfig = (() => {
     return PASSPORT_STAMPS_PREVIEW_MODE;
   }
 
+  function isPassportStampsDevReplay() {
+    return PASSPORT_STAMPS_DEV_REPLAY;
+  }
+
   function getGlobalEventStatus(now = new Date()) {
     return getGlobalEventState(now);
   }
@@ -357,6 +364,7 @@ const WorldChoirConfig = (() => {
     isMemoryUnlocked,
     isMemoryPreviewMode,
     isPassportStampsPreviewMode,
+    isPassportStampsDevReplay,
     getAppState,
     formatEventDate,
     formatEventTime,

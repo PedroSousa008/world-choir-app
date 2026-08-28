@@ -3,6 +3,9 @@
  *
  * Unlock dates are derived from each event's configured eventDateUTC plus
  * unlockOffsetDays (calendar-day math in UTC; isolated for future timezone support).
+ *
+ * Every stamp in PASSPORT_STAMPS automatically gets the one-time center-to-corner
+ * reveal on first Stamps page visit after unlock (tracked per user in localStorage).
  */
 const PassportStamps = (() => {
   const UnlockType = {
@@ -11,6 +14,7 @@ const PassportStamps = (() => {
 
   /**
    * Stamp registry — add future stamps here.
+   * Each entry automatically inherits unlock rules + one-time reveal animation.
    * Artwork lives in public/images/passport/stamps/ (see WorldChoirConfig.PASSPORT_STAMP_*).
    */
   const PASSPORT_STAMPS = [
@@ -159,8 +163,12 @@ const PassportStamps = (() => {
     return `wc_stamp_revealed_${stampId}_${userId || 'anonymous'}`;
   }
 
+  function isDevReplay() {
+    return typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.isPassportStampsDevReplay?.() === true;
+  }
+
   function shouldAnimateReveal(stampId, userId) {
-    if (isPreviewMode()) return true;
+    if (isDevReplay()) return true;
     try {
       return localStorage.getItem(revealStorageKey(stampId, userId)) !== '1';
     } catch {
@@ -169,7 +177,7 @@ const PassportStamps = (() => {
   }
 
   function markRevealSeen(stampId, userId) {
-    if (isPreviewMode()) return;
+    if (isDevReplay()) return;
     try {
       localStorage.setItem(revealStorageKey(stampId, userId), '1');
     } catch {
