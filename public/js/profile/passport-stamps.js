@@ -343,7 +343,12 @@ const PassportStamps = (() => {
         resolve();
       };
 
-      window.setTimeout(done, 2800);
+      window.setTimeout(done, 5200);
+
+      const CENTER_TOTAL_MS = 3000;
+      const CENTER_INTRO_MS = 540;
+      const CENTER_UNLOCK_MS = 520;
+      const CENTER_HOLD_MS = CENTER_TOTAL_MS - CENTER_INTRO_MS - CENTER_UNLOCK_MS;
 
       const runFlight = () => {
         floater.style.opacity = '1';
@@ -411,7 +416,7 @@ const PassportStamps = (() => {
               );
 
               Promise.all([flight.finished, settle.finished]).then(done).catch(done);
-            }, 240);
+            }, CENTER_HOLD_MS);
           }).catch(done);
         }).catch(done);
       };
