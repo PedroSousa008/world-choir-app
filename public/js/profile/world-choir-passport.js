@@ -320,11 +320,23 @@ const WorldChoirPassport = (() => {
 
     const dailyActsCompleted = await fetchDailyActsCompleted();
     const userId = user.id || WorldChoirDB.getDeviceId?.() || 'anonymous';
+    const worldStats = typeof WorldChoirDB.fetchWorldChoirStats === 'function'
+      ? await WorldChoirDB.fetchWorldChoirStats()
+      : null;
+    const country = String(pledge?.country || user.country || '').trim();
+    const city = String(pledge?.city || user.city || '').trim();
     const stamps = typeof PassportStamps !== 'undefined'
       ? PassportStamps.resolveAllStatuses({
         currentDate: new Date(),
         userId,
         hasPledgedForEvent: (eventId) => WorldChoirDB.hasPledged?.(eventId) === true,
+        userHasPledged: WorldChoirDB.hasPledged?.() === true,
+        userHasValidLocation: !!(country && city),
+        representedCountryCount: worldStats?.representedCountryCount
+          ?? worldStats?.countries
+          ?? WorldChoirDB.getMapStats?.()?.countries
+          ?? 0,
+        milestones: worldStats?.milestones || {},
       })
       : [];
 

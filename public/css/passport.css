@@ -613,6 +613,16 @@
   transform: scale(1);
 }
 
+.passport-stamp--blur-locked .passport-stamp__img {
+  filter: blur(12px) saturate(0.72);
+  opacity: 0.9;
+  transform: scale(1.06);
+}
+
+.passport-stamp--blur-locked.passport-stamp--reveal-slot .passport-stamp__img {
+  filter: blur(10px) saturate(0.75);
+}
+
 .passport-stamp--unlocked .passport-stamp__img {
   filter: none;
   opacity: 1;

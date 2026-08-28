@@ -23,6 +23,7 @@ const WorldChoirDB = (() => {
   let lastMetaSignature = null;
   let lastCitySnapshot = null;
   let lastVoiceCount = null;
+  let cachedWorldStats = null;
 
   const LIVE_SYNC_INTERVAL_MS = 2000;
 
@@ -126,6 +127,33 @@ const WorldChoirDB = (() => {
 
   async function fetchPledgesMeta(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
     return apiFetch(`/api/pledges?eventId=${encodeURIComponent(eventId)}&meta=1`);
+  }
+
+  async function fetchWorldChoirStats(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    try {
+      const data = await apiFetch(`/api/stats?eventId=${encodeURIComponent(eventId)}`);
+      cachedWorldStats = data;
+      return data;
+    } catch (err) {
+      console.warn('World Choir stats unavailable, using local map stats', err);
+      const local = getMapStats(eventId);
+      if (local) {
+        cachedWorldStats = {
+          eventId,
+          voices: local.voices,
+          cities: local.cities,
+          countries: local.countries,
+          representedCountryCount: local.countries,
+          milestones: {},
+        };
+        return cachedWorldStats;
+      }
+      return null;
+    }
+  }
+
+  function getWorldChoirStats() {
+    return cachedWorldStats;
   }
 
   function dispatchLiveUpdate(prevSnapshot, nextSnapshot, eventId, prevVoiceCount) {
@@ -705,6 +733,8 @@ const WorldChoirDB = (() => {
     getGatheringPlaces,
     getMapStats,
     getAggregatedCities,
+    fetchWorldChoirStats,
+    getWorldChoirStats,
     hasGatheringNear,
     getParticipationHistory,
     getVoiceNameForUser,

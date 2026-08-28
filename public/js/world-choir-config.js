@@ -8,6 +8,9 @@ const WorldChoirConfig = (() => {
   /** Dev replay — replays the center-to-corner reveal without saving to localStorage. Agent toggles on when reviewing animation. */
   const PASSPORT_STAMPS_DEV_REPLAY = false;
 
+  /** Dev test — treat the 100-country global milestone as reached (production logic unchanged when false). */
+  const TEST_FORCE_100_COUNTRIES_MILESTONE = false;
+
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
 
@@ -124,6 +127,22 @@ const WorldChoirConfig = (() => {
     width: 1305,
     height: 1206,
     alt: 'Locked World Choir 2027 stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /**
+   * Passport stamp — "100 COUNTRIES — ONE WORLD • ONE VOICE"
+   * Drop artwork at: public/images/passport/stamps/world-choir-100-countries.png
+   * Locked state uses CSS blur on the same artwork (no separate locked PNG).
+   */
+  const PASSPORT_STAMP_WORLD_CHOIR_100_COUNTRIES = {
+    src: 'images/passport/stamps/world-choir-100-countries.png',
+    version: '20260828a',
+    width: 1200,
+    height: 1200,
+    alt: '100 Countries — One World • One Voice',
     get url() {
       return `${this.src}?v=${this.version}`;
     },
@@ -253,6 +272,10 @@ const WorldChoirConfig = (() => {
     return PASSPORT_STAMPS_DEV_REPLAY;
   }
 
+  function isTestForce100CountriesMilestone() {
+    return TEST_FORCE_100_COUNTRIES_MILESTONE;
+  }
+
   function getGlobalEventStatus(now = new Date()) {
     return getGlobalEventState(now);
   }
@@ -340,6 +363,7 @@ const WorldChoirConfig = (() => {
     PASSPORT_INSIDE_LOGO,
     PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG,
     PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG_LOCKED,
+    PASSPORT_STAMP_WORLD_CHOIR_100_COUNTRIES,
     EventState,
     AppState,
     getEventDate: getEventStart,
@@ -365,6 +389,7 @@ const WorldChoirConfig = (() => {
     isMemoryPreviewMode,
     isPassportStampsPreviewMode,
     isPassportStampsDevReplay,
+    isTestForce100CountriesMilestone,
     getAppState,
     formatEventDate,
     formatEventTime,

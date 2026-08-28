@@ -473,13 +473,19 @@ async function readPledgesIndex(eventId) {
 
 async function writePledgesIndex(eventId, pledges) {
   const sorted = sortPledges(pledges);
+  const { computeStatsFromPledges, updateMilestonesForEvent } = require('./world-choir-stats');
+  const stats = computeStatsFromPledges(sorted);
   memCache.delete(`pledges:${eventId}`);
   memCache.delete('pledges:all');
   await writeJson(pledgesIndexPath(eventId), {
     updated_at: new Date().toISOString(),
     count: sorted.length,
+    stats,
     pledges: sorted,
   }, { overwrite: true });
+  await updateMilestonesForEvent(eventId, stats).catch((err) => {
+    console.error('milestones update failed:', err);
+  });
   return sorted;
 }
 
@@ -523,6 +529,7 @@ async function getPledgesMeta(eventId) {
       return {
         count: index.count,
         updated_at: index.updated_at || null,
+        stats: index.stats || null,
       };
     }
     if (Array.isArray(index?.pledges)) {

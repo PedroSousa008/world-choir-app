@@ -10,6 +10,7 @@
 const PassportStamps = (() => {
   const UnlockType = {
     EVENT_PARTICIPATION_COMPLETED: 'EVENT_PARTICIPATION_COMPLETED',
+    GLOBAL_COUNTRY_MILESTONE: 'GLOBAL_COUNTRY_MILESTONE',
   };
 
   /**
@@ -28,10 +29,26 @@ const PassportStamps = (() => {
       unlockOffsetDays: 1,
       lockedMessage: 'Complete the World Choir gathering to reveal this stamp.',
     },
+    {
+      id: 'world-choir-100-countries',
+      title: '100 Countries — One World • One Voice',
+      imageKey: 'PASSPORT_STAMP_WORLD_CHOIR_100_COUNTRIES',
+      lockedStyle: 'blur',
+      unlockType: UnlockType.GLOBAL_COUNTRY_MILESTONE,
+      milestoneId: '100-countries',
+      requiredCountryCount: 100,
+      requiresPledge: true,
+      requiresLocation: true,
+      pledgeEventId: 'world-choir-2027',
+      lockedMessage: 'A global milestone is waiting to be reached.',
+    },
   ];
 
   function resolveStampImage(stamp, { unlocked = false } = {}) {
-    const key = unlocked ? stamp.imageKey : (stamp.lockedImageKey || stamp.imageKey);
+    const useBlurLocked = !unlocked && stamp.lockedStyle === 'blur';
+    const key = unlocked || useBlurLocked
+      ? stamp.imageKey
+      : (stamp.lockedImageKey || stamp.imageKey);
     if (key && typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig[key]) {
       return WorldChoirConfig[key];
     }
@@ -100,17 +117,135 @@ const PassportStamps = (() => {
     return typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.isPassportStampsPreviewMode?.() === true;
   }
 
+  function isDevReplay() {
+    return typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.isPassportStampsDevReplay?.() === true;
+  }
+
+  function isTestForceMilestone(stamp) {
+    if (stamp.milestoneId === '100-countries') {
+      return typeof WorldChoirConfig !== 'undefined'
+        && WorldChoirConfig.isTestForce100CountriesMilestone?.() === true;
+    }
+    return false;
+  }
+
+  function getRepresentedCountryCount(context = {}) {
+    if (typeof context.representedCountryCount === 'number') return context.representedCountryCount;
+    if (typeof context.globalCountryCount === 'number') return context.globalCountryCount;
+    if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getWorldChoirStats) {
+      const stats = WorldChoirDB.getWorldChoirStats();
+      if (stats && typeof stats.representedCountryCount === 'number') return stats.representedCountryCount;
+      if (stats && typeof stats.countries === 'number') return stats.countries;
+    }
+    if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getMapStats) {
+      return WorldChoirDB.getMapStats()?.countries ?? 0;
+    }
+    return 0;
+  }
+
+  function isGlobalMilestoneReached(stamp, context = {}) {
+    if (isTestForceMilestone(stamp)) return true;
+
+    const milestoneId = stamp.milestoneId;
+    if (milestoneId && context.milestones?.[milestoneId]?.reached === true) {
+      return true;
+    }
+
+    const threshold = Number(stamp.requiredCountryCount) || 0;
+    return getRepresentedCountryCount(context) >= threshold;
+  }
+
+  function resolveUserPledged(stamp, context = {}) {
+    if (typeof context.userHasPledged === 'boolean') return context.userHasPledged;
+    const eventId = stamp.pledgeEventId || stamp.eventId || WorldChoirConfig?.ACTIVE_EVENT?.id;
+    return hasPledgedForEvent(eventId, context);
+  }
+
+  function resolveUserHasValidLocation(context = {}) {
+    if (typeof context.userHasValidLocation === 'boolean') return context.userHasValidLocation;
+    if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getPledgeForCurrentUser) {
+      const pledge = WorldChoirDB.getPledgeForCurrentUser();
+      const country = String(pledge?.country || '').trim();
+      const city = String(pledge?.city || '').trim();
+      return !!(country && city);
+    }
+    return false;
+  }
+
+  function evaluateGlobalCountryMilestone(stamp, context = {}) {
+    const requiresPledge = stamp.requiresPledge !== false;
+    const requiresLocation = stamp.requiresLocation !== false;
+    const pledged = resolveUserPledged(stamp, context);
+    const hasLocation = resolveUserHasValidLocation(context);
+    const milestoneReached = isGlobalMilestoneReached(stamp, context);
+    const representedCountryCount = getRepresentedCountryCount(context);
+
+    if (requiresPledge && !pledged) {
+      return {
+        unlocked: false,
+        pledged: false,
+        hasLocation,
+        milestoneReached,
+        representedCountryCount,
+        unlockDate: null,
+        reason: 'not_pledged',
+      };
+    }
+
+    if (requiresLocation && !hasLocation) {
+      return {
+        unlocked: false,
+        pledged,
+        hasLocation: false,
+        milestoneReached,
+        representedCountryCount,
+        unlockDate: null,
+        reason: 'missing_location',
+      };
+    }
+
+    if (!milestoneReached) {
+      return {
+        unlocked: false,
+        pledged,
+        hasLocation,
+        milestoneReached: false,
+        representedCountryCount,
+        unlockDate: null,
+        reason: 'milestone_not_reached',
+      };
+    }
+
+    const reachedAt = context.milestones?.[stamp.milestoneId]?.reachedAt || null;
+
+    return {
+      unlocked: true,
+      pledged,
+      hasLocation,
+      milestoneReached: true,
+      representedCountryCount,
+      unlockDate: reachedAt ? new Date(reachedAt) : null,
+      reason: 'unlocked',
+    };
+  }
+
   function evaluateStampUnlock(stamp, context = {}) {
-    const event = getEventById(stamp.eventId);
     if (isPreviewMode()) {
       return {
         unlocked: true,
         pledged: true,
-        unlockDate: getStampUnlockDate(stamp, event),
+        hasLocation: true,
+        milestoneReached: true,
+        unlockDate: getStampUnlockDate(stamp, getEventById(stamp.eventId)),
         reason: 'preview_mode',
       };
     }
 
+    if (stamp.unlockType === UnlockType.GLOBAL_COUNTRY_MILESTONE) {
+      return evaluateGlobalCountryMilestone(stamp, context);
+    }
+
+    const event = getEventById(stamp.eventId);
     const currentDate = context.currentDate instanceof Date ? context.currentDate : new Date();
     const pledged = hasPledgedForEvent(stamp.eventId, context);
 
@@ -163,10 +298,6 @@ const PassportStamps = (() => {
     return `wc_stamp_revealed_${stampId}_${userId || 'anonymous'}`;
   }
 
-  function isDevReplay() {
-    return typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.isPassportStampsDevReplay?.() === true;
-  }
-
   function shouldAnimateReveal(stampId, userId) {
     if (isDevReplay()) return true;
     try {
@@ -197,6 +328,7 @@ const PassportStamps = (() => {
       ? (shouldReveal ? 'passport-stamp--locked passport-stamp--reveal-slot' : 'passport-stamp--unlocked')
       : 'passport-stamp--locked';
     const revealClass = unlocked && shouldReveal ? ' passport-stamp--revealing' : '';
+    const blurLockedClass = stamp.lockedStyle === 'blur' && !slotUnlocked ? ' passport-stamp--blur-locked' : '';
     const lockedMsg = stamp.lockedMessage || 'Locked until your World Choir moment is complete.';
     const ariaLabel = unlocked
       ? stamp.title
@@ -204,7 +336,7 @@ const PassportStamps = (() => {
 
     return `
       <article
-        class="passport-stamp ${stateClass}${revealClass}"
+        class="passport-stamp ${stateClass}${revealClass}${blurLockedClass}"
         data-stamp-id="${esc(stamp.id)}"
         data-stamp-unlocked="${unlocked ? '1' : '0'}"
         data-should-reveal="${shouldReveal ? '1' : '0'}"
