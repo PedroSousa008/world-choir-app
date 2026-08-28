@@ -587,7 +587,7 @@
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.02;
-  color: var(--passport-ink);
+  color: var(--accent-aurora);
 }
 
 .passport-inside-header__meta {
@@ -624,7 +624,6 @@
 
 /* Page 2 footer — centered bottom message */
 .passport-inside-footer {
-  --passport-footer-ink: #1a3057;
   position: absolute;
   left: 50%;
   bottom: 32px;
@@ -643,18 +642,11 @@
   min-width: 28px;
   max-width: 56px;
   height: 2px;
-  background-image: radial-gradient(circle, var(--passport-footer-ink) 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--accent-aurora) 1px, transparent 1px);
   background-size: 4px 2px;
   background-repeat: repeat-x;
   background-position: center;
-  opacity: 0.72;
-}
-
-.passport-inside-footer__icon {
-  flex-shrink: 0;
-  width: 13px;
-  height: 13px;
-  color: var(--passport-footer-ink);
+  opacity: 0.92;
 }
 
 .passport-inside-footer__text {
@@ -666,7 +658,7 @@
   letter-spacing: 0.14em;
   line-height: 1;
   text-transform: uppercase;
-  color: var(--passport-footer-ink);
+  color: var(--accent-aurora);
   white-space: nowrap;
 }
 

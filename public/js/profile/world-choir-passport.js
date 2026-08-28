@@ -209,10 +209,7 @@ const WorldChoirPassport = (() => {
           </button>
           <div class="passport-inside-footer">
             <span class="passport-inside-footer__dots" aria-hidden="true"></span>
-            <svg class="passport-inside-footer__icon" viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">
-              <path fill="currentColor" d="M10 0l1.2 6.8L18 8l-6.8 1.2L10 16l-1.2-6.8L2 8l6.8-1.2L10 0zm0 3.4L9.4 7.8 6 8l3.4.6L10 12l.6-3.4L14 8l-3.4-.6L10 3.4z"/>
-            </svg>
-            <p class="passport-inside-footer__text">Your story continues.</p>
+            <p class="passport-inside-footer__text">Tap to continue your story</p>
             <span class="passport-inside-footer__dots" aria-hidden="true"></span>
           </div>
         </div>
