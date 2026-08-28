@@ -634,7 +634,7 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  width: min(calc(100% - 88px), 292px);
+  width: min(calc(100% - 52px), 292px);
   pointer-events: none;
 }
 
@@ -672,9 +672,10 @@
 
 .passport-card__back {
   position: absolute;
-  top: auto;
-  bottom: 26px;
-  left: 30px;
+  top: 28px;
+  right: 26px;
+  bottom: auto;
+  left: auto;
   z-index: 2;
   width: 36px;
   height: 36px;
