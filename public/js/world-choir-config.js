@@ -3,13 +3,13 @@
  */
 const WorldChoirConfig = (() => {
   /** Design preview — unlocks all stamps without real achievement rules. Agent toggles on when reviewing layout. */
-  const PASSPORT_STAMPS_PREVIEW_MODE = true;
+  const PASSPORT_STAMPS_PREVIEW_MODE = false;
 
   /** Dev replay — replays the center-to-corner reveal without saving to localStorage. Agent toggles on when reviewing animation. */
-  const PASSPORT_STAMPS_DEV_REPLAY = true;
+  const PASSPORT_STAMPS_DEV_REPLAY = false;
 
   /** Dev test — treat the 100-country global milestone as reached. Agent toggles on to test stamp unlock/reveal. */
-  const TEST_FORCE_100_COUNTRIES_MILESTONE = true;
+  const TEST_FORCE_100_COUNTRIES_MILESTONE = false;
 
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
