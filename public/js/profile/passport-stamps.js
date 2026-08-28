@@ -41,7 +41,9 @@ const PassportStamps = (() => {
       requiredCountryCount: 100,
       requiresPledge: true,
       requiresLocation: true,
-      placement: 'top-left',
+      displayWidth: 105,
+      displayHeight: 60,
+      position: { right: 25, bottom: 100 },
       lockedMessage: 'A global milestone is waiting to be reached.',
     },
   ];
@@ -309,6 +311,27 @@ const PassportStamps = (() => {
     return { width: Math.max(1, Math.round(maxPx * aspect)), height: maxPx };
   }
 
+  function resolveStampLayout(stamp, imgW, imgH) {
+    if (stamp.displayWidth && stamp.displayHeight) {
+      return {
+        width: Number(stamp.displayWidth),
+        height: Number(stamp.displayHeight),
+      };
+    }
+    return resolveStampDisplaySize(imgW, imgH);
+  }
+
+  function resolveStampPositionStyle(stamp) {
+    const pos = stamp.position;
+    if (!pos) return '';
+    const parts = [];
+    if (pos.top != null) parts.push(`top:${Number(pos.top)}px`);
+    if (pos.right != null) parts.push(`right:${Number(pos.right)}px`);
+    if (pos.bottom != null) parts.push(`bottom:${Number(pos.bottom)}px`);
+    if (pos.left != null) parts.push(`left:${Number(pos.left)}px`);
+    return parts.join(';');
+  }
+
   function renderStamp(stampStatus, esc) {
     const { stamp, unlocked, shouldReveal } = stampStatus;
     const slotUnlocked = unlocked && !shouldReveal;
@@ -317,7 +340,7 @@ const PassportStamps = (() => {
     const imgAlt = unlocked ? (image?.alt || stamp.title) : (image?.alt || 'Locked passport stamp');
     const imgW = Number(image?.width) || 512;
     const imgH = Number(image?.height) || 512;
-    const displaySize = resolveStampDisplaySize(imgW, imgH);
+    const displaySize = resolveStampLayout(stamp, imgW, imgH);
     const stateClass = unlocked
       ? (shouldReveal ? 'passport-stamp--locked passport-stamp--reveal-slot' : 'passport-stamp--unlocked')
       : 'passport-stamp--locked';
@@ -327,7 +350,12 @@ const PassportStamps = (() => {
     const ariaLabel = unlocked
       ? stamp.title
       : `${stamp.title} — locked`;
-    const placement = stamp.placement || 'bottom-right';
+    const placement = stamp.placement || (stamp.position ? 'custom' : 'bottom-right');
+    const positionStyle = resolveStampPositionStyle(stamp);
+    const articleStyle = [
+      `width:${displaySize.width}px`,
+      positionStyle,
+    ].filter(Boolean).join(';');
 
     return `
       <article
@@ -336,7 +364,7 @@ const PassportStamps = (() => {
         data-stamp-unlocked="${unlocked ? '1' : '0'}"
         data-should-reveal="${shouldReveal ? '1' : '0'}"
         data-placement="${esc(placement)}"
-        style="width:${displaySize.width}px"
+        style="${articleStyle}"
         aria-label="${esc(ariaLabel)}"
         role="listitem"
       >
