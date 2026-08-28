@@ -576,7 +576,7 @@
   letter-spacing: 0.16em;
   line-height: 1.25;
   text-transform: uppercase;
-  color: var(--accent-aurora);
+  color: #000000;
 }
 
 .passport-inside-header__title {
