@@ -626,7 +626,7 @@
 .passport-inside-footer {
   position: absolute;
   left: 50%;
-  bottom: 32px;
+  bottom: 16px;
   transform: translateX(-50%);
   z-index: 1;
   display: flex;
