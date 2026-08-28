@@ -194,7 +194,7 @@ const WorldChoirPassport = (() => {
           <header class="passport-inside-header">
             <div class="passport-inside-header__copy">
               <p class="passport-inside-header__kicker">World Choir Passport</p>
-              <h2 class="passport-inside-header__title">History</h2>
+              <h2 class="passport-inside-header__title">Stamps</h2>
               <p class="passport-inside-header__meta">${metaHtml}</p>
               <span class="passport-inside-header__rule" aria-hidden="true"></span>
             </div>
