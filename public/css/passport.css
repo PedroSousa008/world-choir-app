@@ -548,6 +548,7 @@
 .passport-card__inner--inside {
   position: relative;
   z-index: 1;
+  height: 100%;
 }
 
 /* Inside page — History header (matches design mock) */
@@ -619,6 +620,54 @@
   width: 140px;
   height: 10px;
   vertical-align: middle;
+}
+
+/* Page 2 footer — centered bottom message */
+.passport-inside-footer {
+  --passport-footer-ink: #1a3057;
+  position: absolute;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: min(calc(100% - 88px), 292px);
+  pointer-events: none;
+}
+
+.passport-inside-footer__dots {
+  flex: 1;
+  min-width: 28px;
+  max-width: 56px;
+  height: 2px;
+  background-image: radial-gradient(circle, var(--passport-footer-ink) 1px, transparent 1px);
+  background-size: 4px 2px;
+  background-repeat: repeat-x;
+  background-position: center;
+  opacity: 0.72;
+}
+
+.passport-inside-footer__icon {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  color: var(--passport-footer-ink);
+}
+
+.passport-inside-footer__text {
+  margin: 0;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--passport-footer-ink);
+  white-space: nowrap;
 }
 
 .passport-card__back {
