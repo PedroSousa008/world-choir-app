@@ -135,7 +135,7 @@ const WorldChoirConfig = (() => {
   /**
    * Passport stamp — "WORLD CHOIR — 100 COUNTRIES — ONE WORLD • ONE VOICE"
    * Drop your artwork at: public/images/passport/stamps/100-countries-stamp.png
-   * Native 1672 × 941 px (RGBA). Display slot 140 × 80 px, 25 px from right, 150 px from bottom.
+   * Native 1672 × 941 px (RGBA). Display slot 140 × 80 px, 25 px from right, 135 px from bottom.
    */
   const PASSPORT_STAMP_100_COUNTRIES = {
     src: 'images/passport/stamps/100-countries-stamp.png',
