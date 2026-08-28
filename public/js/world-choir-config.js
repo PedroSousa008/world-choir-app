@@ -135,13 +135,13 @@ const WorldChoirConfig = (() => {
   /**
    * Passport stamp — "WORLD CHOIR — 100 COUNTRIES — ONE WORLD • ONE VOICE"
    * Drop your artwork at: public/images/passport/stamps/100-countries-stamp.png
-   * Displayed at 85 × 85 px on Passport page 2 (top-left) when unlocked.
+   * Native 1672 × 941 px (RGBA). Display slot preserves aspect ratio, top-left on page 2.
    */
   const PASSPORT_STAMP_100_COUNTRIES = {
     src: 'images/passport/stamps/100-countries-stamp.png',
-    version: '20260828a',
-    width: 512,
-    height: 512,
+    version: '20260828b',
+    width: 1672,
+    height: 941,
     alt: 'World Choir 100 Countries stamp',
     get url() {
       return `${this.src}?v=${this.version}`;
@@ -151,13 +151,13 @@ const WorldChoirConfig = (() => {
   /**
    * Locked placeholder for the 100 Countries stamp (shown before unlock).
    * Drop your artwork at: public/images/passport/stamps/100-countries-stamp-locked.png
-   * Same display slot as the unlocked stamp: 85 × 85 px, top-left on page 2.
+   * Native 1672 × 941 px (RGBA). Same display slot as the unlocked stamp.
    */
   const PASSPORT_STAMP_100_COUNTRIES_LOCKED = {
     src: 'images/passport/stamps/100-countries-stamp-locked.png',
-    version: '20260828a',
-    width: 512,
-    height: 512,
+    version: '20260828b',
+    width: 1672,
+    height: 941,
     alt: 'Locked World Choir 100 Countries stamp',
     get url() {
       return `${this.src}?v=${this.version}`;

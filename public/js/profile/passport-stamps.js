@@ -297,6 +297,18 @@ const PassportStamps = (() => {
     return stamp.lockedPresentation === 'blur' || !stamp.lockedImageKey;
   }
 
+  function resolveStampDisplaySize(imgW, imgH, maxPx = 85) {
+    if (!imgW || !imgH) return { width: maxPx, height: maxPx };
+    const aspect = imgW / imgH;
+    if (aspect >= 0.85 && aspect <= 1.15) {
+      return { width: maxPx, height: maxPx };
+    }
+    if (aspect >= 1) {
+      return { width: maxPx, height: Math.max(1, Math.round(maxPx / aspect)) };
+    }
+    return { width: Math.max(1, Math.round(maxPx * aspect)), height: maxPx };
+  }
+
   function renderStamp(stampStatus, esc) {
     const { stamp, unlocked, shouldReveal } = stampStatus;
     const slotUnlocked = unlocked && !shouldReveal;
@@ -305,6 +317,7 @@ const PassportStamps = (() => {
     const imgAlt = unlocked ? (image?.alt || stamp.title) : (image?.alt || 'Locked passport stamp');
     const imgW = Number(image?.width) || 512;
     const imgH = Number(image?.height) || 512;
+    const displaySize = resolveStampDisplaySize(imgW, imgH);
     const stateClass = unlocked
       ? (shouldReveal ? 'passport-stamp--locked passport-stamp--reveal-slot' : 'passport-stamp--unlocked')
       : 'passport-stamp--locked';
@@ -323,10 +336,11 @@ const PassportStamps = (() => {
         data-stamp-unlocked="${unlocked ? '1' : '0'}"
         data-should-reveal="${shouldReveal ? '1' : '0'}"
         data-placement="${esc(placement)}"
+        style="width:${displaySize.width}px"
         aria-label="${esc(ariaLabel)}"
         role="listitem"
       >
-        <div class="passport-stamp__frame">
+        <div class="passport-stamp__frame" style="width:${displaySize.width}px;height:${displaySize.height}px">
           <img
             class="passport-stamp__img"
             src="${esc(imgUrl)}"
