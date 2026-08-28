@@ -19,13 +19,18 @@ const PassportStamps = (() => {
       title: 'I Sang — World Choir 2027',
       eventId: 'world-choir-2027',
       imageKey: 'PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG',
+      lockedImageKey: 'PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG_LOCKED',
       unlockType: UnlockType.EVENT_PARTICIPATION_COMPLETED,
       unlockOffsetDays: 1,
       lockedMessage: 'Complete the World Choir gathering to reveal this stamp.',
     },
   ];
 
-  function resolveStampImage(stamp) {
+  function resolveStampImage(stamp, { unlocked = false } = {}) {
+    const key = unlocked ? stamp.imageKey : (stamp.lockedImageKey || stamp.imageKey);
+    if (key && typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig[key]) {
+      return WorldChoirConfig[key];
+    }
     if (stamp.imageKey && typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig[stamp.imageKey]) {
       return WorldChoirConfig[stamp.imageKey];
     }
@@ -173,9 +178,9 @@ const PassportStamps = (() => {
 
   function renderStamp(stampStatus, esc) {
     const { stamp, unlocked, shouldReveal } = stampStatus;
-    const image = resolveStampImage(stamp);
+    const image = resolveStampImage(stamp, { unlocked });
     const imgUrl = image?.url || image?.src || '';
-    const imgAlt = unlocked ? (image?.alt || stamp.title) : 'Locked passport stamp';
+    const imgAlt = unlocked ? (image?.alt || stamp.title) : (image?.alt || 'Locked passport stamp');
     const imgW = Number(image?.width) || 512;
     const imgH = Number(image?.height) || 512;
     const stateClass = unlocked ? 'passport-stamp--unlocked' : 'passport-stamp--locked';

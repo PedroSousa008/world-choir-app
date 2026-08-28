@@ -3,7 +3,7 @@
  */
 const WorldChoirConfig = (() => {
   /** TEMP PREVIEW — set to false before launch to restore real stamp unlock rules */
-  const PASSPORT_STAMPS_PREVIEW_MODE = true;
+  const PASSPORT_STAMPS_PREVIEW_MODE = false;
 
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
@@ -105,6 +105,22 @@ const WorldChoirConfig = (() => {
     width: 1295,
     height: 1214,
     alt: 'I Sang — World Choir 2027 stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /**
+   * Locked placeholder for the World Choir 2027 stamp (shown before unlock).
+   * Drop your artwork at: public/images/passport/stamps/world-choir-2027-i-sang-locked.png
+   * Same display slot as the unlocked stamp: 85 × 85 px, bottom-right on page 2.
+   */
+  const PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG_LOCKED = {
+    src: 'images/passport/stamps/world-choir-2027-i-sang-locked.png',
+    version: '20260828a',
+    width: 1024,
+    height: 946,
+    alt: 'Locked World Choir 2027 stamp',
     get url() {
       return `${this.src}?v=${this.version}`;
     },
@@ -316,6 +332,7 @@ const WorldChoirConfig = (() => {
     PASSPORT_INSIDE_BACKGROUND,
     PASSPORT_INSIDE_LOGO,
     PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG,
+    PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG_LOCKED,
     EventState,
     AppState,
     getEventDate: getEventStart,
