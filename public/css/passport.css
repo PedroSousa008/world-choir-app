@@ -603,6 +603,10 @@
   will-change: filter, opacity, transform;
 }
 
+.passport-stamp--locked .passport-stamp__frame {
+  background: transparent;
+}
+
 .passport-stamp--locked .passport-stamp__img {
   filter: none;
   opacity: 1;
