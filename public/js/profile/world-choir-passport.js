@@ -179,6 +179,10 @@ const WorldChoirPassport = (() => {
       ? metaParts.join(' <span class="passport-inside-header__dot" aria-hidden="true">•</span> ')
       : '—';
 
+    const stampsHtml = typeof PassportStamps !== 'undefined'
+      ? PassportStamps.renderGrid(data.stamps || [], { esc })
+      : '';
+
     return `
       <div class="passport-card__page passport-card__page--inside" data-passport-page="inside" hidden>
         <img
@@ -199,6 +203,9 @@ const WorldChoirPassport = (() => {
               <span class="passport-inside-header__rule" aria-hidden="true"></span>
             </div>
           </header>
+          <div class="passport-stamps-wrap">
+            ${stampsHtml}
+          </div>
           <button
             type="button"
             class="passport-card__back"
@@ -271,6 +278,9 @@ const WorldChoirPassport = (() => {
       e.preventDefault();
       e.stopPropagation();
       setCardPage(card, 'inside');
+      if (typeof PassportStamps !== 'undefined') {
+        PassportStamps.bindRevealAnimations(card);
+      }
     });
 
     card.querySelector('#passport-back-cover')?.addEventListener('click', (e) => {
@@ -307,6 +317,14 @@ const WorldChoirPassport = (() => {
     }
 
     const dailyActsCompleted = await fetchDailyActsCompleted();
+    const userId = user.id || WorldChoirDB.getDeviceId?.() || 'anonymous';
+    const stamps = typeof PassportStamps !== 'undefined'
+      ? PassportStamps.resolveAllStatuses({
+        currentDate: new Date(),
+        userId,
+        hasPledgedForEvent: (eventId) => WorldChoirDB.hasPledged?.(eventId) === true,
+      })
+      : [];
 
     return {
       voiceNumber: pledge?.voiceNumber ?? null,
@@ -318,6 +336,8 @@ const WorldChoirPassport = (() => {
       eventsJoined,
       dailyActsCompleted,
       hasJoined: !!pledge || eventsJoined > 0,
+      stamps,
+      userId,
     };
   }
 
