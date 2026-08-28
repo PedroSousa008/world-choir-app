@@ -41,9 +41,9 @@ const PassportStamps = (() => {
       requiredCountryCount: 100,
       requiresPledge: true,
       requiresLocation: true,
-      displayWidth: 105,
-      displayHeight: 60,
-      position: { right: 25, bottom: 100 },
+      displayWidth: 140,
+      displayHeight: 80,
+      position: { right: 25, bottom: 150 },
       lockedMessage: 'A global milestone is waiting to be reached.',
     },
   ];
