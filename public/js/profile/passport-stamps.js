@@ -28,6 +28,7 @@ const PassportStamps = (() => {
       unlockType: UnlockType.EVENT_PARTICIPATION_COMPLETED,
       unlockOffsetDays: 1,
       placement: 'bottom-right',
+      revealOrder: 1,
       lockedMessage: 'Complete the World Choir gathering to reveal this stamp.',
     },
     {
@@ -44,6 +45,7 @@ const PassportStamps = (() => {
       displayWidth: 140,
       displayHeight: 80,
       position: { right: 25, bottom: 135 },
+      revealOrder: 2,
       lockedMessage: 'A global milestone is waiting to be reached.',
     },
   ];
@@ -605,7 +607,11 @@ const PassportStamps = (() => {
     if (!scope) return;
 
     const userId = getRevealUserId();
-    const queue = [...scope.querySelectorAll('.passport-stamp--revealing')];
+    const queue = [...scope.querySelectorAll('.passport-stamp--revealing')].sort((a, b) => {
+      const stampA = PASSPORT_STAMPS.find((entry) => entry.id === a.dataset.stampId);
+      const stampB = PASSPORT_STAMPS.find((entry) => entry.id === b.dataset.stampId);
+      return (Number(stampA?.revealOrder) || 999) - (Number(stampB?.revealOrder) || 999);
+    });
 
     for (const el of queue) {
       if (el.dataset.revealBound === '1') continue;
