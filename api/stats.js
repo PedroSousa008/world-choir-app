@@ -1,5 +1,4 @@
-const { getWorldChoirStats } = require('./_lib/world-choir-stats');
-const { jsonStorageError } = require('./_lib/store');
+const { getWorldChoirStats, jsonStorageError } = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

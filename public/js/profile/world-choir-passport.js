@@ -292,6 +292,20 @@ const WorldChoirPassport = (() => {
     });
   }
 
+  async function fetchWorldChoirStats() {
+    try {
+      const eventId = typeof WorldChoirConfig !== 'undefined'
+        ? (WorldChoirConfig.ACTIVE_EVENT?.id || 'world-choir-2027')
+        : 'world-choir-2027';
+      const res = await fetch(`/api/stats?eventId=${encodeURIComponent(eventId)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return null;
+      return data;
+    } catch {
+      return null;
+    }
+  }
+
   async function fetchDailyActsCompleted() {
     try {
       const deviceId = WorldChoirDB.getDeviceId();
@@ -319,24 +333,25 @@ const WorldChoirPassport = (() => {
     }
 
     const dailyActsCompleted = await fetchDailyActsCompleted();
+    const worldStats = await fetchWorldChoirStats();
+    const mapStats = typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.getMapStats?.() : null;
     const userId = user.id || WorldChoirDB.getDeviceId?.() || 'anonymous';
-    const worldStats = typeof WorldChoirDB.fetchWorldChoirStats === 'function'
-      ? await WorldChoirDB.fetchWorldChoirStats()
-      : null;
-    const country = String(pledge?.country || user.country || '').trim();
-    const city = String(pledge?.city || user.city || '').trim();
+    const userCountry = pledge?.country || user.country || null;
+    const userCity = pledge?.city || user.city || null;
     const stamps = typeof PassportStamps !== 'undefined'
       ? PassportStamps.resolveAllStatuses({
         currentDate: new Date(),
         userId,
+        userCountry,
+        userCity,
+        representedCountryCount: worldStats?.countries ?? mapStats?.countries ?? 0,
+        milestones: worldStats?.milestones ?? {},
         hasPledgedForEvent: (eventId) => WorldChoirDB.hasPledged?.(eventId) === true,
-        userHasPledged: WorldChoirDB.hasPledged?.() === true,
-        userHasValidLocation: !!(country && city),
-        representedCountryCount: worldStats?.representedCountryCount
-          ?? worldStats?.countries
-          ?? WorldChoirDB.getMapStats?.()?.countries
-          ?? 0,
-        milestones: worldStats?.milestones || {},
+        userHasValidLocation: () => {
+          const country = String(userCountry || '').trim();
+          const city = String(userCity || '').trim();
+          return !!(country && city);
+        },
       })
       : [];
 

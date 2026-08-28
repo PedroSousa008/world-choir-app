@@ -8,7 +8,7 @@ const WorldChoirConfig = (() => {
   /** Dev replay — replays the center-to-corner reveal without saving to localStorage. Agent toggles on when reviewing animation. */
   const PASSPORT_STAMPS_DEV_REPLAY = false;
 
-  /** Dev test — treat the 100-country global milestone as reached (production logic unchanged when false). */
+  /** Dev test — treat the 100-country global milestone as reached. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_100_COUNTRIES_MILESTONE = false;
 
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
@@ -133,16 +133,16 @@ const WorldChoirConfig = (() => {
   };
 
   /**
-   * Passport stamp — "100 COUNTRIES — ONE WORLD • ONE VOICE"
-   * Drop artwork at: public/images/passport/stamps/world-choir-100-countries.png
-   * Locked state uses CSS blur on the same artwork (no separate locked PNG).
+   * Passport stamp — "WORLD CHOIR — 100 COUNTRIES — ONE WORLD • ONE VOICE"
+   * Drop your artwork at: public/images/passport/stamps/100-countries-stamp.png
+   * Displayed at 85 × 85 px on Passport page 2 (top-left). Locked state uses CSS blur on this artwork.
    */
-  const PASSPORT_STAMP_WORLD_CHOIR_100_COUNTRIES = {
-    src: 'images/passport/stamps/world-choir-100-countries.png',
+  const PASSPORT_STAMP_100_COUNTRIES = {
+    src: 'images/passport/stamps/100-countries-stamp.png',
     version: '20260828a',
-    width: 1200,
-    height: 1200,
-    alt: '100 Countries — One World • One Voice',
+    width: 512,
+    height: 512,
+    alt: 'World Choir 100 Countries stamp',
     get url() {
       return `${this.src}?v=${this.version}`;
     },
@@ -363,7 +363,7 @@ const WorldChoirConfig = (() => {
     PASSPORT_INSIDE_LOGO,
     PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG,
     PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG_LOCKED,
-    PASSPORT_STAMP_WORLD_CHOIR_100_COUNTRIES,
+    PASSPORT_STAMP_100_COUNTRIES,
     EventState,
     AppState,
     getEventDate: getEventStart,

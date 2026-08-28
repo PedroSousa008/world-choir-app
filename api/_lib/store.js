@@ -417,6 +417,7 @@ async function joinWorldChoir({ deviceId, eventId, city, country, latitude, long
   }
 
   await upsertPledgeIntoIndex(trimmedEvent, pledge);
+  refreshEventMilestones(trimmedEvent).catch(() => {});
   return pledge;
 }
 
@@ -440,6 +441,7 @@ async function updatePledgeLocation({ deviceId, eventId, city, country, latitude
 
   await writeJson(pledgePath(trimmedEvent, user.id), updated, { overwrite: true });
   await upsertPledgeIntoIndex(trimmedEvent, updated);
+  refreshEventMilestones(trimmedEvent).catch(() => {});
   return updated;
 }
 
@@ -473,19 +475,13 @@ async function readPledgesIndex(eventId) {
 
 async function writePledgesIndex(eventId, pledges) {
   const sorted = sortPledges(pledges);
-  const { computeStatsFromPledges, updateMilestonesForEvent } = require('./world-choir-stats');
-  const stats = computeStatsFromPledges(sorted);
   memCache.delete(`pledges:${eventId}`);
   memCache.delete('pledges:all');
   await writeJson(pledgesIndexPath(eventId), {
     updated_at: new Date().toISOString(),
     count: sorted.length,
-    stats,
     pledges: sorted,
   }, { overwrite: true });
-  await updateMilestonesForEvent(eventId, stats).catch((err) => {
-    console.error('milestones update failed:', err);
-  });
   return sorted;
 }
 
@@ -529,7 +525,6 @@ async function getPledgesMeta(eventId) {
       return {
         count: index.count,
         updated_at: index.updated_at || null,
-        stats: index.stats || null,
       };
     }
     if (Array.isArray(index?.pledges)) {
@@ -674,6 +669,116 @@ async function buildOwnerDatabaseRows() {
   return assembleOwnerDatabaseRows(users, pledges, promises);
 }
 
+const GLOBAL_COUNTRY_MILESTONES = [
+  { id: '100-countries', threshold: 100 },
+];
+
+function normalizeCountryKey(country) {
+  return String(country || '').trim().toLowerCase();
+}
+
+function computeWorldChoirStatsFromPledges(pledges) {
+  const seenUsers = new Set();
+  const unique = [];
+
+  for (const pledge of pledges || []) {
+    if (!pledge?.user_id || seenUsers.has(pledge.user_id)) continue;
+    seenUsers.add(pledge.user_id);
+    unique.push(pledge);
+  }
+
+  const withLocation = unique.filter((p) => p.city && p.country);
+  const cities = new Set(
+    withLocation.map((p) => `${String(p.city).trim()}|${normalizeCountryKey(p.country)}`)
+  );
+  const countries = new Set(
+    withLocation.map((p) => normalizeCountryKey(p.country)).filter(Boolean)
+  );
+
+  return {
+    voices: unique.length,
+    cities: cities.size,
+    countries: countries.size,
+  };
+}
+
+function milestoneBlobPath(eventId, milestoneId) {
+  return `${eventPrefix(eventId)}/milestones/${milestoneId}.json`;
+}
+
+async function readMilestoneRecord(eventId, milestoneId) {
+  try {
+    return await readBlobJson(milestoneBlobPath(eventId, milestoneId));
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+    return null;
+  }
+}
+
+async function ensureCountryMilestone(eventId, milestoneId, threshold, countryCount) {
+  const existing = await readMilestoneRecord(eventId, milestoneId);
+  if (existing?.reached) return existing;
+
+  if (countryCount < threshold) {
+    return {
+      id: milestoneId,
+      threshold,
+      reached: false,
+      reachedAt: null,
+      countryCountAtReach: null,
+    };
+  }
+
+  const record = {
+    id: milestoneId,
+    threshold,
+    reached: true,
+    reachedAt: new Date().toISOString(),
+    countryCountAtReach: countryCount,
+  };
+
+  await writeJson(milestoneBlobPath(eventId, milestoneId), record, { overwrite: true });
+  return record;
+}
+
+async function refreshEventMilestones(eventId) {
+  const pledges = await listPledges(eventId);
+  const stats = computeWorldChoirStatsFromPledges(pledges);
+  const milestones = {};
+
+  for (const milestone of GLOBAL_COUNTRY_MILESTONES) {
+    const record = await ensureCountryMilestone(
+      eventId,
+      milestone.id,
+      milestone.threshold,
+      stats.countries
+    );
+    milestones[milestone.id] = {
+      reached: !!record.reached,
+      reachedAt: record.reachedAt || null,
+      threshold: milestone.threshold,
+      countryCountAtReach: record.countryCountAtReach ?? null,
+    };
+  }
+
+  return { stats, milestones };
+}
+
+async function getWorldChoirStats(eventId) {
+  assertBlobConfigured();
+  const trimmedEvent = String(eventId || 'world-choir-2027').trim();
+  const { stats, milestones } = await refreshEventMilestones(trimmedEvent);
+
+  return {
+    eventId: trimmedEvent,
+    updatedAt: new Date().toISOString(),
+    voices: stats.voices,
+    cities: stats.cities,
+    countries: stats.countries,
+    milestones,
+  };
+}
+
 module.exports = {
   mapPledgeRow,
   ensureUser,
@@ -690,6 +795,9 @@ module.exports = {
   listAllPromises,
   assembleOwnerDatabaseRows,
   buildOwnerDatabaseRows,
+  getWorldChoirStats,
+  refreshEventMilestones,
+  computeWorldChoirStatsFromPledges,
   getOwnerPasswordHash,
   getOwnerEmailOverride,
   saveOwnerPasswordHash,
