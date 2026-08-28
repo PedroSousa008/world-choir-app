@@ -96,7 +96,7 @@ const WorldChoirConfig = (() => {
    * Passport stamp — "I SANG — WORLD CHOIR 2027"
    * Drop your artwork at: public/images/passport/stamps/world-choir-2027-i-sang.png
    * Recommended size: 512 × 512 px (PNG with transparency).
-   * Displayed at 148 × 148 px on Passport page 2 when unlocked.
+   * Displayed at 55 × 55 px on Passport page 2 (bottom-right) when unlocked.
    * Then bump `version` so all clients refresh the image.
    */
   const PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG = {

@@ -554,36 +554,40 @@
 }
 
 .passport-stamps-wrap {
-  flex: 1;
-  min-height: 0;
+  position: absolute;
+  right: 48px;
+  bottom: 35px;
+  z-index: 1;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 10px 0 52px;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0;
+  pointer-events: none;
 }
 
 .passport-stamps {
   display: flex;
   flex-wrap: wrap;
-  align-content: flex-start;
-  justify-content: center;
-  gap: 18px 16px;
-  width: 100%;
-  max-width: 320px;
+  align-content: flex-end;
+  justify-content: flex-end;
+  gap: 12px;
+  width: auto;
+  max-width: none;
 }
 
 .passport-stamp {
-  width: 148px;
+  width: 55px;
   text-align: center;
+  pointer-events: auto;
 }
 
 /* Fixed stamp slot — drop artwork at public/images/passport/stamps/world-choir-2027-i-sang.png */
 .passport-stamp__frame {
   position: relative;
-  width: 148px;
-  height: 148px;
+  width: 55px;
+  height: 55px;
   overflow: hidden;
-  border-radius: 3px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.08);
   margin: 0 auto;
 }
@@ -600,9 +604,9 @@
 }
 
 .passport-stamp--locked .passport-stamp__img {
-  filter: blur(16px);
+  filter: blur(7px);
   opacity: 0.78;
-  transform: scale(1.12);
+  transform: scale(1.1);
 }
 
 .passport-stamp--unlocked .passport-stamp__img {
@@ -617,7 +621,7 @@
 
 @keyframes passport-stamp-reveal {
   from {
-    filter: blur(16px);
+    filter: blur(7px);
     opacity: 0.78;
     transform: scale(0.96);
   }
@@ -639,13 +643,7 @@
 }
 
 .passport-stamp__locked-msg {
-  margin: 9px 0 0;
-  font-family: var(--font-sans);
-  font-size: 0.48rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  line-height: 1.4;
-  color: #6b6f7d;
+  display: none;
 }
 
 /* Inside page — History header (matches design mock) */
