@@ -11,28 +11,26 @@ const PassportStamps = (() => {
 
   /**
    * Stamp registry — add future stamps here.
-   * Drop artwork at each stamp's image.src and bump image.version.
+   * Artwork lives in public/images/passport/stamps/ (see WorldChoirConfig.PASSPORT_STAMP_*).
    */
   const PASSPORT_STAMPS = [
     {
       id: 'world-choir-2027-i-sang',
       title: 'I Sang — World Choir 2027',
       eventId: 'world-choir-2027',
-      image: {
-        src: 'images/passport/stamps/world-choir-2027-i-sang.png',
-        version: '20260828a',
-        width: 512,
-        height: 512,
-        alt: 'I Sang — World Choir 2027 stamp',
-        get url() {
-          return `${this.src}?v=${this.version}`;
-        },
-      },
+      imageKey: 'PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG',
       unlockType: UnlockType.EVENT_PARTICIPATION_COMPLETED,
       unlockOffsetDays: 1,
       lockedMessage: 'Complete the World Choir gathering to reveal this stamp.',
     },
   ];
+
+  function resolveStampImage(stamp) {
+    if (stamp.imageKey && typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig[stamp.imageKey]) {
+      return WorldChoirConfig[stamp.imageKey];
+    }
+    return stamp.image || null;
+  }
 
   function getUtcCalendarDate(date = new Date()) {
     const d = date instanceof Date ? date : new Date(date);
@@ -160,8 +158,11 @@ const PassportStamps = (() => {
 
   function renderStamp(stampStatus, esc) {
     const { stamp, unlocked, shouldReveal } = stampStatus;
-    const imgUrl = stamp.image?.url || stamp.image?.src || '';
-    const imgAlt = unlocked ? (stamp.image?.alt || stamp.title) : 'Locked passport stamp';
+    const image = resolveStampImage(stamp);
+    const imgUrl = image?.url || image?.src || '';
+    const imgAlt = unlocked ? (image?.alt || stamp.title) : 'Locked passport stamp';
+    const imgW = Number(image?.width) || 512;
+    const imgH = Number(image?.height) || 512;
     const stateClass = unlocked ? 'passport-stamp--unlocked' : 'passport-stamp--locked';
     const revealClass = unlocked && shouldReveal ? ' passport-stamp--revealing' : '';
     const lockedMsg = stamp.lockedMessage || 'Locked until your World Choir moment is complete.';
@@ -182,8 +183,8 @@ const PassportStamps = (() => {
             class="passport-stamp__img"
             src="${esc(imgUrl)}"
             alt="${esc(imgAlt)}"
-            width="${Number(stamp.image?.width) || 512}"
-            height="${Number(stamp.image?.height) || 512}"
+            width="${imgW}"
+            height="${imgH}"
             decoding="async"
             loading="lazy"
             draggable="false"

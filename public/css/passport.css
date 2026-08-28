@@ -577,13 +577,15 @@
   text-align: center;
 }
 
+/* Fixed stamp slot — drop artwork at public/images/passport/stamps/world-choir-2027-i-sang.png */
 .passport-stamp__frame {
   position: relative;
-  width: 100%;
-  aspect-ratio: 1;
+  width: 148px;
+  height: 148px;
   overflow: hidden;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.08);
+  margin: 0 auto;
 }
 
 .passport-stamp__img {
