@@ -184,13 +184,13 @@ const WorldChoirConfig = (() => {
   /**
    * Locked placeholder for the Your Voice Joined stamp (shown before pledge).
    * Drop your artwork at: public/images/passport/stamps/your-voice-joined-locked.png
-   * Native 1774 × 887 px (RGBA). Same display slot as the unlocked stamp.
+   * Native 1994 × 789 px (RGBA). Same display slot as the unlocked stamp.
    */
   const PASSPORT_STAMP_YOUR_VOICE_JOINED_LOCKED = {
     src: 'images/passport/stamps/your-voice-joined-locked.png',
-    version: '20260829a',
-    width: 1774,
-    height: 887,
+    version: '20260829b',
+    width: 1994,
+    height: 789,
     alt: 'Locked Your Voice Joined stamp',
     get url() {
       return `${this.src}?v=${this.version}`;
