@@ -669,8 +669,9 @@ async function buildOwnerDatabaseRows() {
   return assembleOwnerDatabaseRows(users, pledges, promises);
 }
 
-const GLOBAL_COUNTRY_MILESTONES = [
-  { id: '100-countries', threshold: 100 },
+const GLOBAL_MILESTONES = [
+  { id: '100-countries', metric: 'countries', threshold: 100 },
+  { id: '1-million-voices', metric: 'voices', threshold: 1_000_000 },
 ];
 
 function normalizeCountryKey(country) {
@@ -715,17 +716,17 @@ async function readMilestoneRecord(eventId, milestoneId) {
   }
 }
 
-async function ensureCountryMilestone(eventId, milestoneId, threshold, countryCount) {
+async function ensureCountMilestone(eventId, milestoneId, threshold, currentCount, countKey = 'countAtReach') {
   const existing = await readMilestoneRecord(eventId, milestoneId);
   if (existing?.reached) return existing;
 
-  if (countryCount < threshold) {
+  if (currentCount < threshold) {
     return {
       id: milestoneId,
       threshold,
       reached: false,
       reachedAt: null,
-      countryCountAtReach: null,
+      [countKey]: null,
     };
   }
 
@@ -734,7 +735,7 @@ async function ensureCountryMilestone(eventId, milestoneId, threshold, countryCo
     threshold,
     reached: true,
     reachedAt: new Date().toISOString(),
-    countryCountAtReach: countryCount,
+    [countKey]: currentCount,
   };
 
   await writeJson(milestoneBlobPath(eventId, milestoneId), record, { overwrite: true });
@@ -746,18 +747,26 @@ async function refreshEventMilestones(eventId) {
   const stats = computeWorldChoirStatsFromPledges(pledges);
   const milestones = {};
 
-  for (const milestone of GLOBAL_COUNTRY_MILESTONES) {
-    const record = await ensureCountryMilestone(
+  for (const milestone of GLOBAL_MILESTONES) {
+    const metricValue = Number(stats[milestone.metric]) || 0;
+    const countKey = milestone.metric === 'countries'
+      ? 'countryCountAtReach'
+      : milestone.metric === 'voices'
+        ? 'voiceCountAtReach'
+        : 'countAtReach';
+    const record = await ensureCountMilestone(
       eventId,
       milestone.id,
       milestone.threshold,
-      stats.countries
+      metricValue,
+      countKey
     );
     milestones[milestone.id] = {
       reached: !!record.reached,
       reachedAt: record.reachedAt || null,
       threshold: milestone.threshold,
-      countryCountAtReach: record.countryCountAtReach ?? null,
+      metric: milestone.metric,
+      [countKey]: record[countKey] ?? null,
     };
   }
 

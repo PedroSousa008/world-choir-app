@@ -11,6 +11,7 @@ const PassportStamps = (() => {
   const UnlockType = {
     EVENT_PARTICIPATION_COMPLETED: 'EVENT_PARTICIPATION_COMPLETED',
     GLOBAL_COUNTRY_MILESTONE: 'GLOBAL_COUNTRY_MILESTONE',
+    GLOBAL_VOICE_MILESTONE: 'GLOBAL_VOICE_MILESTONE',
     PLEDGE_JOINED: 'PLEDGE_JOINED',
   };
 
@@ -61,6 +62,22 @@ const PassportStamps = (() => {
       displayHeight: 80,
       position: { right: 25, bottom: 135 },
       revealOrder: 3,
+      lockedMessage: 'A global milestone is waiting to be reached.',
+    },
+    {
+      id: 'world-choir-1-million-voices',
+      title: '1 Million Voices — World Choir',
+      eventId: 'world-choir-2027',
+      imageKey: 'PASSPORT_STAMP_1_MILLION_VOICES',
+      lockedImageKey: 'PASSPORT_STAMP_1_MILLION_VOICES_LOCKED',
+      unlockType: UnlockType.GLOBAL_VOICE_MILESTONE,
+      milestoneId: '1-million-voices',
+      requiredVoiceCount: 1_000_000,
+      requiresPledge: true,
+      displayWidth: 85,
+      displayHeight: 85,
+      position: { left: 42, bottom: 45 },
+      revealOrder: 4,
       lockedMessage: 'A global milestone is waiting to be reached.',
     },
   ];
@@ -147,6 +164,14 @@ const PassportStamps = (() => {
       && WorldChoirConfig.isTestForce100CountriesMilestone?.() === true;
   }
 
+  function isTestForce1MillionVoicesMilestone(stamp) {
+    if (stamp?.milestoneId !== '1-million-voices' && stamp?.id !== 'world-choir-1-million-voices') {
+      return false;
+    }
+    return typeof WorldChoirConfig !== 'undefined'
+      && WorldChoirConfig.isTestForce1MillionVoicesMilestone?.() === true;
+  }
+
   function userHasValidLocation(context = {}) {
     if (typeof context.userHasValidLocation === 'function') {
       return context.userHasValidLocation() === true;
@@ -176,6 +201,19 @@ const PassportStamps = (() => {
 
     const required = Number(stamp.requiredCountryCount) || 100;
     return (Number(context.representedCountryCount) || 0) >= required;
+  }
+
+  function isGlobalVoiceMilestoneReached(stamp, context = {}) {
+    if (isTestForce1MillionVoicesMilestone(stamp) || context.force1MillionVoicesMilestone === true) {
+      return true;
+    }
+
+    const milestoneId = stamp.milestoneId || '1-million-voices';
+    const milestone = context.milestones?.[milestoneId];
+    if (milestone?.reached === true) return true;
+
+    const required = Number(stamp.requiredVoiceCount) || 1_000_000;
+    return (Number(context.voiceCount) || 0) >= required;
   }
 
   function evaluateStampUnlock(stamp, context = {}) {
@@ -269,6 +307,37 @@ const PassportStamps = (() => {
         unlocked: true,
         pledged: true,
         hasLocation: true,
+        unlockDate: null,
+        reason: 'unlocked',
+      };
+    }
+
+    if (stamp.unlockType === UnlockType.GLOBAL_VOICE_MILESTONE) {
+      const milestoneReached = isGlobalVoiceMilestoneReached(stamp, context);
+
+      if (!milestoneReached) {
+        return {
+          unlocked: false,
+          pledged: eligibility.pledged,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'milestone_not_reached',
+        };
+      }
+      if (!eligibility.pledged) {
+        return {
+          unlocked: false,
+          pledged: false,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'not_pledged',
+        };
+      }
+
+      return {
+        unlocked: true,
+        pledged: true,
+        hasLocation: eligibility.hasLocation,
         unlockDate: null,
         reason: 'unlocked',
       };

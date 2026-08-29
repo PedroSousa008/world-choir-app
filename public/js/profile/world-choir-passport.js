@@ -345,6 +345,7 @@ const WorldChoirPassport = (() => {
         userCountry,
         userCity,
         representedCountryCount: worldStats?.countries ?? mapStats?.countries ?? 0,
+        voiceCount: worldStats?.voices ?? mapStats?.voices ?? 0,
         milestones: worldStats?.milestones ?? {},
         hasPledgedForEvent: (eventId) => WorldChoirDB.hasPledged?.(eventId) === true,
         userHasValidLocation: () => {
