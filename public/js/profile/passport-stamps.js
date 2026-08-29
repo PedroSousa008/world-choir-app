@@ -76,7 +76,7 @@ const PassportStamps = (() => {
       requiresPledge: true,
       displayWidth: 100,
       displayHeight: 100,
-      position: { left: 100, bottom: 35 },
+      position: { left: 100, bottom: 200 },
       revealOrder: 4,
       lockedMessage: 'A global milestone is waiting to be reached.',
     },
