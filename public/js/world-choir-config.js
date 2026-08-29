@@ -203,7 +203,7 @@ const WorldChoirConfig = (() => {
   /**
    * Passport stamp — "1 MILLION VOICES"
    * Drop your artwork at: public/images/passport/stamps/1-million-voices.png
-   * Native 1312 × 1199 px (RGBA). Display slot 85 × 85 px, bottom-left on page 2.
+   * Native 1312 × 1199 px (RGBA). Display slot 100 × 100 px, 100 px from left, 35 px from bottom.
    */
   const PASSPORT_STAMP_1_MILLION_VOICES = {
     src: 'images/passport/stamps/1-million-voices.png',
