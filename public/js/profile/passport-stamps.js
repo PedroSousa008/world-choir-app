@@ -11,6 +11,7 @@ const PassportStamps = (() => {
   const UnlockType = {
     EVENT_PARTICIPATION_COMPLETED: 'EVENT_PARTICIPATION_COMPLETED',
     GLOBAL_COUNTRY_MILESTONE: 'GLOBAL_COUNTRY_MILESTONE',
+    PLEDGE_JOINED: 'PLEDGE_JOINED',
   };
 
   /**
@@ -20,6 +21,20 @@ const PassportStamps = (() => {
    */
   const PASSPORT_STAMPS = [
     {
+      id: 'your-voice-joined',
+      title: 'Your Voice Joined',
+      eventId: 'world-choir-2027',
+      imageKey: 'PASSPORT_STAMP_YOUR_VOICE_JOINED',
+      lockedImageKey: 'PASSPORT_STAMP_YOUR_VOICE_JOINED_LOCKED',
+      unlockType: UnlockType.PLEDGE_JOINED,
+      requiresPledge: true,
+      displayWidth: 140,
+      displayHeight: 70,
+      position: { left: 28, bottom: 135 },
+      revealOrder: 1,
+      lockedMessage: 'Pledge to sing and join the World Choir.',
+    },
+    {
       id: 'world-choir-2027-i-sang',
       title: 'I Sang — World Choir 2027',
       eventId: 'world-choir-2027',
@@ -28,7 +43,7 @@ const PassportStamps = (() => {
       unlockType: UnlockType.EVENT_PARTICIPATION_COMPLETED,
       unlockOffsetDays: 1,
       placement: 'bottom-right',
-      revealOrder: 1,
+      revealOrder: 2,
       lockedMessage: 'Complete the World Choir gathering to reveal this stamp.',
     },
     {
@@ -45,7 +60,7 @@ const PassportStamps = (() => {
       displayWidth: 140,
       displayHeight: 80,
       position: { right: 25, bottom: 135 },
-      revealOrder: 2,
+      revealOrder: 3,
       lockedMessage: 'A global milestone is waiting to be reached.',
     },
   ];
@@ -178,6 +193,17 @@ const PassportStamps = (() => {
     }
 
     const currentDate = context.currentDate instanceof Date ? context.currentDate : new Date();
+
+    if (stamp.unlockType === UnlockType.PLEDGE_JOINED) {
+      const pledged = hasPledgedForEvent(stamp.eventId, context);
+      return {
+        unlocked: pledged,
+        pledged,
+        hasLocation: eligibility.hasLocation,
+        unlockDate: null,
+        reason: pledged ? 'unlocked' : 'not_pledged',
+      };
+    }
 
     if (stamp.unlockType === UnlockType.EVENT_PARTICIPATION_COMPLETED) {
       const pledged = eligibility.pledged;

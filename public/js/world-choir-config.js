@@ -164,6 +164,39 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Passport stamp — "YOUR VOICE JOINED"
+   * Drop your artwork at: public/images/passport/stamps/your-voice-joined.png
+   * Native 1774 × 887 px (RGBA). Display slot 140 × 70 px, left side of page 2.
+   * Unlocks when the user pledges via “I’ll Sing”.
+   */
+  const PASSPORT_STAMP_YOUR_VOICE_JOINED = {
+    src: 'images/passport/stamps/your-voice-joined.png',
+    version: '20260829a',
+    width: 1774,
+    height: 887,
+    alt: 'Your Voice Joined — World Choir stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /**
+   * Locked placeholder for the Your Voice Joined stamp (shown before pledge).
+   * Drop your artwork at: public/images/passport/stamps/your-voice-joined-locked.png
+   * Native 1774 × 887 px (RGBA). Same display slot as the unlocked stamp.
+   */
+  const PASSPORT_STAMP_YOUR_VOICE_JOINED_LOCKED = {
+    src: 'images/passport/stamps/your-voice-joined-locked.png',
+    version: '20260829a',
+    width: 1774,
+    height: 887,
+    alt: 'Locked Your Voice Joined stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -381,6 +414,8 @@ const WorldChoirConfig = (() => {
     PASSPORT_STAMP_WORLD_CHOIR_2027_I_SANG_LOCKED,
     PASSPORT_STAMP_100_COUNTRIES,
     PASSPORT_STAMP_100_COUNTRIES_LOCKED,
+    PASSPORT_STAMP_YOUR_VOICE_JOINED,
+    PASSPORT_STAMP_YOUR_VOICE_JOINED_LOCKED,
     EventState,
     AppState,
     getEventDate: getEventStart,
