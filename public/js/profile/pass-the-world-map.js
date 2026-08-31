@@ -1,11 +1,11 @@
 /**
  * Pass the World — map layer (same basemap as Map tab, no city pins).
+ * Default framing: zoomed-out world, always centered on the plane.
  */
 const PassTheWorldMap = (() => {
-  // Full Earth framing: Greenland → Antarctica, Americas → far-east Russia.
-  // Web Mercator tops out near ±85°; keep a touch of padding inside that.
+  // Used only to derive a stable zoomed-out zoom level.
   const WORLD_BOUNDS = [[-85, -170], [84, 179]];
-  const WORLD_CENTER = [10, 10];
+  const FALLBACK_CENTER = [41.5518, -8.4229]; // Braga seed
 
   let map = null;
   let routeLayer = null;
@@ -14,6 +14,8 @@ const PassTheWorldMap = (() => {
   let planeMarker = null;
   let cityMarkers = null;
   let containerId = 'ptw-map';
+  let focusLatLng = FALLBACK_CENTER.slice();
+  let lockedWorldZoom = null;
 
   function greatCirclePoints(a, b, steps = 64) {
     const toRad = (d) => (d * Math.PI) / 180;
@@ -100,24 +102,48 @@ const PassTheWorldMap = (() => {
     });
   }
 
-  function fitFullWorld({ animate = false } = {}) {
+  function setFocus(lat, lng) {
+    if (lat == null || lng == null || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) {
+      return;
+    }
+    focusLatLng = [Number(lat), Number(lng)];
+  }
+
+  function resolveWorldZoom() {
+    if (!map) return 1;
+    // Recalculate for current container size so fullscreen vs card both stay zoomed-out.
+    const bounds = L.latLngBounds(WORLD_BOUNDS);
+    const z = map.getBoundsZoom(bounds, false, L.point(2, 2));
+    if (!Number.isFinite(z)) return lockedWorldZoom || 1;
+    lockedWorldZoom = z;
+    return z;
+  }
+
+  /** Zoomed-out world look, always centered on the plane (or current city). */
+  function frameOnPlane({ animate = false } = {}) {
     if (!map) return;
     map.invalidateSize({ animate: false, pan: false });
-    // Stop any in-flight pan/zoom so collapse always lands on the true world frame.
     if (typeof map.stop === 'function') map.stop();
-    map.fitBounds(WORLD_BOUNDS, {
-      animate,
-      padding: [2, 2],
-      maxZoom: 3,
-    });
-    if (map.getZoom() <= 1.75) {
+
+    const zoom = resolveWorldZoom();
+    const center = focusLatLng || FALLBACK_CENTER;
+    map.setView(center, zoom, { animate: !!animate, reset: true });
+
+    if (map.getZoom() <= 1.85) {
       map.dragging.disable();
+    } else {
+      map.dragging.enable();
     }
+  }
+
+  // Back-compat alias used by Pass the World UI.
+  function fitFullWorld(opts) {
+    frameOnPlane(opts);
   }
 
   function syncInteraction() {
     if (!map) return;
-    if (map.getZoom() <= 1.75) {
+    if (map.getZoom() <= 1.85) {
       map.dragging.disable();
     } else {
       map.dragging.enable();
@@ -135,8 +161,8 @@ const PassTheWorldMap = (() => {
     if (!el) return null;
 
     map = L.map(containerId, {
-      center: WORLD_CENTER,
-      zoom: 0.75,
+      center: focusLatLng,
+      zoom: 1,
       minZoom: 0.5,
       maxZoom: 8,
       zoomSnap: 0.25,
@@ -145,17 +171,16 @@ const PassTheWorldMap = (() => {
       attributionControl: false,
       worldCopyJump: false,
       maxBounds: [[-85.05, -180], [85.05, 180]],
-      maxBoundsViscosity: 1.0,
+      maxBoundsViscosity: 0.8,
       dragging: false,
       scrollWheelZoom: false,
       doubleClickZoom: true,
       boxZoom: false,
       keyboard: false,
       fadeAnimation: false,
-      zoomAnimation: true,
+      zoomAnimation: false,
     });
 
-    // Same basemap stack as Map tab (no city light pins here).
     if (typeof WorldChoirMapTiles !== 'undefined') {
       WorldChoirMapTiles.addBasemapLayers(map);
     }
@@ -168,16 +193,15 @@ const PassTheWorldMap = (() => {
     map.on('zoomend', syncInteraction);
 
     requestAnimationFrame(() => {
-      fitFullWorld({ animate: false });
-      setTimeout(() => fitFullWorld({ animate: false }), 80);
-      setTimeout(() => fitFullWorld({ animate: false }), 220);
+      frameOnPlane({ animate: false });
+      setTimeout(() => frameOnPlane({ animate: false }), 100);
     });
 
     return map;
   }
 
   function resetWorldView() {
-    fitFullWorld({ animate: true });
+    frameOnPlane({ animate: false });
   }
 
   function renderJourney(payload = {}) {
@@ -223,6 +247,8 @@ const PassTheWorldMap = (() => {
       }).addTo(cityMarkers);
     }
 
+    let planePos = null;
+
     if (journey.status === 'TRAVELLING' && journey.origin && journey.destination) {
       const from = [journey.origin.latitude, journey.origin.longitude];
       const to = [journey.destination.latitude, journey.destination.longitude];
@@ -241,31 +267,36 @@ const PassTheWorldMap = (() => {
       L.marker(to, { icon: cityDotIcon('destination'), interactive: false }).addTo(cityMarkers);
 
       const progress = Number(journey.progress?.progress) || 0;
-      const pos = interpolateAlong(segs, progress) || from;
+      planePos = interpolateAlong(segs, progress) || from;
       if (planeMarker) {
         try { routeLayer.removeLayer(planeMarker); } catch { /* */ }
         try { cityMarkers.removeLayer(planeMarker); } catch { /* */ }
         planeMarker = null;
       }
-      planeMarker = L.marker(pos, {
+      planeMarker = L.marker(planePos, {
         icon: planeIcon(),
         interactive: false,
         keyboard: false,
       }).addTo(routeLayer);
     } else if (current?.latitude != null) {
+      planePos = [current.latitude, current.longitude];
       if (planeMarker) {
         try { routeLayer.removeLayer(planeMarker); } catch { /* */ }
         try { cityMarkers.removeLayer(planeMarker); } catch { /* */ }
         planeMarker = null;
       }
-      planeMarker = L.marker([current.latitude, current.longitude], {
+      planeMarker = L.marker(planePos, {
         icon: planeIcon(),
         interactive: false,
         keyboard: false,
       }).addTo(cityMarkers);
     }
 
+    if (planePos) setFocus(planePos[0], planePos[1]);
+    else if (current?.latitude != null) setFocus(current.latitude, current.longitude);
+
     renderInvites(journey.invitedCities || []);
+    frameOnPlane({ animate: false });
   }
 
   function renderInvites(cities) {
@@ -296,6 +327,8 @@ const PassTheWorldMap = (() => {
     inviteLayer = null;
     cityMarkers = null;
     planeMarker = null;
+    lockedWorldZoom = null;
+    focusLatLng = FALLBACK_CENTER.slice();
   }
 
   return {
@@ -305,6 +338,7 @@ const PassTheWorldMap = (() => {
     renderInvites,
     resetWorldView,
     fitFullWorld,
+    frameOnPlane,
     invalidateSize,
   };
 })();

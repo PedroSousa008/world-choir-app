@@ -374,16 +374,19 @@ const PassTheWorld = (() => {
     const refit = () => {
       if (typeof PassTheWorldMap === 'undefined') return;
       PassTheWorldMap.invalidateSize();
-      PassTheWorldMap.fitFullWorld({ animate: false });
+      // Keep zoomed-out look, always centered on the plane — never jump the card framing.
+      if (typeof PassTheWorldMap.frameOnPlane === 'function') {
+        PassTheWorldMap.frameOnPlane({ animate: false });
+      } else {
+        PassTheWorldMap.fitFullWorld({ animate: false });
+      }
     };
 
-    // Wait for layout to settle after expand/collapse before reframing.
+    // One settle pass after layout, then one confirmation — avoid multi-fitBounds jitter.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         refit();
-        setTimeout(refit, 60);
-        setTimeout(refit, 180);
-        setTimeout(refit, 360);
+        setTimeout(refit, 120);
       });
     });
   }
