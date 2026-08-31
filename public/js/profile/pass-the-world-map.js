@@ -859,6 +859,7 @@ const PassTheWorldMap = (() => {
     originLatLng = null;
     destLatLng = null;
     planeBearing = 0;
+    planeProgress = 0;
     routeCurve = null;
     travelPts = null;
     travelDepartMs = null;
