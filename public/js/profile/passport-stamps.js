@@ -14,6 +14,7 @@ const PassportStamps = (() => {
     GLOBAL_VOICE_MILESTONE: 'GLOBAL_VOICE_MILESTONE',
     GLOBAL_CONTINENT_MILESTONE: 'GLOBAL_CONTINENT_MILESTONE',
     MAP_PIONEER: 'MAP_PIONEER',
+    PROMISE_SUBMITTED: 'PROMISE_SUBMITTED',
     PLEDGE_JOINED: 'PLEDGE_JOINED',
   };
 
@@ -111,6 +112,20 @@ const PassportStamps = (() => {
       displayHeight: 48,
       position: { left: 205, top: 52 },
       revealOrder: 6,
+    },
+    {
+      id: 'world-choir-made-my-promise',
+      title: 'Made My Promise — World Choir',
+      eventId: 'world-choir-2027',
+      imageKey: 'PASSPORT_STAMP_MADE_MY_PROMISE',
+      lockedImageKey: 'PASSPORT_STAMP_MADE_MY_PROMISE_LOCKED',
+      unlockType: UnlockType.PROMISE_SUBMITTED,
+      requiresPledge: true,
+      displayWidth: 95,
+      displayHeight: 60,
+      position: { right: 28, top: 52 },
+      revealOrder: 7,
+      lockedMessage: 'Share your promise to the world after the gathering.',
     },
   ];
 
@@ -210,6 +225,40 @@ const PassportStamps = (() => {
     }
     return typeof WorldChoirConfig !== 'undefined'
       && WorldChoirConfig.isTestForceEveryContinentMilestone?.() === true;
+  }
+
+  function isTestForceMadeMyPromise(stamp) {
+    if (stamp?.id !== 'world-choir-made-my-promise') {
+      return false;
+    }
+    return typeof WorldChoirConfig !== 'undefined'
+      && WorldChoirConfig.isTestForceMadeMyPromise?.() === true;
+  }
+
+  function hasSubmittedPromiseForEvent(eventId, context = {}) {
+    if (typeof context.hasSubmittedPromiseForEvent === 'function') {
+      return context.hasSubmittedPromiseForEvent(eventId) === true;
+    }
+    if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.hasSubmittedPromise) {
+      return WorldChoirDB.hasSubmittedPromise(eventId) === true;
+    }
+    return false;
+  }
+
+  function isEventEndedForStamp(stamp, context = {}) {
+    const currentDate = context.currentDate instanceof Date ? context.currentDate : new Date();
+    const event = getEventById(stamp.eventId);
+
+    if (typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.getEventEnd) {
+      if (event && WorldChoirConfig.ACTIVE_EVENT?.id === stamp.eventId) {
+        return currentDate >= WorldChoirConfig.getEventEnd();
+      }
+    }
+
+    if (!event?.eventDateUTC) return false;
+    const durationMs = (Number(event.songDurationSeconds) || 183) * 1000;
+    const eventEnd = new Date(new Date(event.eventDateUTC).getTime() + durationMs);
+    return currentDate >= eventEnd;
   }
 
   function hasEveryContinent(representedContinents = []) {
@@ -452,6 +501,58 @@ const PassportStamps = (() => {
         hasLocation: eligibility.hasLocation,
         unlockDate: null,
         reason: isPioneer ? 'unlocked' : 'not_map_pioneer',
+      };
+    }
+
+    if (stamp.unlockType === UnlockType.PROMISE_SUBMITTED) {
+      if (isTestForceMadeMyPromise(stamp) || context.forceMadeMyPromise === true) {
+        return {
+          unlocked: true,
+          pledged: eligibility.pledged,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'test_force',
+        };
+      }
+
+      const pledged = eligibility.pledged;
+      const eventEnded = isEventEndedForStamp(stamp, context);
+      const submittedPromise = hasSubmittedPromiseForEvent(stamp.eventId, context);
+
+      if (!eventEnded) {
+        return {
+          unlocked: false,
+          pledged,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'before_event_end',
+        };
+      }
+      if (!pledged) {
+        return {
+          unlocked: false,
+          pledged: false,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'not_pledged',
+        };
+      }
+      if (!submittedPromise) {
+        return {
+          unlocked: false,
+          pledged: true,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'promise_not_submitted',
+        };
+      }
+
+      return {
+        unlocked: true,
+        pledged: true,
+        hasLocation: eligibility.hasLocation,
+        unlockDate: null,
+        reason: 'unlocked',
       };
     }
 

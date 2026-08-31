@@ -17,6 +17,9 @@ const WorldChoirConfig = (() => {
   /** Dev test — treat the every-continent global milestone as reached. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_EVERY_CONTINENT_MILESTONE = false;
 
+  /** Dev test — treat the made-my-promise stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
+  const TEST_FORCE_MADE_MY_PROMISE = false;
+
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
 
@@ -284,6 +287,39 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Passport stamp — "MADE MY PROMISE"
+   * Drop your artwork at: public/images/passport/stamps/made-my-promise.png
+   * Native 1536 × 1024 px (RGBA). Display slot 95 × 60 px, top-right on page 2.
+   * Unlocks after the event when the user shares their promise to the world.
+   */
+  const PASSPORT_STAMP_MADE_MY_PROMISE = {
+    src: 'images/passport/stamps/made-my-promise.png',
+    version: '20260831b',
+    width: 1536,
+    height: 1024,
+    alt: 'Made My Promise — World Choir stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /**
+   * Locked placeholder for the Made My Promise stamp (shown before unlock).
+   * Drop your artwork at: public/images/passport/stamps/made-my-promise-locked.png
+   * Native 1672 × 940 px (RGBA). Same display slot as the unlocked stamp.
+   */
+  const PASSPORT_STAMP_MADE_MY_PROMISE_LOCKED = {
+    src: 'images/passport/stamps/made-my-promise-locked.png',
+    version: '20260831b',
+    width: 1672,
+    height: 940,
+    alt: 'Locked Made My Promise stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -420,6 +456,10 @@ const WorldChoirConfig = (() => {
     return TEST_FORCE_EVERY_CONTINENT_MILESTONE;
   }
 
+  function isTestForceMadeMyPromise() {
+    return TEST_FORCE_MADE_MY_PROMISE;
+  }
+
   function getGlobalEventStatus(now = new Date()) {
     return getGlobalEventState(now);
   }
@@ -516,6 +556,8 @@ const WorldChoirConfig = (() => {
     PASSPORT_STAMP_EVERY_CONTINENT,
     PASSPORT_STAMP_EVERY_CONTINENT_LOCKED,
     PASSPORT_STAMP_MAP_PIONEER,
+    PASSPORT_STAMP_MADE_MY_PROMISE,
+    PASSPORT_STAMP_MADE_MY_PROMISE_LOCKED,
     EventState,
     AppState,
     getEventDate: getEventStart,
@@ -544,6 +586,7 @@ const WorldChoirConfig = (() => {
     isTestForce100CountriesMilestone,
     isTestForce1MillionVoicesMilestone,
     isTestForceEveryContinentMilestone,
+    isTestForceMadeMyPromise,
     getAppState,
     formatEventDate,
     formatEventTime,

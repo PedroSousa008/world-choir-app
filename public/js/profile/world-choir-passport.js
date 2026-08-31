@@ -349,6 +349,7 @@ const WorldChoirPassport = (() => {
         representedContinents: worldStats?.representedContinents ?? [],
         milestones: worldStats?.milestones ?? {},
         isMapPioneer: pledge?.isMapPioneer === true,
+        hasSubmittedPromiseForEvent: (eventId) => WorldChoirDB.hasSubmittedPromise?.(eventId) === true,
         hasPledgedForEvent: (eventId) => WorldChoirDB.hasPledged?.(eventId) === true,
         userHasValidLocation: () => {
           const country = String(userCountry || '').trim();
