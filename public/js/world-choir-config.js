@@ -3,7 +3,7 @@
  */
 const WorldChoirConfig = (() => {
   /** Design preview — unlocks all stamps without real achievement rules. Agent toggles on when reviewing layout. */
-  const PASSPORT_STAMPS_PREVIEW_MODE = true;
+  const PASSPORT_STAMPS_PREVIEW_MODE = false;
 
   /** Dev replay — replays the center-to-corner reveal without saving to localStorage. Agent toggles on when reviewing animation. */
   const PASSPORT_STAMPS_DEV_REPLAY = false;
