@@ -6,8 +6,8 @@
 const PassTheWorldMap = (() => {
   const WORLD_BOUNDS = [[-85, -170], [84, 179]];
   const FALLBACK_CENTER = [41.5518, -8.4229]; // Braga seed
-  const ROUTE_STEPS = 180;
-  const HISTORY_STEPS = 96;
+  const ROUTE_STEPS = 96;
+  const HISTORY_STEPS = 64;
   /** Same blue as active nav tab letter color (--accent-aurora). */
   const ROUTE_BLUE = '#4ec5e8';
 
@@ -18,6 +18,7 @@ const PassTheWorldMap = (() => {
   let cityMarkers = null;
   let planeEl = null;
   let routeSvg = null;
+  let routeGlowEl = null;
   let routePathEl = null;
   let containerId = 'ptw-map';
   let focusLatLng = FALLBACK_CENTER.slice();
@@ -30,37 +31,60 @@ const PassTheWorldMap = (() => {
   let activeRouteSegs = null;
   let travelDepartMs = null;
   let travelArriveMs = null;
+  let destPopupMeta = null;
+  let destMarker = null;
   let serverSkewMs = 0;
   let animRaf = null;
   let lastCenterSync = 0;
   let onProgressCb = null;
+  let etaTimer = null;
 
-  function greatCirclePoints(a, b, steps = 64) {
-    const toRad = (d) => (d * Math.PI) / 180;
-    const toDeg = (r) => (r * 180) / Math.PI;
+  function toRad(d) { return (d * Math.PI) / 180; }
+  function toDeg(r) { return (r * 180) / Math.PI; }
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function destinationPoint(lat, lon, bearingDeg, distanceKm) {
+    const δ = distanceKm / 6371;
+    const θ = toRad(bearingDeg);
+    const φ1 = toRad(lat);
+    const λ1 = toRad(lon);
+    const φ2 = Math.asin(
+      Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ)
+    );
+    const λ2 = λ1 + Math.atan2(
+      Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
+      Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2)
+    );
+    return [toDeg(φ2), ((toDeg(λ2) + 540) % 360) - 180];
+  }
+
+  function normalizeLon(lon) {
+    return ((lon + 540) % 360) - 180;
+  }
+
+  function unwrapLon(base, lon) {
+    let x = lon;
+    while (x - base > 180) x -= 360;
+    while (x - base < -180) x += 360;
+    return x;
+  }
+
+  function bearingDegrees(a, b) {
     const lat1 = toRad(a[0]);
-    const lon1 = toRad(a[1]);
     const lat2 = toRad(b[0]);
-    const lon2 = toRad(b[1]);
-    const d = 2 * Math.asin(Math.sqrt(
-      Math.sin((lat2 - lat1) / 2) ** 2
-      + Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2
-    ));
-    if (!d || Number.isNaN(d)) return [a, b];
-
-    const pts = [];
-    for (let i = 0; i <= steps; i += 1) {
-      const f = i / steps;
-      const A = Math.sin((1 - f) * d) / Math.sin(d);
-      const B = Math.sin(f * d) / Math.sin(d);
-      const x = A * Math.cos(lat1) * Math.cos(lon1) + B * Math.cos(lat2) * Math.cos(lon2);
-      const y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2);
-      const z = A * Math.sin(lat1) + B * Math.sin(lat2);
-      const lat = Math.atan2(z, Math.sqrt(x * x + y * y));
-      const lon = Math.atan2(y, x);
-      pts.push([toDeg(lat), toDeg(lon)]);
-    }
-    return splitAntimeridian(pts);
+    const dLon = toRad(b[1] - a[1]);
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2)
+      - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+    return (toDeg(Math.atan2(y, x)) + 360) % 360;
   }
 
   function splitAntimeridian(points) {
@@ -80,6 +104,37 @@ const PassTheWorldMap = (() => {
     return segments;
   }
 
+  /**
+   * Always-curved route: quadratic Bezier with a gentle perpendicular bulge.
+   * Looks arched even on short hops; stays smooth on long ones.
+   */
+  function curvedRoutePoints(from, to, steps = ROUTE_STEPS) {
+    const lat1 = Number(from[0]);
+    const lon1 = Number(from[1]);
+    const lat2 = Number(to[0]);
+    const lon2raw = Number(to[1]);
+    const lon2 = unwrapLon(lon1, lon2raw);
+
+    const dist = haversineKm(lat1, lon1, lat2, lon2raw);
+    const mid = [(lat1 + lat2) / 2, (lon1 + lon2) / 2];
+    const bearing = bearingDegrees([lat1, lon1], [lat2, lon2]);
+    // ~15% bulge, clamped so world-scale routes stay elegant and short ones still arc.
+    const bulgeKm = Math.min(1500, Math.max(320, dist * 0.15));
+    const controlRaw = destinationPoint(mid[0], mid[1], bearing - 90, bulgeKm);
+    const clon = unwrapLon(lon1, controlRaw[1]);
+    const clat = controlRaw[0];
+
+    const pts = [];
+    for (let i = 0; i <= steps; i += 1) {
+      const t = i / steps;
+      const u = 1 - t;
+      const lat = (u * u * lat1) + (2 * u * t * clat) + (t * t * lat2);
+      const lon = normalizeLon((u * u * lon1) + (2 * u * t * clon) + (t * t * lon2));
+      pts.push([lat, lon]);
+    }
+    return splitAntimeridian(pts);
+  }
+
   function interpolateAlong(segments, progress) {
     const flat = segments.flat();
     if (!flat.length) return null;
@@ -93,18 +148,6 @@ const PassTheWorldMap = (() => {
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
   }
 
-  function bearingDegrees(a, b) {
-    const toRad = (d) => (d * Math.PI) / 180;
-    const toDeg = (r) => (r * 180) / Math.PI;
-    const lat1 = toRad(a[0]);
-    const lat2 = toRad(b[0]);
-    const dLon = toRad(b[1] - a[1]);
-    const y = Math.sin(dLon) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2)
-      - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-    return (toDeg(Math.atan2(y, x)) + 360) % 360;
-  }
-
   function bearingAlong(segments, progress) {
     const flat = segments.flat();
     if (flat.length < 2) return 0;
@@ -116,8 +159,8 @@ const PassTheWorldMap = (() => {
     return L.divIcon({
       className: `ptw-city-icon ptw-city-icon--${kind}`,
       html: '<span class="ptw-city-dot"></span>',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
+      iconSize: kind === 'destination' ? [22, 22] : [14, 14],
+      iconAnchor: kind === 'destination' ? [11, 11] : [7, 7],
     });
   }
 
@@ -139,12 +182,31 @@ const PassTheWorldMap = (() => {
         opacity: style.opacity,
         lineCap: 'round',
         lineJoin: 'round',
-        smoothFactor: 0,
+        smoothFactor: 1.2,
         interactive: false,
         pane: 'ptwOverlay',
         className: style.className || '',
       }).addTo(layer);
     });
+  }
+
+  /** Smooth screen-space path (quadratic midpoints) — continuous stroke, no speckles. */
+  function pointsToSmoothPath(points) {
+    if (!points || points.length < 2) return '';
+    const p = points.map((pt) => ({ x: pt.x, y: pt.y }));
+    let d = `M${p[0].x.toFixed(2)} ${p[0].y.toFixed(2)}`;
+    if (p.length === 2) {
+      d += ` L${p[1].x.toFixed(2)} ${p[1].y.toFixed(2)}`;
+      return d;
+    }
+    for (let i = 1; i < p.length - 1; i += 1) {
+      const midX = (p[i].x + p[i + 1].x) / 2;
+      const midY = (p[i].y + p[i + 1].y) / 2;
+      d += ` Q${p[i].x.toFixed(2)} ${p[i].y.toFixed(2)} ${midX.toFixed(2)} ${midY.toFixed(2)}`;
+    }
+    const last = p[p.length - 1];
+    d += ` T${last.x.toFixed(2)} ${last.y.toFixed(2)}`;
+    return d;
   }
 
   function ensureOverlayEls() {
@@ -155,14 +217,22 @@ const PassTheWorldMap = (() => {
       routeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       routeSvg.classList.add('ptw-route-overlay');
       routeSvg.setAttribute('aria-hidden', 'true');
+
+      routeGlowEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      routeGlowEl.classList.add('ptw-route-overlay__glow');
+      routeGlowEl.setAttribute('fill', 'none');
+      routeGlowEl.setAttribute('stroke', ROUTE_BLUE);
+      routeGlowEl.setAttribute('stroke-linecap', 'round');
+      routeGlowEl.setAttribute('stroke-linejoin', 'round');
+
       routePathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       routePathEl.classList.add('ptw-route-overlay__path');
       routePathEl.setAttribute('fill', 'none');
       routePathEl.setAttribute('stroke', ROUTE_BLUE);
-      routePathEl.setAttribute('stroke-width', '1.5');
       routePathEl.setAttribute('stroke-linecap', 'round');
       routePathEl.setAttribute('stroke-linejoin', 'round');
-      routePathEl.setAttribute('vector-effect', 'non-scaling-stroke');
+
+      routeSvg.appendChild(routeGlowEl);
       routeSvg.appendChild(routePathEl);
       wrap.appendChild(routeSvg);
     }
@@ -184,7 +254,7 @@ const PassTheWorldMap = (() => {
 
   function syncRouteOverlay() {
     ensureOverlayEls();
-    if (!routeSvg || !routePathEl || !map) return;
+    if (!routeSvg || !routePathEl || !routeGlowEl || !map) return;
 
     const size = map.getSize();
     routeSvg.setAttribute('width', String(size.x));
@@ -193,22 +263,28 @@ const PassTheWorldMap = (() => {
 
     if (!activeRouteSegs || !activeRouteSegs.length) {
       routePathEl.setAttribute('d', '');
+      routeGlowEl.setAttribute('d', '');
       routeSvg.style.opacity = '0';
       return;
     }
 
-    const parts = [];
+    const dParts = [];
     activeRouteSegs.forEach((seg) => {
       if (!seg || seg.length < 2) return;
-      seg.forEach((ll, idx) => {
-        const pt = map.latLngToContainerPoint(ll);
-        if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return;
-        parts.push(`${idx === 0 ? 'M' : 'L'}${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`);
-      });
+      const screenPts = [];
+      for (let i = 0; i < seg.length; i += 1) {
+        const pt = map.latLngToContainerPoint(seg[i]);
+        if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y)) continue;
+        screenPts.push(pt);
+      }
+      const d = pointsToSmoothPath(screenPts);
+      if (d) dParts.push(d);
     });
 
-    routePathEl.setAttribute('d', parts.join(' '));
-    routeSvg.style.opacity = parts.length ? '1' : '0';
+    const d = dParts.join(' ');
+    routeGlowEl.setAttribute('d', d);
+    routePathEl.setAttribute('d', d);
+    routeSvg.style.opacity = d ? '1' : '0';
   }
 
   function syncPlaneOverlay() {
@@ -277,7 +353,6 @@ const PassTheWorldMap = (() => {
     }
   }
 
-  /** Default world framing — only on enter / leave / refresh, never while user is zoomed. */
   function frameOnPlane({ animate = false, force = false } = {}) {
     if (!map) return;
     if (userHasZoomed && !force) {
@@ -317,6 +392,82 @@ const PassTheWorldMap = (() => {
     return Math.max(0, Math.min(1, (nowMs() - travelDepartMs) / span));
   }
 
+  function formatEta(arrivalMs) {
+    const ms = Math.max(0, arrivalMs - nowMs());
+    const totalMins = Math.max(0, Math.ceil(ms / 60000));
+    const hours = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    if (hours <= 0) {
+      if (mins <= 1) return '1 minute';
+      return `${mins} minutes`;
+    }
+    if (mins === 0) {
+      return hours === 1 ? '1 hour' : `${hours} hours`;
+    }
+    const hLabel = hours === 1 ? '1 hour' : `${hours} hours`;
+    const mLabel = mins === 1 ? '1 minute' : `${mins} minutes`;
+    return `${hLabel} ${mLabel}`;
+  }
+
+  function destPopupHtml() {
+    if (!destPopupMeta) return '';
+    const city = destPopupMeta.city || 'Destination';
+    const eta = formatEta(destPopupMeta.arrivalMs);
+    return `
+      <div class="ptw-dest-popup">
+        <p class="ptw-dest-popup__city">${city}</p>
+        <p class="ptw-dest-popup__eta">${eta}</p>
+      </div>`;
+  }
+
+  function refreshOpenDestPopup() {
+    if (!destMarker || !destPopupMeta) return;
+    if (!destMarker.isPopupOpen()) return;
+    destMarker.setPopupContent(destPopupHtml());
+  }
+
+  function stopEtaTimer() {
+    if (etaTimer) {
+      clearInterval(etaTimer);
+      etaTimer = null;
+    }
+  }
+
+  function startEtaTimer() {
+    stopEtaTimer();
+    etaTimer = setInterval(refreshOpenDestPopup, 15000);
+  }
+
+  function placeDestinationMarker(latlng, destination, arrivalAt) {
+    destPopupMeta = {
+      city: destination.city || 'Destination',
+      country: destination.country || '',
+      arrivalMs: new Date(arrivalAt).getTime(),
+    };
+
+    destMarker = L.marker(latlng, {
+      icon: cityDotIcon('destination'),
+      interactive: true,
+      keyboard: true,
+      pane: 'ptwInteractive',
+      zIndexOffset: 800,
+    }).addTo(cityMarkers);
+
+    destMarker.bindPopup(destPopupHtml(), {
+      className: 'ptw-dest-popup-wrap',
+      closeButton: false,
+      offset: [0, -8],
+      maxWidth: 200,
+      autoPan: true,
+    });
+
+    destMarker.on('popupopen', () => {
+      destMarker.setPopupContent(destPopupHtml());
+    });
+
+    startEtaTimer();
+  }
+
   function stopTravelAnimation() {
     if (animRaf) {
       cancelAnimationFrame(animRaf);
@@ -332,7 +483,6 @@ const PassTheWorldMap = (() => {
     const pos = interpolateAlong(travelSegs, progress);
     if (pos) {
       setPlane(pos, bearingAlong(travelSegs, progress));
-      // Follow the plane only while still in default world framing.
       if (!userHasZoomed) {
         const t = performance.now();
         if (t - lastCenterSync > 800) {
@@ -371,6 +521,9 @@ const PassTheWorldMap = (() => {
 
   function clearActiveRoute() {
     activeRouteSegs = null;
+    destPopupMeta = null;
+    destMarker = null;
+    stopEtaTimer();
     syncRouteOverlay();
   }
 
@@ -425,6 +578,11 @@ const PassTheWorldMap = (() => {
       pane.style.zIndex = 650;
       pane.style.pointerEvents = 'none';
     }
+    if (!map.getPane('ptwInteractive')) {
+      const pane = map.createPane('ptwInteractive');
+      pane.style.zIndex = 680;
+      pane.style.pointerEvents = 'auto';
+    }
 
     historyLayer = L.layerGroup().addTo(map);
     routeLayer = L.layerGroup().addTo(map);
@@ -458,6 +616,7 @@ const PassTheWorldMap = (() => {
     historyLayer.clearLayers();
     routeLayer.clearLayers();
     cityMarkers.clearLayers();
+    destMarker = null;
 
     for (let i = 1; i < itinerary.length; i += 1) {
       const prev = itinerary[i - 1];
@@ -468,14 +627,14 @@ const PassTheWorldMap = (() => {
         && curr.city === journey.destination.city
         && curr.country === journey.destination.country;
       if (isCurrent) continue;
-      const segs = greatCirclePoints(
+      const segs = curvedRoutePoints(
         [prev.latitude, prev.longitude],
         [curr.latitude, curr.longitude],
         HISTORY_STEPS
       );
       drawArc(segs, {
-        color: 'rgba(78, 197, 232, 0.22)',
-        weight: 0.9,
+        color: 'rgba(78, 197, 232, 0.2)',
+        weight: 1,
         opacity: 1,
         className: 'ptw-route-history',
       }, historyLayer);
@@ -502,18 +661,15 @@ const PassTheWorldMap = (() => {
     ) {
       const from = [journey.origin.latitude, journey.origin.longitude];
       const to = [journey.destination.latitude, journey.destination.longitude];
-      const segs = greatCirclePoints(from, to, ROUTE_STEPS);
+      const segs = curvedRoutePoints(from, to, ROUTE_STEPS);
 
       L.marker(from, {
         icon: cityDotIcon('origin'),
         interactive: false,
         pane: 'ptwOverlay',
       }).addTo(cityMarkers);
-      L.marker(to, {
-        icon: cityDotIcon('destination'),
-        interactive: false,
-        pane: 'ptwOverlay',
-      }).addTo(cityMarkers);
+
+      placeDestinationMarker(to, journey.destination, journey.arrivalAt);
 
       startTravelAnimation(segs, journey.departureAt, journey.arrivalAt);
       const progress = travelProgress();
@@ -538,7 +694,6 @@ const PassTheWorldMap = (() => {
       journey.status === 'INVITATION_OPEN' ? (journey.invitedCities || []) : []
     );
 
-    // Keep the user's zoom if they pinched/double-tapped; only frame on first paint.
     if (!userHasZoomed) {
       frameOnPlane({ animate: false });
     } else {
@@ -569,6 +724,7 @@ const PassTheWorldMap = (() => {
 
   function destroy() {
     stopTravelAnimation();
+    stopEtaTimer();
     if (map) {
       map.off('zoomend move moveend zoom viewreset', syncOverlays);
       map.off('zoomstart', markUserZoom);
@@ -583,11 +739,14 @@ const PassTheWorldMap = (() => {
       routeSvg.remove();
       routeSvg = null;
       routePathEl = null;
+      routeGlowEl = null;
     }
     routeLayer = null;
     historyLayer = null;
     inviteLayer = null;
     cityMarkers = null;
+    destMarker = null;
+    destPopupMeta = null;
     planeLatLng = null;
     planeBearing = 0;
     travelSegs = null;
