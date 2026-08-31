@@ -356,6 +356,13 @@ const PassTheWorld = (() => {
     if (!wrap) return;
     wrap.classList.toggle('is-expanded', expanded);
     document.body.classList.toggle('ptw-map-expanded', expanded);
+
+    const back = document.getElementById('passport-story-back');
+    if (back) {
+      back.hidden = !!expanded;
+      back.setAttribute('aria-hidden', expanded ? 'true' : 'false');
+    }
+
     if (btn) {
       btn.setAttribute(
         'aria-label',
@@ -363,14 +370,21 @@ const PassTheWorld = (() => {
       );
       btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
     }
-    requestAnimationFrame(() => {
+
+    const refit = () => {
       if (typeof PassTheWorldMap === 'undefined') return;
       PassTheWorldMap.invalidateSize();
       PassTheWorldMap.fitFullWorld({ animate: false });
-      setTimeout(() => {
-        PassTheWorldMap.invalidateSize();
-        PassTheWorldMap.fitFullWorld({ animate: false });
-      }, 120);
+    };
+
+    // Wait for layout to settle after expand/collapse before reframing.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        refit();
+        setTimeout(refit, 60);
+        setTimeout(refit, 180);
+        setTimeout(refit, 360);
+      });
     });
   }
 
@@ -641,6 +655,11 @@ const PassTheWorld = (() => {
   function destroy() {
     stopPolling();
     document.body.classList.remove('ptw-map-expanded');
+    const back = document.getElementById('passport-story-back');
+    if (back) {
+      back.hidden = false;
+      back.setAttribute('aria-hidden', 'false');
+    }
     if (root?._ptwKeyHandler) {
       document.removeEventListener('keydown', root._ptwKeyHandler);
       delete root._ptwKeyHandler;

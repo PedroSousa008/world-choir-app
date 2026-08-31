@@ -1507,6 +1507,10 @@
   z-index: 30;
 }
 
+body.ptw-map-expanded #passport-story-back {
+  display: none !important;
+}
+
 .passport-story-host,
 .ptw-card-host {
   position: relative;
@@ -1577,7 +1581,7 @@
 .ptw-map-wrap.is-expanded {
   position: fixed;
   inset: 0;
-  z-index: 120;
+  z-index: 200;
   width: 100%;
   height: 100%;
   max-height: none;

@@ -103,12 +103,13 @@ const PassTheWorldMap = (() => {
   function fitFullWorld({ animate = false } = {}) {
     if (!map) return;
     map.invalidateSize({ animate: false, pan: false });
+    // Stop any in-flight pan/zoom so collapse always lands on the true world frame.
+    if (typeof map.stop === 'function') map.stop();
     map.fitBounds(WORLD_BOUNDS, {
       animate,
       padding: [2, 2],
       maxZoom: 3,
     });
-    // Lock pan at the fitted world framing (do not re-center — that crops poles).
     if (map.getZoom() <= 1.75) {
       map.dragging.disable();
     }
