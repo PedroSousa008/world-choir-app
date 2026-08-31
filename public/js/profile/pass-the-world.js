@@ -211,15 +211,14 @@ const PassTheWorld = (() => {
     const viewer = journey.viewer || {};
 
     if (status === 'TRAVELLING' && journey.destination) {
-      lines.push(`On the way to ${esc(journey.destination.city)}`);
       const prog = journey.progress || {};
       const total = prog.totalKm ?? prog.distanceKm;
       const travelled = prog.travelledKm;
+      let line = `On the way to ${esc(journey.destination.city)}`;
       if (total != null) {
-        lines.push(
-          `<span data-ptw-progress-km>${formatKm(travelled)} of ${formatKm(total)}</span>`
-        );
+        line += ` · <span data-ptw-progress-km>${formatKm(travelled)} of ${formatKm(total)}</span>`;
       }
+      lines.push(line);
       lines.push('Arrives · 15:59 UTC · Next invitation · 16:00 UTC');
       return lines;
     }
