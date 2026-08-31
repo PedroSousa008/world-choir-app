@@ -14,17 +14,19 @@ const FoundationControl = (() => {
   const RETIRED_SECTIONS = new Set(['projects', 'insights', 'updates']);
   const FOUNDATION_TABS = new Set(['page', 'card', 'information']);
   const FOUNDATION_CAUSES = ['Food & Hunger', 'Health', 'Education', 'Humanitarian Aid', 'Environment'];
-  const COUNTRIES = [
-    'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Belgium',
-    'Brazil', 'Canada', 'Chile', 'China', 'Colombia', 'Croatia', 'Czech Republic',
-    'Denmark', 'Egypt', 'Finland', 'France', 'Germany', 'Greece', 'Hungary',
-    'India', 'Indonesia', 'Ireland', 'Israel', 'Italy', 'Japan', 'Kenya',
-    'Mexico', 'Morocco', 'Netherlands', 'New Zealand', 'Nigeria', 'Norway',
-    'Philippines', 'Poland', 'Portugal', 'Romania', 'Russia', 'Saudi Arabia',
-    'Singapore', 'South Africa', 'South Korea', 'Spain', 'Sweden', 'Switzerland',
-    'Thailand', 'Turkey', 'Ukraine', 'United Arab Emirates', 'United Kingdom',
-    'United States', 'Vietnam',
-  ];
+  const COUNTRIES = typeof WorldChoirCountries !== 'undefined'
+    ? WorldChoirCountries.COUNTRIES
+    : [
+      'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Belgium',
+      'Brazil', 'Canada', 'Chile', 'China', 'Colombia', 'Croatia', 'Czech Republic',
+      'Denmark', 'Egypt', 'Finland', 'France', 'Germany', 'Greece', 'Hungary',
+      'India', 'Indonesia', 'Ireland', 'Israel', 'Italy', 'Japan', 'Kenya',
+      'Mexico', 'Morocco', 'Netherlands', 'New Zealand', 'Nigeria', 'Norway',
+      'Philippines', 'Poland', 'Portugal', 'Romania', 'Russia', 'Saudi Arabia',
+      'Singapore', 'South Africa', 'South Korea', 'Spain', 'Sweden', 'Switzerland',
+      'Thailand', 'Turkey', 'Ukraine', 'United Arab Emirates', 'United Kingdom',
+      'United States', 'Vietnam',
+    ];
   const CAUSE_DETAILS = {
     'Food & Hunger': {
       icon: 'food',

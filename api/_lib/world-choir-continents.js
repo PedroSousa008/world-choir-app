@@ -2,63 +2,12 @@
  * World Choir — country → continent mapping for Passport global milestones.
  * Uses the same country names as the pledge country selector.
  */
-const REQUIRED_CONTINENTS = ['africa', 'america', 'asia', 'europe', 'oceania'];
+const {
+  continents: COUNTRY_TO_CONTINENT,
+  legacyContinentAliases = {},
+} = require('../../public/data/world-choir-countries.json');
 
-const COUNTRY_TO_CONTINENT = {
-  Afghanistan: 'asia',
-  Albania: 'europe',
-  Algeria: 'africa',
-  Argentina: 'america',
-  Australia: 'oceania',
-  Austria: 'europe',
-  Belgium: 'europe',
-  Brazil: 'america',
-  Canada: 'america',
-  Chile: 'america',
-  China: 'asia',
-  Colombia: 'america',
-  Croatia: 'europe',
-  'Czech Republic': 'europe',
-  Denmark: 'europe',
-  Egypt: 'africa',
-  Finland: 'europe',
-  France: 'europe',
-  Germany: 'europe',
-  Greece: 'europe',
-  Hungary: 'europe',
-  India: 'asia',
-  Indonesia: 'asia',
-  Ireland: 'europe',
-  Israel: 'asia',
-  Italy: 'europe',
-  Japan: 'asia',
-  Kenya: 'africa',
-  Mexico: 'america',
-  Morocco: 'africa',
-  Netherlands: 'europe',
-  'New Zealand': 'oceania',
-  Nigeria: 'africa',
-  Norway: 'europe',
-  Philippines: 'asia',
-  Poland: 'europe',
-  Portugal: 'europe',
-  Romania: 'europe',
-  Russia: 'europe',
-  'Saudi Arabia': 'asia',
-  Singapore: 'asia',
-  'South Africa': 'africa',
-  'South Korea': 'asia',
-  Spain: 'europe',
-  Sweden: 'europe',
-  Switzerland: 'europe',
-  Thailand: 'asia',
-  Turkey: 'europe',
-  Ukraine: 'europe',
-  'United Arab Emirates': 'asia',
-  'United Kingdom': 'europe',
-  'United States': 'america',
-  Vietnam: 'asia',
-};
+const REQUIRED_CONTINENTS = ['africa', 'america', 'asia', 'europe', 'oceania'];
 
 const NORMALIZED_COUNTRY_TO_CONTINENT = Object.fromEntries(
   Object.entries(COUNTRY_TO_CONTINENT).map(([country, continent]) => [
@@ -66,6 +15,10 @@ const NORMALIZED_COUNTRY_TO_CONTINENT = Object.fromEntries(
     continent,
   ])
 );
+
+Object.entries(legacyContinentAliases).forEach(([country, continent]) => {
+  NORMALIZED_COUNTRY_TO_CONTINENT[country] = continent;
+});
 
 function getContinentForCountry(country) {
   const key = String(country || '').trim().toLowerCase();

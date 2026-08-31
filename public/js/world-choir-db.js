@@ -386,7 +386,10 @@ const WorldChoirDB = (() => {
   }
 
   async function geocodeCityCountry(city, country) {
-    const q = encodeURIComponent(`${city}, ${country}`);
+    const geocodeCountry = typeof WorldChoirCountries !== 'undefined'
+      ? WorldChoirCountries.getGeocodeCountry(country)
+      : country;
+    const q = encodeURIComponent(`${city}, ${geocodeCountry}`);
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`,
       { headers: { Accept: 'application/json' } }

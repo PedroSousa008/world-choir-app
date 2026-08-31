@@ -2,7 +2,7 @@
  * ChangeLocationModal — manual city/country selection (no GPS)
  */
 const ChangeLocationModal = (() => {
-  const COUNTRIES = WorldChoirParticipation?.COUNTRIES || [
+  const COUNTRIES = WorldChoirCountries?.COUNTRIES || WorldChoirParticipation?.COUNTRIES || [
     'Portugal', 'United Kingdom', 'United States', 'Spain', 'France', 'Germany',
     'Brazil', 'Canada', 'Australia', 'Japan',
   ];
@@ -14,12 +14,16 @@ const ChangeLocationModal = (() => {
   function populateCountries() {
     const sel = document.getElementById('location-country');
     if (!sel || countriesPopulated) return;
-    COUNTRIES.forEach((c) => {
-      const opt = document.createElement('option');
-      opt.value = c;
-      opt.textContent = c;
-      sel.appendChild(opt);
-    });
+    if (typeof WorldChoirCountries !== 'undefined') {
+      WorldChoirCountries.populateCountrySelect(sel);
+    } else {
+      COUNTRIES.forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        sel.appendChild(opt);
+      });
+    }
     countriesPopulated = true;
   }
 

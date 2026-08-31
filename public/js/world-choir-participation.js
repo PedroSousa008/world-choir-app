@@ -2,17 +2,7 @@
  * World Choir — Shared participation modal (Home + Map)
  */
 const WorldChoirParticipation = (() => {
-  const COUNTRIES = [
-    'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Belgium',
-    'Brazil', 'Canada', 'Chile', 'China', 'Colombia', 'Croatia', 'Czech Republic',
-    'Denmark', 'Egypt', 'Finland', 'France', 'Germany', 'Greece', 'Hungary',
-    'India', 'Indonesia', 'Ireland', 'Israel', 'Italy', 'Japan', 'Kenya',
-    'Mexico', 'Morocco', 'Netherlands', 'New Zealand', 'Nigeria', 'Norway',
-    'Philippines', 'Poland', 'Portugal', 'Romania', 'Russia', 'Saudi Arabia',
-    'Singapore', 'South Africa', 'South Korea', 'Spain', 'Sweden', 'Switzerland',
-    'Thailand', 'Turkey', 'Ukraine', 'United Arab Emirates', 'United Kingdom',
-    'United States', 'Vietnam',
-  ];
+  const COUNTRIES = WorldChoirCountries?.COUNTRIES || [];
 
   let onSuccessCallback = null;
   let countriesPopulated = false;
@@ -20,12 +10,16 @@ const WorldChoirParticipation = (() => {
   function populateCountries() {
     const sel = document.getElementById('pledge-country');
     if (!sel || countriesPopulated) return;
-    COUNTRIES.forEach((c) => {
-      const opt = document.createElement('option');
-      opt.value = c;
-      opt.textContent = c;
-      sel.appendChild(opt);
-    });
+    if (typeof WorldChoirCountries !== 'undefined') {
+      WorldChoirCountries.populateCountrySelect(sel);
+    } else {
+      COUNTRIES.forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        sel.appendChild(opt);
+      });
+    }
     countriesPopulated = true;
   }
 
