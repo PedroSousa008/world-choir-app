@@ -35,6 +35,9 @@ const WorldChoirConfig = (() => {
   /** Dev test — treat the peace-explorer stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_PEACE_EXPLORER = false;
 
+  /** Dev test — treat the 1-year stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
+  const TEST_FORCE_1_YEAR = false;
+
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
 
@@ -500,6 +503,39 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Passport stamp — "1 YEAR"
+   * Drop your artwork at: public/images/passport/stamps/1-year.png
+   * Native 1312 × 1199 px (RGBA). Display slot 85 × 85 px on page 2.
+   * Unlocks when 365 calendar days have passed since the user pledged.
+   */
+  const PASSPORT_STAMP_1_YEAR = {
+    src: 'images/passport/stamps/1-year.png',
+    version: '20260901d',
+    width: 1312,
+    height: 1199,
+    alt: '1 Year — World Choir stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /**
+   * Locked placeholder for the 1 Year stamp (shown before unlock).
+   * Drop your artwork at: public/images/passport/stamps/1-year-locked.png
+   * Native 1224 × 1285 px (RGBA). Same display slot as the unlocked stamp.
+   */
+  const PASSPORT_STAMP_1_YEAR_LOCKED = {
+    src: 'images/passport/stamps/1-year-locked.png',
+    version: '20260901d',
+    width: 1224,
+    height: 1285,
+    alt: 'Locked 1 Year stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -660,6 +696,10 @@ const WorldChoirConfig = (() => {
     return TEST_FORCE_PEACE_EXPLORER;
   }
 
+  function isTestForce1Year() {
+    return TEST_FORCE_1_YEAR;
+  }
+
   function getGlobalEventStatus(now = new Date()) {
     return getGlobalEventState(now);
   }
@@ -768,6 +808,8 @@ const WorldChoirConfig = (() => {
     PASSPORT_STAMP_405_COMPLETED_LOCKED,
     PASSPORT_STAMP_PEACE_EXPLORER,
     PASSPORT_STAMP_PEACE_EXPLORER_LOCKED,
+    PASSPORT_STAMP_1_YEAR,
+    PASSPORT_STAMP_1_YEAR_LOCKED,
     EventState,
     AppState,
     getEventDate: getEventStart,
@@ -802,6 +844,7 @@ const WorldChoirConfig = (() => {
     isTestForceDailyActPartner,
     isTestForce405Completed,
     isTestForcePeaceExplorer,
+    isTestForce1Year,
     getAppState,
     formatEventDate,
     formatEventTime,

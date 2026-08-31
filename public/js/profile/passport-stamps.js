@@ -20,11 +20,13 @@ const PassportStamps = (() => {
     DAILY_ACT_PARTNER_COMPLETED: 'DAILY_ACT_PARTNER_COMPLETED',
     DAILY_ACTS_405_COMPLETED: 'DAILY_ACTS_405_COMPLETED',
     PEACE_EXPLORER: 'PEACE_EXPLORER',
+    PLEDGE_ANNIVERSARY_1_YEAR: 'PLEDGE_ANNIVERSARY_1_YEAR',
     PLEDGE_JOINED: 'PLEDGE_JOINED',
   };
 
   const REQUIRED_DAILY_ACTS_405_COUNT = 405;
   const REQUIRED_PEACE_THEME_COUNT = 8;
+  const REQUIRED_PLEDGE_DAYS_1_YEAR = 365;
 
   const MAJOR_CITY_VOICE_THRESHOLD = 50_000;
 
@@ -211,6 +213,21 @@ const PassportStamps = (() => {
       revealOrder: 12,
       lockedMessage: 'Complete a Daily Act of Peace in every peace theme to unlock this stamp.',
     },
+    {
+      id: 'world-choir-1-year',
+      title: '1 Year — World Choir',
+      eventId: 'world-choir-2027',
+      imageKey: 'PASSPORT_STAMP_1_YEAR',
+      lockedImageKey: 'PASSPORT_STAMP_1_YEAR_LOCKED',
+      unlockType: UnlockType.PLEDGE_ANNIVERSARY_1_YEAR,
+      requiredPledgeDays: REQUIRED_PLEDGE_DAYS_1_YEAR,
+      requiresPledge: true,
+      displayWidth: 85,
+      displayHeight: 85,
+      position: { right: 5, top: 180 },
+      revealOrder: 13,
+      lockedMessage: 'Stay pledged for 365 days to unlock this stamp.',
+    },
   ];
 
   function resolveStampImage(stamp, { unlocked = false } = {}) {
@@ -359,6 +376,14 @@ const PassportStamps = (() => {
       && WorldChoirConfig.isTestForcePeaceExplorer?.() === true;
   }
 
+  function isTestForce1Year(stamp) {
+    if (stamp?.id !== 'world-choir-1-year') {
+      return false;
+    }
+    return typeof WorldChoirConfig !== 'undefined'
+      && WorldChoirConfig.isTestForce1Year?.() === true;
+  }
+
   function hasSupportedCreatorCause(context = {}) {
     if (context.hasSupportedCreatorCause === true) return true;
     if (typeof context.hasSupportedCreatorCause === 'function') {
@@ -395,6 +420,29 @@ const PassportStamps = (() => {
     const required = Number(stamp?.requiredThemeCount) || REQUIRED_PEACE_THEME_COUNT;
     const experienced = Number(context.themesExperienced ?? context.categoriesExperienced) || 0;
     return experienced >= required;
+  }
+
+  function resolvePledgedAt(context = {}) {
+    if (typeof context.pledgedAt === 'function') {
+      return context.pledgedAt();
+    }
+    return context.pledgedAt || null;
+  }
+
+  function getPledgeAnniversaryUnlockCalendarDate(stamp, context = {}) {
+    const pledgedAt = resolvePledgedAt(context);
+    if (!pledgedAt) return null;
+    const pledgedDate = pledgedAt instanceof Date ? pledgedAt : new Date(pledgedAt);
+    if (Number.isNaN(pledgedDate.getTime())) return null;
+    const days = Number(stamp?.requiredPledgeDays) || REQUIRED_PLEDGE_DAYS_1_YEAR;
+    return addCalendarDays(getUtcCalendarDate(pledgedDate), days);
+  }
+
+  function hasReachedPledgeAnniversary(stamp, context = {}) {
+    const unlockCalendarDate = getPledgeAnniversaryUnlockCalendarDate(stamp, context);
+    if (!unlockCalendarDate) return false;
+    const currentDate = context.currentDate instanceof Date ? context.currentDate : new Date();
+    return compareCalendarDates(getUtcCalendarDate(currentDate), unlockCalendarDate) >= 0;
   }
 
   function normalizeCityKey(city, country) {
@@ -882,6 +930,48 @@ const PassportStamps = (() => {
         hasLocation: eligibility.hasLocation,
         unlockDate: null,
         reason: exploredAllThemes ? 'unlocked' : 'peace_themes_incomplete',
+      };
+    }
+
+    if (stamp.unlockType === UnlockType.PLEDGE_ANNIVERSARY_1_YEAR) {
+      if (isTestForce1Year(stamp) || context.force1Year === true) {
+        return {
+          unlocked: true,
+          pledged: eligibility.pledged,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'test_force',
+        };
+      }
+
+      if (!eligibility.pledged) {
+        return {
+          unlocked: false,
+          pledged: false,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'not_pledged',
+        };
+      }
+
+      const unlockCalendarDate = getPledgeAnniversaryUnlockCalendarDate(stamp, context);
+      if (!unlockCalendarDate) {
+        return {
+          unlocked: false,
+          pledged: true,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'no_pledge_date',
+        };
+      }
+
+      const anniversaryReached = hasReachedPledgeAnniversary(stamp, context);
+      return {
+        unlocked: anniversaryReached,
+        pledged: true,
+        hasLocation: eligibility.hasLocation,
+        unlockDate: new Date(calendarDateToTimestamp(unlockCalendarDate)),
+        reason: anniversaryReached ? 'unlocked' : 'before_pledge_anniversary',
       };
     }
 

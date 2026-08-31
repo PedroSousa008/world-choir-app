@@ -437,6 +437,7 @@ const WorldChoirPassport = (() => {
         hasCompletedAllPeaceThemes,
         themesExperienced: Number(dailyPeaceImpact?.themesExperienced ?? dailyPeaceImpact?.categoriesExperienced) || 0,
         dailyActsCompleted,
+        pledgedAt: pledge?.pledged_at || user.created_at || null,
       })
       : [];
 
