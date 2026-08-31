@@ -172,7 +172,7 @@ const PassportStamps = (() => {
       requiresPledge: false,
       displayWidth: 90,
       displayHeight: 60,
-      position: { right: 5, top: 180 },
+      position: { left: 15, top: 120 },
       revealOrder: 10,
       lockedMessage: 'Complete a partner-backed Daily Act of Peace to unlock this stamp.',
     },
