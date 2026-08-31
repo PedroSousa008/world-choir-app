@@ -694,7 +694,7 @@ body.passport-stamp-zoom-active {
 }
 
 body.passport-stamp-zoom-active .passport-zoom-root {
-  transition: transform 2.5s cubic-bezier(0.34, 1.08, 0.42, 1);
+  transition: transform 2s cubic-bezier(0.34, 1.08, 0.42, 1);
   will-change: transform;
   pointer-events: none;
 }
@@ -703,14 +703,12 @@ body.passport-stamp-zoom-active .passport-zoom-root {
   position: fixed;
   inset: 0;
   z-index: 12000;
-  background: rgba(12, 18, 32, 0);
+  background: transparent;
   pointer-events: none;
-  transition: background-color 2.5s ease;
 }
 
 .passport-stamp-inspect.is-open {
-  background: rgba(12, 18, 32, 0.42);
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .passport-stamp-inspect__close {
@@ -731,7 +729,7 @@ body.passport-stamp-zoom-active .passport-zoom-root {
   opacity: 0;
   transform: scale(0.9);
   pointer-events: none;
-  transition: opacity 220ms ease 2.3s, transform 220ms cubic-bezier(0.22, 1, 0.36, 1) 2.3s;
+  transition: opacity 220ms ease 1.8s, transform 220ms cubic-bezier(0.22, 1, 0.36, 1) 1.8s;
 }
 
 .passport-stamp-inspect.is-settled .passport-stamp-inspect__close {

@@ -833,7 +833,7 @@ const PassportStamps = (() => {
   let inspectKeyHandler = null;
   let inspectFocusReturn = null;
 
-  const INSPECT_FLIGHT_MS = 2500;
+  const INSPECT_FLIGHT_MS = 2000;
 
   function getZoomRoot() {
     return document.getElementById('passport-zoom-root') || document.body;
@@ -846,8 +846,8 @@ const PassportStamps = (() => {
 
   function getInspectTargetSize(card) {
     const cardRect = card?.getBoundingClientRect?.();
-    if (cardRect?.width) return Math.min(cardRect.width * 0.58, 240);
-    return Math.min(window.innerWidth * 0.58, 240);
+    if (cardRect?.width) return Math.min(cardRect.width * 0.82, 340);
+    return Math.min(window.innerWidth * 0.82, 340);
   }
 
   function computeZoomTransform(stampEl, card) {
