@@ -14,6 +14,9 @@ const WorldChoirConfig = (() => {
   /** Dev test — treat the 1-million-voices global milestone as reached. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_1_MILLION_VOICES_MILESTONE = false;
 
+  /** Dev test — treat the every-continent global milestone as reached. Agent toggles on to test stamp unlock/reveal. */
+  const TEST_FORCE_EVERY_CONTINENT_MILESTONE = false;
+
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
 
@@ -232,6 +235,38 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Passport stamp — "EVERY CONTINENT"
+   * Drop your artwork at: public/images/passport/stamps/every-continent.png
+   * Native 1586 × 992 px (RGBA). Display slot 120 × 75 px, top-center on page 2.
+   */
+  const PASSPORT_STAMP_EVERY_CONTINENT = {
+    src: 'images/passport/stamps/every-continent.png',
+    version: '20260831a',
+    width: 1586,
+    height: 992,
+    alt: 'Every Continent — World Choir stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /**
+   * Locked placeholder for the Every Continent stamp (shown before unlock).
+   * Drop your artwork at: public/images/passport/stamps/every-continent-locked.png
+   * Native 1586 × 992 px (RGBA). Same display slot as the unlocked stamp.
+   */
+  const PASSPORT_STAMP_EVERY_CONTINENT_LOCKED = {
+    src: 'images/passport/stamps/every-continent-locked.png',
+    version: '20260831a',
+    width: 1586,
+    height: 992,
+    alt: 'Locked Every Continent stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -364,6 +399,10 @@ const WorldChoirConfig = (() => {
     return TEST_FORCE_1_MILLION_VOICES_MILESTONE;
   }
 
+  function isTestForceEveryContinentMilestone() {
+    return TEST_FORCE_EVERY_CONTINENT_MILESTONE;
+  }
+
   function getGlobalEventStatus(now = new Date()) {
     return getGlobalEventState(now);
   }
@@ -457,6 +496,8 @@ const WorldChoirConfig = (() => {
     PASSPORT_STAMP_YOUR_VOICE_JOINED_LOCKED,
     PASSPORT_STAMP_1_MILLION_VOICES,
     PASSPORT_STAMP_1_MILLION_VOICES_LOCKED,
+    PASSPORT_STAMP_EVERY_CONTINENT,
+    PASSPORT_STAMP_EVERY_CONTINENT_LOCKED,
     EventState,
     AppState,
     getEventDate: getEventStart,
@@ -484,6 +525,7 @@ const WorldChoirConfig = (() => {
     isPassportStampsDevReplay,
     isTestForce100CountriesMilestone,
     isTestForce1MillionVoicesMilestone,
+    isTestForceEveryContinentMilestone,
     getAppState,
     formatEventDate,
     formatEventTime,

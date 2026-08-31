@@ -12,8 +12,11 @@ const PassportStamps = (() => {
     EVENT_PARTICIPATION_COMPLETED: 'EVENT_PARTICIPATION_COMPLETED',
     GLOBAL_COUNTRY_MILESTONE: 'GLOBAL_COUNTRY_MILESTONE',
     GLOBAL_VOICE_MILESTONE: 'GLOBAL_VOICE_MILESTONE',
+    GLOBAL_CONTINENT_MILESTONE: 'GLOBAL_CONTINENT_MILESTONE',
     PLEDGE_JOINED: 'PLEDGE_JOINED',
   };
+
+  const REQUIRED_CONTINENTS = ['africa', 'america', 'asia', 'europe', 'oceania'];
 
   /**
    * Stamp registry — add future stamps here.
@@ -78,6 +81,21 @@ const PassportStamps = (() => {
       displayHeight: 110,
       position: { left: 105, bottom: 200 },
       revealOrder: 4,
+      lockedMessage: 'A global milestone is waiting to be reached.',
+    },
+    {
+      id: 'world-choir-every-continent',
+      title: 'Every Continent — World Choir',
+      eventId: 'world-choir-2027',
+      imageKey: 'PASSPORT_STAMP_EVERY_CONTINENT',
+      lockedImageKey: 'PASSPORT_STAMP_EVERY_CONTINENT_LOCKED',
+      unlockType: UnlockType.GLOBAL_CONTINENT_MILESTONE,
+      milestoneId: 'every-continent',
+      requiresPledge: true,
+      displayWidth: 120,
+      displayHeight: 75,
+      position: { left: 126, top: 118 },
+      revealOrder: 5,
       lockedMessage: 'A global milestone is waiting to be reached.',
     },
   ];
@@ -172,6 +190,23 @@ const PassportStamps = (() => {
       && WorldChoirConfig.isTestForce1MillionVoicesMilestone?.() === true;
   }
 
+  function isTestForceEveryContinentMilestone(stamp) {
+    if (stamp?.milestoneId !== 'every-continent' && stamp?.id !== 'world-choir-every-continent') {
+      return false;
+    }
+    return typeof WorldChoirConfig !== 'undefined'
+      && WorldChoirConfig.isTestForceEveryContinentMilestone?.() === true;
+  }
+
+  function hasEveryContinent(representedContinents = []) {
+    const set = new Set(
+      representedContinents
+        .map((continent) => String(continent || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+    return REQUIRED_CONTINENTS.every((continent) => set.has(continent));
+  }
+
   function userHasValidLocation(context = {}) {
     if (typeof context.userHasValidLocation === 'function') {
       return context.userHasValidLocation() === true;
@@ -214,6 +249,18 @@ const PassportStamps = (() => {
 
     const required = Number(stamp.requiredVoiceCount) || 1_000_000;
     return (Number(context.voiceCount) || 0) >= required;
+  }
+
+  function isGlobalContinentMilestoneReached(stamp, context = {}) {
+    if (isTestForceEveryContinentMilestone(stamp) || context.forceEveryContinentMilestone === true) {
+      return true;
+    }
+
+    const milestoneId = stamp.milestoneId || 'every-continent';
+    const milestone = context.milestones?.[milestoneId];
+    if (milestone?.reached === true) return true;
+
+    return hasEveryContinent(context.representedContinents || []);
   }
 
   function evaluateStampUnlock(stamp, context = {}) {
@@ -314,6 +361,37 @@ const PassportStamps = (() => {
 
     if (stamp.unlockType === UnlockType.GLOBAL_VOICE_MILESTONE) {
       const milestoneReached = isGlobalVoiceMilestoneReached(stamp, context);
+
+      if (!milestoneReached) {
+        return {
+          unlocked: false,
+          pledged: eligibility.pledged,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'milestone_not_reached',
+        };
+      }
+      if (!eligibility.pledged) {
+        return {
+          unlocked: false,
+          pledged: false,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'not_pledged',
+        };
+      }
+
+      return {
+        unlocked: true,
+        pledged: true,
+        hasLocation: eligibility.hasLocation,
+        unlockDate: null,
+        reason: 'unlocked',
+      };
+    }
+
+    if (stamp.unlockType === UnlockType.GLOBAL_CONTINENT_MILESTONE) {
+      const milestoneReached = isGlobalContinentMilestoneReached(stamp, context);
 
       if (!milestoneReached) {
         return {

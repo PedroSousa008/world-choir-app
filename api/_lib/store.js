@@ -669,6 +669,12 @@ async function buildOwnerDatabaseRows() {
   return assembleOwnerDatabaseRows(users, pledges, promises);
 }
 
+const {
+  REQUIRED_CONTINENTS,
+  hasEveryContinent,
+  computeRepresentedContinentsFromPledges,
+} = require('./world-choir-continents');
+
 const GLOBAL_MILESTONES = [
   { id: '100-countries', metric: 'countries', threshold: 100 },
   { id: '1-million-voices', metric: 'voices', threshold: 1_000_000 },
@@ -695,11 +701,14 @@ function computeWorldChoirStatsFromPledges(pledges) {
   const countries = new Set(
     withLocation.map((p) => normalizeCountryKey(p.country)).filter(Boolean)
   );
+  const representedContinents = computeRepresentedContinentsFromPledges(unique);
 
   return {
     voices: unique.length,
     cities: cities.size,
     countries: countries.size,
+    continents: representedContinents.length,
+    representedContinents,
   };
 }
 
@@ -742,6 +751,33 @@ async function ensureCountMilestone(eventId, milestoneId, threshold, currentCoun
   return record;
 }
 
+async function ensureEveryContinentMilestone(eventId, representedContinents) {
+  const milestoneId = 'every-continent';
+  const existing = await readMilestoneRecord(eventId, milestoneId);
+  if (existing?.reached) return existing;
+
+  if (!hasEveryContinent(representedContinents)) {
+    return {
+      id: milestoneId,
+      reached: false,
+      reachedAt: null,
+      continentsAtReach: null,
+      representedContinentsAtReach: representedContinents,
+    };
+  }
+
+  const record = {
+    id: milestoneId,
+    reached: true,
+    reachedAt: new Date().toISOString(),
+    continentsAtReach: [...REQUIRED_CONTINENTS],
+    representedContinentsAtReach: representedContinents,
+  };
+
+  await writeJson(milestoneBlobPath(eventId, milestoneId), record, { overwrite: true });
+  return record;
+}
+
 async function refreshEventMilestones(eventId) {
   const pledges = await listPledges(eventId);
   const stats = computeWorldChoirStatsFromPledges(pledges);
@@ -770,6 +806,18 @@ async function refreshEventMilestones(eventId) {
     };
   }
 
+  const continentRecord = await ensureEveryContinentMilestone(
+    eventId,
+    stats.representedContinents || []
+  );
+  milestones['every-continent'] = {
+    reached: !!continentRecord.reached,
+    reachedAt: continentRecord.reachedAt || null,
+    requiredContinents: REQUIRED_CONTINENTS,
+    representedContinents: stats.representedContinents || [],
+    continentsAtReach: continentRecord.continentsAtReach || null,
+  };
+
   return { stats, milestones };
 }
 
@@ -784,6 +832,8 @@ async function getWorldChoirStats(eventId) {
     voices: stats.voices,
     cities: stats.cities,
     countries: stats.countries,
+    continents: stats.continents,
+    representedContinents: stats.representedContinents,
     milestones,
   };
 }
