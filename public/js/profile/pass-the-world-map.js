@@ -1,13 +1,15 @@
 /**
  * Pass the World — map layer (same basemap as Map tab, no city pins).
- * Plane is an HTML overlay above Leaflet/MapLibre so it always stays visible.
- * While travelling, position is animated live along the great-circle route.
+ * Plane + active route are HTML/SVG overlays above Leaflet/MapLibre.
+ * World framing resets only on mount / leave / refresh — user zoom is kept.
  */
 const PassTheWorldMap = (() => {
   const WORLD_BOUNDS = [[-85, -170], [84, 179]];
   const FALLBACK_CENTER = [41.5518, -8.4229]; // Braga seed
-  const ROUTE_STEPS = 160;
+  const ROUTE_STEPS = 180;
   const HISTORY_STEPS = 96;
+  /** Same blue as active nav tab letter color (--accent-aurora). */
+  const ROUTE_BLUE = '#4ec5e8';
 
   let map = null;
   let routeLayer = null;
@@ -15,13 +17,17 @@ const PassTheWorldMap = (() => {
   let inviteLayer = null;
   let cityMarkers = null;
   let planeEl = null;
+  let routeSvg = null;
+  let routePathEl = null;
   let containerId = 'ptw-map';
   let focusLatLng = FALLBACK_CENTER.slice();
   let planeLatLng = null;
   let planeBearing = 0;
   let lockedWorldZoom = null;
+  let userHasZoomed = false;
 
   let travelSegs = null;
+  let activeRouteSegs = null;
   let travelDepartMs = null;
   let travelArriveMs = null;
   let serverSkewMs = 0;
@@ -141,35 +147,88 @@ const PassTheWorldMap = (() => {
     });
   }
 
-  function ensurePlaneEl() {
+  function ensureOverlayEls() {
     const wrap = document.getElementById(containerId)?.parentElement;
     if (!wrap) return null;
-    if (planeEl && planeEl.isConnected) return planeEl;
-    planeEl = document.createElement('div');
-    planeEl.className = 'ptw-plane-overlay';
-    planeEl.setAttribute('aria-hidden', 'true');
-    planeEl.innerHTML = `
-      <span class="ptw-plane-overlay__glow"></span>
-      <svg class="ptw-plane-overlay__icon" viewBox="0 0 24 24" width="18" height="18" focusable="false">
-        <path fill="currentColor" d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
-      </svg>`;
-    wrap.appendChild(planeEl);
-    return planeEl;
+
+    if (!routeSvg || !routeSvg.isConnected) {
+      routeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      routeSvg.classList.add('ptw-route-overlay');
+      routeSvg.setAttribute('aria-hidden', 'true');
+      routePathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      routePathEl.classList.add('ptw-route-overlay__path');
+      routePathEl.setAttribute('fill', 'none');
+      routePathEl.setAttribute('stroke', ROUTE_BLUE);
+      routePathEl.setAttribute('stroke-width', '1.5');
+      routePathEl.setAttribute('stroke-linecap', 'round');
+      routePathEl.setAttribute('stroke-linejoin', 'round');
+      routePathEl.setAttribute('vector-effect', 'non-scaling-stroke');
+      routeSvg.appendChild(routePathEl);
+      wrap.appendChild(routeSvg);
+    }
+
+    if (!planeEl || !planeEl.isConnected) {
+      planeEl = document.createElement('div');
+      planeEl.className = 'ptw-plane-overlay';
+      planeEl.setAttribute('aria-hidden', 'true');
+      planeEl.innerHTML = `
+        <span class="ptw-plane-overlay__glow"></span>
+        <svg class="ptw-plane-overlay__icon" viewBox="0 0 24 24" width="18" height="18" focusable="false">
+          <path fill="currentColor" d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+        </svg>`;
+      wrap.appendChild(planeEl);
+    }
+
+    return wrap;
+  }
+
+  function syncRouteOverlay() {
+    ensureOverlayEls();
+    if (!routeSvg || !routePathEl || !map) return;
+
+    const size = map.getSize();
+    routeSvg.setAttribute('width', String(size.x));
+    routeSvg.setAttribute('height', String(size.y));
+    routeSvg.setAttribute('viewBox', `0 0 ${size.x} ${size.y}`);
+
+    if (!activeRouteSegs || !activeRouteSegs.length) {
+      routePathEl.setAttribute('d', '');
+      routeSvg.style.opacity = '0';
+      return;
+    }
+
+    const parts = [];
+    activeRouteSegs.forEach((seg) => {
+      if (!seg || seg.length < 2) return;
+      seg.forEach((ll, idx) => {
+        const pt = map.latLngToContainerPoint(ll);
+        if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return;
+        parts.push(`${idx === 0 ? 'M' : 'L'}${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`);
+      });
+    });
+
+    routePathEl.setAttribute('d', parts.join(' '));
+    routeSvg.style.opacity = parts.length ? '1' : '0';
   }
 
   function syncPlaneOverlay() {
-    const el = ensurePlaneEl();
-    if (!el || !map || !planeLatLng) {
-      if (el) el.style.opacity = '0';
+    ensureOverlayEls();
+    if (!planeEl || !map || !planeLatLng) {
+      if (planeEl) planeEl.style.opacity = '0';
       return;
     }
     const pt = map.latLngToContainerPoint(planeLatLng);
     if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y)) {
-      el.style.opacity = '0';
+      planeEl.style.opacity = '0';
       return;
     }
-    el.style.opacity = '1';
-    el.style.transform = `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px) rotate(${planeBearing}deg)`;
+    planeEl.style.opacity = '1';
+    planeEl.style.transform = `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px) rotate(${planeBearing}deg)`;
+  }
+
+  function syncOverlays() {
+    syncRouteOverlay();
+    syncPlaneOverlay();
   }
 
   function setPlane(latlng, bearing = 0) {
@@ -200,27 +259,6 @@ const PassTheWorldMap = (() => {
     return z;
   }
 
-  function frameOnPlane({ animate = false } = {}) {
-    if (!map) return;
-    map.invalidateSize({ animate: false, pan: false });
-    if (typeof map.stop === 'function') map.stop();
-
-    const zoom = resolveWorldZoom();
-    const center = focusLatLng || FALLBACK_CENTER;
-    map.setView(center, zoom, { animate: !!animate, reset: true });
-    syncPlaneOverlay();
-
-    if (map.getZoom() <= 1.85) {
-      map.dragging.disable();
-    } else {
-      map.dragging.enable();
-    }
-  }
-
-  function fitFullWorld(opts) {
-    frameOnPlane(opts);
-  }
-
   function syncInteraction() {
     if (!map) return;
     if (map.getZoom() <= 1.85) {
@@ -228,7 +266,44 @@ const PassTheWorldMap = (() => {
     } else {
       map.dragging.enable();
     }
-    syncPlaneOverlay();
+    syncOverlays();
+  }
+
+  function markUserZoom() {
+    if (!map) return;
+    const worldZ = lockedWorldZoom || resolveWorldZoom();
+    if (Math.abs(map.getZoom() - worldZ) > 0.15) {
+      userHasZoomed = true;
+    }
+  }
+
+  /** Default world framing — only on enter / leave / refresh, never while user is zoomed. */
+  function frameOnPlane({ animate = false, force = false } = {}) {
+    if (!map) return;
+    if (userHasZoomed && !force) {
+      syncOverlays();
+      syncInteraction();
+      return;
+    }
+
+    map.invalidateSize({ animate: false, pan: false });
+    if (typeof map.stop === 'function') map.stop();
+
+    const zoom = resolveWorldZoom();
+    const center = focusLatLng || FALLBACK_CENTER;
+    map.setView(center, zoom, { animate: !!animate, reset: true });
+    userHasZoomed = false;
+    syncOverlays();
+    syncInteraction();
+  }
+
+  function fitFullWorld(opts) {
+    frameOnPlane({ ...(opts || {}), force: true });
+  }
+
+  function resetWorldView() {
+    userHasZoomed = false;
+    frameOnPlane({ animate: false, force: true });
   }
 
   function nowMs() {
@@ -257,13 +332,14 @@ const PassTheWorldMap = (() => {
     const pos = interpolateAlong(travelSegs, progress);
     if (pos) {
       setPlane(pos, bearingAlong(travelSegs, progress));
-      const t = performance.now();
-      // Keep the world framing locked on the plane without thrashing every frame.
-      if (t - lastCenterSync > 500) {
-        lastCenterSync = t;
-        const zoom = lockedWorldZoom || resolveWorldZoom();
-        map.setView(pos, zoom, { animate: false });
-        syncPlaneOverlay();
+      // Follow the plane only while still in default world framing.
+      if (!userHasZoomed) {
+        const t = performance.now();
+        if (t - lastCenterSync > 800) {
+          lastCenterSync = t;
+          map.setView(pos, map.getZoom(), { animate: false });
+          syncOverlays();
+        }
       }
     }
 
@@ -284,11 +360,18 @@ const PassTheWorldMap = (() => {
 
   function startTravelAnimation(segs, departureAt, arrivalAt) {
     travelSegs = segs;
+    activeRouteSegs = segs;
     travelDepartMs = new Date(departureAt).getTime();
     travelArriveMs = new Date(arrivalAt).getTime();
     stopTravelAnimation();
     lastCenterSync = 0;
+    syncRouteOverlay();
     animRaf = requestAnimationFrame(tickTravel);
+  }
+
+  function clearActiveRoute() {
+    activeRouteSegs = null;
+    syncRouteOverlay();
   }
 
   function setServerSkew(skewMs) {
@@ -309,6 +392,8 @@ const PassTheWorldMap = (() => {
     const el = document.getElementById(containerId);
     if (!el) return null;
 
+    userHasZoomed = false;
+
     map = L.map(containerId, {
       center: focusLatLng,
       zoom: 1,
@@ -322,12 +407,13 @@ const PassTheWorldMap = (() => {
       maxBounds: [[-85.05, -180], [85.05, 180]],
       maxBoundsViscosity: 0.8,
       dragging: false,
-      scrollWheelZoom: false,
+      scrollWheelZoom: true,
+      touchZoom: true,
       doubleClickZoom: true,
       boxZoom: false,
       keyboard: false,
       fadeAnimation: false,
-      zoomAnimation: false,
+      zoomAnimation: true,
     });
 
     if (typeof WorldChoirMapTiles !== 'undefined') {
@@ -345,20 +431,20 @@ const PassTheWorldMap = (() => {
     inviteLayer = L.layerGroup().addTo(map);
     cityMarkers = L.layerGroup().addTo(map);
 
-    ensurePlaneEl();
-    map.on('zoomend move moveend zoom viewreset', syncPlaneOverlay);
-    map.on('zoomend', syncInteraction);
+    ensureOverlayEls();
+    map.on('zoomend move moveend zoom viewreset', syncOverlays);
+    map.on('zoomend', () => {
+      markUserZoom();
+      syncInteraction();
+    });
+    map.on('zoomstart', markUserZoom);
 
     requestAnimationFrame(() => {
-      frameOnPlane({ animate: false });
-      setTimeout(() => frameOnPlane({ animate: false }), 100);
+      frameOnPlane({ animate: false, force: true });
+      setTimeout(() => frameOnPlane({ animate: false, force: true }), 100);
     });
 
     return map;
-  }
-
-  function resetWorldView() {
-    frameOnPlane({ animate: false });
   }
 
   function renderJourney(payload = {}) {
@@ -388,8 +474,8 @@ const PassTheWorldMap = (() => {
         HISTORY_STEPS
       );
       drawArc(segs, {
-        color: 'rgba(160, 170, 185, 0.28)',
-        weight: 0.85,
+        color: 'rgba(78, 197, 232, 0.22)',
+        weight: 0.9,
         opacity: 1,
         className: 'ptw-route-history',
       }, historyLayer);
@@ -418,14 +504,6 @@ const PassTheWorldMap = (() => {
       const to = [journey.destination.latitude, journey.destination.longitude];
       const segs = greatCirclePoints(from, to, ROUTE_STEPS);
 
-      // Thin smooth grey arc the plane always follows.
-      drawArc(segs, {
-        color: 'rgba(170, 178, 190, 0.92)',
-        weight: 1,
-        opacity: 1,
-        className: 'ptw-route-active',
-      }, routeLayer);
-
       L.marker(from, {
         icon: cityDotIcon('origin'),
         interactive: false,
@@ -446,6 +524,7 @@ const PassTheWorldMap = (() => {
       travelSegs = null;
       travelDepartMs = null;
       travelArriveMs = null;
+      clearActiveRoute();
       if (journey.current?.latitude != null) {
         setPlane([journey.current.latitude, journey.current.longitude], 0);
       } else if (parked?.latitude != null) {
@@ -458,7 +537,14 @@ const PassTheWorldMap = (() => {
     renderInvites(
       journey.status === 'INVITATION_OPEN' ? (journey.invitedCities || []) : []
     );
-    frameOnPlane({ animate: false });
+
+    // Keep the user's zoom if they pinched/double-tapped; only frame on first paint.
+    if (!userHasZoomed) {
+      frameOnPlane({ animate: false });
+    } else {
+      syncOverlays();
+      syncInteraction();
+    }
   }
 
   function renderInvites(cities) {
@@ -478,20 +564,25 @@ const PassTheWorldMap = (() => {
   function invalidateSize() {
     if (!map) return;
     map.invalidateSize({ animate: false, pan: false });
-    syncPlaneOverlay();
+    syncOverlays();
   }
 
   function destroy() {
     stopTravelAnimation();
     if (map) {
-      map.off('zoomend move moveend zoom viewreset', syncPlaneOverlay);
-      map.off('zoomend', syncInteraction);
+      map.off('zoomend move moveend zoom viewreset', syncOverlays);
+      map.off('zoomstart', markUserZoom);
       map.remove();
       map = null;
     }
     if (planeEl) {
       planeEl.remove();
       planeEl = null;
+    }
+    if (routeSvg) {
+      routeSvg.remove();
+      routeSvg = null;
+      routePathEl = null;
     }
     routeLayer = null;
     historyLayer = null;
@@ -500,9 +591,11 @@ const PassTheWorldMap = (() => {
     planeLatLng = null;
     planeBearing = 0;
     travelSegs = null;
+    activeRouteSegs = null;
     travelDepartMs = null;
     travelArriveMs = null;
     lockedWorldZoom = null;
+    userHasZoomed = false;
     focusLatLng = FALLBACK_CENTER.slice();
   }
 

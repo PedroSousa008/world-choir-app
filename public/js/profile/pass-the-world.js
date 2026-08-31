@@ -676,11 +676,11 @@ const PassTheWorld = (() => {
 
     requestAnimationFrame(() => {
       PassTheWorldMap.invalidateSize();
-      PassTheWorldMap.fitFullWorld({ animate: false });
+      PassTheWorldMap.frameOnPlane({ animate: false });
     });
     setTimeout(() => {
       PassTheWorldMap.invalidateSize();
-      PassTheWorldMap.fitFullWorld({ animate: false });
+      PassTheWorldMap.frameOnPlane({ animate: false });
     }, 200);
   }
 
