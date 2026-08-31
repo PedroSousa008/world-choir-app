@@ -113,7 +113,7 @@ const PassportStamps = (() => {
       hideWhenLocked: true,
       displayWidth: 85,
       displayHeight: 57,
-      position: { left: 195, top: 50 },
+      position: { left: 190, top: 47 },
       revealOrder: 6,
     },
     {
