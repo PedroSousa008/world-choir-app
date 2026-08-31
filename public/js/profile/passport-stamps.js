@@ -829,9 +829,12 @@ const PassportStamps = (() => {
     }
   }
 
-  let inspectOverlay = null;
+  let inspectState = null;
   let inspectKeyHandler = null;
   let inspectFocusReturn = null;
+
+  const INSPECT_FLIGHT_MS = 2500;
+  const INSPECT_FLIGHT_EASING = 'cubic-bezier(0.34, 1.08, 0.42, 1)';
 
   function getInspectSize(card) {
     const cardRect = card?.getBoundingClientRect?.();
@@ -839,28 +842,118 @@ const PassportStamps = (() => {
     return Math.min(window.innerWidth * 0.58, 240);
   }
 
-  function closeStampInspect() {
-    if (!inspectOverlay) return;
-    const overlay = inspectOverlay;
-    inspectOverlay = null;
+  function getStampSourceRect(stampEl) {
+    const frame = stampEl.querySelector('.passport-stamp__frame') || stampEl;
+    return frame.getBoundingClientRect();
+  }
+
+  function getInspectCenterRect(size) {
+    const left = (window.innerWidth - size) / 2;
+    const top = (window.innerHeight - size) / 2;
+    return { left, top, width: size, height: size };
+  }
+
+  function applyFloaterRect(floater, rect) {
+    Object.assign(floater.style, {
+      left: `${rect.left}px`,
+      top: `${rect.top}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+    });
+  }
+
+  function animateFloater(floater, fromRect, toRect, durationMs) {
+    return floater.animate(
+      [
+        {
+          left: `${fromRect.left}px`,
+          top: `${fromRect.top}px`,
+          width: `${fromRect.width}px`,
+          height: `${fromRect.height}px`,
+        },
+        {
+          left: `${toRect.left}px`,
+          top: `${toRect.top}px`,
+          width: `${toRect.width}px`,
+          height: `${toRect.height}px`,
+        },
+      ],
+      {
+        duration: durationMs,
+        easing: INSPECT_FLIGHT_EASING,
+        fill: 'forwards',
+      }
+    );
+  }
+
+  function animateOverlayBackground(overlay, fromAlpha, toAlpha, durationMs) {
+    return overlay.animate(
+      [
+        { backgroundColor: `rgba(12, 18, 32, ${fromAlpha})` },
+        { backgroundColor: `rgba(12, 18, 32, ${toAlpha})` },
+      ],
+      {
+        duration: durationMs,
+        easing: 'ease',
+        fill: 'forwards',
+      }
+    );
+  }
+
+  function teardownInspect({ restoreFocus = true } = {}) {
+    if (inspectKeyHandler) {
+      document.removeEventListener('keydown', inspectKeyHandler);
+      inspectKeyHandler = null;
+    }
+
+    if (inspectState?.stampEl) {
+      inspectState.stampEl.classList.remove('passport-stamp--inspect-source');
+    }
+
+    inspectState?.overlay?.remove();
+    inspectState = null;
+
+    if (restoreFocus && inspectFocusReturn?.focus) {
+      try { inspectFocusReturn.focus({ preventScroll: true }); } catch { /* ignore */ }
+    }
+    inspectFocusReturn = null;
+  }
+
+  async function closeStampInspect() {
+    if (!inspectState || inspectState.busy) return;
+
+    const state = inspectState;
+    state.busy = true;
+    state.overlay.classList.remove('is-settled');
 
     if (inspectKeyHandler) {
       document.removeEventListener('keydown', inspectKeyHandler);
       inspectKeyHandler = null;
     }
 
-    overlay.classList.remove('is-open');
-    const remove = () => overlay.remove();
+    const sourceRect = getStampSourceRect(state.stampEl);
+    const centerRect = {
+      left: parseFloat(state.floater.style.left) || state.centerRect.left,
+      top: parseFloat(state.floater.style.top) || state.centerRect.top,
+      width: parseFloat(state.floater.style.width) || state.centerRect.width,
+      height: parseFloat(state.floater.style.height) || state.centerRect.height,
+    };
+
     if (prefersReducedMotion()) {
-      remove();
-    } else {
-      window.setTimeout(remove, 220);
+      teardownInspect();
+      return;
     }
 
-    if (inspectFocusReturn?.focus) {
-      try { inspectFocusReturn.focus({ preventScroll: true }); } catch { /* ignore */ }
+    const flight = animateFloater(state.floater, centerRect, sourceRect, INSPECT_FLIGHT_MS);
+    const backdrop = animateOverlayBackground(state.overlay, 0.58, 0, INSPECT_FLIGHT_MS);
+
+    try {
+      await Promise.all([flight.finished, backdrop.finished]);
+    } catch {
+      /* ignore cancelled animations */
     }
-    inspectFocusReturn = null;
+
+    teardownInspect();
   }
 
   function openStampInspect(stampEl, card) {
@@ -868,7 +961,7 @@ const PassportStamps = (() => {
     if (stampEl.classList.contains('passport-stamp--revealing')) return;
     if (stampEl.classList.contains('passport-stamp--reveal-pending')) return;
     if (card?.classList.contains('passport-card--stamp-reveal-active')) return;
-    if (inspectOverlay) closeStampInspect();
+    if (inspectState) return;
 
     const stampId = stampEl.dataset.stampId;
     const stampDef = PASSPORT_STAMPS.find((entry) => entry.id === stampId);
@@ -879,20 +972,22 @@ const PassportStamps = (() => {
       || stampEl.querySelector('.passport-stamp__img')?.src;
     if (!imgSrc) return;
 
+    const sourceRect = getStampSourceRect(stampEl);
     const size = getInspectSize(card);
+    const centerRect = getInspectCenterRect(size);
     const title = stampDef.title || 'Passport stamp';
 
     inspectFocusReturn = document.activeElement;
-    inspectOverlay = document.createElement('div');
-    inspectOverlay.className = 'passport-stamp-inspect';
-    inspectOverlay.setAttribute('role', 'dialog');
-    inspectOverlay.setAttribute('aria-modal', 'true');
-    inspectOverlay.setAttribute('aria-label', title);
 
-    const panel = document.createElement('div');
-    panel.className = 'passport-stamp-inspect__panel';
-    panel.style.width = `${size}px`;
-    panel.style.height = `${size}px`;
+    const overlay = document.createElement('div');
+    overlay.className = 'passport-stamp-inspect';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', title);
+
+    const floater = document.createElement('div');
+    floater.className = 'passport-stamp-inspect__floater';
+    applyFloaterRect(floater, sourceRect);
 
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
@@ -914,10 +1009,21 @@ const PassportStamps = (() => {
     img.draggable = false;
     img.decoding = 'async';
 
-    panel.appendChild(closeBtn);
-    panel.appendChild(img);
-    inspectOverlay.appendChild(panel);
-    document.body.appendChild(inspectOverlay);
+    floater.appendChild(closeBtn);
+    floater.appendChild(img);
+    overlay.appendChild(floater);
+    document.body.appendChild(overlay);
+
+    stampEl.classList.add('passport-stamp--inspect-source');
+
+    inspectState = {
+      overlay,
+      floater,
+      closeBtn,
+      stampEl,
+      centerRect,
+      busy: true,
+    };
 
     inspectKeyHandler = (e) => {
       if (e.key === 'Escape') {
@@ -927,9 +1033,32 @@ const PassportStamps = (() => {
     };
     document.addEventListener('keydown', inspectKeyHandler);
 
-    requestAnimationFrame(() => {
-      inspectOverlay?.classList.add('is-open');
+    const finishOpen = () => {
+      if (!inspectState || inspectState.overlay !== overlay) return;
+      applyFloaterRect(floater, centerRect);
+      overlay.classList.add('is-settled');
+      inspectState.busy = false;
       closeBtn.focus({ preventScroll: true });
+    };
+
+    if (prefersReducedMotion()) {
+      applyFloaterRect(floater, centerRect);
+      finishOpen();
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(async () => {
+        if (!inspectState || inspectState.overlay !== overlay) return;
+        const flight = animateFloater(floater, sourceRect, centerRect, INSPECT_FLIGHT_MS);
+        const backdrop = animateOverlayBackground(overlay, 0, 0.58, INSPECT_FLIGHT_MS);
+        try {
+          await Promise.all([flight.finished, backdrop.finished]);
+        } catch {
+          /* ignore */
+        }
+        finishOpen();
+      });
     });
   }
 

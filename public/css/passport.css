@@ -686,35 +686,28 @@
   position: fixed;
   inset: 0;
   z-index: 12000;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  background: rgba(12, 18, 32, 0);
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.passport-stamp-inspect.is-settled {
   background: rgba(12, 18, 32, 0.58);
-  opacity: 0;
-  transition: opacity 220ms ease;
 }
 
-.passport-stamp-inspect.is-open {
-  opacity: 1;
-}
-
-.passport-stamp-inspect__panel {
-  position: relative;
+.passport-stamp-inspect__floater {
+  position: fixed;
+  z-index: 12001;
   display: grid;
   place-items: center;
-  width: min(72vw, 240px);
-  height: min(72vw, 240px);
-  max-width: calc(100vw - 48px);
-  max-height: calc(100vh - 48px);
+  border-radius: 4px;
   filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.34));
-  transform: scale(0.96);
-  opacity: 0;
-  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 280ms ease;
+  will-change: left, top, width, height;
+  pointer-events: none;
 }
 
-.passport-stamp-inspect.is-open .passport-stamp-inspect__panel {
-  transform: scale(1);
-  opacity: 1;
+.passport-stamp-inspect.is-settled .passport-stamp-inspect__floater {
+  pointer-events: auto;
 }
 
 .passport-stamp-inspect__img {
@@ -741,11 +734,25 @@
   line-height: 1;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  transform: scale(0.85);
+  pointer-events: none;
+  transition: opacity 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.passport-stamp-inspect.is-settled .passport-stamp-inspect__close {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
 }
 
 .passport-stamp-inspect__close:focus-visible {
   outline: 2px solid rgba(247, 244, 239, 0.9);
   outline-offset: 2px;
+}
+
+.passport-stamp--inspect-source {
+  visibility: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -754,8 +761,7 @@
     display: none !important;
   }
 
-  .passport-stamp-inspect,
-  .passport-stamp-inspect__panel {
+  .passport-stamp-inspect__close {
     transition: none;
   }
 }
