@@ -1849,26 +1849,14 @@
   display: inline-flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 6px;
   margin: 5px 0;
   max-width: 100%;
   font-family: var(--font-sans);
-  font-size: 0.5rem;
+  font-size: 7px;
   color: rgba(18, 25, 43, 0.58);
   letter-spacing: 0;
   line-height: 1.35;
-}
-
-@media (min-width: 380px) {
-  .ptw-status__travel {
-    font-size: 0.56rem;
-  }
-}
-
-@media (min-width: 420px) {
-  .ptw-status__travel {
-    font-size: 0.62rem;
-  }
 }
 
 .ptw-status__travel-text {
@@ -1878,9 +1866,9 @@
 }
 
 .ptw-status-info {
-  flex: 0 0 11px;
-  width: 11px;
-  height: 11px;
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
   margin: 0;
   padding: 0;
   border: 1px solid rgba(18, 25, 43, 0.35);
@@ -1888,7 +1876,7 @@
   background: transparent;
   color: rgba(18, 25, 43, 0.58);
   font-family: inherit;
-  font-size: 8px;
+  font-size: 5px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
