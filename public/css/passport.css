@@ -1927,7 +1927,7 @@
 @media (max-width: 360px) {
   .ptw-status__detail-box {
     white-space: normal;
-    font-size: 0.72rem;
+    font-size: 10px;
   }
 }
 
