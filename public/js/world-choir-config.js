@@ -434,12 +434,12 @@ const WorldChoirConfig = (() => {
   /**
    * Passport stamp — "405 COMPLETED"
    * Drop your artwork at: public/images/passport/stamps/405-completed.png
-   * Native 1616 × 973 px (RGBA). Display slot 100 × 60 px on page 2.
+   * Native 1616 × 973 px (RGBA). Display slot 115 × 69 px on page 2.
    * Unlocks when the user completes at least 405 Daily Acts of Peace.
    */
   const PASSPORT_STAMP_405_COMPLETED = {
     src: 'images/passport/stamps/405-completed.png',
-    version: '20260831f',
+    version: '20260901b',
     width: 1616,
     height: 973,
     alt: '405 Daily Acts Completed — World Choir stamp',
@@ -451,13 +451,13 @@ const WorldChoirConfig = (() => {
   /**
    * Locked placeholder for the 405 Completed stamp (shown before unlock).
    * Drop your artwork at: public/images/passport/stamps/405-completed-locked.png
-   * Native 1627 × 967 px (RGBA). Same display slot as the unlocked stamp.
+   * Native 2172 × 724 px (RGBA). Same display slot as the unlocked stamp.
    */
   const PASSPORT_STAMP_405_COMPLETED_LOCKED = {
     src: 'images/passport/stamps/405-completed-locked.png',
-    version: '20260831f',
-    width: 1627,
-    height: 967,
+    version: '20260901b',
+    width: 2172,
+    height: 724,
     alt: 'Locked 405 Daily Acts Completed stamp',
     get url() {
       return `${this.src}?v=${this.version}`;
