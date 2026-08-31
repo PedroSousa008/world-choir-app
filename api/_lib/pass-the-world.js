@@ -238,6 +238,47 @@ async function writeItinerary(entries) {
   await writeJson(ITINERARY_PATH, { entries, updatedAt: new Date().toISOString() }, { overwrite: true });
 }
 
+/** Collapse duplicate stops created by repeated applyWinner heals. */
+function dedupeItinerary(entries) {
+  const order = [];
+  const byKey = new Map();
+  for (const entry of entries || []) {
+    const key = entry.isSeed
+      ? `seed:${entry.id || `${entry.city}|${entry.country}`}`
+      : [
+        entry.selectedAt || entry.departedAt || '',
+        String(entry.city || '').trim().toLowerCase(),
+        normalizeCountry(entry.country),
+        entry.calledByUserId || entry.calledByVoiceNumber || '',
+      ].join('|');
+    if (!byKey.has(key)) order.push(key);
+    byKey.set(key, entry); // last write wins (keeps corrected arrivalAt)
+  }
+  return order.map((key, i) => ({ ...byKey.get(key), sequence: i + 1 }));
+}
+
+async function repairItineraryIfNeeded(state, itinerary) {
+  const cleaned = dedupeItinerary(itinerary);
+  if (cleaned.length === (itinerary || []).length) {
+    return { state, itinerary };
+  }
+  await writeItinerary(cleaned);
+
+  let nextState = state;
+  const currentStillThere = cleaned.some((e) => e.id === state.currentItineraryEntryId);
+  if (!currentStillThere && cleaned.length) {
+    const last = cleaned[cleaned.length - 1];
+    nextState = await writeState({
+      ...state,
+      currentItineraryEntryId: last.id,
+      arrivalAt: last.arrivedAt || state.arrivalAt,
+      departureAt: last.departedAt || state.departureAt,
+      version: (Number(state.version) || 1) + 1,
+    });
+  }
+  return { state: nextState, itinerary: cleaned };
+}
+
 async function readStateRaw() {
   try { return await readBlobJson(STATE_PATH); } catch { return null; }
 }
@@ -343,6 +384,54 @@ function publicReveal(winner, origin) {
 }
 
 async function applyWinner(state, itinerary, winner, invitations) {
+  const selectedAt = winner.selectedAt || new Date().toISOString();
+
+  // Idempotent: heal/re-apply must not append duplicate itinerary stops.
+  const already = itinerary.find((entry) => (
+    !entry.isSeed
+    && entry.selectedAt === selectedAt
+    && entry.city === winner.city
+    && normalizeCountry(entry.country) === normalizeCountry(winner.country)
+    && (
+      (winner.userId && entry.calledByUserId === winner.userId)
+      || (winner.voiceNumber != null && entry.calledByVoiceNumber === winner.voiceNumber)
+    )
+  ));
+  if (already) {
+    const arrivalAt = already.arrivedAt || computeArrivalAt(selectedAt).toISOString();
+    const nextState = await writeState({
+      ...state,
+      status: STATUS.TRAVELLING,
+      origin: {
+        city: already.originCity || state.currentCity,
+        country: already.originCountry || state.currentCountry,
+        countryCode: state.currentCountryCode,
+        latitude: already.originLatitude ?? state.currentLatitude,
+        longitude: already.originLongitude ?? state.currentLongitude,
+      },
+      destination: {
+        city: already.city,
+        country: already.country,
+        countryCode: already.countryCode || null,
+        latitude: already.latitude,
+        longitude: already.longitude,
+      },
+      currentItineraryEntryId: already.id,
+      departureAt: already.departedAt || selectedAt,
+      arrivalAt,
+      invitationOpenAt: null,
+      invitationCloseAt: null,
+      invitationCount: invitations.length,
+      invitedCities: buildInvitedCities(invitations),
+      lastReveal: state.lastReveal || publicReveal(winner, {
+        city: already.originCity,
+        country: already.originCountry,
+      }),
+      version: (Number(state.version) || 1) + 1,
+    });
+    return { state: nextState, itinerary };
+  }
+
   const origin = {
     city: state.currentCity,
     country: state.currentCountry,
@@ -353,7 +442,6 @@ async function applyWinner(state, itinerary, winner, invitations) {
   const distanceKm = Math.round(haversineKm(
     origin.latitude, origin.longitude, winner.latitude, winner.longitude
   ));
-  const selectedAt = winner.selectedAt || new Date().toISOString();
   const arrivalAt = computeArrivalAt(selectedAt).toISOString();
   const entry = {
     id: randomUUID(),
@@ -466,6 +554,7 @@ async function settleInvitationRound(state, itinerary, now) {
 async function advanceStateMachine(nowInput) {
   const now = nowInput instanceof Date ? nowInput : new Date();
   let { state, itinerary } = await ensureSeeded();
+  ({ state, itinerary } = await repairItineraryIfNeeded(state, itinerary));
 
   // Correct any in-flight arrival that is not the canonical 15:59 UTC landing.
   if (

@@ -1502,9 +1502,7 @@
 }
 
 .passport-card--ptw .passport-card__back {
-  top: 14px;
-  right: 14px;
-  z-index: 30;
+  display: none;
 }
 
 

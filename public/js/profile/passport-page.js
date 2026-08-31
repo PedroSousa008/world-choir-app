@@ -109,6 +109,12 @@ const PassportPage = (() => {
       <div id="passport-story-view" class="passport-story-view" hidden>
         <header class="passport-header">
           <div>
+            <button
+              type="button"
+              class="passport-header__back"
+              id="passport-story-back"
+              aria-label="Go back to Passport stamps"
+            >← Passport</button>
             <h1 class="passport-header__title">Passport</h1>
           </div>
           <button
@@ -121,14 +127,6 @@ const PassportPage = (() => {
 
         <div class="passport-card-wrap">
           <div class="passport-card passport-card--ptw is-inside" aria-label="Pass the World">
-            <button
-              type="button"
-              class="passport-card__back"
-              id="passport-story-back"
-              aria-label="Go back to Passport stamps"
-            >
-              ←
-            </button>
             <div id="passport-story-host" class="passport-story-host ptw-card-host"></div>
           </div>
         </div>
