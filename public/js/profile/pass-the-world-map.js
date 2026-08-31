@@ -24,6 +24,7 @@ const PassTheWorldMap = (() => {
   let focusLatLng = FALLBACK_CENTER.slice();
   let planeLatLng = null;
   let planeBearing = 0;
+  let planeProgress = 0;
   let destLatLng = null;
   let originLatLng = null;
   let lockedWorldZoom = null;
@@ -266,6 +267,24 @@ const PassTheWorldMap = (() => {
     return pt;
   }
 
+  /** Screen-space quadratic point — same math as the SVG route path. */
+  function quadPoint(a, c, b, t) {
+    const u = 1 - t;
+    return {
+      x: (u * u * a.x) + (2 * u * t * c.x) + (t * t * b.x),
+      y: (u * u * a.y) + (2 * u * t * c.y) + (t * t * b.y),
+    };
+  }
+
+  /** Bearing for an up-pointing plane icon following the screen curve. */
+  function quadBearing(a, c, b, t) {
+    const u = 1 - t;
+    const dx = (2 * u * (c.x - a.x)) + (2 * t * (b.x - c.x));
+    const dy = (2 * u * (c.y - a.y)) + (2 * t * (b.y - c.y));
+    if (!dx && !dy) return planeBearing || 0;
+    return ((Math.atan2(dy, dx) * 180) / Math.PI) + 90;
+  }
+
   /** Single SVG quadratic — perfectly smooth at every zoom. */
   function syncRouteOverlay(frame) {
     ensureOverlayEls();
@@ -299,8 +318,30 @@ const PassTheWorldMap = (() => {
 
   function syncPlaneOverlay(frame) {
     ensureOverlayEls();
-    if (!planeEl || !map || !planeLatLng) {
+    if (!planeEl || !map) {
       if (planeEl) planeEl.style.opacity = '0';
+      return;
+    }
+
+    // While travelling, sit exactly on the visible SVG curve (screen-space Q).
+    if (routeCurve) {
+      const a = project(routeCurve.from, frame);
+      const c = project(routeCurve.control, frame);
+      const b = project(routeCurve.to, frame);
+      if (!a || !c || !b) {
+        planeEl.style.opacity = '0';
+        return;
+      }
+      const t = Math.max(0, Math.min(1, planeProgress));
+      const pt = quadPoint(a, c, b, t);
+      planeBearing = quadBearing(a, c, b, t);
+      planeEl.style.opacity = '1';
+      planeEl.style.transform = `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px) rotate(${planeBearing}deg)`;
+      return;
+    }
+
+    if (!planeLatLng) {
+      planeEl.style.opacity = '0';
       return;
     }
     const pt = project(planeLatLng, frame);
@@ -392,11 +433,12 @@ const PassTheWorldMap = (() => {
   function setPlane(latlng, bearing = 0) {
     if (!latlng || latlng[0] == null || latlng[1] == null) {
       planeLatLng = null;
+      planeProgress = 0;
       syncPlaneOverlay();
       return;
     }
     planeLatLng = [Number(latlng[0]), Number(latlng[1])];
-    planeBearing = Number(bearing) || 0;
+    if (!routeCurve) planeBearing = Number(bearing) || 0;
     setFocus(planeLatLng[0], planeLatLng[1]);
     syncPlaneOverlay();
   }
@@ -570,20 +612,26 @@ const PassTheWorldMap = (() => {
 
   function tickTravel() {
     animRaf = null;
-    if (!map || !travelPts) return;
+    if (!map || !travelPts || !routeCurve) return;
 
     const progress = travelProgress();
+    planeProgress = progress;
+    // Geo sample only for map centering / focus — the plane itself rides the SVG curve.
     const pos = interpolateAlong(travelPts, progress);
     if (pos) {
-      setPlane(pos, bearingAlong(travelPts, progress));
+      planeLatLng = [Number(pos[0]), Number(pos[1])];
+      setFocus(planeLatLng[0], planeLatLng[1]);
+      syncPlaneOverlay(animFrame);
       if (!userHasZoomed) {
         const t = performance.now();
         if (t - lastCenterSync > 800) {
           lastCenterSync = t;
           map.setView(pos, map.getZoom(), { animate: false });
-          syncOverlays();
+          syncOverlays(animFrame);
         }
       }
+    } else {
+      syncPlaneOverlay(animFrame);
     }
 
     if (typeof onProgressCb === 'function') {
@@ -606,9 +654,11 @@ const PassTheWorldMap = (() => {
     travelPts = curve.points;
     travelDepartMs = new Date(departureAt).getTime();
     travelArriveMs = new Date(arrivalAt).getTime();
+    planeProgress = travelProgress();
     stopTravelAnimation();
     lastCenterSync = 0;
     syncRouteOverlay();
+    syncPlaneOverlay();
     animRaf = requestAnimationFrame(tickTravel);
   }
 
@@ -618,6 +668,7 @@ const PassTheWorldMap = (() => {
     travelPts = null;
     travelDepartMs = null;
     travelArriveMs = null;
+    planeProgress = 0;
     setOrigin(null);
     setDestination(null);
     stopEtaTimer();
@@ -737,8 +788,11 @@ const PassTheWorldMap = (() => {
       startTravel(curve, journey.departureAt, journey.arrivalAt);
 
       const progress = travelProgress();
+      planeProgress = progress;
       const planePos = interpolateAlong(curve.points, progress) || from;
-      setPlane(planePos, bearingAlong(curve.points, progress));
+      planeLatLng = planePos;
+      setFocus(planePos[0], planePos[1]);
+      syncPlaneOverlay();
     } else {
       clearTravel();
       const current = readLatLng(journey.current) || FALLBACK_CENTER;
