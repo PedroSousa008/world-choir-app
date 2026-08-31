@@ -75,10 +75,31 @@ const PassTheWorldMap = (() => {
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
   }
 
-  function planeIcon() {
+  function bearingDegrees(a, b) {
+    const toRad = (d) => (d * Math.PI) / 180;
+    const toDeg = (r) => (r * 180) / Math.PI;
+    const lat1 = toRad(a[0]);
+    const lat2 = toRad(b[0]);
+    const dLon = toRad(b[1] - a[1]);
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2)
+      - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+    return (toDeg(Math.atan2(y, x)) + 360) % 360;
+  }
+
+  function bearingAlong(segments, progress) {
+    const flat = segments.flat();
+    if (flat.length < 2) return 0;
+    const idx = Math.max(0, Math.min(flat.length - 2, Math.floor(progress * (flat.length - 1))));
+    return bearingDegrees(flat[idx], flat[Math.min(idx + 1, flat.length - 1)]);
+  }
+
+  function planeIcon(bearing = 0) {
+    // ✈ glyph points roughly NE; offset so bearing 0° is north.
+    const rot = Number(bearing) - 45;
     return L.divIcon({
       className: 'ptw-plane-icon',
-      html: '<span class="ptw-plane" aria-hidden="true">✈</span>',
+      html: `<span class="ptw-plane" style="transform: rotate(${rot}deg)" aria-hidden="true">✈</span>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12],
     });
@@ -268,13 +289,14 @@ const PassTheWorldMap = (() => {
 
       const progress = Number(journey.progress?.progress) || 0;
       planePos = interpolateAlong(segs, progress) || from;
+      const bearing = bearingAlong(segs, progress);
       if (planeMarker) {
         try { routeLayer.removeLayer(planeMarker); } catch { /* */ }
         try { cityMarkers.removeLayer(planeMarker); } catch { /* */ }
         planeMarker = null;
       }
       planeMarker = L.marker(planePos, {
-        icon: planeIcon(),
+        icon: planeIcon(bearing),
         interactive: false,
         keyboard: false,
       }).addTo(routeLayer);
@@ -286,7 +308,7 @@ const PassTheWorldMap = (() => {
         planeMarker = null;
       }
       planeMarker = L.marker(planePos, {
-        icon: planeIcon(),
+        icon: planeIcon(0),
         interactive: false,
         keyboard: false,
       }).addTo(cityMarkers);

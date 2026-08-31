@@ -1688,7 +1688,21 @@
   font-weight: 600;
   letter-spacing: 0.12em;
   cursor: pointer;
-  transition: border-color var(--transition), color var(--transition), background var(--transition);
+  transition: border-color var(--transition), color var(--transition), background var(--transition), opacity var(--transition);
+}
+
+.ptw-visit-btn--primary {
+  border-color: transparent;
+  background: var(--accent-blue);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(61, 124, 255, 0.28);
+}
+
+.ptw-visit-btn--primary:hover,
+.ptw-visit-btn--primary:focus-visible {
+  border-color: transparent;
+  background: #2f6cf0;
+  outline: none;
 }
 
 .ptw-visit-btn:hover,
@@ -1698,8 +1712,9 @@
 }
 
 .ptw-visit-btn:disabled {
-  opacity: 0.55;
+  opacity: 0.38;
   cursor: default;
+  box-shadow: none;
 }
 
 .ptw-visit-ring {
@@ -1709,14 +1724,14 @@
   pointer-events: none;
   background: conic-gradient(
     from -90deg,
-    rgba(61, 124, 255, 0.75) calc(var(--ptw-progress, 0) * 1turn),
+    rgba(61, 124, 255, 0.85) calc(var(--ptw-progress, 0) * 1turn),
     transparent 0
   );
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask-composite: exclude;
   -webkit-mask-composite: xor;
   padding: 1.5px;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .ptw-countdown,
@@ -1947,7 +1962,8 @@
   font-size: 14px;
   color: #fff;
   filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.65));
-  transform: rotate(-20deg);
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .ptw-city-dot {
@@ -1957,7 +1973,7 @@
   margin: 3px;
   border-radius: 50%;
   background: rgba(240, 248, 255, 0.95);
-  box-shadow: 0 0 8px rgba(78, 197, 232, 0.35);
+  box-shadow: 0 0 8px rgba(61, 124, 255, 0.35);
 }
 
 .ptw-city-icon--origin .ptw-city-dot,
@@ -1972,15 +1988,15 @@
   height: 10px;
   margin: 4px;
   border-radius: 50%;
-  background: rgba(78, 197, 232, 0.65);
-  box-shadow: 0 0 0 0 rgba(78, 197, 232, 0.35);
+  background: rgba(61, 124, 255, 0.75);
+  box-shadow: 0 0 0 0 rgba(61, 124, 255, 0.4);
   animation: ptw-pulse 2.4s ease-out infinite;
 }
 
 @keyframes ptw-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(78, 197, 232, 0.35); }
-  70% { box-shadow: 0 0 0 10px rgba(78, 197, 232, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(78, 197, 232, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(61, 124, 255, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(61, 124, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(61, 124, 255, 0); }
 }
 
 .ptw-dev {

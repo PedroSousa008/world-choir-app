@@ -172,6 +172,7 @@ const PassTheWorld = (() => {
     if (!journey) return lines;
     const status = journey.status;
     const stops = itinerary?.length || 0;
+    const viewer = journey.viewer || {};
 
     if (status === 'TRAVELLING' && journey.destination) {
       lines.push(`On the way to ${esc(journey.destination.city)}`);
@@ -185,29 +186,20 @@ const PassTheWorld = (() => {
       return lines;
     }
 
-    if (status === 'ARRIVED' || status === 'INITIAL') {
-      if (stops <= 1) {
-        lines.push('The journey begins here.');
-      } else {
-        lines.push('The World has arrived.');
-        if (journey.nextInvitationAt) lines.push('Next invitation · 16:00 UTC');
-      }
-      return lines;
-    }
-
     if (status === 'INVITATION_OPEN') {
-      lines.push('Where should the World go next?');
-      lines.push('Invite it to your city.');
+      // CTA owns invitation copy — avoid duplicating under the route.
       return lines;
     }
 
     if (status === 'WAITING_FOR_FIRST_CALL') {
-      lines.push('Waiting for its next invitation.');
       return lines;
     }
 
-    if (status === 'SELECTING') {
-      lines.push('The World is listening…');
+    if (status === 'ARRIVED' || status === 'INITIAL') {
+      if (viewer.sameCountry && viewer.countryLoaded) return lines;
+      if (stops <= 1) lines.push('The journey begins here.');
+      else lines.push('The World has arrived.');
+      if (journey.nextInvitationAt) lines.push('Next invitation · 16:00 UTC');
       return lines;
     }
 
@@ -218,8 +210,14 @@ const PassTheWorld = (() => {
     if (!journey) return '';
     const viewer = journey.viewer || {};
     const status = journey.status;
+    const countryLoaded = viewer.countryLoaded === true;
+    const sameCountry = countryLoaded && viewer.sameCountry === true;
+    const canInviteNow = viewer.canInviteNow === true || viewer.eligible === true;
+    const countryEligible = viewer.countryEligible === true
+      || (countryLoaded && !sameCountry && viewer.city && viewer.country);
 
-    if (viewer.sameCountry) {
+    // Never claim "with your country" until the participant country has loaded.
+    if (sameCountry) {
       return `
         <div class="ptw-cta ptw-cta--quiet" role="status">
           <p class="ptw-cta-note">The World is with your country today.</p>
@@ -233,38 +231,83 @@ const PassTheWorld = (() => {
         <div class="ptw-cta ptw-cta--sent" role="status">
           <p class="ptw-cta-label">INVITATION SENT</p>
           <p class="ptw-cta-note">${esc(city)} is calling.</p>
-        </div>`;
-    }
-
-    if (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL') {
-      if (!viewer.eligible) {
-        return `
-          <div class="ptw-cta ptw-cta--quiet" role="status">
-            <p class="ptw-cta-note">Join World Choir with your city to invite the World.</p>
-          </div>`;
-      }
-      const countdown = status === 'INVITATION_OPEN'
-        ? `<p class="ptw-countdown" data-ptw-countdown aria-live="polite"></p>`
-        : '';
-      return `
-        <div class="ptw-cta">
-          <p class="ptw-cta-lead">Where should the World go next?</p>
-          <p class="ptw-cta-note">Invite it to your city.</p>
-          <button type="button" class="ptw-visit-btn" data-ptw-invite aria-label="Visit my city">
-            <span class="ptw-visit-ring" aria-hidden="true"></span>
-            <span class="ptw-visit-label">VISIT MY CITY</span>
-          </button>
-          ${countdown}
           ${journey.invitationCount > 0
             ? `<p class="ptw-invite-count" aria-live="polite">${Number(journey.invitationCount).toLocaleString()} invitations</p>`
             : ''}
         </div>`;
     }
 
-    if (status === 'TRAVELLING') {
+    if (status === 'INVITATION_OPEN') {
+      if (!countryLoaded) {
+        return `
+          <div class="ptw-cta ptw-cta--quiet" role="status">
+            <p class="ptw-cta-note">Loading your World Choir city…</p>
+          </div>`;
+      }
+      if (!countryEligible) {
+        return `
+          <div class="ptw-cta ptw-cta--quiet" role="status">
+            <p class="ptw-cta-note">Join World Choir with your city to invite the World.</p>
+          </div>`;
+      }
+      return `
+        <div class="ptw-cta">
+          <p class="ptw-cta-lead">WHERE SHOULD THE WORLD GO NEXT?</p>
+          <p class="ptw-cta-note">Invite it to your city.</p>
+          <button type="button" class="ptw-visit-btn ptw-visit-btn--primary" data-ptw-invite aria-label="Visit my city">
+            <span class="ptw-visit-ring" aria-hidden="true"></span>
+            <span class="ptw-visit-label">VISIT MY CITY</span>
+          </button>
+          <p class="ptw-countdown" data-ptw-countdown aria-live="polite"></p>
+          ${journey.invitationCount > 0
+            ? `<p class="ptw-invite-count" aria-live="polite">${Number(journey.invitationCount).toLocaleString()} invitations</p>`
+            : ''}
+        </div>`;
+    }
+
+    if (status === 'WAITING_FOR_FIRST_CALL') {
+      if (!countryLoaded) {
+        return `
+          <div class="ptw-cta ptw-cta--quiet" role="status">
+            <p class="ptw-cta-note">Loading your World Choir city…</p>
+          </div>`;
+      }
+      if (!countryEligible) {
+        return `
+          <div class="ptw-cta ptw-cta--quiet" role="status">
+            <p class="ptw-cta-note">Join World Choir with your city to invite the World.</p>
+          </div>`;
+      }
+      return `
+        <div class="ptw-cta">
+          <p class="ptw-cta-lead">WAITING FOR AN INVITATION</p>
+          <p class="ptw-cta-note">The World is waiting for its next invitation.</p>
+          <button type="button" class="ptw-visit-btn ptw-visit-btn--primary" data-ptw-invite aria-label="Visit my city">
+            <span class="ptw-visit-label">VISIT MY CITY</span>
+          </button>
+        </div>`;
+    }
+
+    // Before the daily window / while travelling — next invitation, button not active.
+    if (status === 'ARRIVED' || status === 'INITIAL' || status === 'TRAVELLING') {
+      if (!countryLoaded) {
+        return `
+          <div class="ptw-cta ptw-cta--quiet" role="status">
+            <p class="ptw-cta-note">Next invitation · 16:00 UTC</p>
+          </div>`;
+      }
+      if (countryEligible || !viewer.userId) {
+        return `
+          <div class="ptw-cta">
+            <p class="ptw-cta-note">Next invitation · 16:00 UTC</p>
+            <button type="button" class="ptw-visit-btn ptw-visit-btn--primary" disabled aria-disabled="true" aria-label="Visit my city — opens at 16:00 UTC">
+              <span class="ptw-visit-label">VISIT MY CITY</span>
+            </button>
+          </div>`;
+      }
       return `
         <div class="ptw-cta ptw-cta--quiet" role="status">
-          <p class="ptw-cta-note">The journey continues.</p>
+          <p class="ptw-cta-note">Next invitation · 16:00 UTC</p>
         </div>`;
     }
 
@@ -396,8 +439,14 @@ const PassTheWorld = (() => {
     }
     const closeAt = new Date(journey.invitationCloseAt).getTime();
     const openAt = new Date(journey.invitationOpenAt || closeAt - 60000).getTime();
+    const serverSkew = (() => {
+      if (!journey.serverNow) return 0;
+      return Date.now() - new Date(journey.serverNow).getTime();
+    })();
     const tick = () => {
-      const now = mockNow ? new Date(mockNow).getTime() : Date.now();
+      const now = mockNow
+        ? new Date(mockNow).getTime()
+        : Date.now() - serverSkew;
       const left = Math.max(0, Math.ceil((closeAt - now) / 1000));
       el.textContent = left > 0 ? `Invitations close in ${left}s` : 'Invitations closing…';
       const total = Math.max(1, closeAt - openAt);
@@ -502,13 +551,19 @@ const PassTheWorld = (() => {
 
   function startPolling() {
     stopPolling();
-    pollTimer = setInterval(async () => {
+    const tick = async () => {
       try { await refresh(); } catch { /* keep last */ }
-    }, POLL_MS);
+      const status = lastPayload?.journey?.status;
+      const ms = (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL')
+        ? 2000
+        : POLL_MS;
+      pollTimer = setTimeout(tick, ms);
+    };
+    pollTimer = setTimeout(tick, POLL_MS);
   }
 
   function stopPolling() {
-    if (pollTimer) clearInterval(pollTimer);
+    if (pollTimer) clearTimeout(pollTimer);
     pollTimer = null;
     if (countdownTimer) clearInterval(countdownTimer);
     countdownTimer = null;
@@ -544,6 +599,8 @@ const PassTheWorld = (() => {
     destroy();
     root = el;
     mounted = true;
+    lastPayload = null;
+    mockNow = null;
     root.innerHTML = shellHtml();
     root.classList.add('ptw-root');
 
@@ -552,6 +609,9 @@ const PassTheWorld = (() => {
     bindDev();
 
     try {
+      if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.ready) {
+        await WorldChoirDB.ready();
+      }
       await ensureMapLibs();
       await PassTheWorldMap.mount('ptw-map');
       await refresh();
@@ -562,7 +622,7 @@ const PassTheWorld = (() => {
         body.innerHTML = `
           <p class="ptw-route">Pass the World</p>
           <p class="ptw-cta-note">${esc(err.message || 'The journey could not be loaded.')}</p>
-          <button type="button" class="ptw-visit-btn" data-ptw-retry>TRY AGAIN</button>`;
+          <button type="button" class="ptw-visit-btn ptw-visit-btn--primary" data-ptw-retry>TRY AGAIN</button>`;
         body.querySelector('[data-ptw-retry]')?.addEventListener('click', () => mount(container));
       }
     }
