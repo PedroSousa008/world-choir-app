@@ -535,6 +535,12 @@ const PassTheWorld = (() => {
     }
   }
 
+  function setItineraryOpen(open) {
+    const card = document.querySelector('.passport-card--ptw');
+    if (!card) return;
+    card.classList.toggle('is-itinerary-open', !!open);
+  }
+
   function openPanel(mode) {
     const panel = root?.querySelector('[data-ptw-panel]');
     const content = root?.querySelector('[data-ptw-panel-content]');
@@ -555,6 +561,7 @@ const PassTheWorld = (() => {
     }
     panel.hidden = false;
     panel.setAttribute('aria-hidden', 'false');
+    setItineraryOpen(true);
   }
 
   function closePanel() {
@@ -562,6 +569,7 @@ const PassTheWorld = (() => {
     if (!panel) return;
     panel.hidden = true;
     panel.setAttribute('aria-hidden', 'true');
+    setItineraryOpen(false);
   }
 
   async function refresh() {
@@ -686,6 +694,7 @@ const PassTheWorld = (() => {
 
   function destroy() {
     stopPolling();
+    setItineraryOpen(false);
     if (typeof PassTheWorldMap !== 'undefined') PassTheWorldMap.destroy();
     if (root) {
       root.innerHTML = '';

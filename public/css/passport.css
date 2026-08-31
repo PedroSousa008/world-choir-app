@@ -1502,7 +1502,15 @@
 }
 
 .passport-card--ptw .passport-card__back {
-  display: none;
+  top: 14px;
+  right: 14px;
+  z-index: 30;
+}
+
+/* Itinerary panel sits above the card; hide the card back so only the panel close shows. */
+.passport-card--ptw.is-itinerary-open .passport-card__back {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 
