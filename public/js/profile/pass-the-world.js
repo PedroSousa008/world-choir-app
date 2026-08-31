@@ -464,7 +464,23 @@ const PassTheWorld = (() => {
     const btn = root?.querySelector('[data-ptw-invite]');
     if (btn) btn.disabled = true;
     try {
-      const result = await sendInvite();
+      let result;
+      try {
+        result = await sendInvite();
+      } catch (firstErr) {
+        // If the client was still on ARRIVED after the empty window, refresh and retry once.
+        if (/Invitations are not open/i.test(String(firstErr.message || ''))) {
+          await refresh();
+          const status = lastPayload?.journey?.status;
+          if (status === 'WAITING_FOR_FIRST_CALL' || status === 'INVITATION_OPEN') {
+            result = await sendInvite();
+          } else {
+            throw firstErr;
+          }
+        } else {
+          throw firstErr;
+        }
+      }
       lastPayload = {
         ...lastPayload,
         journey: result.journey || lastPayload?.journey,
@@ -487,6 +503,9 @@ const PassTheWorld = (() => {
       if (/already moving|already chosen|Invitations are not/i.test(msg)) {
         try { await refresh(); } catch { /* keep */ }
         paintBody(lastPayload);
+        if (typeof PassTheWorldMap !== 'undefined' && lastPayload) {
+          PassTheWorldMap.renderJourney(lastPayload);
+        }
         const note = document.createElement('p');
         note.className = 'ptw-inline-note';
         note.setAttribute('role', 'status');
@@ -499,8 +518,8 @@ const PassTheWorld = (() => {
           const retry = document.createElement('div');
           retry.className = 'ptw-cta';
           retry.innerHTML = `
-            <p class="ptw-cta-note">The invitation could not be sent.</p>
-            <button type="button" class="ptw-visit-btn" data-ptw-invite aria-label="Try again">TRY AGAIN</button>`;
+            <p class="ptw-cta-note">${esc(msg || 'The invitation could not be sent.')}</p>
+            <button type="button" class="ptw-visit-btn ptw-visit-btn--primary" data-ptw-invite aria-label="Try again">TRY AGAIN</button>`;
           body.querySelector('.ptw-cta')?.replaceWith(retry);
           retry.querySelector('[data-ptw-invite]')?.addEventListener('click', onInvite);
         }

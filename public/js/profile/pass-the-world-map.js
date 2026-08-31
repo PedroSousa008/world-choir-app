@@ -95,13 +95,16 @@ const PassTheWorldMap = (() => {
   }
 
   function planeIcon(bearing = 0) {
-    // ✈ glyph points roughly NE; offset so bearing 0° is north.
-    const rot = Number(bearing) - 45;
+    const rot = Number(bearing) || 0;
     return L.divIcon({
       className: 'ptw-plane-icon',
-      html: `<span class="ptw-plane" style="transform: rotate(${rot}deg)" aria-hidden="true">✈</span>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
+      html: `<span class="ptw-plane" style="transform:rotate(${rot}deg)" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="14" height="14" focusable="false">
+          <path fill="currentColor" d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+        </svg>
+      </span>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
     });
   }
 
@@ -231,6 +234,7 @@ const PassTheWorldMap = (() => {
     historyLayer.clearLayers();
     routeLayer.clearLayers();
     cityMarkers.clearLayers();
+    planeMarker = null;
 
     for (let i = 1; i < itinerary.length; i += 1) {
       const prev = itinerary[i - 1];
@@ -290,27 +294,28 @@ const PassTheWorldMap = (() => {
       const progress = Number(journey.progress?.progress) || 0;
       planePos = interpolateAlong(segs, progress) || from;
       const bearing = bearingAlong(segs, progress);
-      if (planeMarker) {
-        try { routeLayer.removeLayer(planeMarker); } catch { /* */ }
-        try { cityMarkers.removeLayer(planeMarker); } catch { /* */ }
-        planeMarker = null;
-      }
       planeMarker = L.marker(planePos, {
         icon: planeIcon(bearing),
         interactive: false,
         keyboard: false,
+        zIndexOffset: 600,
       }).addTo(routeLayer);
     } else if (current?.latitude != null) {
       planePos = [current.latitude, current.longitude];
-      if (planeMarker) {
-        try { routeLayer.removeLayer(planeMarker); } catch { /* */ }
-        try { cityMarkers.removeLayer(planeMarker); } catch { /* */ }
-        planeMarker = null;
-      }
       planeMarker = L.marker(planePos, {
         icon: planeIcon(0),
         interactive: false,
         keyboard: false,
+        zIndexOffset: 600,
+      }).addTo(cityMarkers);
+    } else if (journey.current?.latitude != null) {
+      // Fallback — always show the plane at the world's current city.
+      planePos = [journey.current.latitude, journey.current.longitude];
+      planeMarker = L.marker(planePos, {
+        icon: planeIcon(0),
+        interactive: false,
+        keyboard: false,
+        zIndexOffset: 600,
       }).addTo(cityMarkers);
     }
 

@@ -19,6 +19,8 @@ const INVITATION_HOUR_UTC = 16;
 const INVITATION_WINDOW_MS = 60 * 1000;
 /** If a late claim would arrive sooner than this, roll to the following 16:00 UTC. */
 const MIN_JOURNEY_DURATION_MS = 4 * 60 * 60 * 1000;
+/** First-call (after empty 60s window) journeys are intentionally faster. */
+const FIRST_CALL_JOURNEY_DURATION_MS = 2 * 60 * 60 * 1000;
 
 const SEED_CITY = {
   city: 'Braga',
@@ -147,8 +149,14 @@ function latestInvitationOpenAt(now = new Date()) {
   return yesterday;
 }
 
-function computeArrivalAt(departureAt) {
+function computeArrivalAt(departureAt, { selectionMode = 'window' } = {}) {
   const depart = new Date(departureAt);
+
+  // After an empty 60s window, the first caller starts a shorter symbolic journey.
+  if (selectionMode === 'first_call') {
+    return new Date(depart.getTime() + FIRST_CALL_JOURNEY_DURATION_MS);
+  }
+
   let arrival = nextInvitationOpenAt(depart);
   if (arrival.getTime() - depart.getTime() < MIN_JOURNEY_DURATION_MS) {
     arrival = nextInvitationOpenAt(arrival);
@@ -334,7 +342,9 @@ async function applyWinner(state, itinerary, winner, invitations) {
     origin.latitude, origin.longitude, winner.latitude, winner.longitude
   ));
   const selectedAt = winner.selectedAt || new Date().toISOString();
-  const arrivalAt = computeArrivalAt(selectedAt).toISOString();
+  const arrivalAt = computeArrivalAt(selectedAt, {
+    selectionMode: winner.selectionMode || 'window',
+  }).toISOString();
   const entry = {
     id: randomUUID(),
     sequence: itinerary.length + 1,
@@ -478,12 +488,14 @@ async function advanceStateMachine(nowInput) {
   const closeAt = new Date(openAt.getTime() + INVITATION_WINDOW_MS);
   const roundId = `round-${openAt.toISOString()}`;
 
+  // Active 60-second ritual window
   if (now.getTime() >= openAt.getTime() && now.getTime() < closeAt.getTime()) {
     const winner = await readWinner(roundId);
     if (!winner?.invitationId) state = await openInvitationRound(state, now);
     return { state, itinerary, now };
   }
 
+  // Window just closed while still marked open → settle (pick or wait)
   if (state.status === STATUS.INVITATION_OPEN
     && state.invitationCloseAt
     && now.getTime() >= new Date(state.invitationCloseAt).getTime()) {
@@ -494,6 +506,27 @@ async function advanceStateMachine(nowInput) {
     && now.getTime() >= closeAt.getTime()
     && state.activeRoundId === roundId) {
     return { ...(await settleInvitationRound(state, itinerary, now)), now };
+  }
+
+  // Missed/empty window with no round opened yet → waiting for first call forever
+  // until someone invites (World never moves by itself).
+  if (
+    (state.status === STATUS.ARRIVED || state.status === STATUS.INITIAL)
+    && now.getTime() >= closeAt.getTime()
+  ) {
+    const winner = await readWinner(roundId);
+    if (!winner?.invitationId) {
+      state = await writeState({
+        ...state,
+        status: STATUS.WAITING_FOR_FIRST_CALL,
+        activeRoundId: roundId,
+        invitationOpenAt: openAt.toISOString(),
+        invitationCloseAt: closeAt.toISOString(),
+        invitationCount: 0,
+        invitedCities: [],
+        version: (Number(state.version) || 1) + 1,
+      });
+    }
   }
 
   return { state, itinerary, now };
@@ -629,6 +662,7 @@ function buildPublicState(state, itinerary, now, viewer = {}) {
       invitationHourUtc: INVITATION_HOUR_UTC,
       invitationWindowMs: INVITATION_WINDOW_MS,
       minJourneyDurationMs: MIN_JOURNEY_DURATION_MS,
+      firstCallJourneyDurationMs: FIRST_CALL_JOURNEY_DURATION_MS,
     },
   };
 }
@@ -835,6 +869,7 @@ module.exports = {
   INVITATION_HOUR_UTC,
   INVITATION_WINDOW_MS,
   MIN_JOURNEY_DURATION_MS,
+  FIRST_CALL_JOURNEY_DURATION_MS,
   SEED_CITY,
   getPassTheWorld,
   submitInvitation,
