@@ -340,114 +340,54 @@ const PassTheWorld = (() => {
     });
   }
 
+  function isVisitButtonActive(journey) {
+    return journey?.viewer?.canInviteNow === true;
+  }
+
+  function renderVisitButton(journey, { showRing = false } = {}) {
+    const active = isVisitButtonActive(journey);
+    const classes = active
+      ? 'ptw-visit-btn ptw-visit-btn--primary'
+      : 'ptw-visit-btn ptw-visit-btn--muted';
+    const disabled = active ? '' : ' disabled aria-disabled="true"';
+    return `
+      <button type="button" class="${classes}" data-ptw-invite${disabled} aria-label="Visit my city">
+        ${showRing && active ? '<span class="ptw-visit-ring" aria-hidden="true"></span>' : ''}
+        <span class="ptw-visit-label">VISIT MY CITY</span>
+      </button>`;
+  }
+
   function renderCta(journey) {
     if (!journey) return '';
     const viewer = journey.viewer || {};
     const status = journey.status;
-    const countryLoaded = viewer.countryLoaded === true;
-    const sameCountry = countryLoaded && viewer.sameCountry === true;
-    const canInviteNow = viewer.canInviteNow === true || viewer.eligible === true;
-    const countryEligible = viewer.countryEligible === true
-      || (countryLoaded && !sameCountry && viewer.city && viewer.country);
+    const active = isVisitButtonActive(journey);
+    const showRing = status === 'INVITATION_OPEN';
 
-    // Never claim "with your country" until the participant country has loaded.
-    if (sameCountry) {
-      return `
-        <div class="ptw-cta ptw-cta--quiet" role="status">
-          <p class="ptw-cta-note">The World is with your country today.</p>
-        </div>`;
+    let lead = '';
+    let note = '';
+    if (status === 'INVITATION_OPEN' && active) {
+      lead = 'WHERE SHOULD THE WORLD GO NEXT?';
+      note = 'Invite it to your city.';
+    } else if (status === 'WAITING_FOR_FIRST_CALL' && active) {
+      lead = 'WAITING FOR AN INVITATION';
+      note = 'The World is waiting for its next invitation.';
+    } else if (!viewer.countryLoaded) {
+      note = 'Loading your World Choir city…';
+    } else if (!viewer.countryEligible && viewer.countryLoaded && !viewer.sameCountry) {
+      note = 'Join World Choir with your city to invite the World.';
     }
 
-    if (viewer.hasInvited
-      && (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL')) {
-      const city = viewer.city || 'Your city';
-      // Invitation count is only meaningful during the 60-second ritual window.
-      const showCount = status === 'INVITATION_OPEN' && journey.invitationCount > 0;
-      return `
-        <div class="ptw-cta ptw-cta--sent" role="status">
-          <p class="ptw-cta-label">INVITATION SENT</p>
-          <p class="ptw-cta-note">${esc(city)} is calling.</p>
-          ${showCount
-            ? `<p class="ptw-invite-count" aria-live="polite">${Number(journey.invitationCount).toLocaleString()} invitations</p>`
-            : ''}
-        </div>`;
-    }
-
-    if (status === 'INVITATION_OPEN') {
-      if (!countryLoaded) {
-        return `
-          <div class="ptw-cta ptw-cta--quiet" role="status">
-            <p class="ptw-cta-note">Loading your World Choir city…</p>
-          </div>`;
-      }
-      if (!countryEligible) {
-        return `
-          <div class="ptw-cta ptw-cta--quiet" role="status">
-            <p class="ptw-cta-note">Join World Choir with your city to invite the World.</p>
-          </div>`;
-      }
-      return `
-        <div class="ptw-cta">
-          <p class="ptw-cta-lead">WHERE SHOULD THE WORLD GO NEXT?</p>
-          <p class="ptw-cta-note">Invite it to your city.</p>
-          <button type="button" class="ptw-visit-btn ptw-visit-btn--primary" data-ptw-invite aria-label="Visit my city">
-            <span class="ptw-visit-ring" aria-hidden="true"></span>
-            <span class="ptw-visit-label">VISIT MY CITY</span>
-          </button>
-          <p class="ptw-countdown" data-ptw-countdown aria-live="polite"></p>
-          ${journey.invitationCount > 0
-            ? `<p class="ptw-invite-count" aria-live="polite">${Number(journey.invitationCount).toLocaleString()} invitations</p>`
-            : ''}
-        </div>`;
-    }
-
-    if (status === 'WAITING_FOR_FIRST_CALL') {
-      if (!countryLoaded) {
-        return `
-          <div class="ptw-cta ptw-cta--quiet" role="status">
-            <p class="ptw-cta-note">Loading your World Choir city…</p>
-          </div>`;
-      }
-      if (!countryEligible) {
-        return `
-          <div class="ptw-cta ptw-cta--quiet" role="status">
-            <p class="ptw-cta-note">Join World Choir with your city to invite the World.</p>
-          </div>`;
-      }
-      return `
-        <div class="ptw-cta">
-          <p class="ptw-cta-lead">WAITING FOR AN INVITATION</p>
-          <p class="ptw-cta-note">The World is waiting for its next invitation.</p>
-          <button type="button" class="ptw-visit-btn ptw-visit-btn--primary" data-ptw-invite aria-label="Visit my city">
-            <span class="ptw-visit-label">VISIT MY CITY</span>
-          </button>
-        </div>`;
-    }
-
-    // Before the daily window / while travelling — next invitation, button not active.
-    if (status === 'ARRIVED' || status === 'INITIAL' || status === 'TRAVELLING') {
-      if (!countryLoaded) {
-        return `
-          <div class="ptw-cta ptw-cta--quiet" role="status">
-            <p class="ptw-cta-note">Next invitation · 16:00 UTC</p>
-          </div>`;
-      }
-      if (countryEligible || !viewer.userId) {
-        return `
-          <div class="ptw-cta">
-            <p class="ptw-cta-note">Next invitation · 16:00 UTC</p>
-            <button type="button" class="ptw-visit-btn ptw-visit-btn--primary" disabled aria-disabled="true" aria-label="Visit my city — opens at 16:00 UTC">
-              <span class="ptw-visit-label">VISIT MY CITY</span>
-            </button>
-          </div>`;
-      }
-      return `
-        <div class="ptw-cta ptw-cta--quiet" role="status">
-          <p class="ptw-cta-note">Next invitation · 16:00 UTC</p>
-        </div>`;
-    }
-
-    return '';
+    return `
+      <div class="ptw-cta">
+        ${lead ? `<p class="ptw-cta-lead">${lead}</p>` : ''}
+        ${note ? `<p class="ptw-cta-note">${note}</p>` : ''}
+        ${renderVisitButton(journey, { showRing })}
+        ${showRing && active ? '<p class="ptw-countdown" data-ptw-countdown aria-live="polite"></p>' : ''}
+        ${status === 'INVITATION_OPEN' && journey.invitationCount > 0 && active
+          ? `<p class="ptw-invite-count" aria-live="polite">${Number(journey.invitationCount).toLocaleString()} invitations</p>`
+          : ''}
+      </div>`;
   }
 
   function renderReveal(journey) {

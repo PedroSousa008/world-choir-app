@@ -2002,6 +2002,16 @@
   outline: none;
 }
 
+.ptw-visit-btn--muted,
+.ptw-visit-btn--muted:disabled {
+  border-color: rgba(18, 25, 43, 0.1);
+  background: rgba(18, 25, 43, 0.06);
+  color: rgba(18, 25, 43, 0.34);
+  box-shadow: none;
+  cursor: default;
+  opacity: 1;
+}
+
 .ptw-visit-btn:hover,
 .ptw-visit-btn:focus-visible {
   border-color: rgba(30, 74, 140, 0.45);
