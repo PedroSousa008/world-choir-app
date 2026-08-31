@@ -432,6 +432,7 @@ const WorldChoirPassport = (() => {
         },
         hasSupportedCreatorCause,
         hasCompletedPartnerDailyAct,
+        dailyActsCompleted,
       })
       : [];
 
