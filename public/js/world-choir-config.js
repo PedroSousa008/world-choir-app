@@ -267,6 +267,23 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Passport stamp — "MAP PIONEER"
+   * Drop your artwork at: public/images/passport/stamps/map-pioneer.png
+   * Native 1536 × 1024 px (RGBA). Display slot 72 × 48 px, top-left on page 2.
+   * Rare: first 10 voices per country only. No locked artwork — hidden when not earned.
+   */
+  const PASSPORT_STAMP_MAP_PIONEER = {
+    src: 'images/passport/stamps/map-pioneer.png',
+    version: '20260831a',
+    width: 1536,
+    height: 1024,
+    alt: 'Map Pioneer — World Choir stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -498,6 +515,7 @@ const WorldChoirConfig = (() => {
     PASSPORT_STAMP_1_MILLION_VOICES_LOCKED,
     PASSPORT_STAMP_EVERY_CONTINENT,
     PASSPORT_STAMP_EVERY_CONTINENT_LOCKED,
+    PASSPORT_STAMP_MAP_PIONEER,
     EventState,
     AppState,
     getEventDate: getEventStart,

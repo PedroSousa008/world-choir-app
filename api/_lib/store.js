@@ -69,6 +69,25 @@ async function jsonStorageError(err) {
   return payload;
 }
 
+function normalizeCountryKey(country) {
+  return String(country || '').trim().toLowerCase();
+}
+
+const MAP_PIONEER_LIMIT = 10;
+
+function countMapPioneerAwardsForCountry(pledges, country) {
+  const key = normalizeCountryKey(country);
+  if (!key) return 0;
+  return (pledges || []).filter(
+    (p) => normalizeCountryKey(p.map_pioneer_for_country) === key
+  ).length;
+}
+
+function isMapPioneerActive(pledge) {
+  if (!pledge?.map_pioneer_for_country || !pledge?.country) return false;
+  return normalizeCountryKey(pledge.map_pioneer_for_country) === normalizeCountryKey(pledge.country);
+}
+
 function mapPledgeRow(pledge) {
   if (!pledge) return null;
   return {
@@ -84,6 +103,8 @@ function mapPledgeRow(pledge) {
     longitude: pledge.longitude,
     pledged_at: pledge.pledged_at,
     updated_at: pledge.updated_at,
+    mapPioneerForCountry: pledge.map_pioneer_for_country || null,
+    isMapPioneer: isMapPioneerActive(pledge),
   };
 }
 
@@ -390,6 +411,15 @@ async function joinWorldChoir({ deviceId, eventId, city, country, latitude, long
 
   const voiceNumber = await allocateVoiceNumber(trimmedEvent);
   const now = new Date().toISOString();
+
+  let existingPledges = await readPledgesIndex(trimmedEvent);
+  if (!existingPledges) {
+    existingPledges = await loadPledgesFromFiles(trimmedEvent);
+  }
+  const mapPioneerForCountry = countMapPioneerAwardsForCountry(existingPledges, trimmedCountry) < MAP_PIONEER_LIMIT
+    ? trimmedCountry
+    : null;
+
   const pledge = {
     id: randomUUID(),
     user_id: user.id,
@@ -402,6 +432,7 @@ async function joinWorldChoir({ deviceId, eventId, city, country, latitude, long
     longitude: longitude ?? null,
     pledged_at: now,
     updated_at: now,
+    map_pioneer_for_country: mapPioneerForCountry,
   };
 
   try {
@@ -680,8 +711,55 @@ const GLOBAL_MILESTONES = [
   { id: '1-million-voices', metric: 'voices', threshold: 1_000_000 },
 ];
 
-function normalizeCountryKey(country) {
-  return String(country || '').trim().toLowerCase();
+/**
+ * Backfill Map Pioneer awards for existing pledges (first 10 voice numbers per country).
+ * Slots already awarded stay occupied even if the pioneer later changes country.
+ */
+async function ensureMapPioneerAwards(eventId) {
+  let pledges = await readPledgesIndex(eventId);
+  if (!pledges) {
+    pledges = await loadPledgesFromFiles(eventId);
+  }
+
+  const awardCountByCountry = new Map();
+  for (const pledge of pledges) {
+    const key = normalizeCountryKey(pledge.map_pioneer_for_country);
+    if (!key) continue;
+    awardCountByCountry.set(key, (awardCountByCountry.get(key) || 0) + 1);
+  }
+
+  const candidatesByCountry = new Map();
+  for (const pledge of pledges) {
+    if (pledge.map_pioneer_for_country) continue;
+    const key = normalizeCountryKey(pledge.country);
+    if (!key) continue;
+    if (!candidatesByCountry.has(key)) candidatesByCountry.set(key, []);
+    candidatesByCountry.get(key).push(pledge);
+  }
+
+  const updates = [];
+  for (const [countryKey, candidates] of candidatesByCountry) {
+    const awarded = awardCountByCountry.get(countryKey) || 0;
+    const slots = MAP_PIONEER_LIMIT - awarded;
+    if (slots <= 0) continue;
+
+    const sorted = [...candidates].sort(
+      (a, b) => (Number(a.voice_number) || 0) - (Number(b.voice_number) || 0)
+    );
+    for (const pledge of sorted.slice(0, slots)) {
+      updates.push({
+        ...pledge,
+        map_pioneer_for_country: pledge.country,
+      });
+    }
+  }
+
+  for (const updated of updates) {
+    await writeJson(pledgePath(eventId, updated.user_id), updated, { overwrite: true });
+    await upsertPledgeIntoIndex(eventId, updated);
+  }
+
+  return updates.length;
 }
 
 function computeWorldChoirStatsFromPledges(pledges) {
@@ -779,6 +857,7 @@ async function ensureEveryContinentMilestone(eventId, representedContinents) {
 }
 
 async function refreshEventMilestones(eventId) {
+  await ensureMapPioneerAwards(eventId).catch(() => {});
   const pledges = await listPledges(eventId);
   const stats = computeWorldChoirStatsFromPledges(pledges);
   const milestones = {};

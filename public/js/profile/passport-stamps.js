@@ -13,6 +13,7 @@ const PassportStamps = (() => {
     GLOBAL_COUNTRY_MILESTONE: 'GLOBAL_COUNTRY_MILESTONE',
     GLOBAL_VOICE_MILESTONE: 'GLOBAL_VOICE_MILESTONE',
     GLOBAL_CONTINENT_MILESTONE: 'GLOBAL_CONTINENT_MILESTONE',
+    MAP_PIONEER: 'MAP_PIONEER',
     PLEDGE_JOINED: 'PLEDGE_JOINED',
   };
 
@@ -97,6 +98,19 @@ const PassportStamps = (() => {
       position: { left: 134, top: 118 },
       revealOrder: 5,
       lockedMessage: 'A global milestone is waiting to be reached.',
+    },
+    {
+      id: 'world-choir-map-pioneer',
+      title: 'Map Pioneer — World Choir',
+      eventId: 'world-choir-2027',
+      imageKey: 'PASSPORT_STAMP_MAP_PIONEER',
+      unlockType: UnlockType.MAP_PIONEER,
+      requiresPledge: true,
+      hideWhenLocked: true,
+      displayWidth: 72,
+      displayHeight: 48,
+      position: { left: 30, top: 52 },
+      revealOrder: 6,
     },
   ];
 
@@ -421,6 +435,26 @@ const PassportStamps = (() => {
       };
     }
 
+    if (stamp.unlockType === UnlockType.MAP_PIONEER) {
+      const isPioneer = context.isMapPioneer === true;
+      if (!eligibility.pledged) {
+        return {
+          unlocked: false,
+          pledged: false,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'not_pledged',
+        };
+      }
+      return {
+        unlocked: isPioneer,
+        pledged: true,
+        hasLocation: eligibility.hasLocation,
+        unlockDate: null,
+        reason: isPioneer ? 'unlocked' : 'not_map_pioneer',
+      };
+    }
+
     return {
       unlocked: false,
       pledged: eligibility.pledged,
@@ -444,7 +478,7 @@ const PassportStamps = (() => {
         ...status,
         shouldReveal,
       };
-    });
+    }).filter((status) => status.unlocked || status.stamp.hideWhenLocked !== true);
   }
 
   function revealStorageKey(stampId, userId) {
