@@ -142,7 +142,7 @@ const PassportStamps = (() => {
       requiresLocation: true,
       displayWidth: 120,
       displayHeight: 90,
-      position: { right: 10, top: 100 },
+      position: { right: 2, top: 100 },
       revealOrder: 8,
       lockedMessage: 'Your city must reach 50,000 voices to unlock this stamp.',
     },
