@@ -17,10 +17,9 @@ const ITINERARY_PATH = `${ROOT}/itinerary.json`;
 
 const INVITATION_HOUR_UTC = 16;
 const INVITATION_WINDOW_MS = 60 * 1000;
-/** If a late claim would arrive sooner than this, roll to the following 16:00 UTC. */
-const MIN_JOURNEY_DURATION_MS = 4 * 60 * 60 * 1000;
-/** First-call (after empty 60s window) journeys are intentionally faster. */
-const FIRST_CALL_JOURNEY_DURATION_MS = 2 * 60 * 60 * 1000;
+/** Journeys always land at 15:59 UTC so the World is ready for 16:00 UTC. */
+const ARRIVAL_HOUR_UTC = 15;
+const ARRIVAL_MINUTE_UTC = 59;
 
 const SEED_CITY = {
   city: 'Braga',
@@ -149,19 +148,32 @@ function latestInvitationOpenAt(now = new Date()) {
   return yesterday;
 }
 
-function computeArrivalAt(departureAt, { selectionMode = 'window' } = {}) {
-  const depart = new Date(departureAt);
-
-  // After an empty 60s window, the first caller starts a shorter symbolic journey.
-  if (selectionMode === 'first_call') {
-    return new Date(depart.getTime() + FIRST_CALL_JOURNEY_DURATION_MS);
+/**
+ * Next 15:59:00.000 UTC strictly after departure.
+ * Closer cities therefore move slower; longer hops move faster — same arrival clock.
+ */
+function nextArrivalAt(from = new Date()) {
+  const d = new Date(from.getTime());
+  const candidate = new Date(Date.UTC(
+    d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(),
+    ARRIVAL_HOUR_UTC, ARRIVAL_MINUTE_UTC, 0, 0
+  ));
+  if (candidate.getTime() <= from.getTime()) {
+    candidate.setUTCDate(candidate.getUTCDate() + 1);
   }
+  return candidate;
+}
 
-  let arrival = nextInvitationOpenAt(depart);
-  if (arrival.getTime() - depart.getTime() < MIN_JOURNEY_DURATION_MS) {
-    arrival = nextInvitationOpenAt(arrival);
-  }
-  return arrival;
+function computeArrivalAt(departureAt) {
+  return nextArrivalAt(new Date(departureAt));
+}
+
+function isCanonicalArrivalAt(iso) {
+  if (!iso) return false;
+  const d = new Date(iso);
+  return d.getUTCHours() === ARRIVAL_HOUR_UTC
+    && d.getUTCMinutes() === ARRIVAL_MINUTE_UTC
+    && d.getUTCSeconds() === 0;
 }
 
 function seedItinerary() {
@@ -342,9 +354,7 @@ async function applyWinner(state, itinerary, winner, invitations) {
     origin.latitude, origin.longitude, winner.latitude, winner.longitude
   ));
   const selectedAt = winner.selectedAt || new Date().toISOString();
-  const arrivalAt = computeArrivalAt(selectedAt, {
-    selectionMode: winner.selectionMode || 'window',
-  }).toISOString();
+  const arrivalAt = computeArrivalAt(selectedAt).toISOString();
   const entry = {
     id: randomUUID(),
     sequence: itinerary.length + 1,
@@ -456,6 +466,28 @@ async function settleInvitationRound(state, itinerary, now) {
 async function advanceStateMachine(nowInput) {
   const now = nowInput instanceof Date ? nowInput : new Date();
   let { state, itinerary } = await ensureSeeded();
+
+  // Correct any in-flight arrival that is not the canonical 15:59 UTC landing.
+  if (
+    state.status === STATUS.TRAVELLING
+    && state.departureAt
+    && !isCanonicalArrivalAt(state.arrivalAt)
+  ) {
+    const arrivalAt = computeArrivalAt(state.departureAt).toISOString();
+    state = await writeState({
+      ...state,
+      arrivalAt,
+      version: (Number(state.version) || 1) + 1,
+    });
+    if (state.currentItineraryEntryId) {
+      itinerary = itinerary.map((entry) => (
+        entry.id === state.currentItineraryEntryId
+          ? { ...entry, arrivedAt: arrivalAt }
+          : entry
+      ));
+      await writeItinerary(itinerary);
+    }
+  }
 
   if (state.status === STATUS.TRAVELLING
     && state.arrivalAt
@@ -700,8 +732,8 @@ function buildPublicState(state, itinerary, now, viewer = {}) {
     constants: {
       invitationHourUtc: INVITATION_HOUR_UTC,
       invitationWindowMs: INVITATION_WINDOW_MS,
-      minJourneyDurationMs: MIN_JOURNEY_DURATION_MS,
-      firstCallJourneyDurationMs: FIRST_CALL_JOURNEY_DURATION_MS,
+      arrivalHourUtc: ARRIVAL_HOUR_UTC,
+      arrivalMinuteUtc: ARRIVAL_MINUTE_UTC,
     },
   };
 }
@@ -954,13 +986,14 @@ module.exports = {
   STATUS,
   INVITATION_HOUR_UTC,
   INVITATION_WINDOW_MS,
-  MIN_JOURNEY_DURATION_MS,
-  FIRST_CALL_JOURNEY_DURATION_MS,
+  ARRIVAL_HOUR_UTC,
+  ARRIVAL_MINUTE_UTC,
   SEED_CITY,
   getPassTheWorld,
   submitInvitation,
   advanceStateMachine,
   haversineKm,
   nextInvitationOpenAt,
+  nextArrivalAt,
   computeArrivalAt,
 };

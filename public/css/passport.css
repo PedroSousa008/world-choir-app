@@ -1599,6 +1599,11 @@
   z-index: 650 !important;
 }
 
+.ptw-map .ptw-route-active {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .ptw-plane-overlay {
   position: absolute;
   top: 0;

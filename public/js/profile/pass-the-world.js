@@ -4,6 +4,7 @@
 const PassTheWorld = (() => {
   const EVENT_ID = 'world-choir-2027';
   const POLL_MS = 4000;
+  const TRAVEL_POLL_MS = 30000;
   const DEV = !!(typeof location !== 'undefined'
     && (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
       || /[?&]ptwDev=1(?:&|$)/.test(location.search)));
@@ -24,6 +25,7 @@ const PassTheWorld = (() => {
   let submitting = false;
   let mockNow = null;
   let mounted = false;
+  let arrivalRefreshScheduled = false;
 
   function esc(s) {
     return String(s ?? '')
@@ -180,9 +182,11 @@ const PassTheWorld = (() => {
       const total = prog.totalKm ?? prog.distanceKm;
       const travelled = prog.travelledKm;
       if (total != null) {
-        lines.push(`${formatKm(travelled)} of ${formatKm(total)}`);
+        lines.push(
+          `<span data-ptw-progress-km>${formatKm(travelled)} of ${formatKm(total)}</span>`
+        );
       }
-      lines.push('Next invitation · 16:00 UTC');
+      lines.push('Arrives · 15:59 UTC · Next invitation · 16:00 UTC');
       return lines;
     }
 
@@ -570,14 +574,35 @@ const PassTheWorld = (() => {
     return data;
   }
 
+  function bindLiveProgress() {
+    if (typeof PassTheWorldMap === 'undefined' || !PassTheWorldMap.setOnProgress) return;
+    PassTheWorldMap.setOnProgress(({ progress }) => {
+      const journey = lastPayload?.journey;
+      if (!journey || journey.status !== 'TRAVELLING') return;
+      const total = Number(journey.progress?.totalKm) || 0;
+      const travelled = Math.round(total * progress);
+      const el = root?.querySelector('[data-ptw-progress-km]');
+      if (el && total > 0) {
+        el.textContent = `${formatKm(travelled)} of ${formatKm(total)}`;
+      }
+      if (progress >= 1 && !arrivalRefreshScheduled) {
+        arrivalRefreshScheduled = true;
+        setTimeout(async () => {
+          arrivalRefreshScheduled = false;
+          try { await refresh(); } catch { /* keep */ }
+        }, 800);
+      }
+    });
+  }
+
   function startPolling() {
     stopPolling();
     const tick = async () => {
       try { await refresh(); } catch { /* keep last */ }
       const status = lastPayload?.journey?.status;
-      const ms = (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL')
-        ? 2000
-        : POLL_MS;
+      let ms = POLL_MS;
+      if (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL') ms = 2000;
+      else if (status === 'TRAVELLING') ms = TRAVEL_POLL_MS;
       pollTimer = setTimeout(tick, ms);
     };
     pollTimer = setTimeout(tick, POLL_MS);
@@ -635,6 +660,7 @@ const PassTheWorld = (() => {
       }
       await ensureMapLibs();
       await PassTheWorldMap.mount('ptw-map');
+      bindLiveProgress();
       await refresh();
       startPolling();
     } catch (err) {

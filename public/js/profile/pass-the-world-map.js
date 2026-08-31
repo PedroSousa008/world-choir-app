@@ -1,10 +1,13 @@
 /**
  * Pass the World — map layer (same basemap as Map tab, no city pins).
  * Plane is an HTML overlay above Leaflet/MapLibre so it always stays visible.
+ * While travelling, position is animated live along the great-circle route.
  */
 const PassTheWorldMap = (() => {
   const WORLD_BOUNDS = [[-85, -170], [84, 179]];
   const FALLBACK_CENTER = [41.5518, -8.4229]; // Braga seed
+  const ROUTE_STEPS = 160;
+  const HISTORY_STEPS = 96;
 
   let map = null;
   let routeLayer = null;
@@ -17,6 +20,14 @@ const PassTheWorldMap = (() => {
   let planeLatLng = null;
   let planeBearing = 0;
   let lockedWorldZoom = null;
+
+  let travelSegs = null;
+  let travelDepartMs = null;
+  let travelArriveMs = null;
+  let serverSkewMs = 0;
+  let animRaf = null;
+  let lastCenterSync = 0;
+  let onProgressCb = null;
 
   function greatCirclePoints(a, b, steps = 64) {
     const toRad = (d) => (d * Math.PI) / 180;
@@ -113,6 +124,23 @@ const PassTheWorldMap = (() => {
     });
   }
 
+  function drawArc(segments, style, layer) {
+    segments.forEach((seg) => {
+      if (!seg || seg.length < 2) return;
+      L.polyline(seg, {
+        color: style.color,
+        weight: style.weight,
+        opacity: style.opacity,
+        lineCap: 'round',
+        lineJoin: 'round',
+        smoothFactor: 0,
+        interactive: false,
+        pane: 'ptwOverlay',
+        className: style.className || '',
+      }).addTo(layer);
+    });
+  }
+
   function ensurePlaneEl() {
     const wrap = document.getElementById(containerId)?.parentElement;
     if (!wrap) return null;
@@ -203,6 +231,74 @@ const PassTheWorldMap = (() => {
     syncPlaneOverlay();
   }
 
+  function nowMs() {
+    return Date.now() - serverSkewMs;
+  }
+
+  function travelProgress() {
+    if (travelDepartMs == null || travelArriveMs == null) return 0;
+    const span = travelArriveMs - travelDepartMs;
+    if (span <= 0) return 1;
+    return Math.max(0, Math.min(1, (nowMs() - travelDepartMs) / span));
+  }
+
+  function stopTravelAnimation() {
+    if (animRaf) {
+      cancelAnimationFrame(animRaf);
+      animRaf = null;
+    }
+  }
+
+  function tickTravel() {
+    animRaf = null;
+    if (!map || !travelSegs) return;
+
+    const progress = travelProgress();
+    const pos = interpolateAlong(travelSegs, progress);
+    if (pos) {
+      setPlane(pos, bearingAlong(travelSegs, progress));
+      const t = performance.now();
+      // Keep the world framing locked on the plane without thrashing every frame.
+      if (t - lastCenterSync > 500) {
+        lastCenterSync = t;
+        const zoom = lockedWorldZoom || resolveWorldZoom();
+        map.setView(pos, zoom, { animate: false });
+        syncPlaneOverlay();
+      }
+    }
+
+    if (typeof onProgressCb === 'function') {
+      try {
+        onProgressCb({
+          progress,
+          departureAt: travelDepartMs,
+          arrivalAt: travelArriveMs,
+        });
+      } catch { /* ignore UI errors */ }
+    }
+
+    if (progress < 1) {
+      animRaf = requestAnimationFrame(tickTravel);
+    }
+  }
+
+  function startTravelAnimation(segs, departureAt, arrivalAt) {
+    travelSegs = segs;
+    travelDepartMs = new Date(departureAt).getTime();
+    travelArriveMs = new Date(arrivalAt).getTime();
+    stopTravelAnimation();
+    lastCenterSync = 0;
+    animRaf = requestAnimationFrame(tickTravel);
+  }
+
+  function setServerSkew(skewMs) {
+    serverSkewMs = Number(skewMs) || 0;
+  }
+
+  function setOnProgress(cb) {
+    onProgressCb = typeof cb === 'function' ? cb : null;
+  }
+
   async function mount(id = 'ptw-map') {
     if (typeof L === 'undefined') {
       console.error('Leaflet required for PassTheWorldMap');
@@ -238,17 +334,16 @@ const PassTheWorldMap = (() => {
       WorldChoirMapTiles.addBasemapLayers(map);
     }
 
-    // Dedicated high pane so route/city dots sit above MapLibre canvas.
     if (!map.getPane('ptwOverlay')) {
       const pane = map.createPane('ptwOverlay');
       pane.style.zIndex = 650;
       pane.style.pointerEvents = 'none';
     }
 
-    historyLayer = L.layerGroup([], { pane: 'ptwOverlay' }).addTo(map);
-    routeLayer = L.layerGroup([], { pane: 'ptwOverlay' }).addTo(map);
-    inviteLayer = L.layerGroup([], { pane: 'ptwOverlay' }).addTo(map);
-    cityMarkers = L.layerGroup([], { pane: 'ptwOverlay' }).addTo(map);
+    historyLayer = L.layerGroup().addTo(map);
+    routeLayer = L.layerGroup().addTo(map);
+    inviteLayer = L.layerGroup().addTo(map);
+    cityMarkers = L.layerGroup().addTo(map);
 
     ensurePlaneEl();
     map.on('zoomend move moveend zoom viewreset', syncPlaneOverlay);
@@ -269,6 +364,11 @@ const PassTheWorldMap = (() => {
   function renderJourney(payload = {}) {
     if (!map || !routeLayer) return;
     const { itinerary = [], journey = {} } = payload;
+
+    if (journey.serverNow) {
+      setServerSkew(Date.now() - new Date(journey.serverNow).getTime());
+    }
+
     historyLayer.clearLayers();
     routeLayer.clearLayers();
     cityMarkers.clearLayers();
@@ -285,18 +385,14 @@ const PassTheWorldMap = (() => {
       const segs = greatCirclePoints(
         [prev.latitude, prev.longitude],
         [curr.latitude, curr.longitude],
-        48
+        HISTORY_STEPS
       );
-      segs.forEach((seg) => {
-        if (seg.length < 2) return;
-        L.polyline(seg, {
-          color: 'rgba(255,255,255,0.18)',
-          weight: 1.25,
-          opacity: 1,
-          interactive: false,
-          pane: 'ptwOverlay',
-        }).addTo(historyLayer);
-      });
+      drawArc(segs, {
+        color: 'rgba(160, 170, 185, 0.28)',
+        weight: 0.85,
+        opacity: 1,
+        className: 'ptw-route-history',
+      }, historyLayer);
     }
 
     const parked = journey.status === 'TRAVELLING'
@@ -311,20 +407,24 @@ const PassTheWorldMap = (() => {
       }).addTo(cityMarkers);
     }
 
-    if (journey.status === 'TRAVELLING' && journey.origin && journey.destination) {
+    if (
+      journey.status === 'TRAVELLING'
+      && journey.origin
+      && journey.destination
+      && journey.departureAt
+      && journey.arrivalAt
+    ) {
       const from = [journey.origin.latitude, journey.origin.longitude];
       const to = [journey.destination.latitude, journey.destination.longitude];
-      const segs = greatCirclePoints(from, to, 72);
-      segs.forEach((seg) => {
-        if (seg.length < 2) return;
-        L.polyline(seg, {
-          color: 'rgba(255,255,255,0.92)',
-          weight: 2,
-          opacity: 1,
-          interactive: false,
-          pane: 'ptwOverlay',
-        }).addTo(routeLayer);
-      });
+      const segs = greatCirclePoints(from, to, ROUTE_STEPS);
+
+      // Thin smooth grey arc the plane always follows.
+      drawArc(segs, {
+        color: 'rgba(170, 178, 190, 0.92)',
+        weight: 1,
+        opacity: 1,
+        className: 'ptw-route-active',
+      }, routeLayer);
 
       L.marker(from, {
         icon: cityDotIcon('origin'),
@@ -337,18 +437,24 @@ const PassTheWorldMap = (() => {
         pane: 'ptwOverlay',
       }).addTo(cityMarkers);
 
-      const progress = Number(journey.progress?.progress) || 0;
+      startTravelAnimation(segs, journey.departureAt, journey.arrivalAt);
+      const progress = travelProgress();
       const planePos = interpolateAlong(segs, progress) || from;
       setPlane(planePos, bearingAlong(segs, progress));
-    } else if (journey.current?.latitude != null) {
-      setPlane([journey.current.latitude, journey.current.longitude], 0);
-    } else if (parked?.latitude != null) {
-      setPlane([parked.latitude, parked.longitude], 0);
     } else {
-      setPlane(FALLBACK_CENTER, 0);
+      stopTravelAnimation();
+      travelSegs = null;
+      travelDepartMs = null;
+      travelArriveMs = null;
+      if (journey.current?.latitude != null) {
+        setPlane([journey.current.latitude, journey.current.longitude], 0);
+      } else if (parked?.latitude != null) {
+        setPlane([parked.latitude, parked.longitude], 0);
+      } else {
+        setPlane(FALLBACK_CENTER, 0);
+      }
     }
 
-    // Invite lights only during the 60-second ritual window.
     renderInvites(
       journey.status === 'INVITATION_OPEN' ? (journey.invitedCities || []) : []
     );
@@ -376,6 +482,7 @@ const PassTheWorldMap = (() => {
   }
 
   function destroy() {
+    stopTravelAnimation();
     if (map) {
       map.off('zoomend move moveend zoom viewreset', syncPlaneOverlay);
       map.off('zoomend', syncInteraction);
@@ -392,6 +499,9 @@ const PassTheWorldMap = (() => {
     cityMarkers = null;
     planeLatLng = null;
     planeBearing = 0;
+    travelSegs = null;
+    travelDepartMs = null;
+    travelArriveMs = null;
     lockedWorldZoom = null;
     focusLatLng = FALLBACK_CENTER.slice();
   }
@@ -405,5 +515,7 @@ const PassTheWorldMap = (() => {
     fitFullWorld,
     frameOnPlane,
     invalidateSize,
+    setServerSkew,
+    setOnProgress,
   };
 })();
