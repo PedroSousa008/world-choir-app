@@ -107,15 +107,24 @@ const PassportPage = (() => {
   function renderStoryView() {
     return `
       <div id="passport-story-view" class="passport-story-view" hidden>
-        <button
-          type="button"
-          class="passport-card__back"
-          id="passport-story-back"
-          aria-label="Go back to Passport stamps"
-        >
-          ←
-        </button>
-        <div id="passport-story-host" class="passport-story-host" aria-label="Pass the World"></div>
+        <header class="passport-header passport-header--story-spacer" aria-hidden="true">
+          <div>
+            <h1 class="passport-header__title">Passport</h1>
+          </div>
+        </header>
+        <div class="passport-card-wrap">
+          <div class="passport-card passport-card--ptw is-inside" aria-label="Pass the World">
+            <button
+              type="button"
+              class="passport-card__back"
+              id="passport-story-back"
+              aria-label="Go back to Passport stamps"
+            >
+              ←
+            </button>
+            <div id="passport-story-host" class="passport-story-host ptw-card-host"></div>
+          </div>
+        </div>
       </div>
     `;
   }

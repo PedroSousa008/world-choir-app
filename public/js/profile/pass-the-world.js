@@ -377,11 +377,6 @@ const PassTheWorld = (() => {
   function shellHtml() {
     return `
       <section class="ptw" aria-labelledby="ptw-title">
-        <header class="ptw-header">
-          <h1 id="ptw-title" class="ptw-title">PASS THE WORLD</h1>
-          <p class="ptw-subtitle">One world. One journey.</p>
-        </header>
-
         <div class="ptw-map-wrap">
           <div id="ptw-map" class="ptw-map" role="img" aria-label="World map showing the Pass the World journey"></div>
           <button
@@ -394,6 +389,11 @@ const PassTheWorld = (() => {
             ${expandIconHtml()}
           </button>
         </div>
+
+        <header class="ptw-header">
+          <h1 id="ptw-title" class="ptw-title">PASS THE WORLD</h1>
+          <p class="ptw-subtitle">One world. One journey.</p>
+        </header>
 
         <div class="ptw-body" data-ptw-body>
           <div class="ptw-skeleton" aria-hidden="true">
