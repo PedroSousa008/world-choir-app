@@ -97,6 +97,43 @@ const PassTheWorld = (() => {
     return [loc.city, loc.country].filter(Boolean).join(', ');
   }
 
+  function toCaps(s) {
+    return String(s || '').trim().toUpperCase();
+  }
+
+  function renderPlaceBlock(loc) {
+    if (!loc) return '';
+    const city = toCaps(loc.city);
+    const country = toCaps(loc.country);
+    const flag = typeof WorldChoirFlags !== 'undefined'
+      ? WorldChoirFlags.flagEmoji(loc.country)
+      : '';
+    if (!city && !country) return '';
+    return `
+      <div class="ptw-place">
+        ${city ? `<p class="ptw-place__city">${esc(city)}</p>` : ''}
+        ${country
+          ? `<p class="ptw-place__country">${esc(country)}${flag ? ` ${flag}` : ''}</p>`
+          : ''}
+      </div>`;
+  }
+
+  function renderRoute(journey) {
+    if (!journey) return '';
+    if (journey.status === 'TRAVELLING' && journey.origin && journey.destination) {
+      return `
+        <div class="ptw-route" aria-label="Current journey">
+          ${renderPlaceBlock(journey.origin)}
+          <span class="ptw-route__arrow" aria-hidden="true">→</span>
+          ${renderPlaceBlock(journey.destination)}
+        </div>`;
+    }
+    return `
+      <div class="ptw-route" aria-label="Current city">
+        ${renderPlaceBlock(journey.current)}
+      </div>`;
+  }
+
   function formatKm(n) {
     if (n == null || Number.isNaN(Number(n))) return '—';
     return `${Math.round(Number(n)).toLocaleString()} km`;
@@ -391,8 +428,7 @@ const PassTheWorld = (() => {
         </div>
 
         <header class="ptw-header">
-          <h1 id="ptw-title" class="ptw-title">PASS THE WORLD</h1>
-          <p class="ptw-subtitle">One world. One journey.</p>
+          <h1 id="ptw-title" class="ptw-title">Pass the World</h1>
         </header>
 
         <div class="ptw-body" data-ptw-body>
@@ -423,7 +459,7 @@ const PassTheWorld = (() => {
     const journey = payload.journey || {};
 
     body.innerHTML = `
-      <p class="ptw-route">${esc(journeyHeadline(journey))}</p>
+      ${renderRoute(journey)}
       <div class="ptw-status">
         ${statusLines(journey, payload.itinerary).map((l) => `<p>${l}</p>`).join('')}
       </div>
