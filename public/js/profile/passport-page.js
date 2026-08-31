@@ -107,23 +107,15 @@ const PassportPage = (() => {
   function renderStoryView() {
     return `
       <div id="passport-story-view" class="passport-story-view" hidden>
-        <header class="passport-header passport-header--story-spacer" aria-hidden="true">
-          <div>
-            <h1 class="passport-header__title">Passport</h1>
-          </div>
-        </header>
-        <div class="passport-card-wrap">
-          <div class="passport-story-stage" aria-label="Your story">
-            <button
-              type="button"
-              class="passport-card__back"
-              id="passport-story-back"
-              aria-label="Go back to Passport stamps"
-            >
-              ←
-            </button>
-          </div>
-        </div>
+        <button
+          type="button"
+          class="passport-card__back"
+          id="passport-story-back"
+          aria-label="Go back to Passport stamps"
+        >
+          ←
+        </button>
+        <div id="passport-story-host" class="passport-story-host" aria-label="Pass the World"></div>
       </div>
     `;
   }
@@ -264,13 +256,33 @@ Completed</p>
     }
   }
 
+  function mountPassTheWorld() {
+    const host = document.getElementById('passport-story-host');
+    if (!host || typeof PassTheWorld === 'undefined') return;
+    if (PassTheWorld.isMounted?.() && host.querySelector('.ptw')) {
+      if (typeof PassTheWorldMap !== 'undefined') PassTheWorldMap.invalidateSize?.();
+      return;
+    }
+    PassTheWorld.mount(host);
+  }
+
+  function unmountPassTheWorld() {
+    if (typeof PassTheWorld !== 'undefined') PassTheWorld.destroy();
+  }
+
   function showChapter(chapter, opts = {}) {
-    applyChapter(chapter, opts);
-    if (resolveChapter(chapter) === 'stamps') {
+    const next = resolveChapter(chapter);
+    applyChapter(next, opts);
+    if (next === 'stamps') {
+      unmountPassTheWorld();
       const card = document.querySelector('.passport-card');
       if (card && typeof PassportStamps !== 'undefined') {
         PassportStamps.bindRevealAnimations(card);
       }
+    } else if (next === 'story') {
+      mountPassTheWorld();
+    } else {
+      unmountPassTheWorld();
     }
   }
 
@@ -341,6 +353,13 @@ Completed</p>
     const pageEl = document.getElementById('passport-page');
     if (!root) return;
 
+    // Soft refresh on story: keep Pass the World mounted.
+    if (chapter === 'story' && document.getElementById('passport-story-host')?.querySelector('.ptw')) {
+      passportData = data;
+      applyChapter('story', { syncUrl: true, historyMode: 'replace' });
+      return;
+    }
+
     root.innerHTML = render(data, chapter === 'story' ? 'stamps' : chapter);
     WorldChoirPassport.revealFeatureImages(root);
     bindInteractions();
@@ -356,6 +375,8 @@ Completed</p>
       if (card && typeof PassportStamps !== 'undefined') {
         PassportStamps.bindRevealAnimations(card);
       }
+    } else if (chapter === 'story') {
+      mountPassTheWorld();
     }
   }
 
@@ -373,10 +394,10 @@ Completed</p>
       passportData = cached;
       paint(cached, chapter, { animate: false });
     } else if (chapter === 'story') {
-      // Story needs no network — show instantly, then warm passport data in background.
       root.innerHTML = renderLoading('story');
       bindStoryBack();
       applyChapter('story', { syncUrl: true, historyMode: 'replace' });
+      mountPassTheWorld();
     } else {
       root.innerHTML = renderLoading(chapter);
       WorldChoirPassport.revealFeatureImages(root);
