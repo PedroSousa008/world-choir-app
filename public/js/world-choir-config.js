@@ -238,7 +238,7 @@ const WorldChoirConfig = (() => {
   /**
    * Passport stamp — "EVERY CONTINENT"
    * Drop your artwork at: public/images/passport/stamps/every-continent.png
-   * Native 1586 × 992 px (RGBA). Display slot 120 × 75 px, top-center on page 2.
+   * Native 1586 × 992 px (RGBA). Display slot 105 × 66 px, top-center on page 2.
    */
   const PASSPORT_STAMP_EVERY_CONTINENT = {
     src: 'images/passport/stamps/every-continent.png',
