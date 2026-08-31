@@ -2,8 +2,10 @@
  * Pass the World — map layer (same basemap as Map tab, no city pins).
  */
 const PassTheWorldMap = (() => {
-  const WORLD_BOUNDS = [[-56, -168], [72, 178]];
-  const WORLD_CENTER = [18, 10];
+  // Full Earth framing: Greenland → Antarctica, Americas → far-east Russia.
+  // Web Mercator tops out near ±85°; keep a touch of padding inside that.
+  const WORLD_BOUNDS = [[-85, -170], [84, 179]];
+  const WORLD_CENTER = [10, 10];
 
   let map = null;
   let routeLayer = null;
@@ -103,20 +105,18 @@ const PassTheWorldMap = (() => {
     map.invalidateSize({ animate: false, pan: false });
     map.fitBounds(WORLD_BOUNDS, {
       animate,
-      padding: [8, 8],
-      maxZoom: 4,
+      padding: [2, 2],
+      maxZoom: 3,
     });
-    // Keep the world centered; lock pan at this framing.
-    const z = map.getZoom();
-    if (z <= 1.35) {
-      map.setView(WORLD_CENTER, z, { animate: false });
+    // Lock pan at the fitted world framing (do not re-center — that crops poles).
+    if (map.getZoom() <= 1.75) {
       map.dragging.disable();
     }
   }
 
   function syncInteraction() {
     if (!map) return;
-    if (map.getZoom() <= 1.4) {
+    if (map.getZoom() <= 1.75) {
       map.dragging.disable();
     } else {
       map.dragging.enable();
@@ -135,15 +135,15 @@ const PassTheWorldMap = (() => {
 
     map = L.map(containerId, {
       center: WORLD_CENTER,
-      zoom: 1,
-      minZoom: 0.75,
+      zoom: 0.75,
+      minZoom: 0.5,
       maxZoom: 8,
       zoomSnap: 0.25,
       zoomDelta: 0.5,
       zoomControl: false,
       attributionControl: false,
       worldCopyJump: false,
-      maxBounds: [[-85, -180], [85, 180]],
+      maxBounds: [[-85.05, -180], [85.05, 180]],
       maxBoundsViscosity: 1.0,
       dragging: false,
       scrollWheelZoom: false,

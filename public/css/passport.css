@@ -1565,8 +1565,9 @@
   position: relative;
   width: 100%;
   flex: 0 0 auto;
-  aspect-ratio: 2.1 / 1;
-  max-height: 42%;
+  /* Taller window so Greenland → Antarctica + Americas → Russia can fit */
+  aspect-ratio: 1.55 / 1;
+  max-height: 48%;
   border-radius: 0;
   overflow: hidden;
   background: #000000;
