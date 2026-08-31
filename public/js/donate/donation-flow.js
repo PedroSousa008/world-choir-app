@@ -880,6 +880,19 @@ const WorldChoirDonationFlow = (() => {
       state.step = 'success';
 
       try {
+        CreatorFoundationsStore.UserSupport.recordSuccessfulDonation({
+          foundationId: state.foundation.id,
+          projectId: state.project?.id || null,
+          amount: receipt.amountGross ?? state.amount,
+          currency: receipt.currency || config?.currency || 'EUR',
+          anonymous: state.donorAnonymous,
+          donationId: state.donationId,
+        });
+      } catch {
+        /* ignore local support cache errors */
+      }
+
+      try {
         await CreatorFoundationsStore.refresh?.()
           || CreatorFoundationsStore.ready?.(true);
         const fresh = CreatorFoundationsStore.getById(state.foundation.id);

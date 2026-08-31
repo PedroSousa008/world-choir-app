@@ -306,6 +306,51 @@ const WorldChoirPassport = (() => {
     }
   }
 
+  function readLocalCreatorCauseSupport() {
+    try {
+      if (typeof CreatorFoundationsStore !== 'undefined'
+        && CreatorFoundationsStore.UserSupport?.hasSupportedCreatorCause) {
+        return CreatorFoundationsStore.UserSupport.hasSupportedCreatorCause() === true;
+      }
+    } catch {
+      /* ignore */
+    }
+
+    try {
+      const raw = localStorage.getItem('wc_creator_foundations_support');
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      const successStatuses = new Set(['succeeded', 'completed', 'paid']);
+      return (data?.donations || []).some((entry) => {
+        if (entry?.mock === true) return false;
+        const status = String(entry?.paymentStatus || entry?.status || '').toLowerCase();
+        return successStatuses.has(status);
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  async function fetchHasSupportedCreatorCause() {
+    const localSupported = readLocalCreatorCauseSupport();
+    try {
+      const deviceId = WorldChoirDB.getDeviceId?.() || null;
+      const user = WorldChoirDB.getCurrentUser?.() || null;
+      const userId = user?.id || null;
+      if (!deviceId && !userId) return localSupported;
+
+      const params = new URLSearchParams({ action: 'has-supported' });
+      if (deviceId) params.set('deviceId', deviceId);
+      if (userId) params.set('userId', userId);
+      const res = await fetch(`/api/donations?${params.toString()}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return localSupported;
+      return data?.supported === true;
+    } catch {
+      return localSupported;
+    }
+  }
+
   async function fetchDailyActsCompleted() {
     try {
       const deviceId = WorldChoirDB.getDeviceId();
@@ -334,6 +379,7 @@ const WorldChoirPassport = (() => {
 
     const dailyActsCompleted = await fetchDailyActsCompleted();
     const worldStats = await fetchWorldChoirStats();
+    const hasSupportedCreatorCause = await fetchHasSupportedCreatorCause();
     const mapStats = typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.getMapStats?.() : null;
     const userId = user.id || WorldChoirDB.getDeviceId?.() || 'anonymous';
     const userCountry = pledge?.country || user.country || null;
@@ -369,6 +415,7 @@ const WorldChoirPassport = (() => {
           const city = String(userCity || '').trim();
           return !!(country && city);
         },
+        hasSupportedCreatorCause,
       })
       : [];
 

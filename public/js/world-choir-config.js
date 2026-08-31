@@ -23,6 +23,9 @@ const WorldChoirConfig = (() => {
   /** Dev test — treat the major-city stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_MAJOR_CITY = false;
 
+  /** Dev test — treat the creator-cause stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
+  const TEST_FORCE_CREATOR_CAUSE = false;
+
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
 
@@ -356,6 +359,39 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Passport stamp — "CREATOR CAUSE"
+   * Drop your artwork at: public/images/passport/stamps/creator-cause.png
+   * Native 1672 × 941 px (RGBA). Display slot 100 × 56 px on page 2.
+   * Unlocks when the user completes at least one verified Creator Foundation donation.
+   */
+  const PASSPORT_STAMP_CREATOR_CAUSE = {
+    src: 'images/passport/stamps/creator-cause.png',
+    version: '20260831d',
+    width: 1672,
+    height: 941,
+    alt: 'Creator Cause — World Choir stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /**
+   * Locked placeholder for the Creator Cause stamp (shown before unlock).
+   * Drop your artwork at: public/images/passport/stamps/creator-cause-locked.png
+   * Native 1672 × 940 px (RGBA). Same display slot as the unlocked stamp.
+   */
+  const PASSPORT_STAMP_CREATOR_CAUSE_LOCKED = {
+    src: 'images/passport/stamps/creator-cause-locked.png',
+    version: '20260831d',
+    width: 1672,
+    height: 940,
+    alt: 'Locked Creator Cause stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -500,6 +536,10 @@ const WorldChoirConfig = (() => {
     return TEST_FORCE_MAJOR_CITY;
   }
 
+  function isTestForceCreatorCause() {
+    return TEST_FORCE_CREATOR_CAUSE;
+  }
+
   function getGlobalEventStatus(now = new Date()) {
     return getGlobalEventState(now);
   }
@@ -600,6 +640,8 @@ const WorldChoirConfig = (() => {
     PASSPORT_STAMP_MADE_MY_PROMISE_LOCKED,
     PASSPORT_STAMP_MAJOR_CITY,
     PASSPORT_STAMP_MAJOR_CITY_LOCKED,
+    PASSPORT_STAMP_CREATOR_CAUSE,
+    PASSPORT_STAMP_CREATOR_CAUSE_LOCKED,
     EventState,
     AppState,
     getEventDate: getEventStart,
@@ -630,6 +672,7 @@ const WorldChoirConfig = (() => {
     isTestForceEveryContinentMilestone,
     isTestForceMadeMyPromise,
     isTestForceMajorCity,
+    isTestForceCreatorCause,
     getAppState,
     formatEventDate,
     formatEventTime,

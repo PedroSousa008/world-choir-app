@@ -354,6 +354,32 @@ function isSuccessfulDonation(d) {
   return SUCCESS_STATUSES.has(status);
 }
 
+function donorIdentityKeys(donation) {
+  return [
+    donation?.deviceId,
+    donation?.donorId,
+    donation?.userId,
+    donation?.user_id,
+  ]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+}
+
+async function hasSupportedCreatorCause({ deviceId, userId } = {}) {
+  const keys = new Set(
+    [deviceId, userId]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+  );
+  if (!keys.size) return false;
+
+  const list = await readDonationsLedger();
+  return list.some((donation) => {
+    if (!isSuccessfulDonation(donation)) return false;
+    return donorIdentityKeys(donation).some((key) => keys.has(key));
+  });
+}
+
 module.exports = {
   PLATFORM_FEE_PERCENT,
   MIN_DONATION_CENTS,
@@ -378,5 +404,6 @@ module.exports = {
   assertFoundationDonatable,
   buildDraftRecord,
   isSuccessfulDonation,
+  hasSupportedCreatorCause,
   randomUUID,
 };

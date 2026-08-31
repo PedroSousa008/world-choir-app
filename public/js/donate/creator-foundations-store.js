@@ -507,6 +507,49 @@ const CreatorFoundationsStore = (() => {
     getDonationHistory() {
       return this._read().donations || [];
     },
+    recordSuccessfulDonation({
+      foundationId,
+      amount,
+      currency,
+      anonymous = false,
+      projectId = null,
+      donationId = null,
+    }) {
+      const data = this._read();
+      data.donations = data.donations || [];
+      if (donationId && data.donations.some((entry) => entry.donationId === donationId)) {
+        return data.donations.find((entry) => entry.donationId === donationId);
+      }
+
+      const entry = {
+        id: donationId || `local_${Date.now().toString(36)}`,
+        donationId,
+        foundationId,
+        projectId,
+        amount,
+        currency,
+        anonymous,
+        date: new Date().toISOString(),
+        paymentStatus: 'succeeded',
+        status: 'succeeded',
+        mock: false,
+      };
+      data.donations.push(entry);
+      data.supportedFoundationIds = Array.from(new Set([
+        ...(data.supportedFoundationIds || []),
+        foundationId,
+      ]));
+      this._write(data);
+      return entry;
+    },
+    hasSupportedCreatorCause() {
+      const successStatuses = new Set(['succeeded', 'completed', 'paid']);
+      return this.getDonationHistory().some((entry) => {
+        if (entry?.mock === true) return false;
+        const status = String(entry?.paymentStatus || entry?.status || '').toLowerCase();
+        return successStatuses.has(status);
+      });
+    },
     getSupportedFoundationIds() {
       return this._read().supportedFoundationIds || [];
     },

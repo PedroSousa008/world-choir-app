@@ -16,6 +16,7 @@ const PassportStamps = (() => {
     MAP_PIONEER: 'MAP_PIONEER',
     PROMISE_SUBMITTED: 'PROMISE_SUBMITTED',
     MAJOR_CITY: 'MAJOR_CITY',
+    CREATOR_CAUSE_DONATION: 'CREATOR_CAUSE_DONATION',
     PLEDGE_JOINED: 'PLEDGE_JOINED',
   };
 
@@ -146,6 +147,20 @@ const PassportStamps = (() => {
       revealOrder: 8,
       lockedMessage: 'Your city must reach 50,000 voices to unlock this stamp.',
     },
+    {
+      id: 'world-choir-creator-cause',
+      title: 'Creator Cause — World Choir',
+      eventId: 'world-choir-2027',
+      imageKey: 'PASSPORT_STAMP_CREATOR_CAUSE',
+      lockedImageKey: 'PASSPORT_STAMP_CREATOR_CAUSE_LOCKED',
+      unlockType: UnlockType.CREATOR_CAUSE_DONATION,
+      requiresPledge: false,
+      displayWidth: 100,
+      displayHeight: 56,
+      position: { left: 28, top: 180 },
+      revealOrder: 9,
+      lockedMessage: 'Support a Creator Foundation cause to unlock this stamp.',
+    },
   ];
 
   function resolveStampImage(stamp, { unlocked = false } = {}) {
@@ -260,6 +275,22 @@ const PassportStamps = (() => {
     }
     return typeof WorldChoirConfig !== 'undefined'
       && WorldChoirConfig.isTestForceMajorCity?.() === true;
+  }
+
+  function isTestForceCreatorCause(stamp) {
+    if (stamp?.id !== 'world-choir-creator-cause') {
+      return false;
+    }
+    return typeof WorldChoirConfig !== 'undefined'
+      && WorldChoirConfig.isTestForceCreatorCause?.() === true;
+  }
+
+  function hasSupportedCreatorCause(context = {}) {
+    if (context.hasSupportedCreatorCause === true) return true;
+    if (typeof context.hasSupportedCreatorCause === 'function') {
+      return context.hasSupportedCreatorCause() === true;
+    }
+    return false;
   }
 
   function normalizeCityKey(city, country) {
@@ -663,6 +694,27 @@ const PassportStamps = (() => {
         hasLocation: true,
         unlockDate: null,
         reason: 'unlocked',
+      };
+    }
+
+    if (stamp.unlockType === UnlockType.CREATOR_CAUSE_DONATION) {
+      if (isTestForceCreatorCause(stamp) || context.forceCreatorCause === true) {
+        return {
+          unlocked: true,
+          pledged: eligibility.pledged,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'test_force',
+        };
+      }
+
+      const supported = hasSupportedCreatorCause(context);
+      return {
+        unlocked: supported,
+        pledged: eligibility.pledged,
+        hasLocation: eligibility.hasLocation,
+        unlockDate: null,
+        reason: supported ? 'unlocked' : 'no_creator_cause_donation',
       };
     }
 

@@ -192,6 +192,17 @@ async function handleUpdate(req, res) {
   });
 }
 
+async function handleHasSupported(req, res) {
+  const deviceId = String(req.query?.deviceId || req.body?.deviceId || '').trim() || null;
+  const userId = String(req.query?.userId || req.body?.userId || '').trim() || null;
+  if (!deviceId && !userId) {
+    return res.status(400).json({ error: 'deviceId or userId is required.' });
+  }
+
+  const supported = await donations.hasSupportedCreatorCause({ deviceId, userId });
+  return res.status(200).json({ supported });
+}
+
 async function handleReceipt(req, res) {
   const id = String(req.query?.id || '').trim();
   if (!id) return res.status(400).json({ error: 'id is required.' });
@@ -332,6 +343,7 @@ module.exports = async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
+      if (action === 'has-supported') return handleHasSupported(req, res);
       if (action === 'receipt' || (req.query?.id && action !== 'config')) {
         return handleReceipt(req, res);
       }
