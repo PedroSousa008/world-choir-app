@@ -16,6 +16,7 @@ const PassTheWorldMap = (() => {
   let inviteLayer = null;
   let planeEl = null;
   let destEl = null;
+  let originEl = null;
   let routeSvg = null;
   let routeGlowEl = null;
   let routePathEl = null;
@@ -24,6 +25,7 @@ const PassTheWorldMap = (() => {
   let planeLatLng = null;
   let planeBearing = 0;
   let destLatLng = null;
+  let originLatLng = null;
   let lockedWorldZoom = null;
   let userHasZoomed = false;
 
@@ -205,13 +207,21 @@ const PassTheWorldMap = (() => {
       wrap.appendChild(routeSvg);
     }
 
+    if (!originEl || !originEl.isConnected) {
+      originEl = document.createElement('div');
+      originEl.className = 'ptw-stop-overlay ptw-stop-overlay--origin';
+      originEl.setAttribute('aria-hidden', 'true');
+      originEl.innerHTML = '<span class="ptw-stop-overlay__dot"></span>';
+      wrap.appendChild(originEl);
+    }
+
     if (!destEl || !destEl.isConnected) {
       destEl = document.createElement('button');
       destEl.type = 'button';
-      destEl.className = 'ptw-dest-overlay';
+      destEl.className = 'ptw-stop-overlay ptw-stop-overlay--dest';
       destEl.setAttribute('aria-label', 'Destination');
       destEl.innerHTML = `
-        <span class="ptw-dest-overlay__dot"></span>
+        <span class="ptw-stop-overlay__dot"></span>
         <span class="ptw-dest-overlay__popup" hidden>
           <span class="ptw-dest-overlay__city"></span>
           <span class="ptw-dest-overlay__eta"></span>
@@ -302,6 +312,21 @@ const PassTheWorldMap = (() => {
     planeEl.style.transform = `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px) rotate(${planeBearing}deg)`;
   }
 
+  function syncOriginOverlay(frame) {
+    ensureOverlayEls();
+    if (!originEl || !map || !originLatLng) {
+      if (originEl) originEl.style.opacity = '0';
+      return;
+    }
+    const pt = project(originLatLng, frame);
+    if (!pt) {
+      originEl.style.opacity = '0';
+      return;
+    }
+    originEl.style.opacity = '1';
+    originEl.style.transform = `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px)`;
+  }
+
   function syncDestOverlay(frame) {
     ensureOverlayEls();
     if (!destEl || !map || !destLatLng) {
@@ -321,6 +346,7 @@ const PassTheWorldMap = (() => {
   function syncOverlays(frame) {
     const f = frame || animFrame;
     syncRouteOverlay(f);
+    syncOriginOverlay(f);
     syncDestOverlay(f);
     syncPlaneOverlay(f);
   }
@@ -492,6 +518,15 @@ const PassTheWorldMap = (() => {
     if (popup) popup.setAttribute('hidden', '');
   }
 
+  function setOrigin(latlng) {
+    originLatLng = latlng ? [Number(latlng[0]), Number(latlng[1])] : null;
+    if (!originLatLng) {
+      if (originEl) originEl.style.opacity = '0';
+      return;
+    }
+    syncOriginOverlay();
+  }
+
   function setDestination(latlng, destination, arrivalAt) {
     destLatLng = latlng ? [Number(latlng[0]), Number(latlng[1])] : null;
     if (!destLatLng) {
@@ -583,6 +618,7 @@ const PassTheWorldMap = (() => {
     travelPts = null;
     travelDepartMs = null;
     travelArriveMs = null;
+    setOrigin(null);
     setDestination(null);
     stopEtaTimer();
     syncRouteOverlay();
@@ -696,6 +732,7 @@ const PassTheWorldMap = (() => {
       if (!from || !to) return;
 
       const curve = buildCurve(from, to, ROUTE_STEPS);
+      setOrigin(curve.from);
       setDestination(curve.to, journey.destination, journey.arrivalAt);
       startTravel(curve, journey.departureAt, journey.arrivalAt);
 
@@ -754,6 +791,7 @@ const PassTheWorldMap = (() => {
       map = null;
     }
     if (planeEl) { planeEl.remove(); planeEl = null; }
+    if (originEl) { originEl.remove(); originEl = null; }
     if (destEl) { destEl.remove(); destEl = null; }
     if (routeSvg) {
       routeSvg.remove();
@@ -764,6 +802,7 @@ const PassTheWorldMap = (() => {
     historyLayer = null;
     inviteLayer = null;
     planeLatLng = null;
+    originLatLng = null;
     destLatLng = null;
     planeBearing = 0;
     routeCurve = null;
