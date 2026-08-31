@@ -32,6 +32,9 @@ const WorldChoirConfig = (() => {
   /** Dev test — treat the 405-completed stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_405_COMPLETED = false;
 
+  /** Dev test — treat the peace-explorer stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
+  const TEST_FORCE_PEACE_EXPLORER = false;
+
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
 
@@ -464,6 +467,39 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Passport stamp — "PEACE EXPLORER"
+   * Drop your artwork at: public/images/passport/stamps/peace-explorer.png
+   * Native 1254 × 1254 px (RGBA). Display slot 85 × 85 px on page 2.
+   * Unlocks when the user completes at least one Daily Act in every peace theme.
+   */
+  const PASSPORT_STAMP_PEACE_EXPLORER = {
+    src: 'images/passport/stamps/peace-explorer.png',
+    version: '20260901c',
+    width: 1254,
+    height: 1254,
+    alt: 'Peace Explorer — World Choir stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /**
+   * Locked placeholder for the Peace Explorer stamp (shown before unlock).
+   * Drop your artwork at: public/images/passport/stamps/peace-explorer-locked.png
+   * Native 1254 × 1254 px (RGBA). Same display slot as the unlocked stamp.
+   */
+  const PASSPORT_STAMP_PEACE_EXPLORER_LOCKED = {
+    src: 'images/passport/stamps/peace-explorer-locked.png',
+    version: '20260901c',
+    width: 1254,
+    height: 1254,
+    alt: 'Locked Peace Explorer stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -620,6 +656,10 @@ const WorldChoirConfig = (() => {
     return TEST_FORCE_405_COMPLETED;
   }
 
+  function isTestForcePeaceExplorer() {
+    return TEST_FORCE_PEACE_EXPLORER;
+  }
+
   function getGlobalEventStatus(now = new Date()) {
     return getGlobalEventState(now);
   }
@@ -726,6 +766,8 @@ const WorldChoirConfig = (() => {
     PASSPORT_STAMP_DAILY_ACT_PARTNER_LOCKED,
     PASSPORT_STAMP_405_COMPLETED,
     PASSPORT_STAMP_405_COMPLETED_LOCKED,
+    PASSPORT_STAMP_PEACE_EXPLORER,
+    PASSPORT_STAMP_PEACE_EXPLORER_LOCKED,
     EventState,
     AppState,
     getEventDate: getEventStart,
@@ -759,6 +801,7 @@ const WorldChoirConfig = (() => {
     isTestForceCreatorCause,
     isTestForceDailyActPartner,
     isTestForce405Completed,
+    isTestForcePeaceExplorer,
     getAppState,
     formatEventDate,
     formatEventTime,

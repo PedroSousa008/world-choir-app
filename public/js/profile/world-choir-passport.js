@@ -393,6 +393,8 @@ const WorldChoirPassport = (() => {
     const dailyActsCompleted = Number(dailyPeaceImpact?.totalCompleted) || 0;
     const hasCompletedPartnerDailyAct = dailyPeaceImpact?.hasCompletedPartnerDailyAct === true
       || (Number(dailyPeaceImpact?.partnerDailyActsCompleted) || 0) >= 1;
+    const hasCompletedAllPeaceThemes = dailyPeaceImpact?.hasCompletedAllPeaceThemes === true
+      || (Number(dailyPeaceImpact?.themesExperienced ?? dailyPeaceImpact?.categoriesExperienced) || 0) >= 8;
     const worldStats = await fetchWorldChoirStats();
     const hasSupportedCreatorCause = await fetchHasSupportedCreatorCause();
     const mapStats = typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.getMapStats?.() : null;
@@ -432,6 +434,8 @@ const WorldChoirPassport = (() => {
         },
         hasSupportedCreatorCause,
         hasCompletedPartnerDailyAct,
+        hasCompletedAllPeaceThemes,
+        themesExperienced: Number(dailyPeaceImpact?.themesExperienced ?? dailyPeaceImpact?.categoriesExperienced) || 0,
         dailyActsCompleted,
       })
       : [];

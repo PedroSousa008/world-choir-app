@@ -19,10 +19,12 @@ const PassportStamps = (() => {
     CREATOR_CAUSE_DONATION: 'CREATOR_CAUSE_DONATION',
     DAILY_ACT_PARTNER_COMPLETED: 'DAILY_ACT_PARTNER_COMPLETED',
     DAILY_ACTS_405_COMPLETED: 'DAILY_ACTS_405_COMPLETED',
+    PEACE_EXPLORER: 'PEACE_EXPLORER',
     PLEDGE_JOINED: 'PLEDGE_JOINED',
   };
 
   const REQUIRED_DAILY_ACTS_405_COUNT = 405;
+  const REQUIRED_PEACE_THEME_COUNT = 8;
 
   const MAJOR_CITY_VOICE_THRESHOLD = 50_000;
 
@@ -194,6 +196,21 @@ const PassportStamps = (() => {
       revealOrder: 11,
       lockedMessage: 'Complete 405 Daily Acts of Peace to unlock this stamp.',
     },
+    {
+      id: 'world-choir-peace-explorer',
+      title: 'Peace Explorer — World Choir',
+      eventId: 'world-choir-2027',
+      imageKey: 'PASSPORT_STAMP_PEACE_EXPLORER',
+      lockedImageKey: 'PASSPORT_STAMP_PEACE_EXPLORER_LOCKED',
+      unlockType: UnlockType.PEACE_EXPLORER,
+      requiredThemeCount: REQUIRED_PEACE_THEME_COUNT,
+      requiresPledge: false,
+      displayWidth: 85,
+      displayHeight: 85,
+      position: { right: 5, top: 180 },
+      revealOrder: 12,
+      lockedMessage: 'Complete a Daily Act of Peace in every peace theme to unlock this stamp.',
+    },
   ];
 
   function resolveStampImage(stamp, { unlocked = false } = {}) {
@@ -334,6 +351,14 @@ const PassportStamps = (() => {
       && WorldChoirConfig.isTestForce405Completed?.() === true;
   }
 
+  function isTestForcePeaceExplorer(stamp) {
+    if (stamp?.id !== 'world-choir-peace-explorer') {
+      return false;
+    }
+    return typeof WorldChoirConfig !== 'undefined'
+      && WorldChoirConfig.isTestForcePeaceExplorer?.() === true;
+  }
+
   function hasSupportedCreatorCause(context = {}) {
     if (context.hasSupportedCreatorCause === true) return true;
     if (typeof context.hasSupportedCreatorCause === 'function') {
@@ -360,6 +385,16 @@ const PassportStamps = (() => {
   function hasCompleted405DailyActs(stamp, context = {}) {
     const threshold = Number(stamp?.requiredDailyActsCount) || REQUIRED_DAILY_ACTS_405_COUNT;
     return getDailyActsCompletedCount(context) >= threshold;
+  }
+
+  function hasCompletedAllPeaceThemes(stamp, context = {}) {
+    if (context.hasCompletedAllPeaceThemes === true) return true;
+    if (typeof context.hasCompletedAllPeaceThemes === 'function') {
+      return context.hasCompletedAllPeaceThemes() === true;
+    }
+    const required = Number(stamp?.requiredThemeCount) || REQUIRED_PEACE_THEME_COUNT;
+    const experienced = Number(context.themesExperienced ?? context.categoriesExperienced) || 0;
+    return experienced >= required;
   }
 
   function normalizeCityKey(city, country) {
@@ -826,6 +861,27 @@ const PassportStamps = (() => {
         hasLocation: eligibility.hasLocation,
         unlockDate: null,
         reason: completed405 ? 'unlocked' : 'daily_acts_405_not_reached',
+      };
+    }
+
+    if (stamp.unlockType === UnlockType.PEACE_EXPLORER) {
+      if (isTestForcePeaceExplorer(stamp) || context.forcePeaceExplorer === true) {
+        return {
+          unlocked: true,
+          pledged: eligibility.pledged,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'test_force',
+        };
+      }
+
+      const exploredAllThemes = hasCompletedAllPeaceThemes(stamp, context);
+      return {
+        unlocked: exploredAllThemes,
+        pledged: eligibility.pledged,
+        hasLocation: eligibility.hasLocation,
+        unlockDate: null,
+        reason: exploredAllThemes ? 'unlocked' : 'peace_themes_incomplete',
       };
     }
 

@@ -539,13 +539,15 @@ async function getImpact(deviceId, todayInput) {
   const user = await findUserByDevice(deviceId);
   if (!user) throw new Error('user not found');
 
-  const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
+  const { getAllActsById } = require('./daily-peace-partnerships');
+  const actsById = await getAllActsById();
+  const knownThemeIds = new Set(THEMES.map((theme) => theme.id));
   const rows = await listUserAssignmentRows(user.id);
 
   const completed = [];
   const stillOpen = [];
   const onTimeDates = [];
-  const categories = new Set();
+  const experiencedThemes = new Set();
   let partnerDailyActsCompleted = 0;
 
   for (const raw of rows) {
@@ -557,7 +559,8 @@ async function getImpact(deviceId, todayInput) {
     if (row.completed) {
       completed.push(mapped);
       if (row.completed_on_assigned_day) onTimeDates.push(row.date);
-      if (act.category) categories.add(act.category);
+      const themeId = mapped?.act?.category || resolveTheme(act.category).category;
+      if (knownThemeIds.has(themeId)) experiencedThemes.add(themeId);
       if (row.partnership_id) partnerDailyActsCompleted += 1;
     } else if (row.date < todayDate) {
       stillOpen.push(mapped);
@@ -576,7 +579,10 @@ async function getImpact(deviceId, todayInput) {
       onTimeCompleted: onTimeDates.length,
       currentStreak,
       longestStreak,
-      categoriesExperienced: categories.size,
+      categoriesExperienced: experiencedThemes.size,
+      themesExperienced: experiencedThemes.size,
+      requiredThemeCount: THEMES.length,
+      hasCompletedAllPeaceThemes: experiencedThemes.size >= THEMES.length,
       lastCompletedAt: last?.userDailyAct?.completedAt || null,
       lastActText: last?.act?.text || null,
       stillOpenCount: stillOpen.length,
