@@ -557,7 +557,7 @@ const PassportStamps = (() => {
     const revealClass = unlocked && shouldReveal ? ' passport-stamp--revealing' : '';
     const lockedMsg = stamp.lockedMessage || 'Locked until your World Choir moment is complete.';
     const ariaLabel = unlocked
-      ? stamp.title
+      ? `View ${stamp.title}`
       : `${stamp.title} — locked`;
     const placement = stamp.placement || (stamp.position ? 'custom' : 'bottom-right');
     const positionStyle = resolveStampPositionStyle(stamp);
@@ -565,6 +565,9 @@ const PassportStamps = (() => {
       `width:${displaySize.width}px`,
       positionStyle,
     ].filter(Boolean).join(';');
+    const inspectAttrs = unlocked
+      ? ' tabindex="0" role="button" data-stamp-inspectable="1"'
+      : ' role="listitem"';
 
     return `
       <article
@@ -574,8 +577,7 @@ const PassportStamps = (() => {
         data-should-reveal="${shouldReveal ? '1' : '0'}"
         data-placement="${esc(placement)}"
         style="${articleStyle}"
-        aria-label="${esc(ariaLabel)}"
-        role="listitem"
+        aria-label="${esc(ariaLabel)}"${inspectAttrs}
       >
         <div class="passport-stamp__frame" style="width:${displaySize.width}px;height:${displaySize.height}px">
           <img
@@ -827,6 +829,207 @@ const PassportStamps = (() => {
     }
   }
 
+  let inspectState = null;
+  let inspectKeyHandler = null;
+  let inspectFocusReturn = null;
+
+  const INSPECT_FLIGHT_MS = 2000;
+
+  function getZoomRoot() {
+    return document.getElementById('passport-zoom-root') || document.body;
+  }
+
+  function getStampSourceRect(stampEl) {
+    const frame = stampEl.querySelector('.passport-stamp__frame') || stampEl;
+    return frame.getBoundingClientRect();
+  }
+
+  function getInspectTargetSize(card) {
+    const cardRect = card?.getBoundingClientRect?.();
+    if (cardRect?.width) return Math.min(cardRect.width * 0.82, 340);
+    return Math.min(window.innerWidth * 0.82, 340);
+  }
+
+  function computeZoomTransform(stampEl, card) {
+    const stampRect = getStampSourceRect(stampEl);
+    const zoomRoot = getZoomRoot();
+    const rootRect = zoomRoot.getBoundingClientRect();
+
+    const cx = stampRect.left + stampRect.width / 2;
+    const cy = stampRect.top + stampRect.height / 2;
+    const lx = cx - rootRect.left;
+    const ly = cy - rootRect.top;
+
+    const targetSize = getInspectTargetSize(card);
+    const currentSize = Math.max(stampRect.width, stampRect.height, 1);
+    const scale = Math.max(1.01, targetSize / currentSize);
+
+    const vx = window.innerWidth / 2;
+    const vy = window.innerHeight / 2;
+    const tx = vx - rootRect.left - lx * scale;
+    const ty = vy - rootRect.top - ly * scale;
+
+    return { zoomRoot, scale, tx, ty };
+  }
+
+  function waitForZoomTransition(zoomRoot) {
+    return new Promise((resolve) => {
+      if (prefersReducedMotion()) {
+        resolve();
+        return;
+      }
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        zoomRoot.removeEventListener('transitionend', onEnd);
+        window.clearTimeout(timer);
+        resolve();
+      };
+      const onEnd = (e) => {
+        if (e.target !== zoomRoot || e.propertyName !== 'transform') return;
+        finish();
+      };
+      zoomRoot.addEventListener('transitionend', onEnd);
+      const timer = window.setTimeout(finish, INSPECT_FLIGHT_MS + 120);
+    });
+  }
+
+  function teardownInspect({ restoreFocus = true } = {}) {
+    if (inspectKeyHandler) {
+      document.removeEventListener('keydown', inspectKeyHandler);
+      inspectKeyHandler = null;
+    }
+
+    const zoomRoot = inspectState?.zoomRoot || getZoomRoot();
+    zoomRoot.style.transform = '';
+    document.body.classList.remove('passport-stamp-zoom-active', 'passport-stamp-zoom-settled');
+    inspectState?.overlay?.remove();
+    inspectState = null;
+
+    if (restoreFocus && inspectFocusReturn?.focus) {
+      try { inspectFocusReturn.focus({ preventScroll: true }); } catch { /* ignore */ }
+    }
+    inspectFocusReturn = null;
+  }
+
+  async function closeStampInspect() {
+    if (!inspectState || inspectState.busy) return;
+
+    const state = inspectState;
+    state.busy = true;
+    state.overlay?.classList.remove('is-settled', 'is-open');
+    document.body.classList.remove('passport-stamp-zoom-settled');
+
+    if (inspectKeyHandler) {
+      document.removeEventListener('keydown', inspectKeyHandler);
+      inspectKeyHandler = null;
+    }
+
+    // Force style flush so reverse transition runs from current zoom.
+    void state.zoomRoot.offsetWidth;
+    state.zoomRoot.style.transform = 'translate(0px, 0px) scale(1)';
+
+    await waitForZoomTransition(state.zoomRoot);
+    teardownInspect();
+  }
+
+  function openStampInspect(stampEl, card) {
+    if (!stampEl || stampEl.dataset.stampUnlocked !== '1') return;
+    if (stampEl.classList.contains('passport-stamp--revealing')) return;
+    if (stampEl.classList.contains('passport-stamp--reveal-pending')) return;
+    if (card?.classList.contains('passport-card--stamp-reveal-active')) return;
+    if (inspectState) return;
+
+    const stampId = stampEl.dataset.stampId;
+    const stampDef = PASSPORT_STAMPS.find((entry) => entry.id === stampId);
+    if (!stampDef) return;
+
+    const { zoomRoot, scale, tx, ty } = computeZoomTransform(stampEl, card);
+    const title = stampDef.title || 'Passport stamp';
+
+    inspectFocusReturn = document.activeElement;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'passport-stamp-inspect';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', title);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'passport-stamp-inspect__close';
+    closeBtn.setAttribute('aria-label', 'Close stamp');
+    closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeStampInspect();
+    });
+
+    overlay.appendChild(closeBtn);
+    document.body.appendChild(overlay);
+
+    inspectState = {
+      overlay,
+      closeBtn,
+      stampEl,
+      zoomRoot,
+      busy: true,
+    };
+
+    inspectKeyHandler = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeStampInspect();
+      }
+    };
+    document.addEventListener('keydown', inspectKeyHandler);
+
+    document.body.classList.add('passport-stamp-zoom-active');
+    // Ensure transition starts from identity.
+    zoomRoot.style.transform = 'translate(0px, 0px) scale(1)';
+    void zoomRoot.offsetWidth;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(async () => {
+        if (!inspectState || inspectState.overlay !== overlay) return;
+        overlay.classList.add('is-open');
+        zoomRoot.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+        await waitForZoomTransition(zoomRoot);
+        if (!inspectState || inspectState.overlay !== overlay) return;
+        overlay.classList.add('is-settled');
+        document.body.classList.add('passport-stamp-zoom-settled');
+        inspectState.busy = false;
+        closeBtn.focus({ preventScroll: true });
+      });
+    });
+  }
+
+  function bindStampInspect(root = document) {
+    const scope = root.querySelector?.('.passport-card') || root.closest?.('.passport-card') || root;
+    if (!scope || scope.dataset.stampInspectBound === '1') return;
+    scope.dataset.stampInspectBound = '1';
+
+    const openFromEvent = (target) => {
+      const stampEl = target?.closest?.('.passport-stamp[data-stamp-inspectable="1"]');
+      if (!stampEl || !scope.contains(stampEl)) return;
+      openStampInspect(stampEl, scope);
+    };
+
+    scope.addEventListener('click', (e) => {
+      openFromEvent(e.target);
+    });
+
+    scope.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const stampEl = e.target?.closest?.('.passport-stamp[data-stamp-inspectable="1"]');
+      if (!stampEl || !scope.contains(stampEl)) return;
+      e.preventDefault();
+      openStampInspect(stampEl, scope);
+    });
+  }
+
   return {
     UnlockType,
     PASSPORT_STAMPS,
@@ -838,6 +1041,8 @@ const PassportStamps = (() => {
     resolveAllStatuses,
     renderGrid,
     bindRevealAnimations,
+    bindStampInspect,
+    closeStampInspect,
     shouldAnimateReveal,
     markRevealSeen,
   };

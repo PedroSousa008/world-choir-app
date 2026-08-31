@@ -624,6 +624,15 @@
   transform: scale(1.04);
 }
 
+.passport-stamp--unlocked {
+  cursor: pointer;
+}
+
+.passport-stamp--unlocked:focus-visible {
+  outline: 2px solid rgba(26, 48, 87, 0.55);
+  outline-offset: 3px;
+}
+
 .passport-stamp--unlocked .passport-stamp__img {
   filter: none;
   opacity: 1;
@@ -673,10 +682,78 @@
   will-change: filter, opacity, transform;
 }
 
+.passport-zoom-root {
+  position: relative;
+  min-height: 100%;
+  transform-origin: 0 0;
+  will-change: auto;
+}
+
+body.passport-stamp-zoom-active {
+  overflow: hidden;
+}
+
+body.passport-stamp-zoom-active .passport-zoom-root {
+  transition: transform 2s cubic-bezier(0.34, 1.08, 0.42, 1);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.passport-stamp-inspect {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: transparent;
+  pointer-events: none;
+}
+
+.passport-stamp-inspect.is-open {
+  pointer-events: none;
+}
+
+.passport-stamp-inspect__close {
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top, 0px));
+  right: max(18px, env(safe-area-inset-right, 0px));
+  z-index: 12001;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: #f7f4ef;
+  color: #12192b;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  transform: scale(0.9);
+  pointer-events: none;
+  transition: opacity 220ms ease 1.8s, transform 220ms cubic-bezier(0.22, 1, 0.36, 1) 1.8s;
+}
+
+.passport-stamp-inspect.is-settled .passport-stamp-inspect__close {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.passport-stamp-inspect__close:focus-visible {
+  outline: 2px solid rgba(247, 244, 239, 0.9);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .passport-stamp-reveal-overlay,
   .passport-stamp-reveal-floater {
     display: none !important;
+  }
+
+  body.passport-stamp-zoom-active .passport-zoom-root,
+  .passport-stamp-inspect,
+  .passport-stamp-inspect__close {
+    transition: none !important;
   }
 }
 

@@ -281,6 +281,7 @@ const WorldChoirPassport = (() => {
       if (typeof PassportStamps !== 'undefined') {
         window.setTimeout(() => {
           PassportStamps.bindRevealAnimations(card);
+          PassportStamps.bindStampInspect(card);
         }, 320);
       }
     });
@@ -288,6 +289,9 @@ const WorldChoirPassport = (() => {
     card.querySelector('#passport-back-cover')?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (typeof PassportStamps !== 'undefined') {
+        PassportStamps.closeStampInspect?.();
+      }
       setCardPage(card, 'cover');
     });
   }
