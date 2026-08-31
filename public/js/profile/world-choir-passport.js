@@ -214,11 +214,16 @@ const WorldChoirPassport = (() => {
           >
             ←
           </button>
-          <div class="passport-inside-footer">
+          <button
+            type="button"
+            class="passport-inside-footer"
+            id="passport-continue-story"
+            aria-label="Tap to continue your story"
+          >
             <span class="passport-inside-footer__dots" aria-hidden="true"></span>
-            <p class="passport-inside-footer__text">Tap to continue your story</p>
+            <span class="passport-inside-footer__text">Tap to continue your story</span>
             <span class="passport-inside-footer__dots" aria-hidden="true"></span>
-          </div>
+          </button>
         </div>
       </div>
     `;
@@ -289,6 +294,12 @@ const WorldChoirPassport = (() => {
       e.preventDefault();
       e.stopPropagation();
       setCardPage(card, 'cover');
+    });
+
+    card.querySelector('#passport-continue-story')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.href = 'passport-story.html';
     });
   }
 

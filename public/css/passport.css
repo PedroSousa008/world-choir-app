@@ -778,7 +778,23 @@
   justify-content: center;
   gap: 7px;
   width: min(calc(100% - 52px), 292px);
-  pointer-events: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  color: inherit;
+}
+
+.passport-inside-footer:focus-visible {
+  outline: 2px solid rgba(11, 52, 107, 0.45);
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 .passport-inside-footer__dots {
@@ -1453,4 +1469,53 @@
   .passport-action__label {
     font-size: 0.66rem;
   }
+}
+
+/* Passport story chapter — black placeholder page after stamps */
+.passport-story-body {
+  background: #000;
+}
+
+.passport-story-body .ambient-bg {
+  display: none;
+}
+
+.passport-story-page {
+  min-height: 100dvh;
+  background: #000;
+  color: #fff;
+  padding-top: max(18px, env(safe-area-inset-top));
+  padding-bottom: calc(var(--nav-height, 72px) + env(safe-area-inset-bottom, 0px) + 16px);
+}
+
+.passport-story-header {
+  display: flex;
+  align-items: center;
+  margin: 0 0 24px;
+}
+
+.passport-story-back {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 8px 4px;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.passport-story-back:hover,
+.passport-story-back:focus-visible {
+  color: #fff;
+}
+
+.passport-story-back:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.45);
+  outline-offset: 3px;
+  border-radius: 4px;
 }

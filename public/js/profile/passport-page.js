@@ -245,6 +245,8 @@ Completed</p>
     const page = document.getElementById('passport-page');
     if (!root) return;
 
+    const openStamps = new URLSearchParams(window.location.search).get('page') === 'stamps';
+
     root.innerHTML = renderLoading();
     WorldChoirPassport.revealFeatureImages(root);
     bindInteractions();
@@ -257,6 +259,18 @@ Completed</p>
       bindInteractions();
       page?.classList.add('is-entering');
       window.setTimeout(() => page?.classList.remove('is-entering'), 700);
+
+      if (openStamps) {
+        const card = root.querySelector('.passport-card');
+        if (card) {
+          WorldChoirPassport.setCardPage(card, 'inside');
+          window.setTimeout(() => {
+            if (typeof PassportStamps !== 'undefined') {
+              PassportStamps.bindRevealAnimations(card);
+            }
+          }, 320);
+        }
+      }
     } catch (err) {
       console.error(err);
       root.innerHTML = `
