@@ -334,6 +334,46 @@ const PassTheWorld = (() => {
       </details>`;
   }
 
+  function expandIconHtml() {
+    return `
+      <svg class="ptw-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="15 3 21 3 21 9"/>
+        <polyline points="9 21 3 21 3 15"/>
+        <line x1="21" y1="3" x2="14" y2="10"/>
+        <line x1="3" y1="21" x2="10" y2="14"/>
+      </svg>
+      <svg class="ptw-icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="4 14 10 14 10 20"/>
+        <polyline points="20 10 14 10 14 4"/>
+        <line x1="10" y1="14" x2="3" y2="21"/>
+        <line x1="14" y1="10" x2="21" y2="3"/>
+      </svg>`;
+  }
+
+  function setMapExpanded(expanded) {
+    const wrap = root?.querySelector('.ptw-map-wrap');
+    const btn = root?.querySelector('[data-ptw-expand-map]');
+    if (!wrap) return;
+    wrap.classList.toggle('is-expanded', expanded);
+    document.body.classList.toggle('ptw-map-expanded', expanded);
+    if (btn) {
+      btn.setAttribute(
+        'aria-label',
+        expanded ? 'Close full map' : 'Open full map'
+      );
+      btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+    requestAnimationFrame(() => {
+      if (typeof PassTheWorldMap === 'undefined') return;
+      PassTheWorldMap.invalidateSize();
+      PassTheWorldMap.fitFullWorld({ animate: false });
+      setTimeout(() => {
+        PassTheWorldMap.invalidateSize();
+        PassTheWorldMap.fitFullWorld({ animate: false });
+      }, 120);
+    });
+  }
+
   function shellHtml() {
     return `
       <section class="ptw" aria-labelledby="ptw-title">
@@ -344,7 +384,15 @@ const PassTheWorld = (() => {
 
         <div class="ptw-map-wrap">
           <div id="ptw-map" class="ptw-map" role="img" aria-label="World map showing the Pass the World journey"></div>
-          <button type="button" class="ptw-map-reset" data-ptw-reset-map aria-label="Show the full world">Full world</button>
+          <button
+            type="button"
+            class="ptw-map-expand"
+            data-ptw-expand-map
+            aria-label="Open full map"
+            aria-expanded="false"
+          >
+            ${expandIconHtml()}
+          </button>
         </div>
 
         <div class="ptw-body" data-ptw-body>
@@ -550,8 +598,19 @@ const PassTheWorld = (() => {
 
     root.querySelector('[data-ptw-itinerary]')?.addEventListener('click', () => openPanel('itinerary'));
     root.querySelector('[data-ptw-close]')?.addEventListener('click', closePanel);
-    root.querySelector('[data-ptw-reset-map]')?.addEventListener('click', () => PassTheWorldMap.resetWorldView());
+    root.querySelector('[data-ptw-expand-map]')?.addEventListener('click', () => {
+      const wrap = root.querySelector('.ptw-map-wrap');
+      setMapExpanded(!wrap?.classList.contains('is-expanded'));
+    });
     bindDev();
+
+    const onKey = (e) => {
+      if (e.key === 'Escape' && root?.querySelector('.ptw-map-wrap.is-expanded')) {
+        setMapExpanded(false);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    root._ptwKeyHandler = onKey;
 
     try {
       await ensureMapLibs();
@@ -569,12 +628,23 @@ const PassTheWorld = (() => {
       }
     }
 
-    requestAnimationFrame(() => PassTheWorldMap.invalidateSize());
-    setTimeout(() => PassTheWorldMap.invalidateSize(), 200);
+    requestAnimationFrame(() => {
+      PassTheWorldMap.invalidateSize();
+      PassTheWorldMap.fitFullWorld({ animate: false });
+    });
+    setTimeout(() => {
+      PassTheWorldMap.invalidateSize();
+      PassTheWorldMap.fitFullWorld({ animate: false });
+    }, 200);
   }
 
   function destroy() {
     stopPolling();
+    document.body.classList.remove('ptw-map-expanded');
+    if (root?._ptwKeyHandler) {
+      document.removeEventListener('keydown', root._ptwKeyHandler);
+      delete root._ptwKeyHandler;
+    }
     if (typeof PassTheWorldMap !== 'undefined') PassTheWorldMap.destroy();
     if (root) {
       root.innerHTML = '';

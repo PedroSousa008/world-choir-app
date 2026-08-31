@@ -1,13 +1,17 @@
 /**
- * Pass the World — map layer (Leaflet + WorldChoirMapTiles).
+ * Pass the World — map layer (same basemap as Map tab, no city pins).
  */
 const PassTheWorldMap = (() => {
+  const WORLD_BOUNDS = [[-56, -168], [72, 178]];
+  const WORLD_CENTER = [18, 10];
+
   let map = null;
   let routeLayer = null;
   let historyLayer = null;
   let inviteLayer = null;
   let planeMarker = null;
   let cityMarkers = null;
+  let containerId = 'ptw-map';
 
   function greatCirclePoints(a, b, steps = 64) {
     const toRad = (d) => (d * Math.PI) / 180;
@@ -31,7 +35,7 @@ const PassTheWorldMap = (() => {
       const y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2);
       const z = A * Math.sin(lat1) + B * Math.sin(lat2);
       const lat = Math.atan2(z, Math.sqrt(x * x + y * y));
-      let lon = Math.atan2(y, x);
+      const lon = Math.atan2(y, x);
       pts.push([toDeg(lat), toDeg(lon)]);
     }
     return splitAntimeridian(pts);
@@ -94,34 +98,65 @@ const PassTheWorldMap = (() => {
     });
   }
 
-  async function mount(containerId) {
+  function fitFullWorld({ animate = false } = {}) {
+    if (!map) return;
+    map.invalidateSize({ animate: false, pan: false });
+    map.fitBounds(WORLD_BOUNDS, {
+      animate,
+      padding: [8, 8],
+      maxZoom: 4,
+    });
+    // Keep the world centered; lock pan at this framing.
+    const z = map.getZoom();
+    if (z <= 1.35) {
+      map.setView(WORLD_CENTER, z, { animate: false });
+      map.dragging.disable();
+    }
+  }
+
+  function syncInteraction() {
+    if (!map) return;
+    if (map.getZoom() <= 1.4) {
+      map.dragging.disable();
+    } else {
+      map.dragging.enable();
+    }
+  }
+
+  async function mount(id = 'ptw-map') {
     if (typeof L === 'undefined') {
       console.error('Leaflet required for PassTheWorldMap');
       return null;
     }
     destroy();
+    containerId = id;
     const el = document.getElementById(containerId);
     if (!el) return null;
 
     map = L.map(containerId, {
-      center: [20, 0],
-      zoom: 2,
-      minZoom: 2,
+      center: WORLD_CENTER,
+      zoom: 1,
+      minZoom: 0.75,
       maxZoom: 8,
+      zoomSnap: 0.25,
+      zoomDelta: 0.5,
       zoomControl: false,
       attributionControl: false,
       worldCopyJump: false,
       maxBounds: [[-85, -180], [85, 180]],
       maxBoundsViscosity: 1.0,
-      dragging: true,
+      dragging: false,
       scrollWheelZoom: false,
       doubleClickZoom: true,
       boxZoom: false,
       keyboard: false,
+      fadeAnimation: false,
+      zoomAnimation: true,
     });
 
+    // Same basemap stack as Map tab (no city light pins here).
     if (typeof WorldChoirMapTiles !== 'undefined') {
-      await WorldChoirMapTiles.addSingleBasemapLayer(map);
+      WorldChoirMapTiles.addBasemapLayers(map);
     }
 
     historyLayer = L.layerGroup().addTo(map);
@@ -129,30 +164,19 @@ const PassTheWorldMap = (() => {
     inviteLayer = L.layerGroup().addTo(map);
     cityMarkers = L.layerGroup().addTo(map);
 
-    // Lock horizontal feel at world zoom: disable drag until zoomed in.
-    const syncDrag = () => {
-      if (!map) return;
-      if (map.getZoom() <= 2) {
-        map.dragging.disable();
-        map.setView([20, 0], 2, { animate: false });
-      } else {
-        map.dragging.enable();
-      }
-    };
-    map.on('zoomend', syncDrag);
-    syncDrag();
+    map.on('zoomend', syncInteraction);
 
     requestAnimationFrame(() => {
-      map?.invalidateSize();
-      setTimeout(() => map?.invalidateSize(), 120);
+      fitFullWorld({ animate: false });
+      setTimeout(() => fitFullWorld({ animate: false }), 80);
+      setTimeout(() => fitFullWorld({ animate: false }), 220);
     });
 
     return map;
   }
 
   function resetWorldView() {
-    if (!map) return;
-    map.setView([20, 0], 2, { animate: true });
+    fitFullWorld({ animate: true });
   }
 
   function renderJourney(payload = {}) {
@@ -162,7 +186,6 @@ const PassTheWorldMap = (() => {
     routeLayer.clearLayers();
     cityMarkers.clearLayers();
 
-    // Historical routes (understated)
     for (let i = 1; i < itinerary.length; i += 1) {
       const prev = itinerary[i - 1];
       const curr = itinerary[i];
@@ -188,7 +211,6 @@ const PassTheWorldMap = (() => {
       });
     }
 
-    // Current / resting city
     const current = journey.destination && journey.status === 'TRAVELLING'
       ? null
       : journey.current;
@@ -200,7 +222,6 @@ const PassTheWorldMap = (() => {
       }).addTo(cityMarkers);
     }
 
-    // Active route + plane
     if (journey.status === 'TRAVELLING' && journey.origin && journey.destination) {
       const from = [journey.origin.latitude, journey.origin.longitude];
       const to = [journey.destination.latitude, journey.destination.longitude];
@@ -260,7 +281,8 @@ const PassTheWorldMap = (() => {
   }
 
   function invalidateSize() {
-    map?.invalidateSize();
+    if (!map) return;
+    map.invalidateSize({ animate: false, pan: false });
   }
 
   function destroy() {
@@ -281,6 +303,7 @@ const PassTheWorldMap = (() => {
     renderJourney,
     renderInvites,
     resetWorldView,
+    fitFullWorld,
     invalidateSize,
   };
 })();
