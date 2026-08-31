@@ -163,7 +163,7 @@ const PassportStamps = (() => {
       requiresPledge: false,
       displayWidth: 100,
       displayHeight: 56,
-      position: { left: 5, top: 180 },
+      position: { left: 5, top: 192 },
       revealOrder: 9,
       lockedMessage: 'Support a Creator Foundation cause to unlock this stamp.',
     },
