@@ -557,7 +557,7 @@ const PassportStamps = (() => {
     const revealClass = unlocked && shouldReveal ? ' passport-stamp--revealing' : '';
     const lockedMsg = stamp.lockedMessage || 'Locked until your World Choir moment is complete.';
     const ariaLabel = unlocked
-      ? stamp.title
+      ? `View ${stamp.title}`
       : `${stamp.title} — locked`;
     const placement = stamp.placement || (stamp.position ? 'custom' : 'bottom-right');
     const positionStyle = resolveStampPositionStyle(stamp);
@@ -565,6 +565,9 @@ const PassportStamps = (() => {
       `width:${displaySize.width}px`,
       positionStyle,
     ].filter(Boolean).join(';');
+    const inspectAttrs = unlocked
+      ? ' tabindex="0" role="button" data-stamp-inspectable="1"'
+      : ' role="listitem"';
 
     return `
       <article
@@ -574,8 +577,7 @@ const PassportStamps = (() => {
         data-should-reveal="${shouldReveal ? '1' : '0'}"
         data-placement="${esc(placement)}"
         style="${articleStyle}"
-        aria-label="${esc(ariaLabel)}"
-        role="listitem"
+        aria-label="${esc(ariaLabel)}"${inspectAttrs}
       >
         <div class="passport-stamp__frame" style="width:${displaySize.width}px;height:${displaySize.height}px">
           <img
@@ -827,6 +829,134 @@ const PassportStamps = (() => {
     }
   }
 
+  let inspectOverlay = null;
+  let inspectKeyHandler = null;
+  let inspectFocusReturn = null;
+
+  function getInspectSize(card) {
+    const cardRect = card?.getBoundingClientRect?.();
+    if (cardRect?.width) return Math.min(cardRect.width * 0.58, 240);
+    return Math.min(window.innerWidth * 0.58, 240);
+  }
+
+  function closeStampInspect() {
+    if (!inspectOverlay) return;
+    const overlay = inspectOverlay;
+    inspectOverlay = null;
+
+    if (inspectKeyHandler) {
+      document.removeEventListener('keydown', inspectKeyHandler);
+      inspectKeyHandler = null;
+    }
+
+    overlay.classList.remove('is-open');
+    const remove = () => overlay.remove();
+    if (prefersReducedMotion()) {
+      remove();
+    } else {
+      window.setTimeout(remove, 220);
+    }
+
+    if (inspectFocusReturn?.focus) {
+      try { inspectFocusReturn.focus({ preventScroll: true }); } catch { /* ignore */ }
+    }
+    inspectFocusReturn = null;
+  }
+
+  function openStampInspect(stampEl, card) {
+    if (!stampEl || stampEl.dataset.stampUnlocked !== '1') return;
+    if (stampEl.classList.contains('passport-stamp--revealing')) return;
+    if (stampEl.classList.contains('passport-stamp--reveal-pending')) return;
+    if (card?.classList.contains('passport-card--stamp-reveal-active')) return;
+    if (inspectOverlay) closeStampInspect();
+
+    const stampId = stampEl.dataset.stampId;
+    const stampDef = PASSPORT_STAMPS.find((entry) => entry.id === stampId);
+    if (!stampDef) return;
+
+    const unlockedImage = resolveStampImage(stampDef, { unlocked: true });
+    const imgSrc = unlockedImage?.url || unlockedImage?.src
+      || stampEl.querySelector('.passport-stamp__img')?.src;
+    if (!imgSrc) return;
+
+    const size = getInspectSize(card);
+    const title = stampDef.title || 'Passport stamp';
+
+    inspectFocusReturn = document.activeElement;
+    inspectOverlay = document.createElement('div');
+    inspectOverlay.className = 'passport-stamp-inspect';
+    inspectOverlay.setAttribute('role', 'dialog');
+    inspectOverlay.setAttribute('aria-modal', 'true');
+    inspectOverlay.setAttribute('aria-label', title);
+
+    const panel = document.createElement('div');
+    panel.className = 'passport-stamp-inspect__panel';
+    panel.style.width = `${size}px`;
+    panel.style.height = `${size}px`;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'passport-stamp-inspect__close';
+    closeBtn.setAttribute('aria-label', 'Close stamp');
+    closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeStampInspect();
+    });
+
+    const img = document.createElement('img');
+    img.className = 'passport-stamp-inspect__img';
+    img.src = imgSrc;
+    img.alt = unlockedImage?.alt || title;
+    img.width = Number(unlockedImage?.width) || 512;
+    img.height = Number(unlockedImage?.height) || 512;
+    img.draggable = false;
+    img.decoding = 'async';
+
+    panel.appendChild(closeBtn);
+    panel.appendChild(img);
+    inspectOverlay.appendChild(panel);
+    document.body.appendChild(inspectOverlay);
+
+    inspectKeyHandler = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeStampInspect();
+      }
+    };
+    document.addEventListener('keydown', inspectKeyHandler);
+
+    requestAnimationFrame(() => {
+      inspectOverlay?.classList.add('is-open');
+      closeBtn.focus({ preventScroll: true });
+    });
+  }
+
+  function bindStampInspect(root = document) {
+    const scope = root.querySelector?.('.passport-card') || root.closest?.('.passport-card') || root;
+    if (!scope || scope.dataset.stampInspectBound === '1') return;
+    scope.dataset.stampInspectBound = '1';
+
+    const openFromEvent = (target) => {
+      const stampEl = target?.closest?.('.passport-stamp[data-stamp-inspectable="1"]');
+      if (!stampEl || !scope.contains(stampEl)) return;
+      openStampInspect(stampEl, scope);
+    };
+
+    scope.addEventListener('click', (e) => {
+      openFromEvent(e.target);
+    });
+
+    scope.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const stampEl = e.target?.closest?.('.passport-stamp[data-stamp-inspectable="1"]');
+      if (!stampEl || !scope.contains(stampEl)) return;
+      e.preventDefault();
+      openStampInspect(stampEl, scope);
+    });
+  }
+
   return {
     UnlockType,
     PASSPORT_STAMPS,
@@ -838,6 +968,8 @@ const PassportStamps = (() => {
     resolveAllStatuses,
     renderGrid,
     bindRevealAnimations,
+    bindStampInspect,
+    closeStampInspect,
     shouldAnimateReveal,
     markRevealSeen,
   };
