@@ -107,11 +107,18 @@ const PassportPage = (() => {
   function renderStoryView() {
     return `
       <div id="passport-story-view" class="passport-story-view" hidden>
-        <header class="passport-header passport-header--story-spacer" aria-hidden="true">
+        <header class="passport-header">
           <div>
             <h1 class="passport-header__title">Passport</h1>
           </div>
+          <button
+            type="button"
+            class="passport-info-btn"
+            id="passport-story-info-btn"
+            aria-label="About Pass the World"
+          >i</button>
         </header>
+
         <div class="passport-card-wrap">
           <div class="passport-card passport-card--ptw is-inside" aria-label="Pass the World">
             <button
@@ -124,6 +131,11 @@ const PassportPage = (() => {
             </button>
             <div id="passport-story-host" class="passport-story-host ptw-card-host"></div>
           </div>
+        </div>
+
+        <div class="passport-permanence" id="passport-story-permanence">
+          ${iconLock()}
+          <p>One world. One journey.<br>The World moves only when invited.</p>
         </div>
       </div>
     `;
@@ -301,6 +313,7 @@ Completed</p>
       e.stopPropagation();
       showChapter('stamps', { historyMode: 'push' });
     });
+    document.getElementById('passport-story-info-btn')?.addEventListener('click', openInfo);
   }
 
   function bindInteractions() {

@@ -1481,17 +1481,7 @@
 }
 
 .passport-story-page {
-  min-height: 100dvh;
-  background: #000;
-  color: #fff;
-  padding-top: max(20px, env(safe-area-inset-top, 0px));
-  padding-bottom: calc(var(--nav-height, 72px) + env(safe-area-inset-bottom, 0px) + 16px);
-}
-
-.passport-header--story-spacer {
-  visibility: hidden;
-  pointer-events: none;
-  margin-bottom: 32px;
+  /* Same page chrome as Passport cover/stamps — no layout override */
 }
 
 .passport-story-view {
