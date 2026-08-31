@@ -321,15 +321,23 @@ const WorldChoirPassport = (() => {
     card.querySelector('#passport-continue-story')?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (typeof window.__passportShowChapter === 'function') {
+        window.__passportShowChapter('story', { historyMode: 'push' });
+        return;
+      }
       if (typeof PassportRoute !== 'undefined') {
         PassportRoute.go('story');
       } else {
-        window.location.href = 'passport-story.html';
+        window.location.href = 'passport.html?page=story';
       }
     });
 
     window.addEventListener('popstate', () => {
       const page = typeof PassportRoute !== 'undefined' ? PassportRoute.getPage() : 'cover';
+      if (typeof window.__passportShowChapter === 'function') {
+        window.__passportShowChapter(page, { syncUrl: false });
+        return;
+      }
       setCardPage(card, page === 'stamps' ? 'inside' : 'cover', { syncUrl: false });
       if (page === 'stamps' && typeof PassportStamps !== 'undefined') {
         PassportStamps.bindRevealAnimations(card);
@@ -349,6 +357,40 @@ const WorldChoirPassport = (() => {
     } catch {
       return null;
     }
+  }
+
+  function passportCacheKey() {
+    const deviceId = typeof WorldChoirDB !== 'undefined'
+      ? (WorldChoirDB.getDeviceId?.() || 'anonymous')
+      : 'anonymous';
+    return `wc_passport_cache_v1_${deviceId}`;
+  }
+
+  function readPassportCache() {
+    try {
+      const raw = sessionStorage.getItem(passportCacheKey());
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.data || typeof parsed.data !== 'object') return null;
+      return parsed.data;
+    } catch {
+      return null;
+    }
+  }
+
+  function writePassportCache(data) {
+    try {
+      sessionStorage.setItem(passportCacheKey(), JSON.stringify({
+        savedAt: Date.now(),
+        data,
+      }));
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }
+
+  function getCachedPassportData() {
+    return readPassportCache();
   }
 
   function readLocalCreatorCauseSupport() {
@@ -434,14 +476,17 @@ const WorldChoirPassport = (() => {
       eventsJoined = 1;
     }
 
-    const dailyPeaceImpact = await fetchDailyPeaceImpact();
+    const [dailyPeaceImpact, worldStats, hasSupportedCreatorCause] = await Promise.all([
+      fetchDailyPeaceImpact(),
+      fetchWorldChoirStats(),
+      fetchHasSupportedCreatorCause(),
+    ]);
+
     const dailyActsCompleted = Number(dailyPeaceImpact?.totalCompleted) || 0;
     const hasCompletedPartnerDailyAct = dailyPeaceImpact?.hasCompletedPartnerDailyAct === true
       || (Number(dailyPeaceImpact?.partnerDailyActsCompleted) || 0) >= 1;
     const hasCompletedAllPeaceThemes = dailyPeaceImpact?.hasCompletedAllPeaceThemes === true
       || (Number(dailyPeaceImpact?.themesExperienced ?? dailyPeaceImpact?.categoriesExperienced) || 0) >= 8;
-    const worldStats = await fetchWorldChoirStats();
-    const hasSupportedCreatorCause = await fetchHasSupportedCreatorCause();
     const mapStats = typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.getMapStats?.() : null;
     const userId = user.id || WorldChoirDB.getDeviceId?.() || 'anonymous';
     const userCountry = pledge?.country || user.country || null;
@@ -486,7 +531,7 @@ const WorldChoirPassport = (() => {
       })
       : [];
 
-    return {
+    const data = {
       voiceNumber: pledge?.voiceNumber ?? null,
       voiceName: pledge?.voiceName || pledge?.display_name || user.display_name || null,
       displayName: user.display_name || pledge?.display_name || null,
@@ -499,6 +544,9 @@ const WorldChoirPassport = (() => {
       stamps,
       userId,
     };
+
+    writePassportCache(data);
+    return data;
   }
 
   function showToast(message) {
@@ -632,6 +680,7 @@ const WorldChoirPassport = (() => {
   return {
     renderCard,
     loadPassportData,
+    getCachedPassportData,
     formatVoiceNumber,
     formatMemberSince,
     downloadPassport,

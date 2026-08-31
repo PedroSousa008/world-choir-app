@@ -1505,3 +1505,8 @@
   /* Same control as Stamps page: size + top/right offsets */
   z-index: 2;
 }
+
+.passport-story-view[hidden],
+.passport-main[hidden] {
+  display: none !important;
+}
