@@ -119,9 +119,7 @@ const PassTheWorld = (() => {
       return `
         <div class="ptw-route ptw-route--journey" aria-label="Current journey">
           ${renderPlaceBlock(journey.origin)}
-          <span class="ptw-route__plane" aria-hidden="true">
-            <img src="images/passport/ptw-route-plane.png" alt="" width="55" height="37.5" decoding="async">
-          </span>
+          <span class="ptw-route__plane" aria-hidden="true"></span>
           ${renderPlaceBlock(journey.destination)}
         </div>`;
     }
@@ -129,6 +127,47 @@ const PassTheWorld = (() => {
       <div class="ptw-route" aria-label="Current city">
         ${renderPlaceBlock(journey.current)}
       </div>`;
+  }
+
+  function routeKey(journey) {
+    if (!journey) return 'empty';
+    const { status, origin, destination, current } = journey;
+    if (status === 'TRAVELLING' && origin && destination) {
+      return `T|${origin.city}|${origin.country}|${destination.city}|${destination.country}`;
+    }
+    const c = current || {};
+    return `${status}|${c.city}|${c.country}`;
+  }
+
+  function statusKey(journey, itinerary) {
+    if (!journey) return 'empty';
+    if (journey.status === 'TRAVELLING' && journey.destination) {
+      return `T|${journey.destination.city}|${journey.destination.country}`;
+    }
+    const v = journey.viewer || {};
+    return `${journey.status}|${itinerary?.length || 0}|${v.sameCountry}|${v.countryLoaded}|${journey.nextInvitationAt || ''}`;
+  }
+
+  function ctaKey(journey) {
+    if (!journey) return 'empty';
+    const v = journey.viewer || {};
+    return `${journey.status}|${v.sameCountry}|${v.countryLoaded}|${v.hasInvited}|${v.canInviteNow}|${v.countryEligible}|${journey.invitationCount || 0}`;
+  }
+
+  function revealKey(journey) {
+    const r = journey?.lastReveal;
+    if (!r) return 'empty';
+    return `${r.city}|${r.country}|${r.revealedAt || r.at || ''}|${r.voiceNumber || ''}`;
+  }
+
+  function updateTravellingProgress(journey) {
+    const prog = journey.progress || {};
+    const total = prog.totalKm ?? prog.distanceKm;
+    const travelled = prog.travelledKm;
+    const el = root?.querySelector('[data-ptw-progress-km]');
+    if (el && total != null) {
+      el.textContent = `${formatKm(travelled)} of ${formatKm(total)}`;
+    }
   }
 
   function formatKm(n) {
@@ -512,17 +551,49 @@ const PassTheWorld = (() => {
     if (!body || !payload) return;
     const journey = payload.journey || {};
 
-    body.innerHTML = `
-      ${renderRoute(journey)}
-      <div class="ptw-status">
-        ${renderStatus(journey, payload.itinerary)}
-      </div>
-      ${renderReveal(journey)}
-      ${renderCta(journey)}
-    `;
+    let routeSlot = body.querySelector('[data-ptw-route-slot]');
+    if (!routeSlot) {
+      body.innerHTML = `
+        <div data-ptw-route-slot></div>
+        <div data-ptw-status-slot></div>
+        <div data-ptw-reveal-slot></div>
+        <div data-ptw-cta-slot></div>`;
+      routeSlot = body.querySelector('[data-ptw-route-slot]');
+    }
 
-    body.querySelector('[data-ptw-invite]')?.addEventListener('click', onInvite);
-    bindTravellingStatusInfo(body);
+    const statusSlot = body.querySelector('[data-ptw-status-slot]');
+    const revealSlot = body.querySelector('[data-ptw-reveal-slot]');
+    const ctaSlot = body.querySelector('[data-ptw-cta-slot]');
+
+    const rk = routeKey(journey);
+    if (routeSlot.dataset.key !== rk) {
+      routeSlot.innerHTML = renderRoute(journey);
+      routeSlot.dataset.key = rk;
+    }
+
+    const sk = statusKey(journey, payload.itinerary);
+    if (statusSlot.dataset.key !== sk) {
+      statusSlot.innerHTML = `<div class="ptw-status">${renderStatus(journey, payload.itinerary)}</div>`;
+      statusSlot.dataset.key = sk;
+      bindTravellingStatusInfo(statusSlot);
+    } else if (journey.status === 'TRAVELLING') {
+      updateTravellingProgress(journey);
+    }
+
+    const revk = revealKey(journey);
+    const revealHtml = renderReveal(journey);
+    if (revealSlot.dataset.key !== revk) {
+      revealSlot.innerHTML = revealHtml;
+      revealSlot.dataset.key = revk;
+    }
+
+    const ck = ctaKey(journey);
+    if (ctaSlot.dataset.key !== ck) {
+      ctaSlot.innerHTML = renderCta(journey);
+      ctaSlot.dataset.key = ck;
+      ctaSlot.querySelector('[data-ptw-invite]')?.addEventListener('click', onInvite);
+    }
+
     updateCountdown(journey);
   }
 
@@ -748,6 +819,9 @@ const PassTheWorld = (() => {
     mockNow = null;
     root.innerHTML = shellHtml();
     root.classList.add('ptw-root');
+
+    const routePlanePreload = new Image();
+    routePlanePreload.src = 'images/passport/ptw-route-plane.png';
 
     root.querySelector('[data-ptw-itinerary]')?.addEventListener('click', () => openPanel('itinerary'));
     root.querySelector('[data-ptw-close]')?.addEventListener('click', closePanel);

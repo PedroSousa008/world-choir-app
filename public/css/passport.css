@@ -1814,19 +1814,11 @@
 
 .ptw-route__plane {
   grid-column: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   flex: 0 0 auto;
   width: 55px;
   height: 37.5px;
-}
-
-.ptw-route__plane img {
-  display: block;
-  width: 55px;
-  height: 37.5px;
-  object-fit: contain;
+  background: url('../images/passport/ptw-route-plane.png') center / contain no-repeat;
 }
 
 .ptw-status {
@@ -1866,9 +1858,9 @@
 }
 
 .ptw-status-info {
-  flex: 0 0 7px;
-  width: 7px;
-  height: 7px;
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
   margin: 0;
   padding: 0;
   border: 1px solid rgba(18, 25, 43, 0.35);
@@ -1876,7 +1868,7 @@
   background: transparent;
   color: rgba(18, 25, 43, 0.58);
   font-family: inherit;
-  font-size: 5px;
+  font-size: 6px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
