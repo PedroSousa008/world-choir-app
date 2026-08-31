@@ -300,6 +300,10 @@ const PassportStamps = (() => {
     return typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.isPassportStampsPreviewMode?.() === true;
   }
 
+  function isHideLockedMode() {
+    return typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.isPassportStampsHideLocked?.() === true;
+  }
+
   function isDevReplay() {
     return typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.isPassportStampsDevReplay?.() === true;
   }
@@ -998,7 +1002,11 @@ const PassportStamps = (() => {
         ...status,
         shouldReveal,
       };
-    }).filter((status) => status.unlocked || status.stamp.hideWhenLocked !== true);
+    }).filter((status) => {
+      if (status.unlocked) return true;
+      if (isHideLockedMode()) return false;
+      return status.stamp.hideWhenLocked !== true;
+    });
   }
 
   function revealStorageKey(stampId, userId) {

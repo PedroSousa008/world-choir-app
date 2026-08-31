@@ -5,6 +5,13 @@ const WorldChoirConfig = (() => {
   /** Design preview — unlocks all stamps without real achievement rules. Agent toggles on when reviewing layout. */
   const PASSPORT_STAMPS_PREVIEW_MODE = false;
 
+  /**
+   * Test layout — hide locked stamp placeholders entirely.
+   * Unlocked stamps still appear (with center-to-corner reveal on first view).
+   * Does not delete locked artwork; set back to false to restore locked stamps.
+   */
+  const PASSPORT_STAMPS_HIDE_LOCKED = true;
+
   /** Dev replay — replays the center-to-corner reveal without saving to localStorage. Agent toggles on when reviewing animation. */
   const PASSPORT_STAMPS_DEV_REPLAY = false;
 
@@ -656,6 +663,10 @@ const WorldChoirConfig = (() => {
     return PASSPORT_STAMPS_PREVIEW_MODE;
   }
 
+  function isPassportStampsHideLocked() {
+    return PASSPORT_STAMPS_HIDE_LOCKED;
+  }
+
   function isPassportStampsDevReplay() {
     return PASSPORT_STAMPS_DEV_REPLAY;
   }
@@ -834,6 +845,7 @@ const WorldChoirConfig = (() => {
     isMemoryUnlocked,
     isMemoryPreviewMode,
     isPassportStampsPreviewMode,
+    isPassportStampsHideLocked,
     isPassportStampsDevReplay,
     isTestForce100CountriesMilestone,
     isTestForce1MillionVoicesMilestone,
