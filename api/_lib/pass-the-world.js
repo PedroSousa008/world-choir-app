@@ -730,7 +730,7 @@ function computeStats(itinerary) {
 function clientStatusLabel(state, progress, itinerary) {
   if (state.status === STATUS.TRAVELLING && state.destination) {
     return {
-      headline: `On the way to ${state.destination.city}`,
+      headline: `Next Stop: ${state.destination.city}`,
       detail: progress.totalKm
         ? `${progress.travelledKm.toLocaleString('en-US')} km of ${progress.totalKm.toLocaleString('en-US')} km`
         : null,

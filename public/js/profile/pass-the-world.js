@@ -239,7 +239,7 @@ const PassTheWorld = (() => {
     const prog = journey.progress || {};
     const total = prog.totalKm ?? prog.distanceKm;
     const travelled = prog.travelledKm;
-    let line = `On the way to ${esc(journey.destination.city)}`;
+    let line = `Next Stop: ${esc(journey.destination.city)}`;
     if (total != null) {
       line += ` · <span data-ptw-progress-km>${formatKm(travelled)} of ${formatKm(total)}</span>`;
     }

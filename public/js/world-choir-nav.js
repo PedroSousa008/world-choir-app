@@ -64,7 +64,7 @@ const WorldChoirNav = (() => {
       'js/profile/passport-page.js?v=20260901h',
       'js/world-choir-flags.js?v=20260901a',
       'js/profile/pass-the-world-map.js?v=20260901o',
-      'js/profile/pass-the-world.js?v=20260902b',
+      'js/profile/pass-the-world.js?v=20260902d',
       'js/world-choir-map-tiles.js?v=20260826d',
       'images/passport/passport-inside-bg.png?v=20260827c',
       'js/profile/passport-wallet.js?v=20260820a',
