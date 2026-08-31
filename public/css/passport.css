@@ -682,77 +682,68 @@
   will-change: filter, opacity, transform;
 }
 
+.passport-zoom-root {
+  position: relative;
+  min-height: 100%;
+  transform-origin: 0 0;
+  will-change: auto;
+}
+
+body.passport-stamp-zoom-active {
+  overflow: hidden;
+}
+
+body.passport-stamp-zoom-active .passport-zoom-root {
+  transition: transform 2.5s cubic-bezier(0.34, 1.08, 0.42, 1);
+  will-change: transform;
+  pointer-events: none;
+}
+
 .passport-stamp-inspect {
   position: fixed;
   inset: 0;
   z-index: 12000;
   background: rgba(12, 18, 32, 0);
-  pointer-events: auto;
-  opacity: 1;
-}
-
-.passport-stamp-inspect.is-settled {
-  background: rgba(12, 18, 32, 0.58);
-}
-
-.passport-stamp-inspect__floater {
-  position: fixed;
-  z-index: 12001;
-  display: grid;
-  place-items: center;
-  border-radius: 4px;
-  filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.34));
-  will-change: left, top, width, height;
   pointer-events: none;
+  transition: background-color 2.5s ease;
 }
 
-.passport-stamp-inspect.is-settled .passport-stamp-inspect__floater {
+.passport-stamp-inspect.is-open {
+  background: rgba(12, 18, 32, 0.42);
   pointer-events: auto;
-}
-
-.passport-stamp-inspect__img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-  user-select: none;
-  -webkit-user-drag: none;
 }
 
 .passport-stamp-inspect__close {
-  position: absolute;
-  top: -14px;
-  right: -14px;
-  z-index: 1;
-  width: 36px;
-  height: 36px;
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top, 0px));
+  right: max(18px, env(safe-area-inset-right, 0px));
+  z-index: 12001;
+  width: 40px;
+  height: 40px;
   border: 0;
   border-radius: 999px;
   background: #f7f4ef;
   color: #12192b;
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
   opacity: 0;
-  transform: scale(0.85);
+  transform: scale(0.9);
   pointer-events: none;
-  transition: opacity 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 220ms ease 2.3s, transform 220ms cubic-bezier(0.22, 1, 0.36, 1) 2.3s;
 }
 
 .passport-stamp-inspect.is-settled .passport-stamp-inspect__close {
   opacity: 1;
   transform: scale(1);
   pointer-events: auto;
+  transition-delay: 0s;
 }
 
 .passport-stamp-inspect__close:focus-visible {
   outline: 2px solid rgba(247, 244, 239, 0.9);
   outline-offset: 2px;
-}
-
-.passport-stamp--inspect-source {
-  visibility: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -761,8 +752,10 @@
     display: none !important;
   }
 
+  body.passport-stamp-zoom-active .passport-zoom-root,
+  .passport-stamp-inspect,
   .passport-stamp-inspect__close {
-    transition: none;
+    transition: none !important;
   }
 }
 
