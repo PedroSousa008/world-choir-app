@@ -95,7 +95,7 @@ const WorldChoirPassport = (() => {
     });
   }
 
-  function renderCoverPage(data, { loading = false, interactive = true } = {}) {
+  function renderCoverPage(data, { loading = false, interactive = true, hidden = false } = {}) {
     const logo = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO
       ? WorldChoirConfig.LOGO.url
       : 'images/world-choir-logo.png?v=20270706';
@@ -120,7 +120,7 @@ const WorldChoirPassport = (() => {
       : esc(formatMemberSince(data.memberSince));
 
     return `
-      <div class="passport-card__page passport-card__page--cover" data-passport-page="cover">
+      <div class="passport-card__page passport-card__page--cover" data-passport-page="cover"${hidden ? ' hidden' : ''}>
         <div class="passport-card__inner">
           <div class="passport-card__top">
             <div>
@@ -157,7 +157,7 @@ const WorldChoirPassport = (() => {
   }
 
   /** Inside page — shared background + History header; cover page keeps its own finish. */
-  function renderInsidePage(data = {}, { loading = false } = {}) {
+  function renderInsidePage(data = {}, { loading = false, hidden = true } = {}) {
     const cfg = typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig.PASSPORT_INSIDE_BACKGROUND : null;
     const src = cfg?.url || 'images/passport/passport-inside-bg.png?v=20260827c';
     const alt = cfg?.alt || 'World Choir Passport inside page';
@@ -184,7 +184,7 @@ const WorldChoirPassport = (() => {
       : '';
 
     return `
-      <div class="passport-card__page passport-card__page--inside" data-passport-page="inside" hidden>
+      <div class="passport-card__page passport-card__page--inside" data-passport-page="inside"${hidden ? ' hidden' : ''}>
         <img
           class="passport-card__inside-bg"
           src="${esc(src)}"
@@ -229,12 +229,20 @@ const WorldChoirPassport = (() => {
     `;
   }
 
-  function renderCard(data = {}, { loading = false, id = 'world-choir-passport', interactive = true } = {}) {
+  function renderCard(data = {}, {
+    loading = false,
+    id = 'world-choir-passport',
+    interactive = true,
+    page = 'cover',
+  } = {}) {
+    const initialPage = (page === 'stamps' || page === 'inside') ? 'inside' : 'cover';
+    const showInside = interactive && (!loading || initialPage === 'inside');
+
     return `
       <article
-        class="passport-card"
+        class="passport-card${initialPage === 'inside' ? ' is-inside' : ''}"
         id="${esc(id)}"
-        data-page="cover"
+        data-page="${initialPage}"
         aria-label="World Choir Passport"
       >
         <div class="passport-card__lighting" aria-hidden="true"></div>
@@ -255,16 +263,23 @@ const WorldChoirPassport = (() => {
         <div class="passport-card__edge-light" aria-hidden="true"></div>
         <div class="passport-card__thickness" aria-hidden="true"></div>
         <div class="passport-card__pages">
-          ${renderCoverPage(data, { loading, interactive })}
-          ${interactive && !loading ? renderInsidePage(data, { loading }) : ''}
+          ${renderCoverPage(data, {
+            loading,
+            interactive,
+            hidden: initialPage !== 'cover',
+          })}
+          ${showInside ? renderInsidePage(data, {
+            loading,
+            hidden: initialPage !== 'inside',
+          }) : ''}
         </div>
       </article>
     `;
   }
 
-  function setCardPage(card, page) {
+  function setCardPage(card, page, { historyMode = 'replace', syncUrl = true } = {}) {
     if (!card) return;
-    const next = page === 'inside' ? 'inside' : 'cover';
+    const next = page === 'inside' || page === 'stamps' ? 'inside' : 'cover';
     card.dataset.page = next;
     card.classList.toggle('is-inside', next === 'inside');
 
@@ -272,6 +287,13 @@ const WorldChoirPassport = (() => {
     const inside = card.querySelector('[data-passport-page="inside"]');
     if (cover) cover.hidden = next !== 'cover';
     if (inside) inside.hidden = next !== 'inside';
+
+    if (syncUrl && typeof PassportRoute !== 'undefined') {
+      PassportRoute.syncPassportHtmlUrl(
+        next === 'inside' ? 'stamps' : 'cover',
+        { replace: historyMode !== 'push' }
+      );
+    }
   }
 
   function bindCardPages(root = document) {
@@ -282,7 +304,7 @@ const WorldChoirPassport = (() => {
     card.querySelector('#passport-open-inside')?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      setCardPage(card, 'inside');
+      setCardPage(card, 'inside', { historyMode: 'push' });
       if (typeof PassportStamps !== 'undefined') {
         window.setTimeout(() => {
           PassportStamps.bindRevealAnimations(card);
@@ -293,13 +315,25 @@ const WorldChoirPassport = (() => {
     card.querySelector('#passport-back-cover')?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      setCardPage(card, 'cover');
+      setCardPage(card, 'cover', { historyMode: 'push' });
     });
 
     card.querySelector('#passport-continue-story')?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      window.location.href = 'passport-story.html';
+      if (typeof PassportRoute !== 'undefined') {
+        PassportRoute.go('story');
+      } else {
+        window.location.href = 'passport-story.html';
+      }
+    });
+
+    window.addEventListener('popstate', () => {
+      const page = typeof PassportRoute !== 'undefined' ? PassportRoute.getPage() : 'cover';
+      setCardPage(card, page === 'stamps' ? 'inside' : 'cover', { syncUrl: false });
+      if (page === 'stamps' && typeof PassportStamps !== 'undefined') {
+        PassportStamps.bindRevealAnimations(card);
+      }
     });
   }
 

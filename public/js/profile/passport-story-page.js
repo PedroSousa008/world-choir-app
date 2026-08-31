@@ -4,21 +4,32 @@
 const PassportStoryPage = (() => {
   function render() {
     return `
-      <header class="passport-story-header">
-        <button
-          type="button"
-          class="passport-story-back"
-          id="passport-story-back"
-          aria-label="Go back to Passport stamps"
-        >
-          ← Go back
-        </button>
+      <header class="passport-header passport-header--story-spacer" aria-hidden="true">
+        <div>
+          <h1 class="passport-header__title">Passport</h1>
+        </div>
       </header>
+      <div class="passport-card-wrap">
+        <div class="passport-story-stage" aria-label="Your story">
+          <button
+            type="button"
+            class="passport-card__back"
+            id="passport-story-back"
+            aria-label="Go back to Passport stamps"
+          >
+            ←
+          </button>
+        </div>
+      </div>
     `;
   }
 
   function goBack() {
-    window.location.href = 'passport.html?page=stamps';
+    if (typeof PassportRoute !== 'undefined') {
+      PassportRoute.go('stamps', { replace: true });
+      return;
+    }
+    window.location.replace('passport.html?page=stamps');
   }
 
   function mount() {

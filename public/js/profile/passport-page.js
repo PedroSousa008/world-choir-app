@@ -93,7 +93,7 @@ const PassportPage = (() => {
     });
   }
 
-  function renderLoading() {
+  function renderLoading(page = 'cover') {
     return `
       <header class="passport-header">
         <div>
@@ -102,7 +102,7 @@ const PassportPage = (() => {
         <button type="button" class="passport-info-btn" id="passport-info-btn" aria-label="About World Choir Passport">i</button>
       </header>
       <div class="passport-card-wrap">
-        ${WorldChoirPassport.renderCard({}, { loading: true })}
+        ${WorldChoirPassport.renderCard({}, { loading: true, page })}
       </div>
       <div class="passport-permanence">
         ${iconLock()}
@@ -111,7 +111,7 @@ const PassportPage = (() => {
     `;
   }
 
-  function render(data) {
+  function render(data, page = 'cover') {
     const events = Number(data.eventsJoined) || 0;
     const acts = Number(data.dailyActsCompleted) || 0;
 
@@ -124,7 +124,7 @@ const PassportPage = (() => {
       </header>
 
       <div class="passport-card-wrap">
-        ${WorldChoirPassport.renderCard(data)}
+        ${WorldChoirPassport.renderCard(data, { page })}
       </div>
 
       <div class="passport-permanence">
@@ -242,32 +242,36 @@ Completed</p>
 
   async function mount() {
     const root = document.getElementById('passport-root');
-    const page = document.getElementById('passport-page');
+    const pageEl = document.getElementById('passport-page');
     if (!root) return;
 
-    const openStamps = new URLSearchParams(window.location.search).get('page') === 'stamps';
+    const page = typeof PassportRoute !== 'undefined' ? PassportRoute.getPage() : 'cover';
+    const openStamps = page === 'stamps';
 
-    root.innerHTML = renderLoading();
+    root.innerHTML = renderLoading(openStamps ? 'stamps' : 'cover');
     WorldChoirPassport.revealFeatureImages(root);
     bindInteractions();
 
     try {
       await WorldChoirDB.ready();
       passportData = await WorldChoirPassport.loadPassportData();
-      root.innerHTML = render(passportData);
+      root.innerHTML = render(passportData, openStamps ? 'stamps' : 'cover');
       WorldChoirPassport.revealFeatureImages(root);
       bindInteractions();
-      page?.classList.add('is-entering');
-      window.setTimeout(() => page?.classList.remove('is-entering'), 700);
+
+      // Keep stamps URL stable after load (no cover flash).
+      if (openStamps && typeof PassportRoute !== 'undefined') {
+        PassportRoute.syncPassportHtmlUrl('stamps', { replace: true });
+      }
+
+      pageEl?.classList.add('is-entering');
+      window.setTimeout(() => pageEl?.classList.remove('is-entering'), 700);
 
       if (openStamps) {
         const card = root.querySelector('.passport-card');
-        if (card) {
-          WorldChoirPassport.setCardPage(card, 'inside');
+        if (card && typeof PassportStamps !== 'undefined') {
           window.setTimeout(() => {
-            if (typeof PassportStamps !== 'undefined') {
-              PassportStamps.bindRevealAnimations(card);
-            }
+            PassportStamps.bindRevealAnimations(card);
           }, 320);
         }
       }

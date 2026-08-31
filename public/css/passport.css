@@ -1484,38 +1484,24 @@
   min-height: 100dvh;
   background: #000;
   color: #fff;
-  padding-top: max(18px, env(safe-area-inset-top));
+  padding-top: max(20px, env(safe-area-inset-top, 0px));
   padding-bottom: calc(var(--nav-height, 72px) + env(safe-area-inset-bottom, 0px) + 16px);
 }
 
-.passport-story-header {
-  display: flex;
-  align-items: center;
-  margin: 0 0 24px;
+.passport-header--story-spacer {
+  visibility: hidden;
+  pointer-events: none;
 }
 
-.passport-story-back {
-  display: inline-flex;
-  align-items: center;
-  margin: 0;
-  padding: 8px 4px;
-  border: none;
-  background: none;
-  color: rgba(255, 255, 255, 0.88);
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+.passport-story-stage {
+  position: relative;
+  width: min(100%, 372px);
+  aspect-ratio: 0.7;
+  margin: 0 auto;
+  border-radius: 18px;
 }
 
-.passport-story-back:hover,
-.passport-story-back:focus-visible {
-  color: #fff;
-}
-
-.passport-story-back:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.45);
-  outline-offset: 3px;
-  border-radius: 4px;
+.passport-story-stage .passport-card__back {
+  /* Same control as Stamps page: size + top/right offsets */
+  z-index: 2;
 }
