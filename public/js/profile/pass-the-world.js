@@ -245,10 +245,12 @@ const PassTheWorld = (() => {
     }
     return `
       <p class="ptw-status__travel">
-        ${line}
-        <button type="button" class="ptw-status-info" data-ptw-status-info aria-label="Show arrival and invitation times" aria-expanded="false"><span aria-hidden="true">!</span></button>
-      </p>
-      <p class="ptw-status__detail" data-ptw-status-detail hidden>Arrives · 15:59 UTC · Next invitation · 16:00 UTC</p>`;
+        <span class="ptw-status__travel-text">${line}</span>
+        <span class="ptw-status-info-wrap">
+          <button type="button" class="ptw-status-info" data-ptw-status-info aria-label="Show arrival and invitation times" aria-expanded="false"><span aria-hidden="true">!</span></button>
+          <span class="ptw-status__detail-box" data-ptw-status-detail hidden role="tooltip">Arrives · 15:59 UTC · Next invitation · 16:00 UTC</span>
+        </span>
+      </p>`;
   }
 
   function renderStatus(journey, itinerary) {
@@ -262,11 +264,22 @@ const PassTheWorld = (() => {
     const btn = body?.querySelector('[data-ptw-status-info]');
     const detail = body?.querySelector('[data-ptw-status-detail]');
     if (!btn || !detail) return;
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const open = detail.hidden;
       detail.hidden = !open;
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
+    if (!root?.dataset.ptwStatusInfoBound) {
+      root.dataset.ptwStatusInfoBound = '1';
+      document.addEventListener('click', () => {
+        const activeBtn = root?.querySelector('[data-ptw-status-info][aria-expanded="true"]');
+        const activeDetail = root?.querySelector('[data-ptw-status-detail]:not([hidden])');
+        if (!activeBtn || !activeDetail) return;
+        activeDetail.hidden = true;
+        activeBtn.setAttribute('aria-expanded', 'false');
+      });
+    }
   }
 
   function renderCta(journey) {
