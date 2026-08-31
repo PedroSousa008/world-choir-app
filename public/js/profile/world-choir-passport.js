@@ -338,6 +338,17 @@ const WorldChoirPassport = (() => {
     const userId = user.id || WorldChoirDB.getDeviceId?.() || 'anonymous';
     const userCountry = pledge?.country || user.country || null;
     const userCity = pledge?.city || user.city || null;
+    const normalizeCityKey = (city, country) => (
+      `${String(city || '').trim().toLowerCase()}|${String(country || '').trim().toLowerCase()}`
+    );
+    const userCityVoiceCount = (() => {
+      if (!userCity || !userCountry) return 0;
+      const cityKey = normalizeCityKey(userCity, userCountry);
+      const match = WorldChoirDB.getAggregatedCities?.().find(
+        (entry) => normalizeCityKey(entry.city, entry.country) === cityKey
+      );
+      return Number(match?.count) || 0;
+    })();
     const stamps = typeof PassportStamps !== 'undefined'
       ? PassportStamps.resolveAllStatuses({
         currentDate: new Date(),
@@ -347,6 +358,8 @@ const WorldChoirPassport = (() => {
         representedCountryCount: worldStats?.countries ?? mapStats?.countries ?? 0,
         voiceCount: worldStats?.voices ?? mapStats?.voices ?? 0,
         representedContinents: worldStats?.representedContinents ?? [],
+        majorCities: worldStats?.majorCities ?? [],
+        userCityVoiceCount,
         milestones: worldStats?.milestones ?? {},
         isMapPioneer: pledge?.isMapPioneer === true,
         hasSubmittedPromiseForEvent: (eventId) => WorldChoirDB.hasSubmittedPromise?.(eventId) === true,

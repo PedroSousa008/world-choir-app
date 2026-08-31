@@ -20,6 +20,9 @@ const WorldChoirConfig = (() => {
   /** Dev test — treat the made-my-promise stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_MADE_MY_PROMISE = false;
 
+  /** Dev test — treat the major-city stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
+  const TEST_FORCE_MAJOR_CITY = false;
+
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
 
@@ -320,6 +323,39 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Passport stamp — "MAJOR CITY"
+   * Drop your artwork at: public/images/passport/stamps/major-city.png
+   * Native 1374 × 1145 px (RGBA). Display slot 90 × 75 px on page 2.
+   * Unlocks when the user's pledged city reaches 50,000 voices.
+   */
+  const PASSPORT_STAMP_MAJOR_CITY = {
+    src: 'images/passport/stamps/major-city.png',
+    version: '20260831c',
+    width: 1374,
+    height: 1145,
+    alt: 'Major City — World Choir stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /**
+   * Locked placeholder for the Major City stamp (shown before unlock).
+   * Drop your artwork at: public/images/passport/stamps/major-city-locked.png
+   * Native 1214 × 1295 px (RGBA). Same display slot as the unlocked stamp.
+   */
+  const PASSPORT_STAMP_MAJOR_CITY_LOCKED = {
+    src: 'images/passport/stamps/major-city-locked.png',
+    version: '20260831c',
+    width: 1214,
+    height: 1295,
+    alt: 'Locked Major City stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -460,6 +496,10 @@ const WorldChoirConfig = (() => {
     return TEST_FORCE_MADE_MY_PROMISE;
   }
 
+  function isTestForceMajorCity() {
+    return TEST_FORCE_MAJOR_CITY;
+  }
+
   function getGlobalEventStatus(now = new Date()) {
     return getGlobalEventState(now);
   }
@@ -558,6 +598,8 @@ const WorldChoirConfig = (() => {
     PASSPORT_STAMP_MAP_PIONEER,
     PASSPORT_STAMP_MADE_MY_PROMISE,
     PASSPORT_STAMP_MADE_MY_PROMISE_LOCKED,
+    PASSPORT_STAMP_MAJOR_CITY,
+    PASSPORT_STAMP_MAJOR_CITY_LOCKED,
     EventState,
     AppState,
     getEventDate: getEventStart,
@@ -587,6 +629,7 @@ const WorldChoirConfig = (() => {
     isTestForce1MillionVoicesMilestone,
     isTestForceEveryContinentMilestone,
     isTestForceMadeMyPromise,
+    isTestForceMajorCity,
     getAppState,
     formatEventDate,
     formatEventTime,

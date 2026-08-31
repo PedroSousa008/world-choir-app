@@ -74,6 +74,33 @@ function normalizeCountryKey(country) {
 }
 
 const MAP_PIONEER_LIMIT = 10;
+const MAJOR_CITY_VOICE_THRESHOLD = 50_000;
+
+function normalizeCityKey(city, country) {
+  return `${String(city || '').trim().toLowerCase()}|${normalizeCountryKey(country)}`;
+}
+
+function computeCityVoiceCountsFromPledges(pledges = []) {
+  const seenUsers = new Set();
+  const counts = new Map();
+
+  for (const pledge of pledges) {
+    if (!pledge?.user_id || seenUsers.has(pledge.user_id)) continue;
+    if (!pledge.city || !pledge.country) continue;
+    seenUsers.add(pledge.user_id);
+    const key = normalizeCityKey(pledge.city, pledge.country);
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  return counts;
+}
+
+function computeMajorCitiesFromPledges(pledges = [], threshold = MAJOR_CITY_VOICE_THRESHOLD) {
+  return Array.from(computeCityVoiceCountsFromPledges(pledges).entries())
+    .filter(([, count]) => count >= threshold)
+    .map(([key]) => key)
+    .sort();
+}
 
 function countMapPioneerAwardsForCountry(pledges, country) {
   const key = normalizeCountryKey(country);
@@ -780,6 +807,7 @@ function computeWorldChoirStatsFromPledges(pledges) {
     withLocation.map((p) => normalizeCountryKey(p.country)).filter(Boolean)
   );
   const representedContinents = computeRepresentedContinentsFromPledges(unique);
+  const majorCities = computeMajorCitiesFromPledges(unique);
 
   return {
     voices: unique.length,
@@ -787,6 +815,8 @@ function computeWorldChoirStatsFromPledges(pledges) {
     countries: countries.size,
     continents: representedContinents.length,
     representedContinents,
+    majorCities,
+    majorCityThreshold: MAJOR_CITY_VOICE_THRESHOLD,
   };
 }
 
@@ -913,6 +943,8 @@ async function getWorldChoirStats(eventId) {
     countries: stats.countries,
     continents: stats.continents,
     representedContinents: stats.representedContinents,
+    majorCities: stats.majorCities,
+    majorCityThreshold: stats.majorCityThreshold,
     milestones,
   };
 }

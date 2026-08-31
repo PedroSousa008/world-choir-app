@@ -15,8 +15,11 @@ const PassportStamps = (() => {
     GLOBAL_CONTINENT_MILESTONE: 'GLOBAL_CONTINENT_MILESTONE',
     MAP_PIONEER: 'MAP_PIONEER',
     PROMISE_SUBMITTED: 'PROMISE_SUBMITTED',
+    MAJOR_CITY: 'MAJOR_CITY',
     PLEDGE_JOINED: 'PLEDGE_JOINED',
   };
+
+  const MAJOR_CITY_VOICE_THRESHOLD = 50_000;
 
   const REQUIRED_CONTINENTS = ['africa', 'america', 'asia', 'europe', 'oceania'];
 
@@ -127,6 +130,22 @@ const PassportStamps = (() => {
       revealOrder: 7,
       lockedMessage: 'Share your promise to the world after the gathering.',
     },
+    {
+      id: 'world-choir-major-city',
+      title: 'Major City — World Choir',
+      eventId: 'world-choir-2027',
+      imageKey: 'PASSPORT_STAMP_MAJOR_CITY',
+      lockedImageKey: 'PASSPORT_STAMP_MAJOR_CITY_LOCKED',
+      unlockType: UnlockType.MAJOR_CITY,
+      requiredCityVoiceCount: MAJOR_CITY_VOICE_THRESHOLD,
+      requiresPledge: true,
+      requiresLocation: true,
+      displayWidth: 90,
+      displayHeight: 75,
+      position: { right: 25, top: 115 },
+      revealOrder: 8,
+      lockedMessage: 'Your city must reach 50,000 voices to unlock this stamp.',
+    },
   ];
 
   function resolveStampImage(stamp, { unlocked = false } = {}) {
@@ -233,6 +252,57 @@ const PassportStamps = (() => {
     }
     return typeof WorldChoirConfig !== 'undefined'
       && WorldChoirConfig.isTestForceMadeMyPromise?.() === true;
+  }
+
+  function isTestForceMajorCity(stamp) {
+    if (stamp?.id !== 'world-choir-major-city') {
+      return false;
+    }
+    return typeof WorldChoirConfig !== 'undefined'
+      && WorldChoirConfig.isTestForceMajorCity?.() === true;
+  }
+
+  function normalizeCityKey(city, country) {
+    return `${String(city || '').trim().toLowerCase()}|${String(country || '').trim().toLowerCase()}`;
+  }
+
+  function getUserCityVoiceCount(context = {}) {
+    if (Number.isFinite(context.userCityVoiceCount)) {
+      return Number(context.userCityVoiceCount);
+    }
+
+    const city = String(context.userCity || '').trim();
+    const country = String(context.userCountry || '').trim();
+    if (!city || !country) return 0;
+
+    if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getAggregatedCities) {
+      const cityKey = normalizeCityKey(city, country);
+      const match = WorldChoirDB.getAggregatedCities().find(
+        (entry) => normalizeCityKey(entry.city, entry.country) === cityKey
+      );
+      return Number(match?.count) || 0;
+    }
+
+    return 0;
+  }
+
+  function isMajorCityReached(stamp, context = {}) {
+    if (isTestForceMajorCity(stamp) || context.forceMajorCity === true) {
+      return true;
+    }
+
+    const threshold = Number(stamp.requiredCityVoiceCount) || MAJOR_CITY_VOICE_THRESHOLD;
+    const city = String(context.userCity || '').trim();
+    const country = String(context.userCountry || '').trim();
+    if (!city || !country) return false;
+
+    const cityKey = normalizeCityKey(city, country);
+    const majorCities = context.majorCities || [];
+    if (majorCities.some((entry) => String(entry).trim().toLowerCase() === cityKey)) {
+      return true;
+    }
+
+    return getUserCityVoiceCount(context) >= threshold;
   }
 
   function hasSubmittedPromiseForEvent(eventId, context = {}) {
@@ -551,6 +621,46 @@ const PassportStamps = (() => {
         unlocked: true,
         pledged: true,
         hasLocation: eligibility.hasLocation,
+        unlockDate: null,
+        reason: 'unlocked',
+      };
+    }
+
+    if (stamp.unlockType === UnlockType.MAJOR_CITY) {
+      const cityReached = isMajorCityReached(stamp, context);
+
+      if (!eligibility.pledged) {
+        return {
+          unlocked: false,
+          pledged: false,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'not_pledged',
+        };
+      }
+      if (!eligibility.hasLocation) {
+        return {
+          unlocked: false,
+          pledged: true,
+          hasLocation: false,
+          unlockDate: null,
+          reason: 'no_valid_location',
+        };
+      }
+      if (!cityReached) {
+        return {
+          unlocked: false,
+          pledged: true,
+          hasLocation: true,
+          unlockDate: null,
+          reason: 'city_threshold_not_reached',
+        };
+      }
+
+      return {
+        unlocked: true,
+        pledged: true,
+        hasLocation: true,
         unlockDate: null,
         reason: 'unlocked',
       };
