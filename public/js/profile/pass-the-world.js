@@ -120,7 +120,7 @@ const PassTheWorld = (() => {
         <div class="ptw-route ptw-route--journey" aria-label="Current journey">
           ${renderPlaceBlock(journey.origin)}
           <span class="ptw-route__plane" aria-hidden="true">
-            <img src="images/passport/ptw-route-plane.png" alt="" width="44" height="30" decoding="async">
+            <img src="images/passport/ptw-route-plane.png" alt="" width="55" height="37.5" decoding="async">
           </span>
           ${renderPlaceBlock(journey.destination)}
         </div>`;

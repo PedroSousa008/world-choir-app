@@ -1788,7 +1788,7 @@
 }
 
 .ptw-route--journey .ptw-place__city {
-  font-size: clamp(0.72rem, 3.4vw, 0.98rem);
+  font-size: 14px;
   letter-spacing: 0.04em;
   overflow-wrap: anywhere;
   hyphens: auto;
@@ -1806,8 +1806,9 @@
 }
 
 .ptw-route--journey .ptw-place__country {
-  font-size: clamp(0.58rem, 2.6vw, 0.68rem);
+  font-size: 6px;
   letter-spacing: 0.08em;
+  color: rgba(18, 25, 43, 0.28);
   overflow-wrap: anywhere;
 }
 
@@ -1817,15 +1818,14 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 48px;
-  height: 32px;
+  width: 55px;
+  height: 37.5px;
 }
 
 .ptw-route__plane img {
   display: block;
-  width: 44px;
-  height: auto;
-  max-height: 30px;
+  width: 55px;
+  height: 37.5px;
   object-fit: contain;
 }
 
