@@ -123,7 +123,7 @@ const PassportStamps = (() => {
       requiresPledge: true,
       displayWidth: 95,
       displayHeight: 60,
-      position: { left: 35, bottom: 22 },
+      position: { left: 15, bottom: 25 },
       revealOrder: 7,
       lockedMessage: 'Share your promise to the world after the gathering.',
     },
