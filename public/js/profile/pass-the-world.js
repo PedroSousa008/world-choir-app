@@ -211,16 +211,7 @@ const PassTheWorld = (() => {
     const viewer = journey.viewer || {};
 
     if (status === 'TRAVELLING' && journey.destination) {
-      const prog = journey.progress || {};
-      const total = prog.totalKm ?? prog.distanceKm;
-      const travelled = prog.travelledKm;
-      let line = `On the way to ${esc(journey.destination.city)}`;
-      if (total != null) {
-        line += ` · <span data-ptw-progress-km>${formatKm(travelled)} of ${formatKm(total)}</span>`;
-      }
-      lines.push(line);
-      lines.push('Arrives · 15:59 UTC · Next invitation · 16:00 UTC');
-      return lines;
+      return [];
     }
 
     if (status === 'INVITATION_OPEN') {
@@ -241,6 +232,41 @@ const PassTheWorld = (() => {
     }
 
     return lines;
+  }
+
+  function renderTravellingStatus(journey) {
+    if (!journey?.destination) return '';
+    const prog = journey.progress || {};
+    const total = prog.totalKm ?? prog.distanceKm;
+    const travelled = prog.travelledKm;
+    let line = `On the way to ${esc(journey.destination.city)}`;
+    if (total != null) {
+      line += ` · <span data-ptw-progress-km>${formatKm(travelled)} of ${formatKm(total)}</span>`;
+    }
+    return `
+      <p class="ptw-status__travel">
+        ${line}
+        <button type="button" class="ptw-status-info" data-ptw-status-info aria-label="Show arrival and invitation times" aria-expanded="false"><span aria-hidden="true">!</span></button>
+      </p>
+      <p class="ptw-status__detail" data-ptw-status-detail hidden>Arrives · 15:59 UTC · Next invitation · 16:00 UTC</p>`;
+  }
+
+  function renderStatus(journey, itinerary) {
+    if (journey?.status === 'TRAVELLING' && journey.destination) {
+      return renderTravellingStatus(journey);
+    }
+    return statusLines(journey, itinerary).map((l) => `<p>${l}</p>`).join('');
+  }
+
+  function bindTravellingStatusInfo(body) {
+    const btn = body?.querySelector('[data-ptw-status-info]');
+    const detail = body?.querySelector('[data-ptw-status-detail]');
+    if (!btn || !detail) return;
+    btn.addEventListener('click', () => {
+      const open = detail.hidden;
+      detail.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
   }
 
   function renderCta(journey) {
@@ -457,13 +483,14 @@ const PassTheWorld = (() => {
     body.innerHTML = `
       ${renderRoute(journey)}
       <div class="ptw-status">
-        ${statusLines(journey, payload.itinerary).map((l) => `<p>${l}</p>`).join('')}
+        ${renderStatus(journey, payload.itinerary)}
       </div>
       ${renderReveal(journey)}
       ${renderCta(journey)}
     `;
 
     body.querySelector('[data-ptw-invite]')?.addEventListener('click', onInvite);
+    bindTravellingStatusInfo(body);
     updateCountdown(journey);
   }
 

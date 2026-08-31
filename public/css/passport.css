@@ -1842,6 +1842,49 @@
   line-height: 1.4;
 }
 
+.ptw-status__travel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  margin: 5px 0;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  color: rgba(18, 25, 43, 0.58);
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+
+.ptw-status-info {
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(18, 25, 43, 0.35);
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(18, 25, 43, 0.58);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ptw-status-info span {
+  font-size: 0.72em;
+  line-height: 1;
+}
+
+.ptw-status__detail {
+  margin: 2px 0 5px;
+}
+
 .ptw-cta {
   margin-top: 18px;
 }
