@@ -529,7 +529,46 @@ async function advanceStateMachine(nowInput) {
     }
   }
 
+  // Heal WAITING: any pending winner/invite must start travelling immediately
+  // (first person after the empty 60s window sends the plane — no collecting).
+  if (state.status === STATUS.WAITING_FOR_FIRST_CALL && state.activeRoundId) {
+    const healed = await resolveFirstCallIfPending(state, itinerary, now);
+    if (healed) return { ...healed, now };
+  }
+
   return { state, itinerary, now };
+}
+
+/** If WAITING already has a claimed winner or any invite, start the first-call trip. */
+async function resolveFirstCallIfPending(state, itinerary, now) {
+  const roundId = state.activeRoundId;
+  if (!roundId) return null;
+
+  let winner = await readWinner(roundId);
+  if (!winner?.invitationId) {
+    const invites = await readRoundInvites(roundId);
+    if (!invites.length) return null;
+    // Earliest invite wins (first person who clicked after the window).
+    const sorted = [...invites].sort((a, b) => {
+      const ta = new Date(a.submittedAt || 0).getTime();
+      const tb = new Date(b.submittedAt || 0).getTime();
+      return ta - tb;
+    });
+    const pick = sorted[0];
+    const winnerPayload = {
+      ...pick,
+      invitationId: pick.id,
+      selectedAt: pick.submittedAt || now.toISOString(),
+      selectionMode: 'first_call',
+    };
+    const claimed = await claimWinner(roundId, winnerPayload);
+    winner = claimed.winner;
+  } else if (!winner.selectionMode) {
+    winner = { ...winner, selectionMode: 'first_call' };
+  }
+
+  const invites = await readRoundInvites(roundId);
+  return applyWinner(state, itinerary, winner, invites);
 }
 
 function journeyProgress(state, now) {
@@ -796,8 +835,76 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     };
   }
 
+  let alreadyInvited = false;
   try {
     await readBlobJson(roundInvitationPath(roundId, viewer.userId));
+    alreadyInvited = true;
+  } catch { /* first invite */ }
+
+  // After the empty 60s window: first click sends the plane immediately (no collecting).
+  if (state.status === STATUS.WAITING_FOR_FIRST_CALL) {
+    let invites = await readRoundInvites(roundId);
+    if (!alreadyInvited) {
+      const invitation = {
+        id: randomUUID(),
+        roundId,
+        userId: viewer.userId,
+        voiceNumber: viewer.voiceNumber,
+        city: viewer.city,
+        country: viewer.country,
+        countryCode: viewer.countryCode || resolveCountryCode(viewer.country),
+        latitude: Number(viewer.latitude),
+        longitude: Number(viewer.longitude),
+        submittedAt: clock.toISOString(),
+      };
+      invites = await writeRoundInvite(roundId, invitation);
+      const winnerPayload = {
+        ...invitation,
+        invitationId: invitation.id,
+        selectedAt: clock.toISOString(),
+        selectionMode: 'first_call',
+      };
+      const { winner, created } = await claimWinner(roundId, winnerPayload);
+      const applied = await applyWinner(state, itinerary, winner, invites);
+      return {
+        ok: created,
+        selected: created,
+        alreadyMoving: !created,
+        message: created ? null : 'The World is already moving.',
+        journey: buildPublicState(applied.state, applied.itinerary, clock, { ...viewer, hasInvited: true }),
+        itinerary: applied.itinerary,
+        stats: computeStats(applied.itinerary),
+      };
+    }
+
+    // Already invited but trip never started — heal and start travelling.
+    const healed = await resolveFirstCallIfPending(state, itinerary, clock);
+    if (healed) {
+      return {
+        ok: true,
+        selected: true,
+        alreadyInvited: true,
+        journey: buildPublicState(healed.state, healed.itinerary, clock, { ...viewer, hasInvited: true }),
+        itinerary: healed.itinerary,
+        stats: computeStats(healed.itinerary),
+      };
+    }
+    state = await writeState({
+      ...state,
+      invitationCount: invites.length,
+      invitedCities: buildInvitedCities(invites),
+    });
+    return {
+      ok: true,
+      alreadyInvited: true,
+      journey: buildPublicState(state, itinerary, clock, { ...viewer, hasInvited: true }),
+      itinerary,
+      stats: computeStats(itinerary),
+    };
+  }
+
+  // Active 60-second ritual window — collect invitations only.
+  if (alreadyInvited) {
     const invites = await readRoundInvites(roundId);
     state = await writeState({
       ...state,
@@ -811,7 +918,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
       itinerary,
       stats: computeStats(itinerary),
     };
-  } catch { /* first invite */ }
+  }
 
   const invitation = {
     id: randomUUID(),
@@ -825,27 +932,6 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     longitude: Number(viewer.longitude),
     submittedAt: clock.toISOString(),
   };
-
-  if (state.status === STATUS.WAITING_FOR_FIRST_CALL) {
-    const invites = await writeRoundInvite(roundId, invitation);
-    const winnerPayload = {
-      ...invitation,
-      invitationId: invitation.id,
-      selectedAt: clock.toISOString(),
-      selectionMode: 'first_call',
-    };
-    const { winner, created } = await claimWinner(roundId, winnerPayload);
-    const applied = await applyWinner(state, itinerary, winner, invites);
-    return {
-      ok: created,
-      selected: created,
-      alreadyMoving: !created,
-      message: created ? null : 'The World is already moving.',
-      journey: buildPublicState(applied.state, applied.itinerary, clock, { ...viewer, hasInvited: true }),
-      itinerary: applied.itinerary,
-      stats: computeStats(applied.itinerary),
-    };
-  }
 
   const invites = await writeRoundInvite(roundId, invitation);
   state = await writeState({

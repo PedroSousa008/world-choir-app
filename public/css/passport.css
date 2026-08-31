@@ -1594,6 +1594,41 @@
   background: #000000;
 }
 
+/* Keep MapLibre under overlays; plane lives outside Leaflet as HTML. */
+.ptw-map .leaflet-ptwOverlay-pane {
+  z-index: 650 !important;
+}
+
+.ptw-plane-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0;
+  color: #ffffff;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+
+.ptw-plane-overlay__glow {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(61, 124, 255, 0.55) 0%, rgba(61, 124, 255, 0) 70%);
+}
+
+.ptw-plane-overlay__icon {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 2px;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.65));
+}
+
 
 
 
@@ -1950,29 +1985,10 @@
   color: var(--text-muted);
 }
 
-.ptw-plane-icon,
 .ptw-city-icon,
 .ptw-invite-icon {
   background: transparent !important;
   border: 0 !important;
-}
-
-.ptw-plane {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  color: #ffffff;
-  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.75));
-  transform-origin: center center;
-  will-change: transform;
-}
-
-.ptw-plane svg {
-  display: block;
-  width: 14px;
-  height: 14px;
 }
 
 .ptw-city-dot {

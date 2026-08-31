@@ -227,11 +227,13 @@ const PassTheWorld = (() => {
     if (viewer.hasInvited
       && (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL')) {
       const city = viewer.city || 'Your city';
+      // Invitation count is only meaningful during the 60-second ritual window.
+      const showCount = status === 'INVITATION_OPEN' && journey.invitationCount > 0;
       return `
         <div class="ptw-cta ptw-cta--sent" role="status">
           <p class="ptw-cta-label">INVITATION SENT</p>
           <p class="ptw-cta-note">${esc(city)} is calling.</p>
-          ${journey.invitationCount > 0
+          ${showCount
             ? `<p class="ptw-invite-count" aria-live="polite">${Number(journey.invitationCount).toLocaleString()} invitations</p>`
             : ''}
         </div>`;
