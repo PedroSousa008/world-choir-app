@@ -172,7 +172,7 @@ const PassportStamps = (() => {
       requiresPledge: false,
       displayWidth: 90,
       displayHeight: 60,
-      position: { left: 15, top: 120 },
+      position: { bottom: 15, centerX: true },
       revealOrder: 10,
       lockedMessage: 'Complete a partner-backed Daily Act of Peace to unlock this stamp.',
     },
@@ -852,7 +852,12 @@ const PassportStamps = (() => {
     if (pos.top != null) parts.push(`top:${Number(pos.top)}px`);
     if (pos.right != null) parts.push(`right:${Number(pos.right)}px`);
     if (pos.bottom != null) parts.push(`bottom:${Number(pos.bottom)}px`);
-    if (pos.left != null) parts.push(`left:${Number(pos.left)}px`);
+    if (pos.centerX === true) {
+      parts.push('left:50%');
+      parts.push('transform:translateX(-50%)');
+    } else if (pos.left != null) {
+      parts.push(`left:${Number(pos.left)}px`);
+    }
     return parts.join(';');
   }
 
