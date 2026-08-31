@@ -1507,9 +1507,6 @@
   z-index: 30;
 }
 
-body.ptw-map-expanded #passport-story-back {
-  display: none !important;
-}
 
 .passport-story-host,
 .ptw-card-host {
@@ -1578,18 +1575,6 @@ body.ptw-map-expanded #passport-story-back {
   border: 0;
 }
 
-.ptw-map-wrap.is-expanded {
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  width: 100%;
-  height: 100%;
-  max-height: none;
-  aspect-ratio: auto;
-  border-radius: 0;
-  border: 0;
-  background: #000000;
-}
 
 .ptw-map {
   width: 100%;
@@ -1609,56 +1594,12 @@ body.ptw-map-expanded #passport-story-back {
   background: #000000;
 }
 
-.ptw-map-expand {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  z-index: 500;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: var(--radius-sm);
-  background: rgba(8, 10, 18, 0.78);
-  color: rgba(244, 244, 246, 0.85);
-  cursor: pointer;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  transition: border-color var(--transition), color var(--transition), background var(--transition);
-}
 
-.ptw-map-wrap.is-expanded .ptw-map-expand {
-  top: max(14px, env(safe-area-inset-top, 0px));
-  right: max(14px, env(safe-area-inset-right, 0px));
-  bottom: auto;
-}
 
-.ptw-map-expand:hover,
-.ptw-map-expand:focus-visible {
-  border-color: rgba(78, 197, 232, 0.45);
-  color: #fff;
-  outline: none;
-}
 
-.ptw-map-expand svg {
-  width: 16px;
-  height: 16px;
-  display: block;
-}
 
-.ptw-map-expand .ptw-icon-collapse {
-  display: none;
-}
 
-.ptw-map-wrap.is-expanded .ptw-map-expand .ptw-icon-expand {
-  display: none;
-}
 
-.ptw-map-wrap.is-expanded .ptw-map-expand .ptw-icon-collapse {
-  display: block;
-}
 
 .ptw-body {
   margin-top: 14px;
@@ -2066,6 +2007,3 @@ body.ptw-map-expanded #passport-story-back {
   cursor: pointer;
 }
 
-body.ptw-map-expanded {
-  overflow: hidden;
-}
