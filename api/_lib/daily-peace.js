@@ -546,6 +546,7 @@ async function getImpact(deviceId, todayInput) {
   const stillOpen = [];
   const onTimeDates = [];
   const categories = new Set();
+  let partnerDailyActsCompleted = 0;
 
   for (const raw of rows) {
     const row = normalizeRow(raw);
@@ -557,6 +558,7 @@ async function getImpact(deviceId, todayInput) {
       completed.push(mapped);
       if (row.completed_on_assigned_day) onTimeDates.push(row.date);
       if (act.category) categories.add(act.category);
+      if (row.partnership_id) partnerDailyActsCompleted += 1;
     } else if (row.date < todayDate) {
       stillOpen.push(mapped);
     }
@@ -569,6 +571,8 @@ async function getImpact(deviceId, todayInput) {
   return {
     summary: {
       totalCompleted: completed.length,
+      partnerDailyActsCompleted,
+      hasCompletedPartnerDailyAct: partnerDailyActsCompleted >= 1,
       onTimeCompleted: onTimeDates.length,
       currentStreak,
       longestStreak,

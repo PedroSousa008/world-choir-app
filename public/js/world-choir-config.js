@@ -26,6 +26,9 @@ const WorldChoirConfig = (() => {
   /** Dev test — treat the creator-cause stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_CREATOR_CAUSE = false;
 
+  /** Dev test — treat the daily-act-partner stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
+  const TEST_FORCE_DAILY_ACT_PARTNER = false;
+
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
   const MEMORY_PREVIEW_MODE = false;
 
@@ -392,6 +395,39 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  /**
+   * Passport stamp — "DAILY ACT PARTNER"
+   * Drop your artwork at: public/images/passport/stamps/daily-act-partner.png
+   * Native 1536 × 1024 px (RGBA). Display slot 90 × 60 px on page 2.
+   * Unlocks when the user completes at least one partner-backed Daily Act of Peace.
+   */
+  const PASSPORT_STAMP_DAILY_ACT_PARTNER = {
+    src: 'images/passport/stamps/daily-act-partner.png',
+    version: '20260831e',
+    width: 1536,
+    height: 1024,
+    alt: 'Daily Act Partner — World Choir stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /**
+   * Locked placeholder for the Daily Act Partner stamp (shown before unlock).
+   * Drop your artwork at: public/images/passport/stamps/daily-act-partner-locked.png
+   * Native 1774 × 887 px (RGBA). Same display slot as the unlocked stamp.
+   */
+  const PASSPORT_STAMP_DAILY_ACT_PARTNER_LOCKED = {
+    src: 'images/passport/stamps/daily-act-partner-locked.png',
+    version: '20260831e',
+    width: 1774,
+    height: 887,
+    alt: 'Locked Daily Act Partner stamp',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
   const EventState = {
     UPCOMING: 'upcoming',
     FINAL_HOUR: 'final_hour',
@@ -540,6 +576,10 @@ const WorldChoirConfig = (() => {
     return TEST_FORCE_CREATOR_CAUSE;
   }
 
+  function isTestForceDailyActPartner() {
+    return TEST_FORCE_DAILY_ACT_PARTNER;
+  }
+
   function getGlobalEventStatus(now = new Date()) {
     return getGlobalEventState(now);
   }
@@ -642,6 +682,8 @@ const WorldChoirConfig = (() => {
     PASSPORT_STAMP_MAJOR_CITY_LOCKED,
     PASSPORT_STAMP_CREATOR_CAUSE,
     PASSPORT_STAMP_CREATOR_CAUSE_LOCKED,
+    PASSPORT_STAMP_DAILY_ACT_PARTNER,
+    PASSPORT_STAMP_DAILY_ACT_PARTNER_LOCKED,
     EventState,
     AppState,
     getEventDate: getEventStart,
@@ -673,6 +715,7 @@ const WorldChoirConfig = (() => {
     isTestForceMadeMyPromise,
     isTestForceMajorCity,
     isTestForceCreatorCause,
+    isTestForceDailyActPartner,
     getAppState,
     formatEventDate,
     formatEventTime,

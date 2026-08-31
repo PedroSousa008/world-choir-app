@@ -351,7 +351,7 @@ const WorldChoirPassport = (() => {
     }
   }
 
-  async function fetchDailyActsCompleted() {
+  async function fetchDailyPeaceImpact() {
     try {
       const deviceId = WorldChoirDB.getDeviceId();
       const date = localDateString();
@@ -359,11 +359,23 @@ const WorldChoirPassport = (() => {
         `/api/daily-peace?deviceId=${encodeURIComponent(deviceId)}&view=impact&date=${encodeURIComponent(date)}`
       );
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) return 0;
-      return Number(data?.summary?.totalCompleted) || 0;
+      if (!res.ok) return null;
+      return data?.summary || null;
     } catch {
-      return 0;
+      return null;
     }
+  }
+
+  async function fetchDailyActsCompleted() {
+    const summary = await fetchDailyPeaceImpact();
+    return Number(summary?.totalCompleted) || 0;
+  }
+
+  async function fetchHasCompletedPartnerDailyAct() {
+    const summary = await fetchDailyPeaceImpact();
+    if (!summary) return false;
+    if (summary.hasCompletedPartnerDailyAct === true) return true;
+    return (Number(summary.partnerDailyActsCompleted) || 0) >= 1;
   }
 
   async function loadPassportData() {
@@ -377,7 +389,10 @@ const WorldChoirPassport = (() => {
       eventsJoined = 1;
     }
 
-    const dailyActsCompleted = await fetchDailyActsCompleted();
+    const dailyPeaceImpact = await fetchDailyPeaceImpact();
+    const dailyActsCompleted = Number(dailyPeaceImpact?.totalCompleted) || 0;
+    const hasCompletedPartnerDailyAct = dailyPeaceImpact?.hasCompletedPartnerDailyAct === true
+      || (Number(dailyPeaceImpact?.partnerDailyActsCompleted) || 0) >= 1;
     const worldStats = await fetchWorldChoirStats();
     const hasSupportedCreatorCause = await fetchHasSupportedCreatorCause();
     const mapStats = typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.getMapStats?.() : null;
@@ -416,6 +431,7 @@ const WorldChoirPassport = (() => {
           return !!(country && city);
         },
         hasSupportedCreatorCause,
+        hasCompletedPartnerDailyAct,
       })
       : [];
 

@@ -17,6 +17,7 @@ const PassportStamps = (() => {
     PROMISE_SUBMITTED: 'PROMISE_SUBMITTED',
     MAJOR_CITY: 'MAJOR_CITY',
     CREATOR_CAUSE_DONATION: 'CREATOR_CAUSE_DONATION',
+    DAILY_ACT_PARTNER_COMPLETED: 'DAILY_ACT_PARTNER_COMPLETED',
     PLEDGE_JOINED: 'PLEDGE_JOINED',
   };
 
@@ -161,6 +162,20 @@ const PassportStamps = (() => {
       revealOrder: 9,
       lockedMessage: 'Support a Creator Foundation cause to unlock this stamp.',
     },
+    {
+      id: 'world-choir-daily-act-partner',
+      title: 'Daily Act Partner — World Choir',
+      eventId: 'world-choir-2027',
+      imageKey: 'PASSPORT_STAMP_DAILY_ACT_PARTNER',
+      lockedImageKey: 'PASSPORT_STAMP_DAILY_ACT_PARTNER_LOCKED',
+      unlockType: UnlockType.DAILY_ACT_PARTNER_COMPLETED,
+      requiresPledge: false,
+      displayWidth: 90,
+      displayHeight: 60,
+      position: { right: 5, top: 180 },
+      revealOrder: 10,
+      lockedMessage: 'Complete a partner-backed Daily Act of Peace to unlock this stamp.',
+    },
   ];
 
   function resolveStampImage(stamp, { unlocked = false } = {}) {
@@ -285,12 +300,28 @@ const PassportStamps = (() => {
       && WorldChoirConfig.isTestForceCreatorCause?.() === true;
   }
 
+  function isTestForceDailyActPartner(stamp) {
+    if (stamp?.id !== 'world-choir-daily-act-partner') {
+      return false;
+    }
+    return typeof WorldChoirConfig !== 'undefined'
+      && WorldChoirConfig.isTestForceDailyActPartner?.() === true;
+  }
+
   function hasSupportedCreatorCause(context = {}) {
     if (context.hasSupportedCreatorCause === true) return true;
     if (typeof context.hasSupportedCreatorCause === 'function') {
       return context.hasSupportedCreatorCause() === true;
     }
     return false;
+  }
+
+  function hasCompletedPartnerDailyAct(context = {}) {
+    if (context.hasCompletedPartnerDailyAct === true) return true;
+    if (typeof context.hasCompletedPartnerDailyAct === 'function') {
+      return context.hasCompletedPartnerDailyAct() === true;
+    }
+    return (Number(context.partnerDailyActsCompleted) || 0) >= 1;
   }
 
   function normalizeCityKey(city, country) {
@@ -715,6 +746,27 @@ const PassportStamps = (() => {
         hasLocation: eligibility.hasLocation,
         unlockDate: null,
         reason: supported ? 'unlocked' : 'no_creator_cause_donation',
+      };
+    }
+
+    if (stamp.unlockType === UnlockType.DAILY_ACT_PARTNER_COMPLETED) {
+      if (isTestForceDailyActPartner(stamp) || context.forceDailyActPartner === true) {
+        return {
+          unlocked: true,
+          pledged: eligibility.pledged,
+          hasLocation: eligibility.hasLocation,
+          unlockDate: null,
+          reason: 'test_force',
+        };
+      }
+
+      const completedPartnerAct = hasCompletedPartnerDailyAct(context);
+      return {
+        unlocked: completedPartnerAct,
+        pledged: eligibility.pledged,
+        hasLocation: eligibility.hasLocation,
+        unlockDate: null,
+        reason: completedPartnerAct ? 'unlocked' : 'no_partner_daily_act',
       };
     }
 
