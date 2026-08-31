@@ -2,18 +2,24 @@
  * World Choir — Event configuration & state machine
  */
 const WorldChoirConfig = (() => {
-  /** Design preview — unlocks all stamps without real achievement rules. Agent toggles on when reviewing layout. */
-  const PASSPORT_STAMPS_PREVIEW_MODE = false;
+  /**
+   * TEMP layout preview — unlocks all stamps so you can review the full passport.
+   * Set back to false after review (real unlock rules resume; hide-locked stays on).
+   */
+  const PASSPORT_STAMPS_PREVIEW_MODE = true;
 
   /**
-   * Test layout — hide locked stamp placeholders entirely.
-   * Unlocked stamps still appear (with center-to-corner reveal on first view).
-   * Does not delete locked artwork; set back to false to restore locked stamps.
+   * Permanent product behavior — hide locked stamp placeholders.
+   * Stamps only appear once earned (with center-to-corner reveal on first view).
+   * Locked artwork remains in the repo for future use if needed.
    */
   const PASSPORT_STAMPS_HIDE_LOCKED = true;
 
-  /** Dev replay — replays the center-to-corner reveal without saving to localStorage. Agent toggles on when reviewing animation. */
-  const PASSPORT_STAMPS_DEV_REPLAY = false;
+  /**
+   * TEMP replay — replays the center-to-corner reveal without saving to localStorage.
+   * Set back to false after review so one-time reveals work normally.
+   */
+  const PASSPORT_STAMPS_DEV_REPLAY = true;
 
   /** Dev test — treat the 100-country global milestone as reached. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_100_COUNTRIES_MILESTONE = false;
