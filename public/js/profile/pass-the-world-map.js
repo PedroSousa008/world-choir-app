@@ -39,6 +39,9 @@ const PassTheWorldMap = (() => {
   let lastCenterSync = 0;
   let onProgressCb = null;
   let etaTimer = null;
+  let interactRaf = null;
+  let interacting = false;
+  let animFrame = null; // { center, zoom } during zoomanim
 
   function toRad(d) { return (d * Math.PI) / 180; }
   function toDeg(r) { return (r * 180) / Math.PI; }
@@ -236,15 +239,25 @@ const PassTheWorldMap = (() => {
     return wrap;
   }
 
-  function project(ll) {
+  function project(ll, frame) {
     if (!map || !ll) return null;
-    const pt = map.latLngToContainerPoint(ll);
-    if (!Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return null;
+    const latlng = L.latLng(ll[0], ll[1]);
+    let pt;
+    if (frame && frame.center != null && frame.zoom != null && typeof map.project === 'function') {
+      // Match Leaflet's mid-zoom transform so overlays never slip during pinch/zoomanim.
+      const layerPoint = map.project(latlng, frame.zoom)
+        ._subtract(map._getNewPixelOrigin(frame.center, frame.zoom));
+      const panePos = map._getMapPanePos ? map._getMapPanePos() : L.point(0, 0);
+      pt = layerPoint.add(panePos);
+    } else {
+      pt = map.latLngToContainerPoint(latlng);
+    }
+    if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return null;
     return pt;
   }
 
   /** Single SVG quadratic — perfectly smooth at every zoom. */
-  function syncRouteOverlay() {
+  function syncRouteOverlay(frame) {
     ensureOverlayEls();
     if (!routeSvg || !routePathEl || !routeGlowEl || !map) return;
 
@@ -260,9 +273,9 @@ const PassTheWorldMap = (() => {
       return;
     }
 
-    const a = project(routeCurve.from);
-    const c = project(routeCurve.control);
-    const b = project(routeCurve.to);
+    const a = project(routeCurve.from, frame);
+    const c = project(routeCurve.control, frame);
+    const b = project(routeCurve.to, frame);
     if (!a || !c || !b) {
       routeSvg.style.opacity = '0';
       return;
@@ -274,13 +287,13 @@ const PassTheWorldMap = (() => {
     routeSvg.style.opacity = '1';
   }
 
-  function syncPlaneOverlay() {
+  function syncPlaneOverlay(frame) {
     ensureOverlayEls();
     if (!planeEl || !map || !planeLatLng) {
       if (planeEl) planeEl.style.opacity = '0';
       return;
     }
-    const pt = project(planeLatLng);
+    const pt = project(planeLatLng, frame);
     if (!pt) {
       planeEl.style.opacity = '0';
       return;
@@ -289,13 +302,13 @@ const PassTheWorldMap = (() => {
     planeEl.style.transform = `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px) rotate(${planeBearing}deg)`;
   }
 
-  function syncDestOverlay() {
+  function syncDestOverlay(frame) {
     ensureOverlayEls();
     if (!destEl || !map || !destLatLng) {
       if (destEl) destEl.style.opacity = '0';
       return;
     }
-    const pt = project(destLatLng);
+    const pt = project(destLatLng, frame);
     if (!pt) {
       destEl.style.opacity = '0';
       return;
@@ -305,10 +318,49 @@ const PassTheWorldMap = (() => {
     refreshDestPopupContent();
   }
 
-  function syncOverlays() {
-    syncRouteOverlay();
-    syncDestOverlay();
-    syncPlaneOverlay();
+  function syncOverlays(frame) {
+    const f = frame || animFrame;
+    syncRouteOverlay(f);
+    syncDestOverlay(f);
+    syncPlaneOverlay(f);
+  }
+
+  function stopInteractLoop() {
+    interacting = false;
+    animFrame = null;
+    if (interactRaf) {
+      cancelAnimationFrame(interactRaf);
+      interactRaf = null;
+    }
+  }
+
+  function startInteractLoop() {
+    if (interacting) return;
+    interacting = true;
+    const tick = () => {
+      interactRaf = null;
+      if (!map || !interacting) return;
+      syncOverlays(animFrame);
+      interactRaf = requestAnimationFrame(tick);
+    };
+    interactRaf = requestAnimationFrame(tick);
+  }
+
+  function onZoomAnim(e) {
+    animFrame = { center: e.center, zoom: e.zoom };
+    syncOverlays(animFrame);
+  }
+
+  function onInteractStart() {
+    markUserZoom();
+    startInteractLoop();
+  }
+
+  function onInteractEnd() {
+    animFrame = null;
+    stopInteractLoop();
+    markUserZoom();
+    syncInteraction();
   }
 
   function setPlane(latlng, bearing = 0) {
@@ -575,7 +627,8 @@ const PassTheWorldMap = (() => {
       boxZoom: false,
       keyboard: false,
       fadeAnimation: false,
-      zoomAnimation: true,
+      zoomAnimation: false,
+      markerZoomAnimation: false,
     });
 
     if (typeof WorldChoirMapTiles !== 'undefined') {
@@ -592,12 +645,10 @@ const PassTheWorldMap = (() => {
     inviteLayer = L.layerGroup().addTo(map);
 
     ensureOverlayEls();
-    map.on('zoomend move moveend zoom viewreset', syncOverlays);
-    map.on('zoomend', () => {
-      markUserZoom();
-      syncInteraction();
-    });
-    map.on('zoomstart', markUserZoom);
+    map.on('move zoom viewreset', syncOverlays);
+    map.on('zoomanim', onZoomAnim);
+    map.on('zoomstart movestart', onInteractStart);
+    map.on('zoomend moveend', onInteractEnd);
     map.on('click', () => closeDestPopup());
 
     requestAnimationFrame(() => {
@@ -693,9 +744,12 @@ const PassTheWorldMap = (() => {
   function destroy() {
     stopTravelAnimation();
     stopEtaTimer();
+    stopInteractLoop();
     if (map) {
-      map.off('zoomend move moveend zoom viewreset', syncOverlays);
-      map.off('zoomstart', markUserZoom);
+      map.off('move zoom viewreset', syncOverlays);
+      map.off('zoomanim', onZoomAnim);
+      map.off('zoomstart movestart', onInteractStart);
+      map.off('zoomend moveend', onInteractEnd);
       map.remove();
       map = null;
     }
