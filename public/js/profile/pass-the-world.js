@@ -246,11 +246,22 @@ const PassTheWorld = (() => {
     return `
       <p class="ptw-status__travel">
         <span class="ptw-status__travel-text">${line}</span>
-        <span class="ptw-status-info-wrap">
-          <button type="button" class="ptw-status-info" data-ptw-status-info aria-label="Show arrival and invitation times" aria-expanded="false"><span aria-hidden="true">!</span></button>
-          <span class="ptw-status__detail-box" data-ptw-status-detail hidden role="tooltip">Arrives · 15:59 UTC · Next invitation · 16:00 UTC</span>
-        </span>
+        <button type="button" class="ptw-status-info" data-ptw-status-info aria-label="Show arrival and invitation times" aria-expanded="false" aria-controls="ptw-status-modal"><span aria-hidden="true">!</span></button>
       </p>`;
+  }
+
+  function ensureStatusModal() {
+    let modal = document.getElementById('ptw-status-modal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'ptw-status-modal';
+    modal.className = 'ptw-status-modal';
+    modal.hidden = true;
+    modal.innerHTML = `
+      <button type="button" class="ptw-status-modal__backdrop" data-ptw-status-backdrop aria-label="Close"></button>
+      <div class="ptw-status__detail-box" data-ptw-status-detail role="dialog" aria-modal="true">Arrives · 15:59 UTC · Next invitation · 16:00 UTC</div>`;
+    document.body.appendChild(modal);
+    return modal;
   }
 
   function renderStatus(journey, itinerary) {
@@ -262,24 +273,32 @@ const PassTheWorld = (() => {
 
   function bindTravellingStatusInfo(body) {
     const btn = body?.querySelector('[data-ptw-status-info]');
-    const detail = body?.querySelector('[data-ptw-status-detail]');
-    if (!btn || !detail) return;
+    if (!btn) return;
+
+    const modal = ensureStatusModal();
+    const backdrop = modal.querySelector('[data-ptw-status-backdrop]');
+
+    const close = () => {
+      modal.hidden = true;
+      document.querySelectorAll('[data-ptw-status-info]').forEach((el) => {
+        el.setAttribute('aria-expanded', 'false');
+      });
+    };
+
+    if (!modal.dataset.bound) {
+      modal.dataset.bound = '1';
+      backdrop?.addEventListener('click', close);
+    }
+
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const open = detail.hidden;
-      detail.hidden = !open;
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (modal.hidden) {
+        modal.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+      } else {
+        close();
+      }
     });
-    if (!root?.dataset.ptwStatusInfoBound) {
-      root.dataset.ptwStatusInfoBound = '1';
-      document.addEventListener('click', () => {
-        const activeBtn = root?.querySelector('[data-ptw-status-info][aria-expanded="true"]');
-        const activeDetail = root?.querySelector('[data-ptw-status-detail]:not([hidden])');
-        if (!activeBtn || !activeDetail) return;
-        activeDetail.hidden = true;
-        activeBtn.setAttribute('aria-expanded', 'false');
-      });
-    }
   }
 
   function renderCta(journey) {
