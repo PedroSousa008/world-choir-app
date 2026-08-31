@@ -1817,15 +1817,15 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 40px;
-  height: 28px;
+  width: 48px;
+  height: 32px;
 }
 
 .ptw-route__plane img {
   display: block;
-  width: 36px;
+  width: 44px;
   height: auto;
-  max-height: 24px;
+  max-height: 30px;
   object-fit: contain;
 }
 

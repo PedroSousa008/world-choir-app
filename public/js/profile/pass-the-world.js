@@ -105,16 +105,11 @@ const PassTheWorld = (() => {
     if (!loc) return '';
     const city = toCaps(loc.city);
     const country = toCaps(loc.country);
-    const flag = typeof WorldChoirFlags !== 'undefined'
-      ? WorldChoirFlags.flagEmoji(loc.country)
-      : '';
     if (!city && !country) return '';
     return `
       <div class="ptw-place">
         ${city ? `<p class="ptw-place__city">${esc(city)}</p>` : ''}
-        ${country
-          ? `<p class="ptw-place__country">${esc(country)}${flag ? ` ${flag}` : ''}</p>`
-          : ''}
+        ${country ? `<p class="ptw-place__country">${esc(country)}</p>` : ''}
       </div>`;
   }
 
@@ -125,7 +120,7 @@ const PassTheWorld = (() => {
         <div class="ptw-route ptw-route--journey" aria-label="Current journey">
           ${renderPlaceBlock(journey.origin)}
           <span class="ptw-route__plane" aria-hidden="true">
-            <img src="images/passport/ptw-route-plane.png" alt="" width="36" height="24" decoding="async">
+            <img src="images/passport/ptw-route-plane.png" alt="" width="44" height="30" decoding="async">
           </span>
           ${renderPlaceBlock(journey.destination)}
         </div>`;
