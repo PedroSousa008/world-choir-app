@@ -30,12 +30,11 @@ const WorldChoirConfig = (() => {
   /** Dev test — treat the major-city stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_MAJOR_CITY = false;
 
-  /**
-   * TEMP demo — treat Creator Cause as just unlocked and play its reveal only.
-   * Other already-earned stamps show quietly (no movement). Set both related flags false after review.
-   */
-  const TEST_FORCE_CREATOR_CAUSE = true;
-  const TEST_FORCE_CREATOR_CAUSE_REVEAL_ONLY = true;
+  /** Dev test — treat the creator-cause stamp as unlocked. Keep false in production. */
+  const TEST_FORCE_CREATOR_CAUSE = false;
+
+  /** Dev test — force only Creator Cause reveal animation. Keep false in production. */
+  const TEST_FORCE_CREATOR_CAUSE_REVEAL_ONLY = false;
 
   /** Dev test — treat the daily-act-partner stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_DAILY_ACT_PARTNER = false;
