@@ -1750,16 +1750,30 @@
   text-align: center;
 }
 
-.ptw-route:has(.ptw-route__arrow) {
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
+.ptw-route--journey {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 12px 14px;
+  column-gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 2px;
 }
 
-.ptw-place {
+.ptw-route--journey .ptw-place {
   min-width: 0;
+  max-width: 100%;
+}
+
+.ptw-route--journey .ptw-place:first-child {
+  justify-self: end;
+  text-align: right;
+}
+
+.ptw-route--journey .ptw-place:last-child {
+  justify-self: start;
+  text-align: left;
 }
 
 .ptw-place__city {
@@ -1773,6 +1787,13 @@
   color: #12192b;
 }
 
+.ptw-route--journey .ptw-place__city {
+  font-size: clamp(0.72rem, 3.4vw, 0.98rem);
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
 .ptw-place__country {
   margin: 4px 0 0;
   font-family: var(--font-sans);
@@ -1784,12 +1805,28 @@
   color: rgba(18, 25, 43, 0.58);
 }
 
-.ptw-route__arrow {
+.ptw-route--journey .ptw-place__country {
+  font-size: clamp(0.58rem, 2.6vw, 0.68rem);
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+}
+
+.ptw-route__plane {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
-  font-size: 1.05rem;
-  font-weight: 500;
-  color: rgba(18, 25, 43, 0.35);
-  line-height: 1;
+  width: 40px;
+  height: 28px;
+}
+
+.ptw-route__plane img {
+  display: block;
+  width: 36px;
+  height: auto;
+  max-height: 24px;
+  object-fit: contain;
 }
 
 .ptw-status {

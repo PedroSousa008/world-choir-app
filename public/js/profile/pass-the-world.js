@@ -122,9 +122,11 @@ const PassTheWorld = (() => {
     if (!journey) return '';
     if (journey.status === 'TRAVELLING' && journey.origin && journey.destination) {
       return `
-        <div class="ptw-route" aria-label="Current journey">
+        <div class="ptw-route ptw-route--journey" aria-label="Current journey">
           ${renderPlaceBlock(journey.origin)}
-          <span class="ptw-route__arrow" aria-hidden="true">→</span>
+          <span class="ptw-route__plane" aria-hidden="true">
+            <img src="images/passport/ptw-route-plane.png" alt="" width="36" height="24" decoding="async">
+          </span>
           ${renderPlaceBlock(journey.destination)}
         </div>`;
     }
