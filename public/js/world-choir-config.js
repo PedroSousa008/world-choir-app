@@ -2,11 +2,8 @@
  * World Choir — Event configuration & state machine
  */
 const WorldChoirConfig = (() => {
-  /**
-   * TEMP layout preview — unlocks all stamps so you can review the full passport.
-   * Set back to false after review (real unlock rules resume; hide-locked stays on).
-   */
-  const PASSPORT_STAMPS_PREVIEW_MODE = true;
+  /** Real unlock rules — stamps only unlock from actual achievements. */
+  const PASSPORT_STAMPS_PREVIEW_MODE = false;
 
   /**
    * Permanent product behavior — hide locked stamp placeholders.
@@ -15,11 +12,8 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_STAMPS_HIDE_LOCKED = true;
 
-  /**
-   * TEMP replay — replays the center-to-corner reveal without saving to localStorage.
-   * Set back to false after review so one-time reveals work normally.
-   */
-  const PASSPORT_STAMPS_DEV_REPLAY = true;
+  /** Dev replay — replays every stamp reveal without saving. Keep false for normal one-time reveals. */
+  const PASSPORT_STAMPS_DEV_REPLAY = false;
 
   /** Dev test — treat the 100-country global milestone as reached. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_100_COUNTRIES_MILESTONE = false;
@@ -36,8 +30,12 @@ const WorldChoirConfig = (() => {
   /** Dev test — treat the major-city stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_MAJOR_CITY = false;
 
-  /** Dev test — treat the creator-cause stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
-  const TEST_FORCE_CREATOR_CAUSE = false;
+  /**
+   * TEMP demo — treat Creator Cause as just unlocked and play its reveal only.
+   * Other already-earned stamps show quietly (no movement). Set both related flags false after review.
+   */
+  const TEST_FORCE_CREATOR_CAUSE = true;
+  const TEST_FORCE_CREATOR_CAUSE_REVEAL_ONLY = true;
 
   /** Dev test — treat the daily-act-partner stamp as unlocked. Agent toggles on to test stamp unlock/reveal. */
   const TEST_FORCE_DAILY_ACT_PARTNER = false;
@@ -701,6 +699,10 @@ const WorldChoirConfig = (() => {
     return TEST_FORCE_CREATOR_CAUSE;
   }
 
+  function isTestForceCreatorCauseRevealOnly() {
+    return TEST_FORCE_CREATOR_CAUSE_REVEAL_ONLY;
+  }
+
   function isTestForceDailyActPartner() {
     return TEST_FORCE_DAILY_ACT_PARTNER;
   }
@@ -859,6 +861,7 @@ const WorldChoirConfig = (() => {
     isTestForceMadeMyPromise,
     isTestForceMajorCity,
     isTestForceCreatorCause,
+    isTestForceCreatorCauseRevealOnly,
     isTestForceDailyActPartner,
     isTestForce405Completed,
     isTestForcePeaceExplorer,

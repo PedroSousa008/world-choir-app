@@ -308,6 +308,11 @@ const PassportStamps = (() => {
     return typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.isPassportStampsDevReplay?.() === true;
   }
 
+  function isCreatorCauseRevealOnlyDemo() {
+    return typeof WorldChoirConfig !== 'undefined'
+      && WorldChoirConfig.isTestForceCreatorCauseRevealOnly?.() === true;
+  }
+
   function isTestForce100CountriesMilestone(stamp) {
     if (stamp?.milestoneId !== '100-countries' && stamp?.id !== 'world-choir-100-countries') {
       return false;
@@ -995,8 +1000,14 @@ const PassportStamps = (() => {
   function resolveAllStatuses(context = {}) {
     return PASSPORT_STAMPS.map((stamp) => {
       const status = evaluateStampUnlock(stamp, context);
-      const shouldReveal = status.unlocked
+      let shouldReveal = status.unlocked
         && shouldAnimateReveal(stamp.id, context.userId);
+
+      // Demo: only Creator Cause plays the "just unlocked" movement; other earned stamps stay quiet.
+      if (isCreatorCauseRevealOnlyDemo()) {
+        shouldReveal = status.unlocked && stamp.id === 'world-choir-creator-cause';
+      }
+
       return {
         stamp,
         ...status,
@@ -1024,6 +1035,8 @@ const PassportStamps = (() => {
 
   function markRevealSeen(stampId, userId) {
     if (isDevReplay()) return;
+    // Keep replaying Creator Cause during the reveal-only demo.
+    if (isCreatorCauseRevealOnlyDemo() && stampId === 'world-choir-creator-cause') return;
     try {
       localStorage.setItem(revealStorageKey(stampId, userId), '1');
     } catch {
