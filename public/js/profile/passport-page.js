@@ -416,24 +416,14 @@ const PassportPage = (() => {
         </div>
 
         ${renderMainStats(data, statsChapter)}
-
-        <section class="passport-actions" aria-label="Passport actions">
-          <button type="button" class="passport-action" id="passport-action-download" aria-label="Download World Choir Passport">
-            <span class="passport-action__icon">${iconDownload()}</span>
-            <span class="passport-action__label">Download</span>
-          </button>
-          <button type="button" class="passport-action" id="passport-action-wallet" aria-label="Add World Choir Passport to Wallet">
-            <span class="passport-action__icon">${iconWallet()}</span>
-            <span class="passport-action__label">Add to Wallet</span>
-          </button>
-          <button type="button" class="passport-action" id="passport-action-share" aria-label="Share World Choir Passport">
-            <span class="passport-action__icon">${iconShare()}</span>
-            <span class="passport-action__label">Share</span>
-          </button>
-        </section>
       </div>
       ${renderStoryView(data)}
     `;
+  }
+
+  function updateInfoActionsVisibility(chapter = activeChapter) {
+    const actions = document.getElementById('passport-info-actions');
+    if (actions) actions.hidden = chapter !== 'stamps';
   }
 
   function updateStoryStats(data = {}) {
@@ -478,6 +468,7 @@ const PassportPage = (() => {
         });
       }
       updateMainStats(next);
+      updateInfoActionsVisibility(next);
     }
 
     if (syncUrl && typeof PassportRoute !== 'undefined') {
@@ -662,6 +653,7 @@ const PassportPage = (() => {
 
   function init() {
     window.__passportShowChapter = showChapter;
+    updateInfoActionsVisibility(activeChapter);
     WorldChoirNav.startWatcher('profile');
     if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.start?.();
     mount();
