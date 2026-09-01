@@ -191,6 +191,62 @@ const LyricsDisplay = (() => {
     update(0);
   }
 
+  function renderLiveShell() {
+    const { title, artist } = WorldChoirLiveConfig?.EVENT?.liveSong
+      || WorldChoirPracticeConfig.PRACTICE_SONG;
+    return `
+      <div class="practice-playing practice-playing--live" id="practice-playing">
+        <div class="pm-bg" aria-hidden="true"><div class="pm-bg__overlay"></div></div>
+        <header class="pm-header" aria-label="World Choir">
+          <img class="pm-logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir App" width="1024" height="1024" decoding="async">
+        </header>
+        <p class="wc-live-song__live-badge"><span class="live-dot"></span> LIVE</p>
+        <section class="pm-lyrics" aria-label="Lyrics">
+          <div class="pm-lyrics__radial" aria-hidden="true"></div>
+          <p class="lyrics-display__prev" id="lyric-prev">&nbsp;</p>
+          <div class="pm-lyrics__row">
+            <span class="pm-waveform pm-waveform--left" aria-hidden="true">
+              <span class="pm-waveform__bar"></span><span class="pm-waveform__bar"></span><span class="pm-waveform__bar"></span>
+            </span>
+            <p class="lyrics-display__current" id="lyric-current">&nbsp;</p>
+            <span class="pm-waveform pm-waveform--right" aria-hidden="true">
+              <span class="pm-waveform__bar"></span><span class="pm-waveform__bar"></span><span class="pm-waveform__bar"></span>
+            </span>
+          </div>
+          <p class="lyrics-display__next" id="lyric-next">&nbsp;</p>
+        </section>
+        <div class="pm-progress-wrap">
+          <div class="pm-progress-bar" id="pm-progress-bar" role="progressbar" aria-label="Song progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div class="pm-progress-bar__fill" id="pm-progress-fill"></div>
+            <div class="pm-progress-bar__thumb" id="pm-progress-thumb"></div>
+          </div>
+          <div class="pm-progress-times">
+            <span class="pm-time pm-time--current" id="pm-time-current">0:00</span>
+            <span class="pm-time pm-time--total" id="pm-time-total">0:00</span>
+          </div>
+        </div>
+        <div class="pm-song-info">
+          <p class="pm-song-info__title">${title}</p>
+          <p class="pm-song-info__artist">${artist}</p>
+        </div>
+        <div class="pm-community pm-community--live">
+          <div class="pm-community__center">
+            <p class="pm-community__title">The world is singing</p>
+            <p class="pm-community__primary">You are part of this moment.</p>
+          </div>
+          <div class="pm-community__right">
+            <span class="pm-community__count" id="pm-voice-count" aria-label="Voices joined">&mdash;</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function mountLive(container) {
+    container.innerHTML = renderLiveShell();
+    update(0);
+  }
+
   function updateVoiceCount() {
     const el = document.getElementById('pm-voice-count');
     if (!el) return;
@@ -264,5 +320,5 @@ const LyricsDisplay = (() => {
     }
   }
 
-  return { mount, update, startSync, stopSync };
+  return { mount, mountLive, update, startSync, stopSync };
 })();

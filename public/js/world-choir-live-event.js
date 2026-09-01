@@ -1,8 +1,10 @@
 /**
- * LiveEventMode — global countdown → synced lyrics + music → promise → final moment
+ * LiveEventMode — post-song promise flow + compatibility shim for GlobalLiveEvent.
+ *
+ * The synchronized pre-event video and live song are owned by GlobalLiveEvent.
+ * This module keeps the promise / final-moment flow and legacy API surface.
  */
 const LiveEventMode = (() => {
-  let audio = null;
   let active = false;
 
   function storageKey() {
@@ -17,17 +19,19 @@ const LiveEventMode = (() => {
     localStorage.setItem(storageKey(), 'true');
   }
 
+  function usesGlobalLive() {
+    return typeof GlobalLiveEvent !== 'undefined';
+  }
+
   function isDuringLiveSong() {
+    if (usesGlobalLive()) return GlobalLiveEvent.isDuringLiveSong();
     const now = Date.now();
     return now >= WorldChoirConfig.getEventStart().getTime() && now < WorldChoirConfig.getEventEnd().getTime();
   }
 
   function isPostEvent() {
+    if (usesGlobalLive() && GlobalLiveEvent.getState() === 'LIVE_FINISHED') return true;
     return Date.now() >= WorldChoirConfig.getEventEnd().getTime();
-  }
-
-  function getLiveOffsetSeconds() {
-    return Math.max(0, (Date.now() - WorldChoirConfig.getEventStart().getTime()) / 1000);
   }
 
   function getContainer() {
@@ -53,50 +57,17 @@ const LiveEventMode = (() => {
       container.classList.remove('active');
       container.setAttribute('aria-hidden', 'true');
     }
-    document.body.style.overflow = '';
+    if (!usesGlobalLive() || !GlobalLiveEvent.isActive()) {
+      document.body.style.overflow = '';
+    }
     active = false;
   }
 
-  function cleanupAudio() {
-    if (!audio) return;
-    audio.pause();
-    audio.currentTime = 0;
-    audio.removeEventListener('ended', handleSongEnd);
-    audio.removeEventListener('error', handleAudioError);
-    audio.src = '';
-    audio.load();
-    audio = null;
-  }
-
-  function cleanup() {
-    LyricsDisplay.stopSync();
-    cleanupAudio();
-  }
-
-  function handleAudioError() {
-    cleanup();
-    const contentEl = getContentEl();
-    if (!contentEl) return;
-    contentEl.innerHTML = `
-      <div class="live-event-error">
-        <h2 class="live-event-error__title">Audio unavailable</h2>
-        <p class="live-event-error__copy">We couldn't play the song right now. The world is still singing — join in wherever you are.</p>
-        <div class="actions-row">
-          <button class="btn btn-primary" id="live-error-continue" type="button">Continue</button>
-        </div>
-      </div>
-    `;
-    document.getElementById('live-error-continue')?.addEventListener('click', () => {
-      showPostSongFlow();
-    });
-  }
-
-  function handleSongEnd() {
-    cleanup();
-    showPostSongFlow();
-  }
-
   function showPostSongFlow() {
+    if (hasCompletedFlow()) {
+      hideOverlay();
+      return;
+    }
     showOverlay();
     if (WorldChoirDB.hasPledged() && !WorldChoirDB.hasSubmittedPromise()) {
       showPromiseForm();
@@ -163,64 +134,15 @@ const LiveEventMode = (() => {
 
   function finishFlow() {
     markFlowComplete();
-    cleanup();
     hideOverlay();
     if (typeof WorldChoirHome !== 'undefined') {
       WorldChoirHome.render();
     }
   }
 
-  function waitForAudioReady(audioEl) {
-    return new Promise((resolve, reject) => {
-      if (audioEl.readyState >= 1) {
-        resolve();
-        return;
-      }
-      audioEl.addEventListener('loadedmetadata', () => resolve(), { once: true });
-      audioEl.addEventListener('error', () => reject(new Error('Audio load failed')), { once: true });
-    });
-  }
-
-  async function startPlayback() {
-    if (active || hasCompletedFlow()) return;
-
-    showOverlay();
-    const contentEl = getContentEl();
-    if (!contentEl) return;
-
-    LyricsDisplay.mount(contentEl);
-
-    const offset = getLiveOffsetSeconds();
-    const duration = WorldChoirConfig.ACTIVE_EVENT.songDurationSeconds;
-
-    if (offset >= duration) {
-      showPostSongFlow();
-      return;
-    }
-
-    audio = new Audio(WorldChoirPracticeConfig.PRACTICE_SONG.audioUrl);
-    audio.addEventListener('ended', handleSongEnd);
-    audio.addEventListener('error', handleAudioError);
-
-    try {
-      await waitForAudioReady(audio);
-      audio.currentTime = Math.min(offset, audio.duration || offset);
-      await audio.play();
-      LyricsDisplay.startSync(audio);
-      LyricsDisplay.update(audio.currentTime);
-    } catch (err) {
-      console.warn('Live playback failed:', err);
-      handleAudioError();
-    }
-  }
-
   function launch() {
     if (hasCompletedFlow() || active) return;
-
-    if (isDuringLiveSong()) {
-      startPlayback();
-      return;
-    }
+    if (usesGlobalLive() && GlobalLiveEvent.isActive()) return;
 
     if (isPostEvent()) {
       if (WorldChoirDB.hasPledged() && !WorldChoirDB.hasSubmittedPromise()) {
@@ -237,9 +159,7 @@ const LiveEventMode = (() => {
 
   function init() {
     const container = getContainer();
-    if (!container) return;
-
-    if (!container.querySelector('.practice-mode__ambient')) {
+    if (container && !container.querySelector('.practice-mode__ambient')) {
       const ambient = document.createElement('div');
       ambient.className = 'practice-mode__ambient';
       ambient.setAttribute('aria-hidden', 'true');
@@ -253,7 +173,10 @@ const LiveEventMode = (() => {
     isDuringLiveSong,
     isPostEvent,
     hasCompletedFlow,
-    isActive: () => active,
+    isActive: () => active || (usesGlobalLive() && GlobalLiveEvent.isActive()),
     finishFlow,
+    showPostSongFlow,
+    showPromiseForm,
+    showFinalMessage,
   };
 })();

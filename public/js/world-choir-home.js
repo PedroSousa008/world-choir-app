@@ -188,6 +188,7 @@ const WorldChoirHome = (() => {
   function render() {
     const root = document.getElementById('home-content');
     if (LiveEventMode.isActive()) return;
+    if (typeof GlobalLiveEvent !== 'undefined' && GlobalLiveEvent.isActive()) return;
 
     if (isPostEvent() && LiveEventMode.hasCompletedFlow()) {
       root.innerHTML = renderPostEventHome();
@@ -206,8 +207,12 @@ const WorldChoirHome = (() => {
   }
 
   function updateCountdown() {
+    if (typeof GlobalLiveEvent !== 'undefined' && GlobalLiveEvent.isActive()) return;
+
     if (!isPreEvent()) {
-      LiveEventMode.launch();
+      if (isPostEvent() && !LiveEventMode.isActive()) {
+        LiveEventMode.launch();
+      }
       if (!LiveEventMode.isActive()) render();
       return;
     }
@@ -261,11 +266,11 @@ const WorldChoirHome = (() => {
       startedOnboarding = await WorldChoirOnboarding.maybeStartFirstTime({
         onDone: () => {
           if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
-          LiveEventMode.launch();
+          if (isPostEvent()) LiveEventMode.launch();
         },
       });
     }
-    if (!startedOnboarding) {
+    if (!startedOnboarding && isPostEvent()) {
       LiveEventMode.launch();
     }
   }
