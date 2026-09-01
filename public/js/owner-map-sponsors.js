@@ -58,6 +58,12 @@ const OwnerMapSponsors = (() => {
     '1y': '1Y',
     lifetime: 'Lifetime',
   };
+  const SPONSOR_CHART = { w: 720, h: 280 };
+  const SPONSOR_CHART_SERIES = [
+    { key: 'impressions', label: 'Impressions', className: 'impressions' },
+    { key: 'uniqueReach', label: 'Unique Reach', className: 'reach' },
+    { key: 'clicks', label: 'Website Clicks', className: 'clicks' },
+  ];
   const ANALYTICS_CHART_METRICS = [
     ['impressions', 'Impressions'],
     ['clicks', 'Clicks'],
@@ -439,6 +445,64 @@ const OwnerMapSponsors = (() => {
     `;
   }
 
+  function formatChartAxisValue(value) {
+    const n = Number(value || 0);
+    if (n >= 1000) {
+      const k = n / 1000;
+      return Number.isInteger(k) ? `${k}K` : `${k.toFixed(1).replace(/\.0$/, '')}K`;
+    }
+    return formatCount(Math.round(n));
+  }
+
+  function formatChartDate(iso, { withYear = false } = {}) {
+    if (!iso) return '—';
+    try {
+      return new Date(`${String(iso).slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        ...(withYear ? { year: 'numeric' } : {}),
+      });
+    } catch {
+      return '—';
+    }
+  }
+
+  function niceChartMax(value) {
+    const max = Math.max(0, Number(value) || 0);
+    if (max <= 0) return 4;
+    if (max <= 4) return 4;
+    if (max <= 5) return 5;
+    if (max <= 10) return 10;
+    const exp = 10 ** Math.floor(Math.log10(max));
+    const frac = max / exp;
+    const nice = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 5 ? 5 : 10;
+    return nice * exp;
+  }
+
+  function sponsorChartLinePath(coords) {
+    if (!coords.length) return '';
+    if (coords.length === 1) return `M${coords[0].x} ${coords[0].y}`;
+    let d = `M${coords[0].x} ${coords[0].y}`;
+    for (let i = 1; i < coords.length; i += 1) {
+      const prev = coords[i - 1];
+      const cur = coords[i];
+      const cpx = (prev.x + cur.x) / 2;
+      d += ` C ${cpx} ${prev.y}, ${cpx} ${cur.y}, ${cur.x} ${cur.y}`;
+    }
+    return d;
+  }
+
+  function pickChartXTicks(points, maxTicks = 6) {
+    if (!points.length) return [];
+    if (points.length <= maxTicks) return points;
+    const ticks = [];
+    for (let i = 0; i < maxTicks; i += 1) {
+      const idx = Math.round((i / (maxTicks - 1)) * (points.length - 1));
+      ticks.push(points[idx]);
+    }
+    return ticks.filter((tick, index, arr) => arr.findIndex((t) => t.date === tick.date) === index);
+  }
+
   function renderSponsorLineChart(timeSeries, esc) {
     const points = timeSeries || [];
     const hasData = points.some((p) => p.impressions > 0 || p.uniqueReach > 0 || p.clicks > 0);
@@ -451,69 +515,201 @@ const OwnerMapSponsors = (() => {
       `;
     }
 
-    const w = 640;
-    const h = 220;
-    const pad = { t: 18, r: 18, b: 28, l: 36 };
+    const w = SPONSOR_CHART.w;
+    const h = SPONSOR_CHART.h;
+    const pad = { t: 20, r: 20, b: 18, l: 44 };
     const innerW = w - pad.l - pad.r;
     const innerH = h - pad.t - pad.b;
-    const max = Math.max(
-      1,
-      ...points.flatMap((p) => [p.impressions, p.uniqueReach, p.clicks])
+    const maxValue = Math.max(
+      0,
+      ...points.flatMap((p) => [p.impressions, p.uniqueReach, p.clicks].map((v) => Number(v || 0)))
     );
+    const yMax = niceChartMax(maxValue);
+    const yTicks = Array.from({ length: 6 }, (_, i) => (yMax / 5) * (5 - i));
 
-    const coords = (key) => points.map((p, i) => {
+    const dayPoints = points.map((p, i) => {
       const x = points.length === 1
         ? pad.l + innerW / 2
         : pad.l + (i / (points.length - 1)) * innerW;
-      const y = pad.t + innerH - ((Number(p[key] || 0) / max) * innerH);
-      return { x, y, date: p.date, value: p[key] || 0 };
+      const yFor = (value) => pad.t + innerH - ((Number(value || 0) / yMax) * innerH);
+      return {
+        date: p.date,
+        x,
+        impressions: Number(p.impressions || 0),
+        uniqueReach: Number(p.uniqueReach || 0),
+        clicks: Number(p.clicks || 0),
+        y: {
+          impressions: yFor(p.impressions),
+          uniqueReach: yFor(p.uniqueReach),
+          clicks: yFor(p.clicks),
+        },
+      };
     });
 
-    const linePath = (key) => {
-      const c = coords(key);
-      if (!c.length) return '';
-      let d = `M${c[0].x} ${c[0].y}`;
-      for (let i = 1; i < c.length; i += 1) {
-        const prev = c[i - 1];
-        const cur = c[i];
-        const cpx = (prev.x + cur.x) / 2;
-        d += ` C ${cpx} ${prev.y}, ${cpx} ${cur.y}, ${cur.x} ${cur.y}`;
-      }
-      return d;
-    };
+    const seriesCoords = (key) => dayPoints.map((p) => ({ x: p.x, y: p.y[key], date: p.date, value: p[key] }));
+    const xTicks = pickChartXTicks(dayPoints);
 
-    const xTicks = points.length === 1
-      ? coords('impressions')
-      : [coords('impressions')[0], coords('impressions')[Math.floor(points.length / 2)], coords('impressions')[points.length - 1]]
-        .filter((c, i, arr) => arr.findIndex((x) => x.date === c.date) === i);
-    const yTicks = [max, max / 2, 0];
+    const chartPayload = esc(JSON.stringify(dayPoints.map((p) => ({
+      date: p.date,
+      x: p.x,
+      impressions: p.impressions,
+      uniqueReach: p.uniqueReach,
+      clicks: p.clicks,
+      y: p.y,
+    }))));
 
     return `
-      <div class="sa-line-chart">
-        <div class="sa-line-chart__legend">
-          <span><i class="sa-swatch sa-swatch--impressions"></i> Impressions</span>
-          <span><i class="sa-swatch sa-swatch--reach"></i> Unique Reach</span>
-          <span><i class="sa-swatch sa-swatch--clicks"></i> Website Clicks</span>
-        </div>
+      <div
+        class="sa-line-chart"
+        data-sa-line-chart
+        data-sa-chart-w="${w}"
+        data-sa-chart-h="${h}"
+        data-sa-chart-points="${chartPayload}"
+      >
         <div class="sa-line-chart__plot">
           <div class="sa-line-chart__y" aria-hidden="true">
-            ${yTicks.map((tick) => `<span>${esc(formatCount(Math.round(tick)))}</span>`).join('')}
+            ${yTicks.map((tick) => `<span>${esc(formatChartAxisValue(tick))}</span>`).join('')}
           </div>
           <svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Performance over time">
-            ${[0, 1, 2, 3, 4].map((i) => {
-              const y = pad.t + (innerH / 4) * i;
+            ${yTicks.map((tick) => {
+              const y = pad.t + innerH - ((tick / yMax) * innerH);
               return `<line class="sa-line-chart__grid" x1="${pad.l}" y1="${y}" x2="${w - pad.r}" y2="${y}" />`;
             }).join('')}
-            <path class="sa-line-chart__line sa-line-chart__line--impressions" d="${linePath('impressions')}" />
-            <path class="sa-line-chart__line sa-line-chart__line--reach" d="${linePath('uniqueReach')}" />
-            <path class="sa-line-chart__line sa-line-chart__line--clicks" d="${linePath('clicks')}" />
+            <line class="sa-line-chart__hover-line" data-sa-chart-hover-line x1="0" y1="${pad.t}" x2="0" y2="${pad.t + innerH}" hidden />
+            ${SPONSOR_CHART_SERIES.map((series) => `
+              <path class="sa-line-chart__line sa-line-chart__line--${series.className}" d="${sponsorChartLinePath(seriesCoords(series.key))}" />
+            `).join('')}
+            ${SPONSOR_CHART_SERIES.map((series) => seriesCoords(series.key).map((c) => `
+              <circle
+                class="sa-line-chart__dot sa-line-chart__dot--${series.className}"
+                cx="${c.x}"
+                cy="${c.y}"
+                r="3.5"
+              />
+            `).join('')).join('')}
+            ${SPONSOR_CHART_SERIES.map((series) => `
+              <circle
+                class="sa-line-chart__hover-dot sa-line-chart__hover-dot--${series.className}"
+                data-sa-chart-hover-dot="${series.key}"
+                cx="0"
+                cy="0"
+                r="5.5"
+                hidden
+              />
+            `).join('')}
+            <rect class="sa-line-chart__hit" x="0" y="0" width="${w}" height="${h}" fill="transparent" />
           </svg>
-          <div class="sa-line-chart__x" aria-hidden="true">
-            ${xTicks.map((tick) => `<span>${esc(formatDisplayDate(tick.date))}</span>`).join('')}
-          </div>
         </div>
+        <div class="sa-line-chart__x" aria-hidden="true">
+          ${xTicks.map((tick) => `<span>${esc(formatChartDate(tick.date))}</span>`).join('')}
+        </div>
+        <div class="sa-line-chart__legend" aria-hidden="true">
+          ${SPONSOR_CHART_SERIES.map((series) => `
+            <span><i class="sa-swatch sa-swatch--${series.className}"></i> ${esc(series.label)}</span>
+          `).join('')}
+        </div>
+        <div class="sa-line-chart__tip" data-sa-chart-tip hidden></div>
       </div>
     `;
+  }
+
+  function bindSponsorAnalyticsChart(root) {
+    const chart = root.querySelector('[data-sa-line-chart]');
+    if (!chart) return;
+
+    let points = [];
+    try {
+      points = JSON.parse(chart.getAttribute('data-sa-chart-points') || '[]');
+    } catch {
+      points = [];
+    }
+    if (!points.length) return;
+
+    const chartW = Number(chart.getAttribute('data-sa-chart-w') || SPONSOR_CHART.w);
+    const chartH = Number(chart.getAttribute('data-sa-chart-h') || SPONSOR_CHART.h);
+    const svg = chart.querySelector('svg');
+    const tip = chart.querySelector('[data-sa-chart-tip]');
+    const hoverLine = chart.querySelector('[data-sa-chart-hover-line]');
+    const hoverDots = chart.querySelectorAll('[data-sa-chart-hover-dot]');
+    if (!svg || !tip) return;
+
+    const nearest = (ev) => {
+      const rect = svg.getBoundingClientRect();
+      if (!rect.width) return points[0];
+      const x = ((ev.clientX - rect.left) / rect.width) * chartW;
+      let best = points[0];
+      let bestDist = Infinity;
+      points.forEach((p) => {
+        const dist = Math.abs(p.x - x);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = p;
+        }
+      });
+      return best;
+    };
+
+    const hide = () => {
+      tip.hidden = true;
+      if (hoverLine) hoverLine.setAttribute('hidden', '');
+      hoverDots.forEach((dot) => dot.setAttribute('hidden', ''));
+    };
+
+    const show = (ev) => {
+      const p = nearest(ev);
+      if (!p) return;
+
+      const safe = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+
+      tip.innerHTML = `
+        <p class="sa-line-chart__tip-date">${safe(formatChartDate(p.date, { withYear: true }))}</p>
+        ${SPONSOR_CHART_SERIES.map((series) => `
+          <div class="sa-line-chart__tip-row">
+            <span class="sa-line-chart__tip-label">
+              <i class="sa-swatch sa-swatch--${series.className}"></i>
+              ${safe(series.label)}
+            </span>
+            <strong>${safe(formatCount(p[series.key]))}</strong>
+          </div>
+        `).join('')}
+      `;
+      tip.hidden = false;
+
+      if (hoverLine) {
+        hoverLine.removeAttribute('hidden');
+        hoverLine.setAttribute('x1', String(p.x));
+        hoverLine.setAttribute('x2', String(p.x));
+      }
+
+      hoverDots.forEach((dot) => {
+        const key = dot.getAttribute('data-sa-chart-hover-dot');
+        dot.removeAttribute('hidden');
+        dot.setAttribute('cx', String(p.x));
+        dot.setAttribute('cy', String(p.y[key]));
+      });
+
+      const chartRect = chart.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
+      const px = svgRect.left - chartRect.left + (p.x / chartW) * svgRect.width;
+      const py = svgRect.top - chartRect.top + (p.y.impressions / chartH) * svgRect.height;
+      const tipW = tip.offsetWidth || 210;
+      const tipH = tip.offsetHeight || 120;
+      let left = px + 16;
+      if (left + tipW > chartRect.width - 8) left = px - tipW - 16;
+      left = Math.max(8, Math.min(left, chartRect.width - tipW - 8));
+      let top = py - tipH / 2;
+      top = Math.max(8, Math.min(top, chartRect.height - tipH - 8));
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+    };
+
+    chart.addEventListener('pointermove', show);
+    chart.addEventListener('pointerdown', show);
+    chart.addEventListener('pointerleave', hide);
   }
 
   function renderHighlightRows(highlights, esc) {
@@ -1435,6 +1631,9 @@ const OwnerMapSponsors = (() => {
         setTimeout(() => mountAnalyticsMap(state), 120);
       }
     };
+
+    bindSponsorAnalyticsChart(root);
+    mountAnalyticsMap(state);
 
     if (state.sponsorAnalyticsId && !state.sponsorAnalyticsDetail && !state.sponsorAnalyticsBusy && !state.sponsorAnalyticsError) {
       loadAnalytics();

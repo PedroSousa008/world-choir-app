@@ -3801,14 +3801,112 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 }
 
 .sa-line-chart {
+  position: relative;
   margin-top: 4px;
+}
+
+.sa-line-chart__plot {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.sa-line-chart__y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: right;
+  font-size: 0.72rem;
+  color: #8a8d97;
+  font-variant-numeric: tabular-nums;
+  padding: 18px 0 24px;
+  min-width: 2.75em;
+}
+
+.sa-line-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.sa-line-chart__grid {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.sa-line-chart__line {
+  fill: none;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sa-line-chart__line--impressions { stroke: #4ec5e8; }
+.sa-line-chart__line--reach { stroke: #5b8def; }
+.sa-line-chart__line--clicks { stroke: #a78bfa; }
+
+.sa-line-chart__dot {
+  stroke: #000;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.sa-line-chart__dot--impressions { fill: #4ec5e8; }
+.sa-line-chart__dot--reach { fill: #5b8def; }
+.sa-line-chart__dot--clicks { fill: #a78bfa; }
+
+.sa-line-chart__hover-line {
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.sa-line-chart__hover-line[hidden] {
+  display: none;
+}
+
+.sa-line-chart__hover-dot {
+  stroke: #000;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.18));
+}
+
+.sa-line-chart__hover-dot--impressions { fill: #4ec5e8; }
+.sa-line-chart__hover-dot--reach { fill: #5b8def; }
+.sa-line-chart__hover-dot--clicks { fill: #a78bfa; }
+
+.sa-line-chart__hover-dot[hidden] {
+  display: none;
+}
+
+.sa-line-chart__hit {
+  cursor: crosshair;
+}
+
+.sa-line-chart__x {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding-left: calc(2.75em + 12px);
+  font-size: 0.72rem;
+  color: #8a8d97;
+}
+
+.sa-line-chart__x span:only-child {
+  margin: 0 auto;
 }
 
 .sa-line-chart__legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-bottom: 12px;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 14px;
   font-size: 0.78rem;
   color: #8a8d97;
 }
@@ -3817,6 +3915,51 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.sa-line-chart__tip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  min-width: 196px;
+  max-width: min(240px, calc(100% - 16px));
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(10, 10, 10, 0.96);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.sa-line-chart__tip[hidden] {
+  display: none;
+}
+
+.sa-line-chart__tip-date {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  color: #c5c8d0;
+}
+
+.sa-line-chart__tip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 0.8rem;
+  color: #8a8d97;
+}
+
+.sa-line-chart__tip-row strong {
+  color: #f2efe8;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.sa-line-chart__tip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .sa-swatch {
@@ -3829,59 +3972,6 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 .sa-swatch--impressions { background: #4ec5e8; }
 .sa-swatch--reach { background: #5b8def; }
 .sa-swatch--clicks { background: #a78bfa; }
-
-.sa-line-chart__plot {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
-  align-items: stretch;
-}
-
-.sa-line-chart__y {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  text-align: right;
-  font-size: 0.72rem;
-  color: #8a8d97;
-  font-variant-numeric: tabular-nums;
-  padding: 12px 0;
-  min-width: 2.5em;
-}
-
-.sa-line-chart svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.sa-line-chart__grid {
-  stroke: rgba(255, 255, 255, 0.06);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-
-.sa-line-chart__line {
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.sa-line-chart__line--impressions { stroke: #4ec5e8; }
-.sa-line-chart__line--reach { stroke: #5b8def; }
-.sa-line-chart__line--clicks { stroke: #a78bfa; }
-
-.sa-line-chart__x {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 8px 0 0;
-  padding-left: calc(2.5em + 10px);
-  font-size: 0.72rem;
-  color: #8a8d97;
-}
 
 .sa-list {
   margin: 0;
