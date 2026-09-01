@@ -32,6 +32,16 @@ const {
   exportPassTheWorldCsv,
 } = require('./_lib/pass-the-world-owner');
 const {
+  buildPromiseMemoryIntel,
+  getPromiseDetail,
+  createFolder,
+  renameFolder,
+  deleteFolder,
+  addPromisesToFolder,
+  removePromisesFromFolder,
+  exportPromiseMemory,
+} = require('./_lib/promise-memory-owner');
+const {
   listInfluencers,
   createInfluencer,
   updateInfluencer,
@@ -113,6 +123,78 @@ module.exports = async function handler(req, res) {
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="pass-the-world-${kind}.csv"`);
       return res.status(200).send(csv);
+    }
+
+    if (action === 'promise-memory' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await buildPromiseMemoryIntel({
+        eventId: req.query.eventId,
+        country: req.query.country,
+        city: req.query.city,
+        dateFrom: req.query.dateFrom,
+        dateTo: req.query.dateTo,
+        q: req.query.q,
+        sort: req.query.sort,
+        page: req.query.page,
+        pageSize: req.query.pageSize,
+        folderId: req.query.folderId,
+        cityQuery: req.query.cityQuery,
+        cityPage: req.query.cityPage,
+      });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'promise-memory-detail' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const id = req.query.id;
+      if (!id) return res.status(400).json({ error: 'Promise id required' });
+      const detail = await getPromiseDetail(id);
+      if (!detail) return res.status(404).json({ error: 'Promise not found' });
+      return res.status(200).json(detail);
+    }
+
+    if (action === 'promise-memory-export' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const result = await exportPromiseMemory(req.query || {});
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+      res.setHeader('X-Export-Part', String(result.meta.part));
+      res.setHeader('X-Export-Total-Parts', String(result.meta.totalParts));
+      res.setHeader('X-Export-Total', String(result.meta.total));
+      return res.status(200).send(result.body);
+    }
+
+    if (action === 'promise-memory-folder' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { op, folderId, name, promiseIds } = req.body || {};
+      if (op === 'create') {
+        const folder = await createFolder(name);
+        return res.status(200).json({ ok: true, folder });
+      }
+      if (op === 'rename') {
+        if (!folderId) return res.status(400).json({ error: 'folderId required' });
+        const folder = await renameFolder(folderId, name);
+        return res.status(200).json({ ok: true, folder });
+      }
+      if (op === 'delete') {
+        if (!folderId) return res.status(400).json({ error: 'folderId required' });
+        await deleteFolder(folderId);
+        return res.status(200).json({ ok: true });
+      }
+      if (op === 'add') {
+        if (!folderId) return res.status(400).json({ error: 'folderId required' });
+        const folder = await addPromisesToFolder(folderId, promiseIds || []);
+        return res.status(200).json({ ok: true, folder });
+      }
+      if (op === 'remove') {
+        if (!folderId) return res.status(400).json({ error: 'folderId required' });
+        const folder = await removePromisesFromFolder(folderId, promiseIds || []);
+        return res.status(200).json({ ok: true, folder });
+      }
+      return res.status(400).json({ error: 'Unknown folder operation' });
     }
 
     if (action === 'daily-peace-partnerships' && req.method === 'GET') {

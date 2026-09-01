@@ -640,13 +640,25 @@ async function savePromise({ userId, eventId, promiseText, city, country, voiceN
     promise_text: String(promiseText).trim(),
     city: city || null,
     country: country || null,
+    country_code: null,
     voice_number: voiceNumber ?? null,
     voice_name: voiceName || null,
     submitted_at: now,
   };
 
-  await writeJson(promisePath(trimmedUser, trimmedEvent), promise, { overwrite: false });
-  return promise;
+  try {
+    const { resolveCountryCode, appendPromiseToIndex } = require('./promise-memory-index');
+    promise.country_code = resolveCountryCode(country);
+    await writeJson(promisePath(trimmedUser, trimmedEvent), promise, { overwrite: false });
+    await appendPromiseToIndex(promise);
+    memCache.delete('promises:all');
+    return promise;
+  } catch (indexErr) {
+    console.error('Promise index update failed:', indexErr);
+    await writeJson(promisePath(trimmedUser, trimmedEvent), promise, { overwrite: false });
+    memCache.delete('promises:all');
+    return promise;
+  }
 }
 
 async function readPromise(userId, eventId) {

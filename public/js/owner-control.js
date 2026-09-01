@@ -17,6 +17,7 @@ const OwnerControl = (() => {
     { id: 'daily-acts', label: 'Daily Acts' },
     { id: 'pass-the-world', label: 'Pass the World' },
     { id: 'growth', label: 'Growth' },
+    { id: 'promise-memory', label: 'Post Event Promise Memory' },
     { id: 'applications', label: 'Applications' },
     { id: 'operations', label: 'Operations' },
     { id: 'reports', label: 'Reports' },
@@ -80,6 +81,22 @@ const OwnerControl = (() => {
     ptwCountryQuery: '',
     ptwCityQuery: '',
     ptwCityPage: 1,
+    pmData: null,
+    pmBusy: false,
+    pmQuery: '',
+    pmEvent: 'all',
+    pmCountry: '',
+    pmCity: '',
+    pmFolder: '',
+    pmDateFrom: '',
+    pmDateTo: '',
+    pmSort: 'newest',
+    pmPage: 1,
+    pmSelectedIds: [],
+    pmDetail: null,
+    pmFolderModal: null,
+    pmCityQuery: '',
+    pmCityPage: 1,
   };
 
   const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
@@ -1755,6 +1772,43 @@ const OwnerControl = (() => {
     return OwnerPassTheWorld.render(state, { esc, money, num, when });
   }
 
+  async function ensurePromiseMemoryLoaded(silent = false) {
+    if (state.pmBusy) return;
+    state.pmBusy = true;
+    if (!silent) render();
+    try {
+      const q = typeof OwnerPromiseMemory !== 'undefined'
+        ? OwnerPromiseMemory.buildQuery(state)
+        : '';
+      state.pmData = await api('promise-memory', { query: q ? `&${q}` : '' });
+      if (state.pmData?.filters) {
+        state.pmEvent = state.pmData.filters.eventId || state.pmEvent;
+        state.pmCountry = state.pmData.filters.country || '';
+        state.pmCity = state.pmData.filters.city || '';
+        state.pmDateFrom = state.pmData.filters.dateFrom || '';
+        state.pmDateTo = state.pmData.filters.dateTo || '';
+        state.pmQuery = state.pmData.filters.q || state.pmQuery;
+        state.pmSort = state.pmData.filters.sort || state.pmSort;
+        state.pmFolder = state.pmData.filters.folderId || '';
+      }
+    } catch (err) {
+      if (!silent) setFlash(err.message || 'Could not load Promise Memory.', 'err');
+    } finally {
+      state.pmBusy = false;
+    }
+  }
+
+  function renderPromiseMemory() {
+    if (!state.pmData && !state.pmBusy) {
+      ensurePromiseMemoryLoaded().then(() => render());
+      return `<section class="owner-section"><p class="owner-muted">Loading Promise Memory…</p></section>`;
+    }
+    if (typeof OwnerPromiseMemory === 'undefined') {
+      return `<section class="owner-section"><p class="owner-muted">Promise Memory module not loaded.</p></section>`;
+    }
+    return OwnerPromiseMemory.render(state, { esc, money, num, when });
+  }
+
   async function ensureDailyPeaceLoaded() {
     if (state.dailyPeace || state.dailyPeaceBusy) return;
     state.dailyPeaceBusy = true;
@@ -2281,6 +2335,7 @@ const OwnerControl = (() => {
       case 'event': return renderEvent();
       case 'daily-acts': return renderDailyActs();
       case 'pass-the-world': return renderPassTheWorld();
+      case 'promise-memory': return renderPromiseMemory();
       case 'growth': return renderGrowth();
       case 'applications': return renderApplications();
       case 'operations': return renderOperations();
@@ -2829,6 +2884,20 @@ const OwnerControl = (() => {
       });
     } else if (typeof OwnerPassTheWorld !== 'undefined') {
       OwnerPassTheWorld.stopPolling();
+    }
+
+    if (typeof OwnerPromiseMemory !== 'undefined' && state.section === 'promise-memory') {
+      OwnerPromiseMemory.bind(root(), state, { esc, money, num, when }, {
+        api,
+        onRender: () => render(),
+        setFlash,
+        loadData: async (silent) => {
+          await ensurePromiseMemoryLoaded(silent);
+          render();
+        },
+      });
+    } else if (typeof OwnerPromiseMemory !== 'undefined') {
+      OwnerPromiseMemory.stopPolling();
     }
 
     root().querySelectorAll('[data-export]').forEach((btn) => {
