@@ -3141,9 +3141,8 @@ const OwnerControl = (() => {
 
     const analyticsMapHost = document.getElementById('owner-sponsor-analytics-map');
     if (analyticsMapHost) {
-      const countries = state.sponsorAnalyticsDetail?.countries || [];
       const cities = typeof OwnerMapSponsors !== 'undefined'
-        ? OwnerMapSponsors.getAnalyticsMapCities(state.data, countries)
+        ? OwnerMapSponsors.getAnalyticsMapCities(state.sponsorAnalyticsDetail?.clickLocations)
         : [];
       OwnerMap.mount('owner-sponsor-analytics-map', cities);
       return;

@@ -368,28 +368,18 @@ const OwnerMapSponsors = (() => {
     };
   }
 
-  function getAnalyticsMapCities(ownerData, countries) {
-    const countrySet = new Set(
-      (countries || [])
-        .map((row) => String(row.country || '').trim().toLowerCase())
-        .filter(Boolean)
-    );
-    const points = ownerData?.map?.points || [];
-    let filtered = points.filter((p) =>
-      Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude))
-    );
-    if (countrySet.size) {
-      filtered = filtered.filter((p) =>
-        countrySet.has(String(p.country || '').trim().toLowerCase())
-      );
-    }
-    return filtered.map((p) => ({
-      city: p.city || 'Unknown city',
-      country: p.country || '',
-      latitude: Number(p.latitude),
-      longitude: Number(p.longitude),
-      count: p.count || 1,
-    }));
+  function getAnalyticsMapCities(clickLocations) {
+    return (clickLocations || [])
+      .filter((point) =>
+        Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude))
+      )
+      .map((point) => ({
+        city: point.city || 'Unknown city',
+        country: point.country || '',
+        latitude: Number(point.latitude),
+        longitude: Number(point.longitude),
+        count: Number(point.clicks || point.count || 1),
+      }));
   }
 
   function renderKpiCard({ icon, label, value, comparison, periodLabel, esc, isPct = false }) {
@@ -565,20 +555,20 @@ const OwnerMapSponsors = (() => {
     `;
   }
 
-  function renderGlobalReachMap(countries, esc) {
-    const hasCountries = (countries || []).length > 0;
+  function renderGlobalReachMap(clickLocations, esc) {
+    const hasClickLocations = (clickLocations || []).length > 0;
     return `
       <div class="sa-map-card">
         <div class="sa-map-card__head">
           <h3 class="sa-panel__title">Global Reach</h3>
-          <p class="owner-muted">Top countries by unique reach</p>
+          <p class="owner-muted">Locations of users who clicked through to the sponsor website</p>
         </div>
         <div class="sa-map-shell owner-leaflet-shell owner-leaflet-shell--compact">
           <div id="owner-sponsor-analytics-map"></div>
-          ${hasCountries ? '' : `
+          ${hasClickLocations ? '' : `
             <div class="sa-map-empty">
               <p class="sa-panel-empty__title">No data available yet</p>
-              <p class="owner-muted">No reach data recorded for this date range.</p>
+              <p class="owner-muted">No click-through locations recorded for this date range.</p>
             </div>
           `}
         </div>
@@ -631,7 +621,7 @@ const OwnerMapSponsors = (() => {
     const summary = detail.summary || {};
     const comparison = detail.comparison || {};
     const periodLabel = comparison.periodLabel || 'previous period';
-    const countries = detail.countries || [];
+    const clickLocations = detail.clickLocations || [];
     const events = detail.events || [];
     const rangeFrom = detail.range?.from || state.sponsorAnalyticsCustomFrom;
     const rangeTo = detail.range?.to;
@@ -706,7 +696,7 @@ const OwnerMapSponsors = (() => {
                 <h3 class="sa-panel__title">Performance Over Time</h3>
                 ${renderSponsorLineChart(detail.timeSeries, esc)}
               </section>
-              ${renderGlobalReachMap(countries, esc)}
+              ${renderGlobalReachMap(clickLocations, esc)}
             </div>
 
             <div class="sa-grid-3">

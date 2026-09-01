@@ -19,6 +19,9 @@ module.exports = async function handler(req, res) {
       eventType,
       visitorId,
       country,
+      city,
+      latitude,
+      longitude,
       eventId,
       destinationUrl,
     } = req.body || {};
@@ -28,6 +31,9 @@ module.exports = async function handler(req, res) {
       eventType,
       visitorId,
       country,
+      city,
+      latitude,
+      longitude,
       eventId,
       destinationUrl,
     });

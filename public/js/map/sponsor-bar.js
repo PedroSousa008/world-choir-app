@@ -203,32 +203,46 @@ const MapSponsorBar = (() => {
       ? (WorldChoirConfig.ACTIVE_EVENT?.id || 'world-choir-2027')
       : 'world-choir-2027';
     let country = null;
+    let city = null;
+    let latitude = null;
+    let longitude = null;
     try {
       const pledge = typeof WorldChoirDB !== 'undefined'
         ? WorldChoirDB.getPledgeForCurrentUser?.()
         : null;
-      country = pledge?.country ? String(pledge.country).trim() : null;
+      if (pledge) {
+        country = pledge.country ? String(pledge.country).trim() : null;
+        city = pledge.city ? String(pledge.city).trim() : null;
+        latitude = Number.isFinite(Number(pledge.latitude)) ? Number(pledge.latitude) : null;
+        longitude = Number.isFinite(Number(pledge.longitude)) ? Number(pledge.longitude) : null;
+      }
     } catch {
       /* ignore */
     }
-    return { eventId, country };
+    return { eventId, country, city, latitude, longitude };
   }
 
   function trackSponsorEvent(sponsorId, eventType, extra = {}) {
     if (!sponsorId) return;
     const context = getAnalyticsContext();
+    const payload = {
+      sponsorId,
+      eventType,
+      visitorId: getMapVisitorId(),
+      country: context.country,
+      eventId: context.eventId,
+      destinationUrl: extra.destinationUrl || null,
+    };
+    if (eventType === 'click') {
+      payload.city = context.city;
+      payload.latitude = context.latitude;
+      payload.longitude = context.longitude;
+    }
     fetch('/api/map-sponsor-events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       keepalive: eventType === 'click',
-      body: JSON.stringify({
-        sponsorId,
-        eventType,
-        visitorId: getMapVisitorId(),
-        country: context.country,
-        eventId: context.eventId,
-        destinationUrl: extra.destinationUrl || null,
-      }),
+      body: JSON.stringify(payload),
     }).catch(() => {});
   }
 

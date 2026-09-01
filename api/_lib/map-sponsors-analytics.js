@@ -44,6 +44,7 @@ function emptyDailyRow(sponsorId, date) {
     countries: {},
     events: {},
     clickDestinations: {},
+    clickLocations: {},
     updatedAt: null,
   };
 }
@@ -193,6 +194,9 @@ async function readDailyRow(sponsorId, date) {
       clickDestinations: row.clickDestinations && typeof row.clickDestinations === 'object'
         ? row.clickDestinations
         : {},
+      clickLocations: row.clickLocations && typeof row.clickLocations === 'object'
+        ? row.clickLocations
+        : {},
     };
   } catch {
     return emptyDailyRow(sponsorId, date);
@@ -295,6 +299,52 @@ function mergeCountryAgg(target, source) {
     bucket.uniqueClickVisitors = [...clk];
     bucket.uniqueClickers = clk.size;
   });
+}
+
+function mergeClickLocationsAgg(target, source) {
+  Object.entries(source || {}).forEach(([visitorId, loc]) => {
+    const lat = Number(loc?.latitude);
+    const lng = Number(loc?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    const existing = target[visitorId];
+    if (existing) {
+      existing.clicks = Number(existing.clicks || 0) + Number(loc.clicks || 1);
+      return;
+    }
+
+    target[visitorId] = {
+      city: loc.city || null,
+      country: loc.country || null,
+      latitude: lat,
+      longitude: lng,
+      clicks: Number(loc.clicks || 1),
+    };
+  });
+}
+
+function recordClickLocation(row, visitorId, { city, country, latitude, longitude }) {
+  const visitor = String(visitorId || '').trim();
+  if (!visitor) return;
+
+  const lat = latitude == null || latitude === '' ? NaN : Number(latitude);
+  const lng = longitude == null || longitude === '' ? NaN : Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+  row.clickLocations = row.clickLocations || {};
+  const existing = row.clickLocations[visitor];
+  if (existing) {
+    existing.clicks = Number(existing.clicks || 0) + 1;
+    return;
+  }
+
+  row.clickLocations[visitor] = {
+    city: String(city || '').trim() || null,
+    country: normalizeCountry(country),
+    latitude: lat,
+    longitude: lng,
+    clicks: 1,
+  };
 }
 
 function mergeEventAgg(target, source) {
@@ -491,6 +541,9 @@ async function recordMapSponsorEvent({
   eventType,
   visitorId,
   country = null,
+  city = null,
+  latitude = null,
+  longitude = null,
   eventId = DEFAULT_EVENT_ID,
   destinationUrl = null,
 }) {
@@ -583,6 +636,7 @@ async function recordMapSponsorEvent({
       row.clickDestinations = row.clickDestinations || {};
       row.clickDestinations[dest] = Number(row.clickDestinations[dest] || 0) + 1;
     }
+    recordClickLocation(row, visitor, { city, country: geo || country, latitude, longitude });
   }
 
   row.updatedAt = new Date().toISOString();
@@ -626,11 +680,24 @@ async function getMapSponsorAnalytics(sponsorId, options = {}) {
 
   const countries = {};
   const events = {};
+  const clickLocations = {};
 
   rows.forEach((row) => {
     mergeCountryAgg(countries, row.countries || {});
     mergeEventAgg(events, row.events || {});
+    mergeClickLocationsAgg(clickLocations, row.clickLocations || {});
   });
+
+  const clickLocationRows = Object.values(clickLocations)
+    .filter((loc) => Number.isFinite(Number(loc.latitude)) && Number.isFinite(Number(loc.longitude)))
+    .map((loc) => ({
+      city: loc.city || null,
+      country: loc.country || null,
+      latitude: Number(loc.latitude),
+      longitude: Number(loc.longitude),
+      clicks: Number(loc.clicks || 1),
+    }))
+    .sort((a, b) => b.clicks - a.clicks || String(a.country || '').localeCompare(String(b.country || '')));
 
   const countriesReached = Object.values(countries).filter((stats) => Number(stats.impressions || 0) > 0).length;
   const countryRows = Object.entries(countries)
@@ -703,6 +770,7 @@ async function getMapSponsorAnalytics(sponsorId, options = {}) {
     comparison,
     countriesReached,
     countries: countryRows,
+    clickLocations: clickLocationRows,
     events: eventRows,
     timeSeries,
     highlights,
@@ -721,5 +789,7 @@ async function getMapSponsorAnalytics(sponsorId, options = {}) {
 module.exports = {
   recordMapSponsorEvent,
   getMapSponsorAnalytics,
+  mergeClickLocationsAgg,
+  recordClickLocation,
   DEFAULT_EVENT_ID,
 };
