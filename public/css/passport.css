@@ -430,7 +430,7 @@
   position: relative;
   z-index: 1;
   height: 100%;
-  padding: 28px 26px 26px 30px;
+  padding: 55px 26px 26px 30px;
   display: flex;
   flex-direction: column;
 }
@@ -458,7 +458,7 @@
 }
 
 .passport-card__brand-title {
-  margin: 5px 0 0;
+  margin: calc(80px - 55px - 28px * 1.02) 0 0;
   font-family: var(--font-sans);
   font-size: 0.72rem;
   font-weight: 700;
