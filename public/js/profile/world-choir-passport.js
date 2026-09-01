@@ -304,6 +304,10 @@ const WorldChoirPassport = (() => {
     card.querySelector('#passport-open-inside')?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (typeof window.__passportShowChapter === 'function') {
+        window.__passportShowChapter('stamps', { historyMode: 'push' });
+        return;
+      }
       setCardPage(card, 'inside', { historyMode: 'push' });
       if (typeof PassportStamps !== 'undefined') {
         window.setTimeout(() => {
@@ -315,6 +319,10 @@ const WorldChoirPassport = (() => {
     card.querySelector('#passport-back-cover')?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (typeof window.__passportShowChapter === 'function') {
+        window.__passportShowChapter('cover', { historyMode: 'push' });
+        return;
+      }
       setCardPage(card, 'cover', { historyMode: 'push' });
     });
 
