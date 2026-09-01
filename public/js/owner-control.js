@@ -13,6 +13,7 @@ const OwnerControl = (() => {
     { id: 'map', label: 'Map' },
     { id: 'donations', label: 'Donations' },
     { id: 'foundations', label: 'Creator Foundations' },
+    { id: 'sponsors', label: 'Sponsors' },
     { id: 'event', label: 'Event' },
     { id: 'daily-acts', label: 'Daily Acts' },
     { id: 'pass-the-world', label: 'Pass the World' },
@@ -97,6 +98,13 @@ const OwnerControl = (() => {
     pmFolderModal: null,
     pmCityQuery: '',
     pmCityPage: 1,
+    sponsorsData: null,
+    sponsorsBusy: false,
+    sponsorsView: 'roster',
+    sponsorsQuery: '',
+    sponsorFormMode: null,
+    sponsorDetail: null,
+    sponsorsReorderBusy: false,
   };
 
   const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
@@ -347,6 +355,8 @@ const OwnerControl = (() => {
         state.cityDetail = null;
         state.countryDetail = null;
         state.ptwRoundId = null;
+        state.sponsorFormMode = null;
+        state.sponsorDetail = null;
         if (typeof OwnerPassTheWorld !== 'undefined') OwnerPassTheWorld.stopPolling();
         setFlash(null);
         render();
@@ -1809,6 +1819,37 @@ const OwnerControl = (() => {
     return OwnerPromiseMemory.render(state, { esc, money, num, when });
   }
 
+  async function ensureSponsorsLoaded(force = false) {
+    if (state.sponsorsBusy && !force) return;
+    if (state.sponsorsData && !force) return;
+    state.sponsorsBusy = true;
+    try {
+      state.sponsorsData = await api('map-sponsors');
+    } catch (err) {
+      state.sponsorsData = {
+        capacity: 20,
+        overview: { totalCompanies: 0, activeCount: 0, inactiveCount: 0, availablePositions: 20 },
+        slots: [],
+        inactive: [],
+        companies: [],
+        error: err.message,
+      };
+    } finally {
+      state.sponsorsBusy = false;
+    }
+  }
+
+  function renderSponsors() {
+    if (!state.sponsorsData && !state.sponsorsBusy) {
+      ensureSponsorsLoaded().then(() => render());
+      return `<section class="owner-section"><p class="owner-muted">Loading sponsors…</p></section>`;
+    }
+    if (typeof OwnerMapSponsors === 'undefined') {
+      return `<section class="owner-section"><p class="owner-muted">Sponsors module not loaded.</p></section>`;
+    }
+    return OwnerMapSponsors.render(state, { esc, money, num, when });
+  }
+
   async function ensureDailyPeaceLoaded() {
     if (state.dailyPeace || state.dailyPeaceBusy) return;
     state.dailyPeaceBusy = true;
@@ -2332,6 +2373,7 @@ const OwnerControl = (() => {
       case 'map': return renderMap();
       case 'donations': return renderDonations();
       case 'foundations': return renderFoundations();
+      case 'sponsors': return renderSponsors();
       case 'event': return renderEvent();
       case 'daily-acts': return renderDailyActs();
       case 'pass-the-world': return renderPassTheWorld();
@@ -2898,6 +2940,18 @@ const OwnerControl = (() => {
       });
     } else if (typeof OwnerPromiseMemory !== 'undefined') {
       OwnerPromiseMemory.stopPolling();
+    }
+
+    if (typeof OwnerMapSponsors !== 'undefined' && state.section === 'sponsors') {
+      OwnerMapSponsors.bind(root(), state, { esc, money, num, when }, {
+        api,
+        onRender: () => render(),
+        setFlash,
+        loadData: async (force) => {
+          await ensureSponsorsLoaded(force);
+          render();
+        },
+      });
     }
 
     root().querySelectorAll('[data-export]').forEach((btn) => {

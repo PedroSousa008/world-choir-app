@@ -46,6 +46,19 @@ const {
   createInfluencer,
   updateInfluencer,
 } = require('./_lib/members-store');
+const {
+  buildOwnerSponsorsLibrary,
+  getSponsorById,
+  createMapSponsor,
+  updateMapSponsor,
+  setMapSponsorStatus,
+  deleteMapSponsor,
+  reorderMapSponsors,
+  uploadMapSponsorLogo,
+  uploadMapSponsorDocument,
+  deleteMapSponsorDocument,
+  readMapSponsorDocument,
+} = require('./_lib/map-sponsors-owner');
 
 module.exports = async function handler(req, res) {
   corsHeaders(res);
@@ -320,6 +333,96 @@ module.exports = async function handler(req, res) {
       if (!requireOwner(req, res)) return;
       const influencers = await listInfluencers();
       return res.status(200).json({ influencers });
+    }
+
+    if (action === 'map-sponsors' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await buildOwnerSponsorsLibrary();
+      return res.status(200).json(data);
+    }
+
+    if (action === 'map-sponsor' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const id = req.query.id;
+      if (!id) return res.status(400).json({ error: 'Sponsor id required' });
+      const sponsor = await getSponsorById(id);
+      if (!sponsor) return res.status(404).json({ error: 'Company not found' });
+      return res.status(200).json({ sponsor });
+    }
+
+    if (action === 'create-map-sponsor' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const sponsor = await createMapSponsor(req.body || {});
+      return res.status(200).json({ ok: true, sponsor });
+    }
+
+    if (action === 'update-map-sponsor' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id, ...updates } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Sponsor id required' });
+      const sponsor = await updateMapSponsor(id, updates);
+      return res.status(200).json({ ok: true, sponsor });
+    }
+
+    if (action === 'set-map-sponsor-status' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id, isActive } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Sponsor id required' });
+      const sponsor = await setMapSponsorStatus(id, isActive !== false && isActive !== 0 && isActive !== '0');
+      return res.status(200).json({ ok: true, sponsor });
+    }
+
+    if (action === 'delete-map-sponsor' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Sponsor id required' });
+      const result = await deleteMapSponsor(id);
+      return res.status(200).json({ ok: true, ...result });
+    }
+
+    if (action === 'reorder-map-sponsors' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { orderedIds } = req.body || {};
+      const data = await reorderMapSponsors(orderedIds);
+      return res.status(200).json({ ok: true, ...data });
+    }
+
+    if (action === 'upload-map-sponsor-logo' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id, dataUrl, fileName } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Sponsor id required' });
+      const sponsor = await uploadMapSponsorLogo(id, dataUrl, fileName);
+      return res.status(200).json({ ok: true, sponsor });
+    }
+
+    if (action === 'upload-map-sponsor-document' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id, dataUrl, fileName, description } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Sponsor id required' });
+      const sponsor = await uploadMapSponsorDocument(id, dataUrl, fileName, description);
+      return res.status(200).json({ ok: true, sponsor });
+    }
+
+    if (action === 'delete-map-sponsor-document' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id, documentId } = req.body || {};
+      if (!id || !documentId) return res.status(400).json({ error: 'Sponsor id and document id required' });
+      const sponsor = await deleteMapSponsorDocument(id, documentId);
+      return res.status(200).json({ ok: true, sponsor });
+    }
+
+    if (action === 'download-map-sponsor-document' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const { id, documentId } = req.query;
+      if (!id || !documentId) return res.status(400).json({ error: 'Sponsor id and document id required' });
+      const { buffer, contentType, fileName } = await readMapSponsorDocument(id, documentId);
+      res.setHeader('Content-Type', contentType || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${String(fileName || 'document').replace(/"/g, '')}"`);
+      res.setHeader('Content-Length', buffer.length);
+      return res.status(200).send(buffer);
     }
 
     return res.status(404).json({ error: 'Unknown admin action' });

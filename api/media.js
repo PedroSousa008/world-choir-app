@@ -8,6 +8,7 @@ const { readPrivateBinary } = require('./_lib/store');
 const ALLOWED_PREFIXES = [
   'wc-data/members/media/',
   'wc-data/daily-peace/partnerships/media/',
+  'wc-data/map-sponsors/media/',
 ];
 
 module.exports = async function handler(req, res) {
