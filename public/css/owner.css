@@ -2767,7 +2767,6 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 .owner-sponsors-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
   font-size: 0.86rem;
 }
 
@@ -2782,18 +2781,19 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   background: rgba(0, 0, 0, 0.25);
 }
 
-.owner-sponsors-table tbody tr:not(:last-child) {
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
-}
-
 .owner-sponsors-table tbody td {
   padding: 14px;
-  border-bottom: 0;
+  border-bottom: none;
   vertical-align: middle;
+}
+
+.owner-sponsors-table tbody tr:not(:last-child) td {
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .owner-sponsors-table tbody tr:last-child td {
   border-bottom: 0;
+  box-shadow: none;
 }
 
 .owner-sponsors-row.is-dragging {
@@ -2809,38 +2809,34 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 }
 
 .owner-sponsors-row__drag {
-  width: 36px;
-  padding-left: 14px;
-  padding-right: 0;
+  width: 28px;
   color: #6d717a;
   cursor: grab;
   user-select: none;
   font-size: 1rem;
 }
 
-.owner-sponsors-row__drag-spacer {
-  display: block;
-  width: 1px;
-  height: 1px;
-}
-
 .owner-sponsors-row__order {
-  width: 56px;
-  padding-left: 10px;
+  width: 42px;
   color: #8a8d97;
   font-variant-numeric: tabular-nums;
 }
 
 .owner-sponsors-row__company {
-  width: auto;
   min-width: 0;
 }
 
-.owner-sponsors-row__company-inner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
+.owner-sponsors-row__company .owner-sponsors-row__empty-icon,
+.owner-sponsors-row__company .owner-sponsors-row__logo {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 12px;
+}
+
+.owner-sponsors-row__company > span,
+.owner-sponsors-row__company > strong {
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .owner-sponsors-row__company strong {
@@ -2923,15 +2919,16 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 }
 
 .owner-sponsors-row__actions {
-  width: 148px;
-  padding-right: 14px;
+  text-align: right;
+  white-space: nowrap;
 }
 
-.owner-sponsors-row__actions-inner {
-  display: flex;
-  gap: 4px;
-  justify-content: flex-end;
-  align-items: center;
+.owner-sponsors-row__actions .owner-sponsors-icon-btn {
+  margin-left: 4px;
+}
+
+.owner-sponsors-row__actions .owner-sponsors-icon-btn:first-child {
+  margin-left: 0;
 }
 
 .owner-sponsors-icon-btn {
