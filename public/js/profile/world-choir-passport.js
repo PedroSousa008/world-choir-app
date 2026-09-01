@@ -591,59 +591,137 @@ const WorldChoirPassport = (() => {
     );
   }
 
-  async function capturePassportImage(data) {
+  function doubleFrame() {
+    return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }
+
+  function getLivePassportCard() {
+    return document.getElementById('world-choir-passport') || document.querySelector('.passport-card');
+  }
+
+  function isStampsCardVisible(card) {
+    if (!card) return false;
+    const inside = card.querySelector('[data-passport-page="inside"]');
+    return card.classList.contains('is-inside') && inside && !inside.hidden;
+  }
+
+  function measurePassportCard(card) {
+    const live = card || getLivePassportCard();
+    const width = live?.offsetWidth || Math.min(372, Math.max(280, document.documentElement.clientWidth - 48));
+    const height = live?.offsetHeight || Math.round(width / 0.7);
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    return { width, height, dpr };
+  }
+
+  function sanitizeStampsCaptureClone(doc) {
+    const card = doc.querySelector('.passport-card');
+    if (!card) return;
+    card.classList.add('is-inside');
+    card.dataset.page = 'inside';
+    card.querySelector('#passport-back-cover')?.remove();
+    card.querySelector('#passport-continue-story')?.remove();
+    card.querySelector('[data-passport-page="cover"]')?.remove();
+    const inside = card.querySelector('[data-passport-page="inside"]');
+    if (inside) inside.hidden = false;
+    card.querySelectorAll('.passport-stamp__img, .passport-card__inside-bg').forEach((img) => {
+      img.removeAttribute('loading');
+    });
+  }
+
+  async function canvasToPngBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not create image'))), 'image/png');
+    });
+  }
+
+  async function renderStampsCanvas(card, { width, height, dpr }) {
+    return html2canvas(card, {
+      backgroundColor: '#e6e4de',
+      scale: dpr,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      width,
+      height,
+      onclone: sanitizeStampsCaptureClone,
+    });
+  }
+
+  async function captureLiveStampsCard(card) {
+    await waitForImages(card);
+    card.querySelectorAll('.passport-stamp__img').forEach((img) => {
+      if (img.complete && img.naturalWidth > 0) return;
+    });
+    await doubleFrame();
+    const { width, height, dpr } = measurePassportCard(card);
+    const canvas = await renderStampsCanvas(card, { width, height, dpr });
+    return canvasToPngBlob(canvas);
+  }
+
+  async function captureStampsCardClone(data, sourceCard) {
+    const { width, height, dpr } = measurePassportCard(sourceCard);
+    const host = document.createElement('div');
+    host.className = 'passport-export-host passport-export-host--stamps';
+    host.style.width = `${width}px`;
+    host.style.height = `${height}px`;
+    host.innerHTML = renderCard(data, {
+      loading: false,
+      id: 'passport-export-card',
+      interactive: false,
+      page: 'inside',
+    });
+    document.body.appendChild(host);
+
+    const card = host.querySelector('.passport-card');
+    if (card) {
+      card.classList.add('is-inside');
+      card.dataset.page = 'inside';
+      const cover = card.querySelector('[data-passport-page="cover"]');
+      const inside = card.querySelector('[data-passport-page="inside"]');
+      if (cover) cover.hidden = true;
+      if (inside) inside.hidden = false;
+    }
+
+    try {
+      await waitForImages(host);
+      await doubleFrame();
+      const canvas = await renderStampsCanvas(card, { width, height, dpr });
+      return canvasToPngBlob(canvas);
+    } finally {
+      host.remove();
+    }
+  }
+
+  async function captureStampsCardImage(data) {
     if (typeof html2canvas !== 'function') {
       throw new Error('Passport export is unavailable on this device.');
     }
 
-    const host = document.createElement('div');
-    host.className = 'passport-export-host';
-    host.innerHTML = renderCard(data, { loading: false, id: 'passport-export-card', interactive: false });
-    document.body.appendChild(host);
-    revealFeatureImages(host);
-
-    const card = host.querySelector('.passport-card');
-    await waitForImages(host);
-    host.querySelectorAll('.passport-card__feature-img').forEach((img) => img.classList.add('is-ready'));
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-    try {
-      const canvas = await html2canvas(card, {
-        backgroundColor: null,
-        scale: 1,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        width: card.offsetWidth,
-        height: card.offsetHeight,
-      });
-      const blob = await new Promise((resolve, reject) => {
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not create image'))), 'image/png');
-      });
-      return blob;
-    } finally {
-      host.remove();
+    const liveCard = getLivePassportCard();
+    if (isStampsCardVisible(liveCard)) {
+      return captureLiveStampsCard(liveCard);
     }
+    return captureStampsCardClone(data, liveCard);
   }
 
   async function downloadPassport(data) {
     if (exportBusy) return;
     exportBusy = true;
     try {
-      const blob = await capturePassportImage(data);
+      const blob = await captureStampsCardImage(data);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       const voice = data.voiceNumber != null ? `-${data.voiceNumber}` : '';
       a.href = url;
-      a.download = `world-choir-passport${voice}.png`;
+      a.download = `world-choir-stamps${voice}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      showToast('Passport saved');
+      showToast('Stamps card saved');
     } catch (err) {
       console.error(err);
-      showToast(err.message || 'Could not save Passport');
+      showToast(err.message || 'Could not save Stamps card');
     } finally {
       exportBusy = false;
     }
@@ -653,34 +731,34 @@ const WorldChoirPassport = (() => {
     if (exportBusy) return;
     exportBusy = true;
     try {
-      const blob = await capturePassportImage(data);
-      const file = new File([blob], 'world-choir-passport.png', { type: 'image/png' });
-      const text = 'My voice is part of World Choir.';
+      const blob = await captureStampsCardImage(data);
+      const file = new File([blob], 'world-choir-stamps.png', { type: 'image/png' });
+      const text = 'My World Choir Passport stamps.';
       const url = typeof window !== 'undefined' ? `${window.location.origin}/` : '';
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text, title: 'World Choir Passport', url });
+        await navigator.share({ files: [file], text, title: 'World Choir Stamps', url });
         return;
       }
 
       if (navigator.share) {
-        await navigator.share({ text: url ? `${text}\n${url}` : text, title: 'World Choir Passport', url: url || undefined });
+        await navigator.share({ text: url ? `${text}\n${url}` : text, title: 'World Choir Stamps', url: url || undefined });
         return;
       }
 
       const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = objectUrl;
-      a.download = 'world-choir-passport.png';
+      a.download = 'world-choir-stamps.png';
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(objectUrl);
-      showToast('Passport saved — share it from your photos');
+      showToast('Stamps card saved — share it from your photos');
     } catch (err) {
       if (err?.name === 'AbortError') return;
       console.error(err);
-      showToast(err.message || 'Could not share Passport');
+      showToast(err.message || 'Could not share Stamps card');
     } finally {
       exportBusy = false;
     }

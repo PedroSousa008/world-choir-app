@@ -1387,7 +1387,11 @@
   z-index: -1;
 }
 
-.passport-export-host .passport-card {
+.passport-export-host:not(.passport-export-host--stamps) {
+  width: 1080px;
+}
+
+.passport-export-host:not(.passport-export-host--stamps) .passport-card {
   width: 1080px;
   aspect-ratio: 0.7;
   border-radius: 48px;
@@ -1402,11 +1406,41 @@
     inset 5px 0 26px rgba(0, 0, 0, 0.16);
 }
 
-.passport-export-host .passport-card__inner {
+/* Stamps card export — match live on-screen card size (device-relative) */
+.passport-export-host--stamps {
+  width: auto;
+  height: auto;
+}
+
+.passport-export-host--stamps .passport-card {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: unset;
+  border-radius: 18px;
+  border: 1px solid rgba(140, 170, 200, 0.14);
+  box-shadow:
+    -3px 4px 16px rgba(0, 0, 0, 0.4),
+    0 6px 18px rgba(0, 0, 0, 0.48),
+    0 22px 52px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.28),
+    inset 2px 0 10px rgba(0, 0, 0, 0.16);
+}
+
+.passport-export-host--stamps .passport-card__inner {
+  padding: 28px 26px 26px 30px !important;
+}
+
+.passport-export-host--stamps .passport-card__back,
+.passport-export-host--stamps .passport-inside-footer {
+  display: none !important;
+}
+
+.passport-export-host:not(.passport-export-host--stamps) .passport-card__inner {
   padding: 72px 68px 68px 78px;
 }
 
-.passport-export-host .passport-card__brand-kicker {
+.passport-export-host:not(.passport-export-host--stamps) .passport-card__brand-kicker {
   top: 13px;
   font-size: 4.5rem;
   letter-spacing: -0.025em;
@@ -1414,7 +1448,7 @@
   line-height: 1.02;
 }
 
-.passport-export-host .passport-card__brand-title {
+.passport-export-host:not(.passport-export-host--stamps) .passport-card__brand-title {
   top: 108px;
   font-size: 1.85rem;
   margin-top: 0;
@@ -1423,7 +1457,7 @@
   line-height: 1.02;
 }
 
-.passport-export-host .passport-card__logo {
+.passport-export-host:not(.passport-export-host--stamps) .passport-card__logo {
   width: 168px;
   height: 168px;
   top: -23px;
@@ -1432,11 +1466,11 @@
     drop-shadow(0 4px 5px rgba(0, 0, 0, 0.45));
 }
 
-.passport-export-host .passport-card__top {
+.passport-export-host:not(.passport-export-host--stamps) .passport-card__top {
   margin-bottom: 72px;
 }
 
-.passport-export-host .passport-card__identity {
+.passport-export-host:not(.passport-export-host--stamps) .passport-card__identity {
   gap: 56px;
 }
 
