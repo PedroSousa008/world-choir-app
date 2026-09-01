@@ -4,6 +4,7 @@
 const { list } = require('@vercel/blob');
 const { readBlobJson, writeJson, assertBlobConfigured } = require('./store');
 const { getSponsorById } = require('./map-sponsors-owner');
+const { lookupCountryCentroid } = require('./country-centroids');
 
 const ANALYTICS_ROOT = 'wc-data/map-sponsors/analytics';
 const DEFAULT_EVENT_ID = 'world-choir-2027';
@@ -322,20 +323,73 @@ function recordClickLocation(row, visitorId, { city, country, latitude, longitud
   const visitor = String(visitorId || '').trim();
   if (!visitor) return;
 
-  const lat = latitude == null || latitude === '' ? NaN : Number(latitude);
-  const lng = longitude == null || longitude === '' ? NaN : Number(longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  let lat = latitude == null || latitude === '' ? NaN : Number(latitude);
+  let lng = longitude == null || longitude === '' ? NaN : Number(longitude);
+  let resolvedCity = String(city || '').trim() || null;
+  const resolvedCountry = normalizeCountry(country);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    const centroid = lookupCountryCentroid(resolvedCountry || country);
+    if (!centroid) return;
+    lat = centroid.latitude;
+    lng = centroid.longitude;
+    resolvedCity = resolvedCity || centroid.city || null;
+  }
 
   row.clickLocations = row.clickLocations || {};
   if (row.clickLocations[visitor]) return;
 
   row.clickLocations[visitor] = {
-    city: String(city || '').trim() || null,
-    country: normalizeCountry(country),
+    city: resolvedCity,
+    country: resolvedCountry,
     latitude: lat,
     longitude: lng,
     uniqueClickers: 1,
   };
+}
+
+function backfillClickLocationsFromCountries(rows, clickLocations) {
+  rows.forEach((row) => {
+    Object.entries(row.countries || {}).forEach(([country, stats]) => {
+      const visitors = Array.isArray(stats.uniqueClickVisitors) ? stats.uniqueClickVisitors : [];
+      visitors.forEach((visitorId) => {
+        if (clickLocations[visitorId]) return;
+        const centroid = lookupCountryCentroid(country);
+        if (!centroid) return;
+        clickLocations[visitorId] = {
+          city: centroid.city || null,
+          country: normalizeCountry(country),
+          latitude: centroid.latitude,
+          longitude: centroid.longitude,
+          uniqueClickers: 1,
+        };
+      });
+    });
+  });
+}
+
+function buildClickMapPointsFromCountries(countriesAgg) {
+  return Object.entries(countriesAgg || {})
+    .map(([country, stats]) => {
+      const uniqueClickers = Number(
+        stats.uniqueClickers || (stats.uniqueClickVisitors || []).length || 0
+      );
+      if (!uniqueClickers) return null;
+      const centroid = lookupCountryCentroid(country);
+      if (!centroid) return null;
+      return {
+        city: centroid.city || null,
+        country: normalizeCountry(country),
+        latitude: centroid.latitude,
+        longitude: centroid.longitude,
+        uniqueClickers,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) =>
+      b.uniqueClickers - a.uniqueClickers
+      || String(a.country || '').localeCompare(String(b.country || ''))
+    );
 }
 
 function aggregateClickMapPoints(clickLocationsByVisitor) {
@@ -703,6 +757,8 @@ async function getMapSponsorAnalytics(sponsorId, options = {}) {
     mergeClickLocationsAgg(clickLocations, row.clickLocations || {});
   });
 
+  backfillClickLocationsFromCountries(rows, clickLocations);
+
   const clickLocationRows = Object.values(clickLocations)
     .filter((loc) => Number.isFinite(Number(loc.latitude)) && Number.isFinite(Number(loc.longitude)))
     .map((loc) => ({
@@ -715,7 +771,10 @@ async function getMapSponsorAnalytics(sponsorId, options = {}) {
     .sort((a, b) => String(a.country || '').localeCompare(String(b.country || ''))
       || String(a.city || '').localeCompare(String(b.city || '')));
 
-  const clickMapPoints = aggregateClickMapPoints(clickLocations);
+  let clickMapPoints = aggregateClickMapPoints(clickLocations);
+  if (!clickMapPoints.length) {
+    clickMapPoints = buildClickMapPointsFromCountries(countries);
+  }
 
   const countriesReached = Object.values(countries).filter((stats) => Number(stats.impressions || 0) > 0).length;
   const countryRows = Object.entries(countries)
@@ -726,6 +785,7 @@ async function getMapSponsorAnalytics(sponsorId, options = {}) {
         country,
         impressions,
         clicks,
+        uniqueClickers: Number(stats.uniqueClickers || (stats.uniqueClickVisitors || []).length || 0),
         ctr: impressions ? (clicks / impressions) * 100 : 0,
       };
     })
@@ -811,5 +871,7 @@ module.exports = {
   mergeClickLocationsAgg,
   recordClickLocation,
   aggregateClickMapPoints,
+  backfillClickLocationsFromCountries,
+  buildClickMapPointsFromCountries,
   DEFAULT_EVENT_ID,
 };

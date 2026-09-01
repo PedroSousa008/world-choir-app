@@ -263,25 +263,48 @@ const MapSponsorBar = (() => {
   function trackSponsorEvent(sponsorId, eventType, extra = {}) {
     if (!sponsorId) return;
     const context = getAnalyticsContext();
-    const payload = {
-      sponsorId,
-      eventType,
-      visitorId: getMapVisitorId(),
-      country: context.country,
-      eventId: context.eventId,
-      destinationUrl: extra.destinationUrl || null,
+
+    const send = (coords = {}) => {
+      const payload = {
+        sponsorId,
+        eventType,
+        visitorId: getMapVisitorId(),
+        country: context.country,
+        eventId: context.eventId,
+        destinationUrl: extra.destinationUrl || null,
+      };
+      if (eventType === 'click') {
+        payload.city = coords.city ?? context.city;
+        payload.latitude = coords.latitude ?? context.latitude;
+        payload.longitude = coords.longitude ?? context.longitude;
+      }
+      fetch('/api/map-sponsor-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: eventType === 'click',
+        body: JSON.stringify(payload),
+      }).catch(() => {});
     };
-    if (eventType === 'click') {
-      payload.city = context.city;
-      payload.latitude = context.latitude;
-      payload.longitude = context.longitude;
+
+    if (eventType !== 'click' || (context.latitude != null && context.longitude != null)) {
+      send();
+      return;
     }
-    fetch('/api/map-sponsor-events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      keepalive: eventType === 'click',
-      body: JSON.stringify(payload),
-    }).catch(() => {});
+
+    if (typeof navigator !== 'undefined' && navigator.geolocation?.getCurrentPosition) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => send({
+          city: context.city,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }),
+        () => send(),
+        { enableHighAccuracy: false, timeout: 2500, maximumAge: 600000 }
+      );
+      return;
+    }
+
+    send();
   }
 
   function resetImpressionTracking() {

@@ -3141,10 +3141,18 @@ const OwnerControl = (() => {
 
     const analyticsMapHost = document.getElementById('owner-sponsor-analytics-map');
     if (analyticsMapHost) {
-      const cities = typeof OwnerMapSponsors !== 'undefined'
-        ? OwnerMapSponsors.getAnalyticsMapCities(state.sponsorAnalyticsDetail?.clickMapPoints)
-        : [];
-      OwnerMap.mount('owner-sponsor-analytics-map', cities);
+      if (typeof OwnerMapSponsors !== 'undefined' && OwnerMapSponsors.mountAnalyticsMap) {
+        OwnerMapSponsors.mountAnalyticsMap(state);
+      } else {
+        const cities = typeof OwnerMapSponsors !== 'undefined'
+          ? OwnerMapSponsors.getAnalyticsMapCities(
+            state.sponsorAnalyticsDetail?.clickMapPoints,
+            state.sponsorAnalyticsDetail?.countries,
+            state.data?.map?.points
+          )
+          : [];
+        OwnerMap.mount('owner-sponsor-analytics-map', cities);
+      }
       return;
     }
 

@@ -37,7 +37,25 @@ function testRecordClickLocationRequiresCoordinates() {
     latitude: null,
     longitude: null,
   });
-  assert.strictEqual(Object.keys(row.clickLocations).length, 0);
+  assert.strictEqual(Object.keys(row.clickLocations).length, 1);
+  assert.strictEqual(row.clickLocations['visitor-b'].country, 'Portugal');
+}
+
+function testBackfillClickLocationsFromCountries() {
+  const { backfillClickLocationsFromCountries } = require('../api/_lib/map-sponsors-analytics');
+  const clickLocations = {};
+  backfillClickLocationsFromCountries([
+    {
+      countries: {
+        Portugal: {
+          uniqueClickVisitors: ['visitor-a', 'visitor-b'],
+          uniqueClickers: 2,
+        },
+      },
+    },
+  ], clickLocations);
+  assert.strictEqual(Object.keys(clickLocations).length, 2);
+  assert.ok(clickLocations['visitor-a'].latitude);
 }
 
 function testMergeClickLocationsAgg() {
@@ -126,6 +144,7 @@ function testAggregateClickMapPoints() {
 
 testRecordClickLocation();
 testRecordClickLocationRequiresCoordinates();
+testBackfillClickLocationsFromCountries();
 testMergeClickLocationsAgg();
 testAggregateClickMapPoints();
 console.log('map-sponsor-analytics tests passed');

@@ -368,8 +368,8 @@ const OwnerMapSponsors = (() => {
     };
   }
 
-  function getAnalyticsMapCities(clickMapPoints) {
-    return (clickMapPoints || [])
+  function getAnalyticsMapCities(clickMapPoints, countries, ownerMapPoints) {
+    const fromApi = (clickMapPoints || [])
       .filter((point) =>
         Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude))
       )
@@ -381,6 +381,48 @@ const OwnerMapSponsors = (() => {
         count: Number(point.uniqueClickers || 1),
         mapMetric: 'uniqueClickers',
       }));
+
+    if (fromApi.length) return fromApi;
+
+    const clickedCountries = (countries || []).filter((row) =>
+      Number(row.uniqueClickers || row.clicks || 0) > 0
+    );
+    if (!clickedCountries.length || !ownerMapPoints?.length) return [];
+
+    const points = ownerMapPoints.filter((p) =>
+      Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude))
+    );
+
+    return clickedCountries.map((row) => {
+      const countryKey = String(row.country || '').trim().toLowerCase();
+      const citiesInCountry = points
+        .filter((p) => String(p.country || '').trim().toLowerCase() === countryKey)
+        .sort((a, b) => Number(b.count || 0) - Number(a.count || 0));
+      const best = citiesInCountry[0];
+      if (!best) return null;
+      return {
+        city: best.city || row.country,
+        country: row.country || best.country || '',
+        latitude: Number(best.latitude),
+        longitude: Number(best.longitude),
+        count: Number(row.uniqueClickers || row.clicks || 1),
+        mapMetric: 'uniqueClickers',
+      };
+    }).filter(Boolean);
+  }
+
+  function mountAnalyticsMap(state) {
+    if (typeof OwnerMap === 'undefined') return;
+    const host = document.getElementById('owner-sponsor-analytics-map');
+    if (!host) return;
+    const detail = state.sponsorAnalyticsDetail;
+    const cities = getAnalyticsMapCities(
+      detail?.clickMapPoints,
+      detail?.countries,
+      state.data?.map?.points
+    );
+    OwnerMap.mount('owner-sponsor-analytics-map', cities);
+    setTimeout(() => OwnerMap.invalidateSize?.(), 180);
   }
 
   function renderKpiCard({ icon, label, value, comparison, periodLabel, esc, isPct = false }) {
@@ -556,8 +598,9 @@ const OwnerMapSponsors = (() => {
     `;
   }
 
-  function renderGlobalReachMap(clickMapPoints, esc) {
-    const hasClickLocations = (clickMapPoints || []).length > 0;
+  function renderGlobalReachMap(clickMapPoints, summary, esc) {
+    const hasClickers = Number(summary?.uniqueClickers || summary?.websiteClicks || 0) > 0;
+    const hasMapPoints = (clickMapPoints || []).length > 0;
     return `
       <div class="sa-map-card">
         <div class="sa-map-card__head">
@@ -566,12 +609,18 @@ const OwnerMapSponsors = (() => {
         </div>
         <div class="sa-map-shell owner-leaflet-shell owner-leaflet-shell--compact">
           <div id="owner-sponsor-analytics-map"></div>
-          ${hasClickLocations ? '' : `
+          ${hasMapPoints || !hasClickers ? '' : `
+            <div class="sa-map-empty">
+              <p class="sa-panel-empty__title">Clicks recorded, location pending</p>
+              <p class="owner-muted">${esc(formatCount(summary.uniqueClickers || summary.websiteClicks))} click${Number(summary.uniqueClickers || summary.websiteClicks) === 1 ? '' : 's'} with no resolvable location yet.</p>
+            </div>
+          `}
+          ${!hasMapPoints && !hasClickers ? `
             <div class="sa-map-empty">
               <p class="sa-panel-empty__title">No data available yet</p>
               <p class="owner-muted">No click-through locations recorded for this date range.</p>
             </div>
-          `}
+          ` : ''}
         </div>
       </div>
     `;
@@ -697,7 +746,7 @@ const OwnerMapSponsors = (() => {
                 <h3 class="sa-panel__title">Performance Over Time</h3>
                 ${renderSponsorLineChart(detail.timeSeries, esc)}
               </section>
-              ${renderGlobalReachMap(clickMapPoints, esc)}
+              ${renderGlobalReachMap(clickMapPoints, summary, esc)}
             </div>
 
             <div class="sa-grid-3">
@@ -1383,6 +1432,7 @@ const OwnerMapSponsors = (() => {
       } finally {
         state.sponsorAnalyticsBusy = false;
         ctx.onRender();
+        setTimeout(() => mountAnalyticsMap(state), 120);
       }
     };
 
@@ -1765,5 +1815,5 @@ const OwnerMapSponsors = (() => {
     });
   }
 
-  return { render, bind, getAnalyticsMapCities };
+  return { render, bind, getAnalyticsMapCities, mountAnalyticsMap };
 })();
