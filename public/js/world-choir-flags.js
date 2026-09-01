@@ -69,7 +69,7 @@ const WorldChoirFlags = (() => {
   function flagCircleUrl(countryOrCode) {
     const iso = iso2ForCountry(countryOrCode);
     if (!iso) return null;
-    return `https://hatscripts.github.io/circle-flags/flags/${iso.toLowerCase()}.svg`;
+    return `https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/flags/1x1/${iso.toLowerCase()}.svg`;
   }
 
   function formatPlace(city, country) {

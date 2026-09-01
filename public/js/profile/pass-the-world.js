@@ -430,7 +430,7 @@ const PassTheWorld = (() => {
     }
     return `
       <span class="ptw-day-flag" aria-hidden="true">
-        <img src="${esc(url)}" alt="" width="34" height="34" loading="lazy" decoding="async">
+        <img src="${esc(url)}" alt="" width="38" height="38" loading="lazy" decoding="async">
       </span>`;
   }
 
@@ -444,7 +444,9 @@ const PassTheWorld = (() => {
         ? `
           <p class="ptw-day-called__label">Called by</p>
           <p class="ptw-day-called__voice">${esc(formatVoice(entry.calledByVoiceNumber))}</p>`
-        : `<p class="ptw-day-called__label ptw-day-called__label--solo">The journey began here.</p>`;
+        : `
+          <p class="ptw-day-called__label">The journey</p>
+          <p class="ptw-day-called__voice">began here</p>`;
       return `
         <article class="ptw-day">
           <span class="ptw-day-badge" aria-label="Day ${esc(entry.sequence)}">${esc(entry.sequence)}</span>

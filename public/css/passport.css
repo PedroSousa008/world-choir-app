@@ -2323,16 +2323,19 @@
 }
 
 .ptw-day-flag {
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 2px 8px rgba(0, 0, 0, 0.28);
 }
 
 .ptw-day-flag img {
@@ -2340,6 +2343,7 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  object-position: center;
 }
 
 .ptw-day-flag--empty {
@@ -2349,8 +2353,8 @@
 
 .ptw-day-called {
   flex: 0 0 auto;
-  min-width: 68px;
-  max-width: 92px;
+  min-width: 72px;
+  max-width: 96px;
   text-align: right;
 }
 
@@ -2362,10 +2366,7 @@
   letter-spacing: 0.06em;
   line-height: 1.25;
   color: rgba(255, 255, 255, 0.42);
-}
-
-.ptw-day-called__label--solo {
-  text-align: right;
+  white-space: nowrap;
 }
 
 .ptw-day-called__voice {
@@ -2376,6 +2377,7 @@
   letter-spacing: 0.02em;
   line-height: 1.25;
   color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
 }
 
 .ptw-stats-grid {
