@@ -51,6 +51,13 @@ const OwnerMapSponsors = (() => {
     ['lifetime', 'Lifetime'],
     ['custom', 'Custom'],
   ];
+  const ANALYTICS_RANGE_CHIPS = {
+    '7d': '7D',
+    '30d': '30D',
+    '90d': '90D',
+    '1y': '1Y',
+    lifetime: 'Lifetime',
+  };
   const ANALYTICS_CHART_METRICS = [
     ['impressions', 'Impressions'],
     ['clicks', 'Clicks'],
@@ -320,149 +327,262 @@ const OwnerMapSponsors = (() => {
     return query;
   }
 
-  function renderSummaryMetrics(summary, esc) {
-    const s = summary || {};
+  function formatDisplayDate(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return '—';
+    }
+  }
+
+  function formatDisplayDateTime(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '—';
+    }
+  }
+
+  function formatWebsite(url) {
+    return String(url || '').replace(/^https?:\/\//, '').replace(/\/$/, '') || '—';
+  }
+
+  function formatComparison(pct, periodLabel) {
+    const n = Number(pct || 0);
+    const arrow = n > 0 ? '↑' : n < 0 ? '↓' : '—';
+    return {
+      text: `${arrow} ${Math.abs(n).toFixed(0)}% vs ${periodLabel || 'previous period'}`,
+      dir: n > 0 ? 'up' : n < 0 ? 'down' : 'flat',
+    };
+  }
+
+  function getAnalyticsMapCities(ownerData, countries) {
+    const countrySet = new Set(
+      (countries || [])
+        .map((row) => String(row.country || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+    const points = ownerData?.map?.points || [];
+    let filtered = points.filter((p) =>
+      Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude))
+    );
+    if (countrySet.size) {
+      filtered = filtered.filter((p) =>
+        countrySet.has(String(p.country || '').trim().toLowerCase())
+      );
+    }
+    return filtered.map((p) => ({
+      city: p.city || 'Unknown city',
+      country: p.country || '',
+      latitude: Number(p.latitude),
+      longitude: Number(p.longitude),
+      count: p.count || 1,
+    }));
+  }
+
+  function renderKpiCard({ icon, label, value, comparison, periodLabel, esc, isPct = false }) {
+    const delta = formatComparison(comparison, periodLabel);
     return `
-      <div class="owner-groups owner-dap-impact owner-sponsor-analytics__metrics">
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatCount(s.impressions))}</span>
-          <span class="owner-metric__label">Total Impressions</span>
+      <div class="sa-kpi">
+        <div class="sa-kpi__top">
+          <span class="sa-kpi__label">${esc(label)}</span>
+          <span class="sa-kpi__icon" aria-hidden="true">${icon}</span>
         </div>
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatCount(s.uniqueReach))}</span>
-          <span class="owner-metric__label">Unique Reach</span>
-        </div>
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatCount(s.websiteClicks))}</span>
-          <span class="owner-metric__label">Website Clicks</span>
-        </div>
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatCount(s.uniqueClickers))}</span>
-          <span class="owner-metric__label">Unique Clickers</span>
-        </div>
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatPct(s.ctr))}</span>
-          <span class="owner-metric__label">CTR</span>
-        </div>
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatCount(s.daysActive))}</span>
-          <span class="owner-metric__label">Days Active</span>
-        </div>
+        <span class="sa-kpi__value">${esc(isPct ? formatPct(value) : formatCount(value))}</span>
+        <span class="sa-kpi__delta is-${delta.dir}">${esc(delta.text)}</span>
       </div>
     `;
   }
 
-  function renderPerformanceChart(series, metric, esc) {
-    const key = metric === 'ctr' ? 'ctr' : (metric === 'clicks' ? 'clicks' : 'impressions');
-    const points = series || [];
-    const hasData = points.some((point) => Number(point[key] || 0) > 0);
+  function renderSponsorLineChart(timeSeries, esc) {
+    const points = timeSeries || [];
+    const hasData = points.some((p) => p.impressions > 0 || p.uniqueReach > 0 || p.clicks > 0);
     if (!hasData) {
       return `
-        <div class="owner-growth-empty owner-sponsor-analytics__chart-empty">
-          <p class="owner-growth-empty__title">No performance data recorded for this period.</p>
+        <div class="sa-panel-empty">
+          <p class="sa-panel-empty__title">No data available yet</p>
+          <p class="owner-muted">No performance data recorded for this date range.</p>
         </div>
       `;
     }
-    const max = Math.max(1, ...points.map((point) => Number(point[key] || 0)));
+
+    const w = 640;
+    const h = 220;
+    const pad = { t: 18, r: 18, b: 28, l: 36 };
+    const innerW = w - pad.l - pad.r;
+    const innerH = h - pad.t - pad.b;
+    const max = Math.max(
+      1,
+      ...points.flatMap((p) => [p.impressions, p.uniqueReach, p.clicks])
+    );
+
+    const coords = (key) => points.map((p, i) => {
+      const x = points.length === 1
+        ? pad.l + innerW / 2
+        : pad.l + (i / (points.length - 1)) * innerW;
+      const y = pad.t + innerH - ((Number(p[key] || 0) / max) * innerH);
+      return { x, y, date: p.date, value: p[key] || 0 };
+    });
+
+    const linePath = (key) => {
+      const c = coords(key);
+      if (!c.length) return '';
+      let d = `M${c[0].x} ${c[0].y}`;
+      for (let i = 1; i < c.length; i += 1) {
+        const prev = c[i - 1];
+        const cur = c[i];
+        const cpx = (prev.x + cur.x) / 2;
+        d += ` C ${cpx} ${prev.y}, ${cpx} ${cur.y}, ${cur.x} ${cur.y}`;
+      }
+      return d;
+    };
+
+    const xTicks = points.length === 1
+      ? coords('impressions')
+      : [coords('impressions')[0], coords('impressions')[Math.floor(points.length / 2)], coords('impressions')[points.length - 1]]
+        .filter((c, i, arr) => arr.findIndex((x) => x.date === c.date) === i);
+    const yTicks = [max, max / 2, 0];
+
     return `
-      <div class="owner-chart" role="img" aria-label="Performance over time">
-        ${points.map((point) => {
-          const val = Number(point[key] || 0);
-          const h = Math.max(4, Math.round((val / max) * 100));
-          const label = metric === 'ctr' ? formatPct(val) : formatCount(val);
-          return `<span class="owner-chart__bar" style="height:${h}%" title="${esc(point.date)}: ${esc(label)}"></span>`;
-        }).join('')}
+      <div class="sa-line-chart">
+        <div class="sa-line-chart__legend">
+          <span><i class="sa-swatch sa-swatch--impressions"></i> Impressions</span>
+          <span><i class="sa-swatch sa-swatch--reach"></i> Unique Reach</span>
+          <span><i class="sa-swatch sa-swatch--clicks"></i> Website Clicks</span>
+        </div>
+        <div class="sa-line-chart__plot">
+          <div class="sa-line-chart__y" aria-hidden="true">
+            ${yTicks.map((tick) => `<span>${esc(formatCount(Math.round(tick)))}</span>`).join('')}
+          </div>
+          <svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Performance over time">
+            ${[0, 1, 2, 3, 4].map((i) => {
+              const y = pad.t + (innerH / 4) * i;
+              return `<line class="sa-line-chart__grid" x1="${pad.l}" y1="${y}" x2="${w - pad.r}" y2="${y}" />`;
+            }).join('')}
+            <path class="sa-line-chart__line sa-line-chart__line--impressions" d="${linePath('impressions')}" />
+            <path class="sa-line-chart__line sa-line-chart__line--reach" d="${linePath('uniqueReach')}" />
+            <path class="sa-line-chart__line sa-line-chart__line--clicks" d="${linePath('clicks')}" />
+          </svg>
+          <div class="sa-line-chart__x" aria-hidden="true">
+            ${xTicks.map((tick) => `<span>${esc(formatDisplayDate(tick.date))}</span>`).join('')}
+          </div>
+        </div>
       </div>
     `;
   }
 
-  function renderHighlights(highlights, esc) {
-    if (!highlights) {
-      return '<p class="owner-empty">No performance highlights yet.</p>';
-    }
-    const cards = [];
-    if (highlights.bestImpressionDay?.impressions) {
-      cards.push(`
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatCount(highlights.bestImpressionDay.impressions))}</span>
-          <span class="owner-metric__label">Best Impression Day · ${esc(highlights.bestImpressionDay.date)}</span>
-        </div>
-      `);
-    }
-    if (highlights.mostClicksDay?.clicks) {
-      cards.push(`
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatCount(highlights.mostClicksDay.clicks))}</span>
-          <span class="owner-metric__label">Most Clicks in One Day · ${esc(highlights.mostClicksDay.date)}</span>
-        </div>
-      `);
-    }
-    if (highlights.highestCtrDay?.ctr > 0) {
-      cards.push(`
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatPct(highlights.highestCtrDay.ctr))}</span>
-          <span class="owner-metric__label">Highest Daily CTR · ${esc(highlights.highestCtrDay.date)}</span>
-        </div>
-      `);
-    }
-    if (highlights.topCountry?.country) {
-      cards.push(`
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(highlights.topCountry.country)}</span>
-          <span class="owner-metric__label">Top Country · ${esc(formatCount(highlights.topCountry.impressions))} impressions</span>
-        </div>
-      `);
-    }
-    if (highlights.bestEvent?.eventId) {
-      cards.push(`
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(highlights.bestEvent.eventName || highlights.bestEvent.eventId)}</span>
-          <span class="owner-metric__label">Best Performing Event · ${esc(formatCount(highlights.bestEvent.impressions))} impressions</span>
-        </div>
-      `);
-    }
-    if (!cards.length) {
-      return '<p class="owner-empty">No performance highlights yet.</p>';
-    }
-    return `<div class="owner-groups owner-sponsor-analytics__metrics">${cards.join('')}</div>`;
+  function renderHighlightRows(highlights, esc) {
+    const h = highlights || {};
+    const rows = [
+      ['Top Day', h.bestImpressionDay?.date ? `${formatDisplayDate(h.bestImpressionDay.date)} · ${formatCount(h.bestImpressionDay.impressions)}` : '—'],
+      ['Top Country', h.topCountry?.country || '—'],
+      ['Top Event', h.bestEvent?.eventName || '—'],
+      ['Most Clicks Day', h.mostClicksDay?.date ? `${formatDisplayDate(h.mostClicksDay.date)} · ${formatCount(h.mostClicksDay.clicks)}` : '—'],
+      ['CTR (Best Day)', h.highestCtrDay?.ctr > 0 ? formatPct(h.highestCtrDay.ctr) : '—'],
+    ];
+    return `
+      <dl class="sa-list">
+        ${rows.map(([label, value]) => `
+          <div class="sa-list__row">
+            <dt>${esc(label)}</dt>
+            <dd>${esc(value)}</dd>
+          </div>
+        `).join('')}
+      </dl>
+    `;
   }
 
-  function renderCommercialSection(commercial, esc) {
-    if (!commercial) return '';
-    if (!commercial.hasMonetaryValue) {
-      return `
-        <section class="owner-section">
-          <p class="owner-section__label">Commercial Performance</p>
-          <p class="owner-muted">Commercial efficiency metrics are not applicable for this partnership.</p>
-        </section>
-      `;
-    }
+  function renderCommercialRows(commercial, esc) {
+    const c = commercial || {};
+    const rows = [
+      ['Estimated Media Value', '—'],
+      ['Engagement Value', '—'],
+      ['Total Events Supported', c.eventsSupported > 0 ? formatCount(c.eventsSupported) : '—'],
+      ['Partnership Value', c.hasMonetaryValue ? formatMoney(c.contractValue, c.currency) : '—'],
+    ];
     return `
-      <section class="owner-section">
-        <p class="owner-section__label">Commercial Performance</p>
-        <div class="owner-groups owner-dap-impact owner-sponsor-analytics__metrics">
-          <div class="owner-group">
-            <span class="owner-metric__value">${esc(formatMoney(commercial.contractValue, commercial.currency))}</span>
-            <span class="owner-metric__label">Contract Value</span>
+      <dl class="sa-list">
+        ${rows.map(([label, value]) => `
+          <div class="sa-list__row">
+            <dt>${esc(label)}</dt>
+            <dd>${esc(value)}</dd>
           </div>
-          <div class="owner-group">
-            <span class="owner-metric__value">${esc(formatCount(commercial.impressionsDelivered))}</span>
-            <span class="owner-metric__label">Impressions Delivered</span>
-          </div>
-          <div class="owner-group">
-            <span class="owner-metric__value">${esc(formatCount(commercial.clicksDelivered))}</span>
-            <span class="owner-metric__label">Clicks Delivered</span>
-          </div>
-          <div class="owner-group">
-            <span class="owner-metric__value">${commercial.cpm == null ? '—' : esc(formatMoney(commercial.cpm, commercial.currency))}</span>
-            <span class="owner-metric__label">CPM</span>
-          </div>
-          <div class="owner-group">
-            <span class="owner-metric__value">${commercial.costPerClick == null ? '—' : esc(formatMoney(commercial.costPerClick, commercial.currency))}</span>
-            <span class="owner-metric__label">Cost Per Click</span>
-          </div>
+        `).join('')}
+      </dl>
+    `;
+  }
+
+  function renderAnalyticsSidebar(detail, esc) {
+    const sponsor = detail.sponsor || {};
+    const partnershipSince = sponsor.activatedAt || sponsor.createdAt;
+    return `
+      <aside class="sa-aside">
+        <section class="sa-aside-card">
+          <h3 class="sa-aside-card__title">About This Sponsor</h3>
+          <dl class="sa-list sa-list--aside">
+            <div class="sa-list__row"><dt>Country</dt><dd>${esc(sponsor.country || '—')}</dd></div>
+            <div class="sa-list__row"><dt>Partnership Since</dt><dd>${esc(formatDisplayDate(partnershipSince?.slice?.(0, 10) || partnershipSince))}</dd></div>
+            <div class="sa-list__row"><dt>Contract End Date</dt><dd>${esc(formatDisplayDate(sponsor.contractEndDate))}</dd></div>
+            <div class="sa-list__row"><dt>Sponsor Tier</dt><dd>${esc(sponsor.agreementTypeLabel || '—')}</dd></div>
+          </dl>
+        </section>
+
+        <section class="sa-aside-card">
+          <h3 class="sa-aside-card__title">Data Status</h3>
+          <dl class="sa-list sa-list--aside">
+            <div class="sa-list__row"><dt>Status</dt><dd>${esc(detail.dataStatus || 'No data yet')}</dd></div>
+            <div class="sa-list__row"><dt>Last Updated</dt><dd>${esc(formatDisplayDateTime(detail.lastUpdated))}</dd></div>
+          </dl>
+        </section>
+
+        <section class="sa-aside-card">
+          <h3 class="sa-aside-card__title">Data Sources</h3>
+          <ul class="sa-sources">
+            <li><span aria-hidden="true">◎</span> Public Sponsor Bar</li>
+            <li><span aria-hidden="true">↗</span> Website Tracking</li>
+            <li><span aria-hidden="true">◉</span> Event Participation</li>
+            <li><span aria-hidden="true">✈</span> Pass the World</li>
+          </ul>
+        </section>
+
+        <section class="sa-aside-card">
+          <h3 class="sa-aside-card__title">Need Help?</h3>
+          <button type="button" class="owner-btn-ghost sa-guide-btn" data-sponsor-analytics-guide>View Guide ↗</button>
+        </section>
+      </aside>
+    `;
+  }
+
+  function renderGlobalReachMap(countries, esc) {
+    const hasCountries = (countries || []).length > 0;
+    return `
+      <div class="sa-map-card">
+        <div class="sa-map-card__head">
+          <h3 class="sa-panel__title">Global Reach</h3>
+          <p class="owner-muted">Top countries by unique reach</p>
         </div>
-      </section>
+        <div class="sa-map-shell owner-leaflet-shell owner-leaflet-shell--compact">
+          <div id="owner-sponsor-analytics-map"></div>
+          ${hasCountries ? '' : `
+            <div class="sa-map-empty">
+              <p class="sa-panel-empty__title">No data available yet</p>
+              <p class="owner-muted">No reach data recorded for this date range.</p>
+            </div>
+          `}
+        </div>
+      </div>
     `;
   }
 
@@ -471,22 +591,26 @@ const OwnerMapSponsors = (() => {
 
     if (state.sponsorAnalyticsBusy && !state.sponsorAnalyticsDetail) {
       return `
-        <div class="owner-sponsors-page owner-sponsor-analytics">
-          <section class="owner-section">
-            <p class="owner-muted">Loading analytics…</p>
-          </section>
+        <div class="owner-sponsors-page owner-sponsor-analytics sa-page">
+          <div class="sa-layout">
+            <div class="sa-main">
+              <p class="owner-muted">Loading analytics…</p>
+            </div>
+          </div>
         </div>
       `;
     }
 
     if (state.sponsorAnalyticsError && !state.sponsorAnalyticsDetail) {
       return `
-        <div class="owner-sponsors-page owner-sponsor-analytics">
-          <section class="owner-section">
-            <button type="button" class="owner-btn-ghost" data-sponsor-analytics-back>← Back to roster</button>
-            <p class="owner-empty" style="margin-top:16px">Analytics could not be loaded.</p>
-            <button type="button" class="owner-btn-ghost" data-sponsor-analytics-refresh style="margin-top:12px">Retry</button>
-          </section>
+        <div class="owner-sponsors-page owner-sponsor-analytics sa-page">
+          <div class="sa-layout">
+            <div class="sa-main">
+              <button type="button" class="sa-back" data-sponsor-analytics-back>← Back to Sponsors</button>
+              <p class="owner-empty" style="margin-top:16px">Analytics could not be loaded.</p>
+              <button type="button" class="owner-btn-ghost" data-sponsor-analytics-refresh style="margin-top:12px">Retry</button>
+            </div>
+          </div>
         </div>
       `;
     }
@@ -505,134 +629,118 @@ const OwnerMapSponsors = (() => {
 
     const sponsor = detail.sponsor;
     const summary = detail.summary || {};
-    const rangeLabel = analyticsRangeLabel(state, detail);
-    const chartMetric = state.sponsorAnalyticsChartMetric || 'impressions';
+    const comparison = detail.comparison || {};
+    const periodLabel = comparison.periodLabel || 'previous period';
     const countries = detail.countries || [];
     const events = detail.events || [];
+    const rangeFrom = detail.range?.from || state.sponsorAnalyticsCustomFrom;
+    const rangeTo = detail.range?.to;
+    const website = formatWebsite(sponsor.companyWebsiteUrl);
+    const websiteHref = sponsor.companyWebsiteUrl
+      ? (sponsor.companyWebsiteUrl.startsWith('http') ? sponsor.companyWebsiteUrl : `https://${sponsor.companyWebsiteUrl}`)
+      : '';
 
     return `
-      <div class="owner-sponsors-page owner-sponsor-analytics">
-        <section class="owner-section">
-          <button type="button" class="owner-btn-ghost" data-sponsor-analytics-back>← Back to roster</button>
-          <div class="owner-sponsor-analytics__head" style="margin-top:16px">
-            ${sponsor.companyLogoUrl
-              ? `<img src="${esc(sponsor.companyLogoUrl)}" alt="" class="owner-sponsor-analytics__logo">`
-              : '<span class="owner-sponsor-analytics__logo owner-sponsor-analytics__logo--empty" aria-hidden="true">—</span>'}
-            <div>
-              <h2 class="owner-h1" style="font-size:1.35rem;margin:0 0 4px">${esc(sponsor.companyName)}</h2>
-              <p class="owner-muted">Sponsor Analytics · ${sponsor.isActive ? 'Active' : 'Inactive'}</p>
+      <div class="owner-sponsors-page owner-sponsor-analytics sa-page">
+        <div class="sa-layout">
+          <div class="sa-main">
+            <div class="sa-topbar">
+              <button type="button" class="sa-back" data-sponsor-analytics-back>← Back to Sponsors</button>
+              <div class="sa-topbar__actions">
+                <button type="button" class="owner-btn-ghost sa-export-btn" data-sponsor-analytics-export>Export Report ↓</button>
+              </div>
             </div>
-          </div>
-        </section>
 
-        <section class="owner-section">
-          <div class="owner-growth-toolbar">
-            <div class="owner-growth-range" data-sponsor-analytics-range-wrap>
-              <button type="button" class="owner-btn-ghost owner-growth-range__btn" data-sponsor-analytics-range-toggle aria-expanded="${state.sponsorAnalyticsRangeOpen ? 'true' : 'false'}">
-                Date range: ${esc(rangeLabel)}
-                <span class="owner-growth-range__caret" aria-hidden="true"></span>
-              </button>
-              ${state.sponsorAnalyticsRangeOpen ? `
-                <div class="owner-growth-range__menu" role="listbox" aria-label="Analytics date range">
-                  ${ANALYTICS_RANGES.map(([id, label]) => `
-                    <button type="button" class="owner-growth-range__option ${state.sponsorAnalyticsRange === id ? 'is-active' : ''}" data-sponsor-analytics-range="${id}" role="option">${esc(label)}</button>
-                  `).join('')}
-                  ${state.sponsorAnalyticsRange === 'custom' ? `
-                    <div class="owner-growth-range__custom">
-                      <label class="owner-field">
-                        <span>Start date</span>
-                        <input type="date" data-sponsor-analytics-custom="from" value="${esc(state.sponsorAnalyticsCustomFrom || detail.range?.from || '')}">
-                      </label>
-                      <label class="owner-field">
-                        <span>End date</span>
-                        <input type="date" data-sponsor-analytics-custom="to" value="${esc(state.sponsorAnalyticsCustomTo || detail.range?.to || '')}">
-                      </label>
-                    </div>
-                  ` : ''}
+            <h2 class="sa-title">Sponsor Analytics</h2>
+
+            <div class="sa-hero">
+              ${sponsor.companyLogoUrl
+                ? `<img src="${esc(sponsor.companyLogoUrl)}" alt="" class="sa-hero__logo">`
+                : '<span class="sa-hero__logo sa-hero__logo--empty" aria-hidden="true">—</span>'}
+              <div class="sa-hero__body">
+                <div class="sa-hero__head">
+                  <h3 class="sa-hero__name">${esc(sponsor.companyName)}</h3>
+                  ${websiteHref
+                    ? `<a class="sa-hero__link" href="${esc(websiteHref)}" target="_blank" rel="noopener noreferrer">${esc(website)} ↗</a>`
+                    : `<span class="sa-hero__link">${esc(website)}</span>`}
+                  <span class="sa-status ${sponsor.isActive ? 'is-active' : ''}">
+                    <span class="sa-status__dot" aria-hidden="true"></span>${sponsor.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <p class="owner-muted">Analytics and performance data for this sponsor.</p>
+              </div>
+            </div>
+
+            <div class="sa-range">
+              <div class="sa-range__chips">
+                ${ANALYTICS_RANGES.filter(([id]) => id !== 'custom').map(([id]) => `
+                  <button type="button" class="sa-chip ${state.sponsorAnalyticsRange === id ? 'is-active' : ''}" data-sponsor-analytics-range="${id}">${esc(ANALYTICS_RANGE_CHIPS[id] || id)}</button>
+                `).join('')}
+                <button type="button" class="sa-chip sa-chip--custom ${state.sponsorAnalyticsRange === 'custom' ? 'is-active' : ''}" data-sponsor-analytics-range="custom">Custom</button>
+              </div>
+              <p class="sa-range__dates">${esc(formatDisplayDate(rangeFrom))} – ${esc(formatDisplayDate(rangeTo))}</p>
+              ${state.sponsorAnalyticsRange === 'custom' ? `
+                <div class="sa-range__custom">
+                  <label class="owner-field">
+                    <span>Start</span>
+                    <input type="date" data-sponsor-analytics-custom="from" value="${esc(state.sponsorAnalyticsCustomFrom || rangeFrom || '')}">
+                  </label>
+                  <label class="owner-field">
+                    <span>End</span>
+                    <input type="date" data-sponsor-analytics-custom="to" value="${esc(state.sponsorAnalyticsCustomTo || rangeTo || '')}">
+                  </label>
                 </div>
               ` : ''}
             </div>
-            <button type="button" class="owner-btn-ghost" data-sponsor-analytics-refresh>Refresh</button>
+
+            <div class="sa-kpis">
+              ${renderKpiCard({ icon: '◎', label: 'Total Impressions', value: summary.impressions, comparison: comparison.impressions, periodLabel, esc })}
+              ${renderKpiCard({ icon: '◉', label: 'Unique Reach', value: summary.uniqueReach, comparison: comparison.uniqueReach, periodLabel, esc })}
+              ${renderKpiCard({ icon: '↗', label: 'Website Clicks', value: summary.websiteClicks, comparison: comparison.websiteClicks, periodLabel, esc })}
+              ${renderKpiCard({ icon: '◎', label: 'Unique Clickers', value: summary.uniqueClickers, comparison: comparison.uniqueClickers, periodLabel, esc })}
+              ${renderKpiCard({ icon: '◍', label: 'CTR (Unique)', value: summary.ctrUnique, comparison: comparison.ctrUnique, periodLabel, esc, isPct: true })}
+            </div>
+
+            <div class="sa-grid-2">
+              <section class="sa-panel">
+                <h3 class="sa-panel__title">Performance Over Time</h3>
+                ${renderSponsorLineChart(detail.timeSeries, esc)}
+              </section>
+              ${renderGlobalReachMap(countries, esc)}
+            </div>
+
+            <div class="sa-grid-3">
+              <section class="sa-panel">
+                <h3 class="sa-panel__title">World Choir Event Performance</h3>
+                ${events.length ? `
+                  <dl class="sa-list">
+                    ${events.map((event) => `
+                      <div class="sa-list__row">
+                        <dt>${esc(event.eventName)}</dt>
+                        <dd>${esc(formatCount(event.impressions))} impressions · ${esc(formatCount(event.websiteClicks))} clicks</dd>
+                      </div>
+                    `).join('')}
+                  </dl>
+                ` : `
+                  <div class="sa-panel-empty sa-panel-empty--dashed">
+                    <span class="sa-panel-empty__icon" aria-hidden="true">▢</span>
+                    <p class="sa-panel-empty__title">No event data yet</p>
+                  </div>
+                `}
+              </section>
+              <section class="sa-panel">
+                <h3 class="sa-panel__title">Performance Highlights</h3>
+                ${renderHighlightRows(detail.highlights, esc)}
+              </section>
+              <section class="sa-panel">
+                <h3 class="sa-panel__title">Commercial Performance</h3>
+                ${renderCommercialRows(detail.commercial, esc)}
+              </section>
+            </div>
           </div>
-        </section>
 
-        <section class="owner-section">
-          <p class="owner-section__label">Performance Summary</p>
-          ${detail.hasData
-            ? renderSummaryMetrics(summary, esc)
-            : '<p class="owner-empty">No analytics recorded yet.</p>'}
-        </section>
-
-        <section class="owner-section">
-          <p class="owner-section__label">Performance Over Time</p>
-          <div class="owner-chips" style="margin-bottom:12px">
-            ${ANALYTICS_CHART_METRICS.map(([id, label]) => `
-              <button type="button" class="owner-chip ${chartMetric === id ? 'is-active' : ''}" data-sponsor-analytics-chart="${id}">${esc(label)}</button>
-            `).join('')}
-          </div>
-          ${renderPerformanceChart(detail.timeSeries, chartMetric, esc)}
-        </section>
-
-        <section class="owner-section">
-          <p class="owner-section__label">Global Reach</p>
-          <p class="owner-muted" style="margin-bottom:12px">${esc(formatCount(detail.countriesReached || 0))} Countries Reached</p>
-          <div class="owner-table-wrap">
-            <table class="owner-table">
-              <thead>
-                <tr><th>Country</th><th>Impressions</th><th>Clicks</th><th>CTR</th></tr>
-              </thead>
-              <tbody>
-                ${countries.length ? countries.map((row) => `
-                  <tr>
-                    <td>${esc(row.country)}</td>
-                    <td>${esc(formatCount(row.impressions))}</td>
-                    <td>${esc(formatCount(row.clicks))}</td>
-                    <td>${esc(formatPct(row.ctr))}</td>
-                  </tr>
-                `).join('') : '<tr><td colspan="4" class="owner-empty">No geographic data yet.</td></tr>'}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="owner-section">
-          <p class="owner-section__label">World Choir Event Performance</p>
-          <div class="owner-table-wrap">
-            <table class="owner-table">
-              <thead>
-                <tr>
-                  <th>Event</th>
-                  <th>Date</th>
-                  <th>Impressions</th>
-                  <th>Unique Reach</th>
-                  <th>Clicks</th>
-                  <th>CTR</th>
-                  <th>Countries</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${events.length ? events.map((row) => `
-                  <tr>
-                    <td>${esc(row.eventName)}</td>
-                    <td>${row.eventDate ? esc(row.eventDate.slice(0, 10)) : '—'}</td>
-                    <td>${esc(formatCount(row.impressions))}</td>
-                    <td>${esc(formatCount(row.uniqueReach))}</td>
-                    <td>${esc(formatCount(row.websiteClicks))}</td>
-                    <td>${esc(formatPct(row.ctr))}</td>
-                    <td>${esc(formatCount(row.countriesReached))}</td>
-                  </tr>
-                `).join('') : '<tr><td colspan="7" class="owner-empty">No event performance recorded yet.</td></tr>'}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="owner-section">
-          <p class="owner-section__label">Performance Highlights</p>
-          ${renderHighlights(detail.highlights, esc)}
-        </section>
-
-        ${renderCommercialSection(detail.commercial, esc)}
+          ${renderAnalyticsSidebar(detail, esc)}
+        </div>
       </div>
     `;
   }
@@ -1408,16 +1516,9 @@ const OwnerMapSponsors = (() => {
       });
     });
 
-    root.querySelector('[data-sponsor-analytics-range-toggle]')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      state.sponsorAnalyticsRangeOpen = !state.sponsorAnalyticsRangeOpen;
-      ctx.onRender();
-    });
-
     root.querySelectorAll('[data-sponsor-analytics-range]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         state.sponsorAnalyticsRange = btn.getAttribute('data-sponsor-analytics-range') || '30d';
-        state.sponsorAnalyticsRangeOpen = state.sponsorAnalyticsRange === 'custom';
         if (state.sponsorAnalyticsRange !== 'custom') {
           await loadAnalytics();
         } else {
@@ -1439,10 +1540,15 @@ const OwnerMapSponsors = (() => {
       });
     });
 
-    root.querySelectorAll('[data-sponsor-analytics-chart]').forEach((btn) => {
+    root.querySelectorAll('[data-sponsor-analytics-export]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        state.sponsorAnalyticsChartMetric = btn.getAttribute('data-sponsor-analytics-chart') || 'impressions';
-        ctx.onRender();
+        ctx.setFlash('Export report is not available yet.');
+      });
+    });
+
+    root.querySelectorAll('[data-sponsor-analytics-guide]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        ctx.setFlash('Sponsor analytics guide coming soon.');
       });
     });
 
@@ -1641,5 +1747,5 @@ const OwnerMapSponsors = (() => {
     });
   }
 
-  return { render, bind };
+  return { render, bind, getAnalyticsMapCities };
 })();

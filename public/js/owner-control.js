@@ -3138,6 +3138,17 @@ const OwnerControl = (() => {
 
   function mountOwnerMapIfNeeded() {
     if (typeof OwnerMap === 'undefined') return;
+
+    const analyticsMapHost = document.getElementById('owner-sponsor-analytics-map');
+    if (analyticsMapHost) {
+      const countries = state.sponsorAnalyticsDetail?.countries || [];
+      const cities = typeof OwnerMapSponsors !== 'undefined'
+        ? OwnerMapSponsors.getAnalyticsMapCities(state.data, countries)
+        : [];
+      OwnerMap.mount('owner-sponsor-analytics-map', cities);
+      return;
+    }
+
     const mapHost = document.getElementById('owner-world-map');
     // Any tab that embeds the shared map shell stays wired to the same filtered data.
     if (!mapHost) {

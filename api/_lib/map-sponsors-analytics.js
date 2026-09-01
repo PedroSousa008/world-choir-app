@@ -55,8 +55,66 @@ function emptySummary() {
     websiteClicks: 0,
     uniqueClickers: 0,
     ctr: 0,
+    ctrUnique: 0,
     daysActive: 0,
   };
+}
+
+function finalizeSummary(summary) {
+  const impressions = Number(summary.impressions || 0);
+  const websiteClicks = Number(summary.websiteClicks || 0);
+  const uniqueClickers = Number(summary.uniqueClickers || 0);
+  const uniqueReach = Number(summary.uniqueReach || 0);
+  return {
+    impressions,
+    uniqueReach,
+    websiteClicks,
+    uniqueClickers,
+    ctr: impressions ? (websiteClicks / impressions) * 100 : 0,
+    ctrUnique: impressions ? (uniqueClickers / impressions) * 100 : 0,
+    daysActive: Number(summary.daysActive || 0),
+  };
+}
+
+function mergeSummaryFromRow(summary, row, impressionSet, clickSet) {
+  summary.impressions += Number(row.impressions || 0);
+  summary.websiteClicks += Number(row.totalClicks || 0);
+  (row.uniqueImpressionVisitors || []).forEach((visitorId) => impressionSet.add(visitorId));
+  (row.uniqueClickVisitors || []).forEach((visitorId) => clickSet.add(visitorId));
+  summary.uniqueReach = impressionSet.size;
+  summary.uniqueClickers = clickSet.size;
+  return summary;
+}
+
+function getPreviousBounds(bounds) {
+  if (!bounds.from) return null;
+  const fromMs = Date.parse(`${bounds.from}T00:00:00.000Z`);
+  const toMs = Date.parse(`${bounds.to}T00:00:00.000Z`);
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs)) return null;
+  const dayCount = Math.max(1, Math.round((toMs - fromMs) / 86400000) + 1);
+  const prevTo = new Date(fromMs - 86400000);
+  const prevFrom = new Date(prevTo.getTime() - (dayCount - 1) * 86400000);
+  return {
+    from: getUtcDateString(prevFrom),
+    to: getUtcDateString(prevTo),
+    label: `previous ${dayCount} days`,
+  };
+}
+
+function pctChange(current, previous) {
+  const cur = Number(current || 0);
+  const prev = Number(previous || 0);
+  if (prev === 0) return cur === 0 ? 0 : 100;
+  return ((cur - prev) / prev) * 100;
+}
+
+function aggregateRowsInRange(allDaily, bounds) {
+  const rows = allDaily.filter((row) => rowInRange(row, bounds));
+  const summary = emptySummary();
+  const impressionSet = new Set();
+  const clickSet = new Set();
+  rows.forEach((row) => mergeSummaryFromRow(summary, row, impressionSet, clickSet));
+  return finalizeSummary(summary);
 }
 
 function dailyPath(sponsorId, date) {
@@ -305,6 +363,7 @@ function buildTimeSeries(rows, bounds) {
     date: row.date,
     impressions: Number(row.impressions || 0),
     clicks: Number(row.totalClicks || 0),
+    uniqueReach: Number(row.uniqueReach || (row.uniqueImpressionVisitors || []).length || 0),
     ctr: row.impressions ? (row.totalClicks / row.impressions) * 100 : 0,
   }));
 
@@ -337,9 +396,10 @@ function aggregateSeries(daily, mode) {
   const buckets = new Map();
   daily.forEach((point) => {
     const key = mode === 'month' ? monthKey(point.date) : startOfWeek(point.date);
-    const existing = buckets.get(key) || { date: key, impressions: 0, clicks: 0 };
+    const existing = buckets.get(key) || { date: key, impressions: 0, clicks: 0, uniqueReach: 0 };
     existing.impressions += point.impressions;
     existing.clicks += point.clicks;
+    existing.uniqueReach = Math.max(existing.uniqueReach || 0, point.uniqueReach || 0);
     buckets.set(key, existing);
   });
   return [...buckets.values()]
@@ -538,19 +598,39 @@ async function getMapSponsorAnalytics(sponsorId, options = {}) {
   const allDaily = await listDailyRows(sponsorId);
   const rows = allDaily.filter((row) => rowInRange(row, bounds));
 
-  const summary = emptySummary();
   const impressionSet = new Set();
   const clickSet = new Set();
+  const summary = emptySummary();
+  rows.forEach((row) => mergeSummaryFromRow(summary, row, impressionSet, clickSet));
+  summary.daysActive = countActiveDaysInRange(normalizeActivationHistory(sponsor), bounds);
+  const finalizedSummary = finalizeSummary(summary);
+
+  const previousBounds = getPreviousBounds(bounds);
+  const previousSummary = previousBounds
+    ? aggregateRowsInRange(allDaily, previousBounds)
+    : finalizeSummary(emptySummary());
+
+  const comparison = {
+    impressions: pctChange(finalizedSummary.impressions, previousSummary.impressions),
+    uniqueReach: pctChange(finalizedSummary.uniqueReach, previousSummary.uniqueReach),
+    websiteClicks: pctChange(finalizedSummary.websiteClicks, previousSummary.websiteClicks),
+    uniqueClickers: pctChange(finalizedSummary.uniqueClickers, previousSummary.uniqueClickers),
+    ctrUnique: pctChange(finalizedSummary.ctrUnique, previousSummary.ctrUnique),
+    periodLabel: previousBounds?.label || 'previous period',
+  };
+
+  const lastUpdated = rows.reduce((latest, row) => {
+    const ts = row.updatedAt ? Date.parse(row.updatedAt) : 0;
+    return ts > latest ? ts : latest;
+  }, 0);
+
   const countries = {};
   const events = {};
 
   rows.forEach((row) => {
-    mergeSummaryFromRow(summary, row, impressionSet, clickSet);
     mergeCountryAgg(countries, row.countries || {});
     mergeEventAgg(events, row.events || {});
   });
-
-  summary.daysActive = countActiveDaysInRange(normalizeActivationHistory(sponsor), bounds);
 
   const countriesReached = Object.values(countries).filter((stats) => Number(stats.impressions || 0) > 0).length;
   const countryRows = Object.entries(countries)
@@ -591,26 +671,50 @@ async function getMapSponsorAnalytics(sponsorId, options = {}) {
 
   const timeSeries = buildTimeSeries(rows, bounds);
   const highlights = buildHighlights(rows, countries, events);
-  const commercial = buildCommercial(sponsor, summary);
+  const commercial = buildCommercial(sponsor, finalizedSummary);
+
+  const agreementLabels = {
+    sponsorship: 'Sponsorship',
+    partnership: 'Partnership',
+    in_kind: 'In-Kind',
+    promotional: 'Promotional',
+    strategic: 'Strategic',
+    other: 'Other',
+  };
 
   return {
     sponsor: {
       id: sponsor.id,
       companyName: sponsor.companyName,
       companyLogoUrl: sponsor.companyLogoUrl,
+      companyWebsiteUrl: sponsor.companyWebsiteUrl || '',
       isActive: !!sponsor.isActive,
       activatedAt: sponsor.activatedAt || null,
+      createdAt: sponsor.createdAt || null,
+      country: sponsor.country || '',
       activationHistory: normalizeActivationHistory(sponsor),
+      contractEndDate: sponsor.contract?.endDate || null,
+      agreementType: sponsor.contract?.agreementType || '',
+      agreementTypeLabel: agreementLabels[sponsor.contract?.agreementType] || '—',
     },
     range: bounds,
-    summary,
+    summary: finalizedSummary,
+    previousSummary,
+    comparison,
     countriesReached,
     countries: countryRows,
     events: eventRows,
     timeSeries,
     highlights,
-    commercial,
+    commercial: {
+      ...commercial,
+      eventsSupported: eventRows.length,
+    },
     hasData: rows.some((row) => Number(row.impressions || 0) > 0 || Number(row.totalClicks || 0) > 0),
+    lastUpdated: lastUpdated ? new Date(lastUpdated).toISOString() : null,
+    dataStatus: rows.some((row) => Number(row.impressions || 0) > 0 || Number(row.totalClicks || 0) > 0)
+      ? 'Collecting'
+      : 'No data yet',
   };
 }
 
