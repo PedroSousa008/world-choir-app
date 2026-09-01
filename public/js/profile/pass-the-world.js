@@ -384,9 +384,6 @@ const PassTheWorld = (() => {
     } else if (status === 'REVEAL_PENDING') {
       lead = 'THE WORLD IS CHOOSING';
       note = 'Where will the journey go next?';
-    } else if (status === 'WAITING_FOR_FIRST_CALL' && active) {
-      lead = 'WAITING FOR AN INVITATION';
-      note = 'The World is waiting for its next invitation.';
     } else if (!viewer.countryLoaded) {
       note = 'Loading your World Choir city…';
     } else if (!viewer.countryEligible && viewer.countryLoaded && !viewer.sameCountry) {
