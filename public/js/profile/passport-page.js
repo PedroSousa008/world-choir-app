@@ -422,8 +422,21 @@ const PassportPage = (() => {
   }
 
   function updateInfoActionsVisibility(chapter = activeChapter) {
+    const isStamps = chapter === 'stamps';
     const actions = document.getElementById('passport-info-actions');
-    if (actions) actions.hidden = chapter !== 'stamps';
+    const download = document.getElementById('passport-action-download');
+    const wallet = document.getElementById('passport-action-wallet');
+    const share = document.getElementById('passport-action-share');
+    const overlay = document.getElementById('passport-info-overlay');
+
+    if (download) download.hidden = !isStamps;
+    if (wallet) wallet.hidden = !isStamps;
+    if (share) share.hidden = !isStamps;
+    if (actions) {
+      actions.hidden = !isStamps;
+      actions.classList.toggle('passport-info-modal__actions--visible', isStamps);
+    }
+    overlay?.classList.toggle('is-stamps-actions', isStamps);
   }
 
   function updateStoryStats(data = {}) {
@@ -431,6 +444,7 @@ const PassportPage = (() => {
   }
 
   function openInfo() {
+    updateInfoActionsVisibility();
     const overlay = document.getElementById('passport-info-overlay');
     if (!overlay) return;
     overlay.classList.add('active');
@@ -468,8 +482,9 @@ const PassportPage = (() => {
         });
       }
       updateMainStats(next);
-      updateInfoActionsVisibility(next);
     }
+
+    updateInfoActionsVisibility(next);
 
     if (syncUrl && typeof PassportRoute !== 'undefined') {
       PassportRoute.syncPassportHtmlUrl(next, { replace: historyMode !== 'push' });

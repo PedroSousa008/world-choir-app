@@ -1174,6 +1174,15 @@
   width: 100%;
 }
 
+.passport-info-modal__actions:not(.passport-info-modal__actions--visible),
+.passport-info-modal__actions:not(.passport-info-modal__actions--visible) .passport-action--stamps-only,
+#passport-info-overlay:not(.is-stamps-actions) #passport-info-actions,
+#passport-info-overlay:not(.is-stamps-actions) #passport-action-download,
+#passport-info-overlay:not(.is-stamps-actions) #passport-action-wallet,
+#passport-info-overlay:not(.is-stamps-actions) #passport-action-share {
+  display: none !important;
+}
+
 /* Actions */
 .passport-actions {
   display: grid;
