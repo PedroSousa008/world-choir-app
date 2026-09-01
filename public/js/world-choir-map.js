@@ -414,15 +414,24 @@ const WorldChoirMap = (() => {
   }
 
   function setMapHeaderMinimized(minimized) {
+    if (minimized && typeof MapSponsorBar !== 'undefined' && MapSponsorBar.hasActiveSponsors()) {
+      return;
+    }
     syncMapHeaderUi(minimized);
     persistMapHeaderMinimized(minimized);
+  }
+
+  function restoreMapHeaderFromStorage() {
+    syncMapHeaderUi(isMapHeaderMinimized());
   }
 
   function initMapHeader() {
     const header = document.getElementById('map-header');
     if (!header) return;
-    syncMapHeaderUi(isMapHeaderMinimized());
+    const sponsorLocked = typeof MapSponsorBar !== 'undefined' && MapSponsorBar.hasActiveSponsors();
+    syncMapHeaderUi(sponsorLocked ? false : isMapHeaderMinimized());
     header.addEventListener('click', () => {
+      if (typeof MapSponsorBar !== 'undefined' && MapSponsorBar.hasActiveSponsors()) return;
       setMapHeaderMinimized(!header.classList.contains('map-header--minimized'));
     });
   }
@@ -502,12 +511,14 @@ const WorldChoirMap = (() => {
     const hasVoiceJoinedSession = !!sessionStorage.getItem('wc_voice_joined');
 
     initMap();
-    initMapHeader();
     if (typeof MapSponsorBar !== 'undefined') {
-      MapSponsorBar.init().catch((err) => {
+      try {
+        await MapSponsorBar.init();
+      } catch (err) {
         console.warn('Map sponsor bar failed to initialize:', err);
-      });
+      }
     }
+    initMapHeader();
     refreshMapData();
     WorldChoirPledgeState.subscribe(() => updateEmptyState());
     updateCountdown();
@@ -561,5 +572,5 @@ const WorldChoirMap = (() => {
     checkVoiceJoinedFromSession();
   }
 
-  return { init, refreshMapData, runVoiceJoinedAnimation };
+  return { init, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
 })();

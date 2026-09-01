@@ -49,9 +49,7 @@ const MapSponsorBar = (() => {
         ? 'The Earth Breathes — tap to expand'
         : 'The Earth Breathes — tap to minimize';
     }
-    return minimized
-      ? 'World Choir supported by sponsors — tap to expand'
-      : 'World Choir supported by sponsors — tap to minimize';
+    return 'World Choir supported by sponsors';
   }
 
   function applyHeaderMode(hasSponsors) {
@@ -69,8 +67,15 @@ const MapSponsorBar = (() => {
     }
 
     if (header) {
-      const minimized = header.classList.contains('map-header--minimized');
-      header.setAttribute('aria-label', getHeaderAriaLabel(minimized));
+      if (hasSponsors) {
+        header.classList.remove('map-header--minimized');
+        header.setAttribute('aria-expanded', 'true');
+      } else if (typeof WorldChoirMap !== 'undefined' && WorldChoirMap.restoreMapHeaderFromStorage) {
+        WorldChoirMap.restoreMapHeaderFromStorage();
+      }
+      header.setAttribute('aria-label', getHeaderAriaLabel(
+        header.classList.contains('map-header--minimized')
+      ));
     }
   }
 

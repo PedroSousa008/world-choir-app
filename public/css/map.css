@@ -344,6 +344,7 @@ body.map-page {
 .map-header:has(#map-header-sponsor:not([hidden])) {
   align-items: flex-start;
   padding-top: 13px;
+  cursor: default;
 }
 
 .map-header:has(#map-header-sponsor:not([hidden])) .map-header__content,
