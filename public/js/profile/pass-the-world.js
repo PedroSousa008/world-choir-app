@@ -408,18 +408,49 @@ const PassTheWorld = (() => {
       </div>`;
   }
 
+  function formatItineraryDateParts(iso) {
+    if (!iso) return { month: '—', day: '—', year: '—' };
+    try {
+      const d = new Date(iso);
+      const month = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }).toUpperCase();
+      const day = String(d.getUTCDate());
+      const year = String(d.getUTCFullYear());
+      return { month, day, year };
+    } catch {
+      return { month: '—', day: '—', year: '—' };
+    }
+  }
+
   function renderItinerary(itinerary) {
     if (!itinerary?.length) return '<p class="ptw-empty">The journey has not begun.</p>';
     return itinerary.map((entry) => {
-      const called = entry.calledByVoiceNumber
-        ? `Called by <strong>${esc(formatVoice(entry.calledByVoiceNumber))}</strong>`
-        : 'The journey began here.';
+      const date = formatItineraryDateParts(entry.arrivedAt || entry.createdAt);
+      const city = toCaps(entry.city);
+      const country = toCaps(entry.country);
+      const flag = typeof WorldChoirFlags !== 'undefined'
+        ? WorldChoirFlags.flagEmoji(entry.country)
+        : '';
+      const calledHtml = entry.calledByVoiceNumber
+        ? `
+          <p class="ptw-day-called__label">Called by</p>
+          <p class="ptw-day-called__voice">${esc(formatVoice(entry.calledByVoiceNumber))}</p>`
+        : `<p class="ptw-day-called__label ptw-day-called__label--solo">The journey began here.</p>`;
       return `
         <article class="ptw-day">
-          <p class="ptw-day-label">Day ${esc(entry.sequence)}</p>
-          <h3 class="ptw-day-place">${esc(placeLabel(entry))}</h3>
-          <p class="ptw-day-meta">${called}</p>
-          <p class="ptw-day-date">${esc(formatDayDate(entry.arrivedAt || entry.createdAt))}</p>
+          <span class="ptw-day-badge" aria-label="Day ${esc(entry.sequence)}">${esc(entry.sequence)}</span>
+          <div class="ptw-day-date" aria-label="${esc(formatDayDate(entry.arrivedAt || entry.createdAt))}">
+            <span class="ptw-day-date__month">${esc(date.month)}</span>
+            <span class="ptw-day-date__day">${esc(date.day)}</span>
+            <span class="ptw-day-date__year">${esc(date.year)}</span>
+          </div>
+          <div class="ptw-day-place">
+            ${city ? `<p class="ptw-day-city">${esc(city)}</p>` : ''}
+            ${country ? `<p class="ptw-day-country">${esc(country)}</p>` : ''}
+          </div>
+          ${flag
+            ? `<span class="ptw-day-flag" aria-hidden="true">${flag}</span>`
+            : '<span class="ptw-day-flag ptw-day-flag--empty" aria-hidden="true"></span>'}
+          <div class="ptw-day-called">${calledHtml}</div>
         </article>`;
     }).join('');
   }
