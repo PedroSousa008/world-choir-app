@@ -339,6 +339,18 @@ body.map-page {
   min-height: 0.95rem;
 }
 
+/* Sponsor mode: title sits 14px from top of bar (1px border + 13px padding) */
+.map-header:has(#map-header-sponsor:not([hidden])) {
+  align-items: flex-start;
+  padding-top: 13px;
+}
+
+.map-header:has(#map-header-sponsor:not([hidden])) .map-header__content,
+.map-header:has(#map-header-sponsor:not([hidden])) .map-header__sponsor {
+  justify-content: flex-start;
+  min-height: auto;
+}
+
 /* Sponsor bar — compact belt within the original header footprint */
 .map-sponsor {
   width: 100%;
@@ -755,6 +767,11 @@ body.map-page {
     padding: 10px 12px;
     min-height: 65px;
     height: 65px;
+  }
+
+  /* Sponsor mode: title sits 10px from top of bar (1px border + 9px padding) */
+  .map-header:has(#map-header-sponsor:not([hidden])) {
+    padding-top: 9px;
   }
 
   .map-header--minimized {
