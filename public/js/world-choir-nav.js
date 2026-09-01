@@ -9,13 +9,26 @@ const WorldChoirNav = (() => {
   let prefetchStarted = false;
   const prefetched = new Set();
 
+  const NAV_ICON_SVGS = {
+    home: `<svg class="nav-icon__svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M4 10.75 12 4l8 6.75V19a1.25 1.25 0 0 1-1.25 1.25H15v-5.5H9v5.5H5.25A1.25 1.25 0 0 1 4 19v-8.25Z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/></svg>`,
+    map: `<svg class="nav-icon__svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M3 12h18M12 3c2.75 2.75 4.5 6.25 4.5 9s-1.75 6.25-4.5 9M12 3c-2.75 2.75-4.5 6.25-4.5 9s1.75 6.25 4.5 9" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`,
+    profile: `<svg class="nav-icon__svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="12" cy="8" r="3.75" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M5 20.25c.9-3.35 3.75-5.25 7-5.25s6.1 1.9 7 5.25" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`,
+  };
+
   const ALL_PAGES = [
-    { id: 'home', href: 'index.html', label: 'Home', icon: '◉' },
-    { id: 'map', href: 'map.html', label: 'Map', icon: '◎' },
+    { id: 'home', href: 'index.html', label: 'Home', iconSvg: NAV_ICON_SVGS.home },
+    { id: 'map', href: 'map.html', label: 'Map', iconSvg: NAV_ICON_SVGS.map },
     { id: 'donate', href: 'donate.html', label: 'Donate', icon: '♡' },
     { id: 'memory', href: 'memory.html', label: 'Memory', icon: '◇', requiresMemory: true },
-    { id: 'profile', href: 'profile.html', label: 'Profile', icon: '○' },
+    { id: 'profile', href: 'profile.html', label: 'Profile', iconSvg: NAV_ICON_SVGS.profile },
   ];
+
+  function renderNavIcon(page) {
+    if (page.iconSvg) {
+      return `<span class="nav-icon">${page.iconSvg}</span>`;
+    }
+    return `<span class="nav-icon">${page.icon}</span>`;
+  }
 
   /** Critical assets per tab — warm the cache before the user taps. */
   const TAB_ASSETS = {
@@ -170,7 +183,7 @@ const WorldChoirNav = (() => {
       const link = document.createElement('a');
       link.href = page.href;
       link.className = 'nav-item' + (activePage === page.id ? ' active' : '');
-      link.innerHTML = `<span class="nav-icon">${page.icon}</span><span>${page.label}</span>`;
+      link.innerHTML = `${renderNavIcon(page)}<span>${page.label}</span>`;
       const warm = () => prefetchOnIntent(page.href);
       link.addEventListener('pointerdown', warm, { passive: true });
       link.addEventListener('touchstart', warm, { passive: true });
