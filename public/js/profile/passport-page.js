@@ -479,10 +479,15 @@ const PassportPage = (() => {
       setStatus('');
       WorldChoirPassport.showToast('Opening Apple Wallet…');
     } catch (err) {
-      if (err?.code === 'unsupported') {
+      const code = String(err?.code || '');
+      if (code === 'unsupported') {
         WorldChoirPassport.showToast('Add to Apple Wallet is available on iPhone and iPad.');
-      } else if (err?.code === 'WALLET_NOT_CONFIGURED' || err?.code === 503 || err?.code === 501) {
+      } else if (code === 'WALLET_NOT_CONFIGURED' || code === '503' || code === '501') {
         WorldChoirPassport.showToast('Apple Wallet is being prepared — coming soon.');
+      } else if (code === '403') {
+        WorldChoirPassport.showToast('Join World Choir first to add your Passport to Wallet.');
+      } else if (code === '404') {
+        WorldChoirPassport.showToast('We could not find your Passport. Open Passport once, then try again.');
       } else {
         WorldChoirPassport.showToast(PassportWallet.ERROR_MESSAGE);
       }

@@ -1,6 +1,6 @@
-const { putPrivateBinary } = require('../_lib/store');
-const { loadPassportDataForDevice } = require('../_lib/passport-data');
-const { generatePassportPass, walletConfigured } = require('../_lib/wallet/passport-pass-builder');
+const { putPrivateBinary } = require('./_lib/store');
+const { loadPassportDataForDevice } = require('./_lib/passport-data');
+const { generatePassportPass, walletConfigured } = require('./_lib/wallet/passport-pass-builder');
 const {
   ensureWalletRecord,
   publicPassportUrl,
@@ -9,7 +9,7 @@ const {
   storeDownloadTicket,
   passFilePath,
   markPassGenerated,
-} = require('../_lib/wallet/wallet-store');
+} = require('./_lib/wallet/wallet-store');
 
 async function issueApplePass(req, res, deviceId) {
   if (!walletConfigured()) {

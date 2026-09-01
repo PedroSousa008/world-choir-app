@@ -47,7 +47,15 @@ const PassportWallet = (() => {
       return { ok: true, blob, direct: true };
     }
 
-    const data = await res.json().catch(() => ({}));
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {
+      const err = new Error('Wallet service is temporarily unavailable. Please try again.');
+      err.code = res.status || 'network';
+      throw err;
+    }
+
     if (!res.ok) {
       const err = new Error(data.error || `Wallet request failed (${res.status})`);
       err.code = data.code || res.status;
@@ -58,10 +66,8 @@ const PassportWallet = (() => {
 
   function openPkpassBlob(blob) {
     const url = URL.createObjectURL(blob);
-    const opened = window.open(url, '_blank');
-    if (!opened) {
-      window.location.assign(url);
-    }
+    // iOS Safari opens Wallet most reliably via navigation, not window.open.
+    window.location.assign(url);
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     return { ok: true };
   }
@@ -82,23 +88,25 @@ const PassportWallet = (() => {
     onStatus?.(LOADING_MESSAGE);
     const deviceId = WorldChoirDB.getDeviceId();
 
+    // Prefer signed download URL on iOS — Safari handles .pkpass MIME type reliably.
     try {
-      const direct = await requestPass({ deviceId, platform: 'apple', delivery: 'direct' });
-      if (direct?.blob) {
-        return openPkpassBlob(direct.blob);
+      const result = await requestPass({ deviceId, platform: 'apple', delivery: 'url' });
+      if (result?.passUrl) {
+        return openPassUrl(result.passUrl);
+      }
+      if (result?.blob) {
+        return openPkpassBlob(result.blob);
       }
     } catch (err) {
-      if (err?.code !== 'WALLET_NOT_CONFIGURED' && err?.code !== 503) {
+      if (err?.code === 'WALLET_NOT_CONFIGURED' || err?.code === 503) {
         throw err;
       }
+      // Fall back to direct delivery if URL flow failed for another reason.
     }
 
-    const result = await requestPass({ deviceId, platform: 'apple', delivery: 'url' });
-    if (result?.passUrl) {
-      return openPassUrl(result.passUrl);
-    }
-    if (result?.blob) {
-      return openPkpassBlob(result.blob);
+    const direct = await requestPass({ deviceId, platform: 'apple', delivery: 'direct' });
+    if (direct?.blob) {
+      return openPkpassBlob(direct.blob);
     }
     throw new Error('Apple Wallet pass is not ready yet.');
   }
