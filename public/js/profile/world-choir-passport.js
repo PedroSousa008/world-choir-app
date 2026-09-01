@@ -123,7 +123,7 @@ const WorldChoirPassport = (() => {
       <div class="passport-card__page passport-card__page--cover" data-passport-page="cover"${hidden ? ' hidden' : ''}>
         <div class="passport-card__inner">
           <div class="passport-card__top">
-            <div>
+            <div class="passport-card__brand-copy">
               <p class="passport-card__brand-kicker">World Choir</p>
               <p class="passport-card__brand-title">Passport</p>
             </div>

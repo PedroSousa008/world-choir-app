@@ -430,7 +430,7 @@
   position: relative;
   z-index: 1;
   height: 100%;
-  padding: 55px 26px 26px 30px;
+  padding: 28px 26px 26px 30px;
   display: flex;
   flex-direction: column;
 }
@@ -443,7 +443,17 @@
   margin-bottom: 28px;
 }
 
+.passport-card__brand-copy {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 0;
+}
+
 .passport-card__brand-kicker {
+  position: absolute;
+  top: 27px;
+  left: 0;
   margin: 0;
   font-family: var(--font-sans);
   font-size: 28px;
@@ -458,7 +468,10 @@
 }
 
 .passport-card__brand-title {
-  margin: calc(80px - 55px - 28px * 1.02) 0 0;
+  position: absolute;
+  top: 52px;
+  left: 0;
+  margin: 0;
   font-family: var(--font-sans);
   font-size: 0.72rem;
   font-weight: 700;
@@ -1394,6 +1407,7 @@
 }
 
 .passport-export-host .passport-card__brand-kicker {
+  top: 69px;
   font-size: 4.5rem;
   letter-spacing: -0.025em;
   font-weight: 700;
@@ -1401,8 +1415,9 @@
 }
 
 .passport-export-host .passport-card__brand-title {
+  top: 134px;
   font-size: 1.85rem;
-  margin-top: 12px;
+  margin-top: 0;
   letter-spacing: -0.025em;
   font-weight: 700;
   line-height: 1.02;
