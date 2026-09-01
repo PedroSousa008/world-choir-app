@@ -106,6 +106,7 @@ const OwnerControl = (() => {
     sponsorDetail: null,
     sponsorsReorderBusy: false,
     sponsorsPage: 1,
+    sponsorPendingLogo: null,
   };
 
   const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
@@ -358,6 +359,7 @@ const OwnerControl = (() => {
         state.ptwRoundId = null;
         state.sponsorFormMode = null;
         state.sponsorDetail = null;
+        state.sponsorPendingLogo = null;
         if (typeof OwnerPassTheWorld !== 'undefined') OwnerPassTheWorld.stopPolling();
         setFlash(null);
         render();

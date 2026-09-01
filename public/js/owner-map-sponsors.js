@@ -408,97 +408,226 @@ const OwnerMapSponsors = (() => {
     `;
   }
 
+  function getNextAvailableSpot(data) {
+    const slots = data?.slots || [];
+    const empty = slots.find((s) => !s.sponsor);
+    if (empty) return empty.position;
+    const active = data?.overview?.activeCount ?? 0;
+    const capacity = data?.capacity ?? 20;
+    return Math.min(active + 1, capacity);
+  }
+
+  function getLogoPreviewSrc(state, sponsor) {
+    if (state.sponsorPendingLogo?.dataUrl) return state.sponsorPendingLogo.dataUrl;
+    return sponsor?.companyLogoUrl || '';
+  }
+
+  function isImageFile(file) {
+    if (!file) return false;
+    if (file.type && file.type.startsWith('image/')) return true;
+    return /\.(png|jpe?g|gif|webp|svg|bmp|heic|heif|avif|ico|tiff?|jfif)$/i.test(file.name || '');
+  }
+
+  function renderFormSection(num, title, subtitle, body, open = true) {
+    return `
+      <details class="owner-sponsor-form-section" ${open ? 'open' : ''}>
+        <summary class="owner-sponsor-form-section__head">
+          <span class="owner-sponsor-form-section__num">${num}</span>
+          <span class="owner-sponsor-form-section__titles">
+            <strong>${title}</strong>
+            <span>${subtitle}</span>
+          </span>
+          <span class="owner-sponsor-form-section__chev" aria-hidden="true"></span>
+        </summary>
+        <div class="owner-sponsor-form-section__body">${body}</div>
+      </details>
+    `;
+  }
+
+  function renderFormSidebar(state, helpers) {
+    const { esc } = helpers;
+    const sponsor = state.sponsorDetail || {};
+    const data = state.sponsorsData || {};
+    const nextSpot = pad2(getNextAvailableSpot(data));
+    const logoSrc = getLogoPreviewSrc(state, sponsor);
+    const companyName = sponsor.companyName || 'Company';
+    const website = sponsor.companyWebsiteUrl || '';
+    const websiteDisplay = website ? website.replace(/^https?:\/\//, '') : 'example.com';
+
+    const logoPreview = logoSrc
+      ? `<img src="${esc(logoSrc)}" alt="" class="owner-sponsor-form-preview__logo">`
+      : `<span class="owner-sponsor-form-preview__logo-placeholder" aria-hidden="true">🌐</span>`;
+
+    return `
+      <aside class="owner-sponsor-form-aside">
+        <div class="owner-sponsors-card">
+          <h3 class="owner-sponsors-card__title">Spot Assignment</h3>
+          <p class="owner-muted">This company will be added to the next available spot.</p>
+          <div class="owner-sponsor-form-spot">
+            <span class="owner-sponsor-form-spot__num">${esc(nextSpot)}</span>
+            <span class="owner-muted">Next Available Spot</span>
+          </div>
+        </div>
+
+        <div class="owner-sponsors-card">
+          <h3 class="owner-sponsors-card__title">Public Display Preview</h3>
+          <p class="owner-muted">When active, this logo will appear in the public sponsor bar rotation.</p>
+          <div class="owner-sponsor-form-preview" id="owner-sponsor-public-preview">
+            ${logoPreview}
+            <strong id="owner-sponsor-preview-name">${esc(companyName)}</strong>
+            <span class="owner-muted" id="owner-sponsor-preview-website">${esc(websiteDisplay)}</span>
+          </div>
+        </div>
+
+        <div class="owner-sponsors-card">
+          <h3 class="owner-sponsors-card__title">Guidelines</h3>
+          <ul class="owner-sponsor-form-guidelines">
+            <li>Use high quality logos (transparent background recommended)</li>
+            <li>Logos should be square (1:1 ratio)</li>
+            <li>Company name should be recognizable in the logo</li>
+            <li>Keep descriptions concise and professional</li>
+            <li>Ensure all information is accurate before saving</li>
+          </ul>
+        </div>
+      </aside>
+    `;
+  }
+
   function renderForm(state, helpers) {
     const { esc } = helpers;
     const mode = state.sponsorFormMode;
     const sponsor = state.sponsorDetail || {};
     const isEdit = mode === 'edit';
+    const isCreate = mode === 'create';
     const title = isEdit ? `Edit ${sponsor.companyName || 'Company'}` : 'Add Company';
+    const subtitle = isCreate
+      ? 'Create a new company profile to add to the World Choir sponsor roster.'
+      : 'Update company details, branding, and contacts.';
+    const logoSrc = getLogoPreviewSrc(state, sponsor);
+    const descLen = String(sponsor.internalNotes || '').length;
+    const primary = sponsor.contacts?.primary || {};
+    const secondary = sponsor.contacts?.secondary || {};
+
+    const section1 = `
+      <div class="owner-sponsor-form-grid owner-sponsor-form-grid--2">
+        ${field('Company Name *', `<input class="owner-input" name="companyName" required value="${esc(sponsor.companyName || '')}" placeholder="e.g. Nike, Inc." data-sponsor-preview="name">`)}
+        ${field('Website URL *', `<input class="owner-input" name="companyWebsiteUrl" required value="${esc(sponsor.companyWebsiteUrl || '')}" placeholder="https://www.example.com" data-sponsor-preview="website">`)}
+      </div>
+      <label class="owner-field owner-field--full">
+        <span class="owner-field__lbl">Short Description</span>
+        <textarea class="owner-input" name="internalNotes" rows="3" maxlength="200" placeholder="Enter a short description..." data-sponsor-desc>${esc(sponsor.internalNotes || '')}</textarea>
+        <span class="owner-sponsor-form-counter"><span data-sponsor-desc-count>${descLen}</span> / 200</span>
+      </label>
+      ${field('Status', `
+        <select class="owner-input owner-sponsor-form-status" name="isActive">
+          <option value="1" ${sponsor.isActive !== false ? 'selected' : ''}>● Active</option>
+          <option value="0" ${sponsor.isActive === false ? 'selected' : ''}>○ Inactive</option>
+        </select>
+      `)}
+    `;
+
+    const section2 = `
+      <div class="owner-sponsor-form-branding">
+        <div class="owner-sponsor-form-branding__upload">
+          <label class="owner-field">
+            <span class="owner-field__lbl">Company Logo *</span>
+            <span class="owner-muted owner-sponsor-form-hint">Recommended: PNG or SVG, transparent background, at least 512×512px</span>
+          </label>
+          <div class="owner-sponsor-form-dropzone" id="owner-sponsor-logo-dropzone">
+            <input type="file" id="owner-sponsor-logo-upload" class="owner-sponsor-form-dropzone__input" accept="image/*">
+            <div class="owner-sponsor-form-dropzone__inner">
+              <span class="owner-sponsor-form-dropzone__icon" aria-hidden="true">☁</span>
+              <strong>Upload Logo</strong>
+              <span class="owner-muted">Drag and drop or click to browse</span>
+              <span class="owner-muted owner-sponsor-form-dropzone__types">All image types · up to 8 MB</span>
+            </div>
+          </div>
+          ${state.sponsorPendingLogo?.fileName ? `<p class="owner-muted owner-sponsor-form-file">${esc(state.sponsorPendingLogo.fileName)}</p>` : ''}
+        </div>
+        <div class="owner-sponsor-form-branding__preview">
+          <span class="owner-field__lbl">Logo Preview</span>
+          <div class="owner-sponsor-form-logo-preview" id="owner-sponsor-logo-preview">
+            ${logoSrc
+              ? `<img src="${esc(logoSrc)}" alt="">`
+              : '<span class="owner-sponsor-form-logo-preview__empty"><span aria-hidden="true">🌐</span><strong>COMPANY</strong></span>'}
+          </div>
+        </div>
+      </div>
+      <label class="owner-field owner-field--full">
+        <span class="owner-field__lbl">Website URL (Public)</span>
+        <span class="owner-muted owner-sponsor-form-hint">The company website that will be linked from the public sponsor bar.</span>
+        <input class="owner-input" name="companyWebsiteUrlPublic" value="${esc(sponsor.companyWebsiteUrl || '')}" placeholder="https://www.example.com" data-sponsor-preview="website-public">
+      </label>
+    `;
+
+    const section3 = `
+      <p class="owner-muted owner-sponsor-form-section-note">Primary company contacts</p>
+      <div class="owner-sponsor-form-grid owner-sponsor-form-grid--3">
+        ${field('Primary Contact Name', `<input class="owner-input" name="contacts.primary.fullName" value="${esc(primary.fullName || '')}" placeholder="Full name">`)}
+        ${field('Email Address', `<input class="owner-input" type="email" name="contacts.primary.email" value="${esc(primary.email || '')}" placeholder="email@company.com">`)}
+        ${field('Phone Number', `<input class="owner-input" name="contacts.primary.phone" value="${esc(primary.phone || '')}" placeholder="+1 (555) 000-0000">`)}
+      </div>
+      <div class="owner-sponsor-form-grid owner-sponsor-form-grid--3">
+        ${field('Position / Role', `<input class="owner-input" name="contacts.primary.role" value="${esc(primary.role || '')}" placeholder="e.g. Marketing Director">`)}
+        ${field('Secondary Contact (Optional)', `<input class="owner-input" name="contacts.secondary.fullName" value="${esc(secondary.fullName || '')}" placeholder="Full name">`)}
+        ${field('Secondary Email (Optional)', `<input class="owner-input" type="email" name="contacts.secondary.email" value="${esc(secondary.email || '')}" placeholder="email@company.com">`)}
+      </div>
+    `;
+
+    const advancedSections = isEdit ? `
+      ${renderFormSection('4', 'Contract &amp; Partnership', 'Private commercial information', renderContractFields(sponsor.contract, esc), false)}
+      ${renderFormSection('5', 'Internal Notes', 'Additional private notes', `
+        ${field('Partnership Notes', `<textarea class="owner-input" name="partnershipNotes" rows="3">${esc(sponsor.partnershipNotes || '')}</textarea>`)}
+        ${field('Legal Company Name', `<input class="owner-input" name="legalCompanyName" value="${esc(sponsor.legalCompanyName || '')}">`)}
+        ${field('Internal Reference', `<input class="owner-input" name="internalReference" value="${esc(sponsor.internalReference || '')}">`)}
+        ${field('Country', `<input class="owner-input" name="country" value="${esc(sponsor.country || '')}">`)}
+        ${field('Address', `<textarea class="owner-input" name="address" rows="2">${esc(sponsor.address || '')}</textarea>`)}
+      `, false)}
+      ${renderFormSection('6', 'Contract Documents', 'Private supporting files', `
+        <div class="owner-upload" style="margin-bottom:12px">
+          <label class="owner-upload__pick">
+            <input type="file" id="owner-sponsor-doc-upload" accept=".pdf,.doc,.docx,.txt,image/*">
+            Upload document
+          </label>
+          <input class="owner-input" id="owner-sponsor-doc-desc" placeholder="Optional description" style="margin-top:8px">
+        </div>
+        ${renderDocuments(sponsor, esc)}
+      `, false)}
+    ` : '';
 
     return `
-      <section class="owner-section owner-sponsor-form">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
-          <div>
-            <p class="owner-section__label">Company Management</p>
-            <h2 class="owner-h1">${esc(title)}</h2>
+      <div class="owner-sponsors-page owner-sponsors-form-page">
+        ${renderSubNav()}
+
+        <div class="owner-sponsor-form-toolbar">
+          <button type="button" class="owner-sponsor-form-back" data-sponsor-form-cancel>‹ Back to Sponsors</button>
+          <div class="owner-sponsor-form-toolbar__actions">
+            <button type="button" class="owner-btn-ghost" data-sponsor-form-cancel>Cancel</button>
+            <button type="submit" form="owner-sponsor-form" class="owner-btn" ${state.sponsorsBusy ? 'disabled' : ''}>${state.sponsorsBusy ? 'Saving…' : 'Save Company'}</button>
           </div>
-          <button type="button" class="owner-btn-ghost" data-sponsor-form-cancel>Back to roster</button>
         </div>
 
-        <form id="owner-sponsor-form" class="owner-form">
-          <input type="hidden" name="id" value="${esc(sponsor.id || '')}">
+        <header class="owner-sponsor-form-intro">
+          <h2 class="owner-sponsor-form-intro__title">${esc(title)}</h2>
+          <p class="owner-sponsor-form-intro__sub">${esc(subtitle)}</p>
+        </header>
 
-          <details class="owner-sponsor-panel" open>
-            <summary>Company</summary>
-            <div class="owner-form-grid">
-              ${field('Company Name *', `<input class="owner-input" name="companyName" required value="${esc(sponsor.companyName || '')}" placeholder="Nike">`)}
-              ${field('Legal Company Name', `<input class="owner-input" name="legalCompanyName" value="${esc(sponsor.legalCompanyName || '')}">`)}
-              ${field('Internal Reference', `<input class="owner-input" name="internalReference" value="${esc(sponsor.internalReference || '')}">`)}
-              ${field('Country', `<input class="owner-input" name="country" value="${esc(sponsor.country || '')}">`)}
-              ${field('Address', `<textarea class="owner-input" name="address" rows="2">${esc(sponsor.address || '')}</textarea>`)}
-              ${isEdit ? field('Status', `<select class="owner-input" name="isActive"><option value="1" ${sponsor.isActive ? 'selected' : ''}>Active</option><option value="0" ${!sponsor.isActive ? 'selected' : ''}>Inactive</option></select>`) : field('Start as', `<select class="owner-input" name="isActive"><option value="1" selected>Active</option><option value="0">Inactive</option></select>`)}
-            </div>
-          </details>
-
-          <details class="owner-sponsor-panel" open>
-            <summary>Branding</summary>
-            <div class="owner-upload">
-              <div class="owner-upload__preview" id="owner-sponsor-logo-preview">
-                ${sponsor.companyLogoUrl ? `<img src="${esc(sponsor.companyLogoUrl)}" alt="">` : '<span class="owner-muted">No logo yet</span>'}
+        <div class="owner-sponsor-form-layout">
+          <form id="owner-sponsor-form" class="owner-sponsor-form-main">
+            <input type="hidden" name="id" value="${esc(sponsor.id || '')}">
+            ${renderFormSection('1', 'Company Information', 'Basic company details and status', section1)}
+            ${renderFormSection('2', 'Branding &amp; Website', 'Logo and public-facing brand assets', section2)}
+            ${renderFormSection('3', 'Contacts', 'Primary company contacts', section3)}
+            ${advancedSections}
+            ${isEdit ? `
+              <div class="owner-sponsor-form-footer">
+                <button type="button" class="owner-btn-ghost" data-sponsor-delete="${esc(sponsor.id)}" data-sponsor-name="${esc(sponsor.companyName)}">Delete Company</button>
               </div>
-              <label class="owner-upload__pick">
-                <input type="file" id="owner-sponsor-logo-upload" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" ${isEdit ? '' : 'disabled'}>
-                ${isEdit ? 'Upload approved logo' : 'Save company first, then upload logo'}
-              </label>
-              <p class="owner-muted">PNG, WebP, GIF, JPEG, or SVG. Max 8 MB. Logo is shown at fixed height on the Map — the original asset is preserved.</p>
-            </div>
-          </details>
-
-          <details class="owner-sponsor-panel" open>
-            <summary>Website</summary>
-            ${field('Website URL', `<input class="owner-input" name="companyWebsiteUrl" value="${esc(sponsor.companyWebsiteUrl || '')}" placeholder="https://example.com">`)}
-            ${sponsor.companyWebsiteUrl ? `<p><a class="owner-link" href="${esc(sponsor.companyWebsiteUrl)}" target="_blank" rel="noopener noreferrer">Open website ↗</a></p>` : ''}
-          </details>
-
-          <details class="owner-sponsor-panel">
-            <summary>Contacts</summary>
-            <p class="owner-sub">Primary contact</p>
-            ${renderContactFields('contacts.primary', sponsor.contacts?.primary, esc)}
-            <p class="owner-sub" style="margin-top:14px">Secondary contact (optional)</p>
-            ${renderContactFields('contacts.secondary', sponsor.contacts?.secondary, esc)}
-          </details>
-
-          <details class="owner-sponsor-panel">
-            <summary>Contract &amp; Partnership</summary>
-            ${renderContractFields(sponsor.contract, esc)}
-          </details>
-
-          <details class="owner-sponsor-panel">
-            <summary>Internal Notes</summary>
-            ${field('Internal Notes', `<textarea class="owner-input" name="internalNotes" rows="4">${esc(sponsor.internalNotes || '')}</textarea>`)}
-            ${field('Partnership Notes', `<textarea class="owner-input" name="partnershipNotes" rows="3">${esc(sponsor.partnershipNotes || '')}</textarea>`)}
-          </details>
-
-          ${isEdit ? `
-            <details class="owner-sponsor-panel">
-              <summary>Contract Documents</summary>
-              <div class="owner-upload" style="margin-bottom:12px">
-                <label class="owner-upload__pick">
-                  <input type="file" id="owner-sponsor-doc-upload" accept=".pdf,.doc,.docx,.txt,image/*">
-                  Upload document
-                </label>
-                <input class="owner-input" id="owner-sponsor-doc-desc" placeholder="Optional description" style="margin-top:8px">
-              </div>
-              ${renderDocuments(sponsor, esc)}
-            </details>
-          ` : ''}
-
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
-            <button type="submit" class="owner-btn" ${state.sponsorsBusy ? 'disabled' : ''}>${state.sponsorsBusy ? 'Saving…' : 'Save Company'}</button>
-            ${isEdit ? `<button type="button" class="owner-btn-ghost" data-sponsor-delete="${esc(sponsor.id)}" data-sponsor-name="${esc(sponsor.companyName)}">Delete Company</button>` : ''}
-          </div>
-        </form>
-      </section>
+            ` : ''}
+          </form>
+          ${renderFormSidebar(state, helpers)}
+        </div>
+      </div>
     `;
   }
 
@@ -581,12 +710,13 @@ const OwnerMapSponsors = (() => {
   function buildUpdatePayload(raw) {
     const contract = raw.contract || {};
     const numOrNull = (v) => (v === '' || v == null ? null : Number(v));
+    const website = String(raw.companyWebsiteUrl || raw.companyWebsiteUrlPublic || '').trim();
 
     return {
       companyName: String(raw.companyName || '').trim(),
       legalCompanyName: String(raw.legalCompanyName || '').trim(),
       internalReference: String(raw.internalReference || '').trim(),
-      companyWebsiteUrl: String(raw.companyWebsiteUrl || '').trim(),
+      companyWebsiteUrl: website,
       address: String(raw.address || '').trim(),
       country: String(raw.country || '').trim(),
       internalNotes: String(raw.internalNotes || '').trim(),
@@ -599,6 +729,110 @@ const OwnerMapSponsors = (() => {
         amountOutstanding: numOrNull(contract.amountOutstanding),
       },
     };
+  }
+
+  function updateFormPreview(root) {
+    const name = root.querySelector('[name="companyName"]')?.value?.trim() || 'Company';
+    const website = root.querySelector('[name="companyWebsiteUrl"]')?.value?.trim()
+      || root.querySelector('[name="companyWebsiteUrlPublic"]')?.value?.trim()
+      || '';
+    const websiteDisplay = website ? website.replace(/^https?:\/\//, '') : 'example.com';
+    const nameEl = root.querySelector('#owner-sponsor-preview-name');
+    const webEl = root.querySelector('#owner-sponsor-preview-website');
+    if (nameEl) nameEl.textContent = name;
+    if (webEl) webEl.textContent = websiteDisplay;
+  }
+
+  function bindFormInteractions(root, state, ctx) {
+    const form = root.querySelector('#owner-sponsor-form');
+    if (!form) return;
+
+    const desc = form.querySelector('[data-sponsor-desc]');
+    const descCount = form.querySelector('[data-sponsor-desc-count]');
+    desc?.addEventListener('input', () => {
+      if (descCount) descCount.textContent = String(desc.value.length);
+    });
+
+    const websiteMain = form.querySelector('[name="companyWebsiteUrl"]');
+    const websitePublic = form.querySelector('[name="companyWebsiteUrlPublic"]');
+    websiteMain?.addEventListener('input', () => {
+      if (websitePublic) websitePublic.value = websiteMain.value;
+      updateFormPreview(root);
+    });
+    websitePublic?.addEventListener('input', () => {
+      if (websiteMain) websiteMain.value = websitePublic.value;
+      updateFormPreview(root);
+    });
+    form.querySelector('[name="companyName"]')?.addEventListener('input', () => updateFormPreview(root));
+
+    const processLogoFile = async (file) => {
+      if (!file) return;
+      if (!isImageFile(file)) {
+        ctx.setFlash('Please choose an image file from your device.', 'err');
+        ctx.onRender();
+        return;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        ctx.setFlash('Logo must be under 8 MB.', 'err');
+        ctx.onRender();
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        if (state.sponsorFormMode === 'create' || !state.sponsorDetail?.id) {
+          state.sponsorPendingLogo = { dataUrl: reader.result, fileName: file.name };
+          ctx.onRender();
+          return;
+        }
+
+        state.sponsorsBusy = true;
+        ctx.onRender();
+        try {
+          const res = await ctx.api('upload-map-sponsor-logo', {
+            method: 'POST',
+            body: { id: state.sponsorDetail.id, dataUrl: reader.result, fileName: file.name },
+          });
+          state.sponsorDetail = res.sponsor;
+          state.sponsorPendingLogo = null;
+          ctx.setFlash('Logo uploaded.');
+        } catch (err) {
+          ctx.setFlash(err.message, 'err');
+        } finally {
+          state.sponsorsBusy = false;
+          ctx.onRender();
+        }
+      };
+      reader.onerror = () => {
+        ctx.setFlash('Could not read that image file.', 'err');
+        ctx.onRender();
+      };
+      reader.readAsDataURL(file);
+    };
+
+    const logoInput = root.querySelector('#owner-sponsor-logo-upload');
+    logoInput?.addEventListener('change', () => {
+      const file = logoInput.files?.[0];
+      processLogoFile(file);
+      logoInput.value = '';
+    });
+
+    const dropzone = root.querySelector('#owner-sponsor-logo-dropzone');
+    if (dropzone) {
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('is-dragover');
+      });
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('is-dragover');
+      });
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('is-dragover');
+        const file = e.dataTransfer?.files?.[0];
+        processLogoFile(file);
+      });
+    }
   }
 
   function bindDragDrop(root, state, ctx) {
@@ -675,6 +909,7 @@ const OwnerMapSponsors = (() => {
     root.querySelector('[data-sponsor-create]')?.addEventListener('click', () => {
       state.sponsorFormMode = 'create';
       state.sponsorDetail = { isActive: true, contacts: { primary: {}, secondary: {} }, contract: {} };
+      state.sponsorPendingLogo = null;
       scrollToTop();
       ctx.onRender();
     });
@@ -683,16 +918,20 @@ const OwnerMapSponsors = (() => {
       btn.addEventListener('click', () => {
         state.sponsorFormMode = 'create';
         state.sponsorDetail = { isActive: true, contacts: { primary: {}, secondary: {} }, contract: {} };
+        state.sponsorPendingLogo = null;
         scrollToTop();
         ctx.onRender();
       });
     });
 
-    root.querySelector('[data-sponsor-form-cancel]')?.addEventListener('click', () => {
-      state.sponsorFormMode = null;
-      state.sponsorDetail = null;
-      scrollToTop();
-      ctx.onRender();
+    root.querySelectorAll('[data-sponsor-form-cancel]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.sponsorFormMode = null;
+        state.sponsorDetail = null;
+        state.sponsorPendingLogo = null;
+        scrollToTop();
+        ctx.onRender();
+      });
     });
 
     root.querySelectorAll('[data-sponsor-view]').forEach((btn) => {
@@ -726,6 +965,7 @@ const OwnerMapSponsors = (() => {
           const res = await ctx.api('map-sponsor', { query: `&id=${encodeURIComponent(id)}` });
           state.sponsorDetail = res.sponsor;
           state.sponsorFormMode = 'edit';
+          state.sponsorPendingLogo = null;
           scrollToTop();
           ctx.onRender();
         } catch (err) {
@@ -809,36 +1049,7 @@ const OwnerMapSponsors = (() => {
     });
 
     bindDragDrop(root, state, ctx);
-
-    const logoInput = root.querySelector('#owner-sponsor-logo-upload');
-    logoInput?.addEventListener('change', async () => {
-      const file = logoInput.files?.[0];
-      if (!file || !state.sponsorDetail?.id) return;
-      if (file.size > 8 * 1024 * 1024) {
-        ctx.setFlash('Logo must be under 8 MB.', 'err');
-        ctx.onRender();
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = async () => {
-        state.sponsorsBusy = true;
-        ctx.onRender();
-        try {
-          const res = await ctx.api('upload-map-sponsor-logo', {
-            method: 'POST',
-            body: { id: state.sponsorDetail.id, dataUrl: reader.result, fileName: file.name },
-          });
-          state.sponsorDetail = res.sponsor;
-          ctx.setFlash('Logo uploaded.');
-        } catch (err) {
-          ctx.setFlash(err.message, 'err');
-        } finally {
-          state.sponsorsBusy = false;
-          ctx.onRender();
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    bindFormInteractions(root, state, ctx);
 
     const docInput = root.querySelector('#owner-sponsor-doc-upload');
     docInput?.addEventListener('change', async () => {
@@ -912,7 +1123,20 @@ const OwnerMapSponsors = (() => {
             method: 'POST',
             body: { ...payload, isActive },
           });
-          state.sponsorDetail = res.sponsor;
+          let sponsor = res.sponsor;
+          if (state.sponsorPendingLogo?.dataUrl) {
+            const logoRes = await ctx.api('upload-map-sponsor-logo', {
+              method: 'POST',
+              body: {
+                id: sponsor.id,
+                dataUrl: state.sponsorPendingLogo.dataUrl,
+                fileName: state.sponsorPendingLogo.fileName,
+              },
+            });
+            sponsor = logoRes.sponsor;
+          }
+          state.sponsorDetail = sponsor;
+          state.sponsorPendingLogo = null;
           state.sponsorFormMode = 'edit';
           state.sponsorsData = null;
           await ctx.loadData(true);
