@@ -650,16 +650,7 @@ const PassTheWorld = (() => {
     if (mode === 'itinerary') {
       content.innerHTML = `
         <h2 class="ptw-panel-title">THE JOURNEY</h2>
-        <div class="ptw-itinerary">${renderItinerary(lastPayload.itinerary)}</div>
-        <button type="button" class="ptw-link-btn ptw-link-btn--secondary" data-ptw-stats>Journey so far</button>
-        <div class="ptw-stats-slot" data-ptw-stats-slot hidden>${renderStats(lastPayload.stats)}</div>
-      `;
-      content.querySelector('[data-ptw-stats]')?.addEventListener('click', () => {
-        const slot = content.querySelector('[data-ptw-stats-slot]');
-        if (!slot) return;
-        if (slot.hasAttribute('hidden')) slot.removeAttribute('hidden');
-        else slot.setAttribute('hidden', '');
-      });
+        <div class="ptw-itinerary">${renderItinerary(lastPayload.itinerary)}</div>`;
     }
     panel.hidden = false;
     panel.setAttribute('aria-hidden', 'false');
