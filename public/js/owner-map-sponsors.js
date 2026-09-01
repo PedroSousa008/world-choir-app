@@ -40,7 +40,17 @@ const OwnerMapSponsors = (() => {
     ['other', 'Other'],
   ];
 
+  const MOBILE_MAX_VISIBLE = 6;
+  const DESKTOP_MAX_VISIBLE = 10;
+  const SPOTS_PER_PAGE = 8;
+
   let dragId = null;
+
+  function scrollToTop() {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }
 
   function pad2(n) {
     return String(n).padStart(2, '0');
@@ -67,86 +77,234 @@ const OwnerMapSponsors = (() => {
     return rows;
   }
 
-  function renderOverview(data, esc) {
-    const o = data?.overview || {};
+  function formatAddedDate(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
+      });
+    } catch {
+      return '—';
+    }
+  }
+
+  function visibleCount(activeCount, max) {
+    return Math.min(activeCount, max);
+  }
+
+  function renderSubNav() {
     return `
-      <div class="owner-sponsor-overview">
-        <div class="owner-sponsor-stat"><span class="owner-sponsor-stat__val">${esc(o.totalCompanies ?? 0)}</span><span class="owner-sponsor-stat__lbl">Total Companies</span></div>
-        <div class="owner-sponsor-stat"><span class="owner-sponsor-stat__val">${esc(o.activeCount ?? 0)}</span><span class="owner-sponsor-stat__lbl">Active Sponsors</span></div>
-        <div class="owner-sponsor-stat"><span class="owner-sponsor-stat__val">${esc(o.inactiveCount ?? 0)}</span><span class="owner-sponsor-stat__lbl">Inactive</span></div>
-        <div class="owner-sponsor-stat"><span class="owner-sponsor-stat__val">${esc(o.availablePositions ?? 0)}</span><span class="owner-sponsor-stat__lbl">Available Positions</span></div>
+      <nav class="owner-sponsors-subnav" aria-label="Related sections">
+        <button type="button" class="owner-sponsors-subnav__btn" data-section-jump="foundations">Creator Foundations</button>
+        <button type="button" class="owner-sponsors-subnav__btn is-active" aria-current="page">Sponsors</button>
+        <button type="button" class="owner-sponsors-subnav__btn" data-section-jump="event">Event</button>
+      </nav>
+    `;
+  }
+
+  function renderStatCards(data, esc) {
+    const o = data?.overview || {};
+    const capacity = data?.capacity ?? 20;
+    const active = o.activeCount ?? 0;
+    const mobileVisible = visibleCount(active, MOBILE_MAX_VISIBLE);
+    const desktopVisible = visibleCount(active, DESKTOP_MAX_VISIBLE);
+
+    return `
+      <div class="owner-sponsors-stats">
+        <div class="owner-sponsors-stat">
+          <span class="owner-sponsors-stat__icon" aria-hidden="true">◎</span>
+          <div>
+            <span class="owner-sponsors-stat__val">${esc(capacity)}</span>
+            <span class="owner-sponsors-stat__lbl">Total Spots</span>
+          </div>
+        </div>
+        <div class="owner-sponsors-stat">
+          <span class="owner-sponsors-stat__icon" aria-hidden="true">◉</span>
+          <div>
+            <span class="owner-sponsors-stat__val">${esc(active)} Active</span>
+            <span class="owner-sponsors-stat__lbl">Active Sponsors</span>
+          </div>
+        </div>
+        <div class="owner-sponsors-stat">
+          <span class="owner-sponsors-stat__icon" aria-hidden="true">▢</span>
+          <div>
+            <span class="owner-sponsors-stat__val">${esc(mobileVisible)} / ${esc(MOBILE_MAX_VISIBLE)}</span>
+            <span class="owner-sponsors-stat__lbl">Visible Now (Mobile) · Max ${esc(MOBILE_MAX_VISIBLE)}</span>
+          </div>
+        </div>
+        <div class="owner-sponsors-stat">
+          <span class="owner-sponsors-stat__icon" aria-hidden="true">▣</span>
+          <div>
+            <span class="owner-sponsors-stat__val">${esc(desktopVisible)} / ${esc(DESKTOP_MAX_VISIBLE)}</span>
+            <span class="owner-sponsors-stat__lbl">Visible Now (Desktop) · Max ${esc(DESKTOP_MAX_VISIBLE)}</span>
+          </div>
+        </div>
       </div>
     `;
   }
 
-  function renderSlotRow(slot, esc, { isFirst, isLast }) {
+  function renderStatusPill(isActive, isEmpty = false) {
+    if (isEmpty) {
+      return '<span class="owner-sponsors-status owner-sponsors-status--empty"><span class="owner-sponsors-status__dot"></span>Empty</span>';
+    }
+    if (isActive) {
+      return '<span class="owner-sponsors-status owner-sponsors-status--active"><span class="owner-sponsors-status__dot"></span>Active</span>';
+    }
+    return '<span class="owner-sponsors-status owner-sponsors-status--inactive"><span class="owner-sponsors-status__dot"></span>Inactive</span>';
+  }
+
+  function renderTableRow(slot, esc, { isFirst, isLast }) {
     const pos = slot.position;
     const s = slot.sponsor;
 
     if (!s) {
       return `
-        <div class="owner-sponsor-slot owner-sponsor-slot--empty" data-sponsor-slot="${pos}">
-          <div class="owner-sponsor-slot__pos">${pad2(pos)}</div>
-          <div class="owner-sponsor-slot__body">
-            <span class="owner-muted">Available</span>
-          </div>
-          <div class="owner-sponsor-slot__actions">
-            <button type="button" class="owner-btn" data-sponsor-create-at="${pos}">+ Add Company</button>
-          </div>
-        </div>
+        <tr class="owner-sponsors-row owner-sponsors-row--empty" data-sponsor-slot="${pos}">
+          <td class="owner-sponsors-row__drag" aria-hidden="true"></td>
+          <td class="owner-sponsors-row__order">${pad2(pos)}</td>
+          <td class="owner-sponsors-row__company">
+            <span class="owner-sponsors-row__empty-icon" aria-hidden="true">+</span>
+            <span>
+              <strong>Available Spot</strong>
+              <span class="owner-muted owner-sponsors-row__hint">Add a company to this position</span>
+            </span>
+          </td>
+          <td class="owner-sponsors-row__website">—</td>
+          <td class="owner-sponsors-row__status">${renderStatusPill(false, true)}</td>
+          <td class="owner-sponsors-row__added">—</td>
+          <td class="owner-sponsors-row__actions">
+            <button type="button" class="owner-sponsors-icon-btn" data-sponsor-create-at="${pos}" aria-label="Add company to spot ${pad2(pos)}">+</button>
+          </td>
+        </tr>
       `;
     }
 
     const logo = s.companyLogoUrl
-      ? `<img src="${esc(s.companyLogoUrl)}" alt="" class="owner-sponsor-slot__logo">`
-      : '<span class="owner-sponsor-slot__logo owner-sponsor-slot__logo--empty">—</span>';
+      ? `<img src="${esc(s.companyLogoUrl)}" alt="" class="owner-sponsors-row__logo">`
+      : '<span class="owner-sponsors-row__logo owner-sponsors-row__logo--empty" aria-hidden="true">—</span>';
+
+    const websiteCell = s.companyWebsiteUrl
+      ? `<a href="${esc(s.companyWebsiteUrl)}" target="_blank" rel="noopener noreferrer" class="owner-sponsors-link" data-sponsor-stop>${esc(s.companyWebsiteUrl.replace(/^https?:\/\//, ''))} <span aria-hidden="true">↗</span></a>`
+      : '<span class="owner-muted">—</span>';
 
     return `
-      <div
-        class="owner-sponsor-slot"
+      <tr
+        class="owner-sponsors-row"
         data-sponsor-slot="${pos}"
         data-sponsor-id="${esc(s.id)}"
         draggable="true"
       >
-        <div class="owner-sponsor-slot__drag" aria-hidden="true" title="Drag to reorder">⋮⋮</div>
-        <div class="owner-sponsor-slot__pos">${pad2(pos)}</div>
-        ${logo}
-        <div class="owner-sponsor-slot__body">
+        <td class="owner-sponsors-row__drag" title="Drag to reorder" aria-label="Drag to reorder">⠿</td>
+        <td class="owner-sponsors-row__order">${pad2(pos)}</td>
+        <td class="owner-sponsors-row__company">
+          ${logo}
           <strong>${esc(s.companyName)}</strong>
-          <span class="owner-sponsor-slot__meta">
-            <span class="owner-badge ${s.isActive ? 'is-on' : ''}">${esc(statusLabel(s.isActive))}</span>
-            ${s.companyWebsiteUrl ? `<a href="${esc(s.companyWebsiteUrl)}" target="_blank" rel="noopener noreferrer" class="owner-link" data-sponsor-stop>${esc(s.companyWebsiteUrl.replace(/^https?:\/\//, '').slice(0, 40))}</a>` : '<span class="owner-muted">No website</span>'}
-          </span>
-        </div>
-        <div class="owner-sponsor-slot__actions">
-          <button type="button" class="owner-btn-ghost" data-sponsor-move="up" data-sponsor-id="${esc(s.id)}" ${isFirst ? 'disabled' : ''} aria-label="Move up">↑</button>
-          <button type="button" class="owner-btn-ghost" data-sponsor-move="down" data-sponsor-id="${esc(s.id)}" ${isLast ? 'disabled' : ''} aria-label="Move down">↓</button>
-          <button type="button" class="owner-btn-ghost" data-sponsor-edit="${esc(s.id)}">Edit</button>
-          <button type="button" class="owner-btn-ghost" data-sponsor-deactivate="${esc(s.id)}">Deactivate</button>
-        </div>
-      </div>
+        </td>
+        <td class="owner-sponsors-row__website">${websiteCell}</td>
+        <td class="owner-sponsors-row__status">${renderStatusPill(s.isActive)}</td>
+        <td class="owner-sponsors-row__added">${esc(formatAddedDate(s.createdAt))}</td>
+        <td class="owner-sponsors-row__actions">
+          <button type="button" class="owner-sponsors-icon-btn" data-sponsor-edit="${esc(s.id)}" aria-label="Edit ${esc(s.companyName)}">✎</button>
+          <button type="button" class="owner-sponsors-icon-btn" data-sponsor-move="up" data-sponsor-id="${esc(s.id)}" ${isFirst ? 'disabled' : ''} aria-label="Move up">↑</button>
+          <button type="button" class="owner-sponsors-icon-btn" data-sponsor-move="down" data-sponsor-id="${esc(s.id)}" ${isLast ? 'disabled' : ''} aria-label="Move down">↓</button>
+          <button type="button" class="owner-sponsors-icon-btn" data-sponsor-deactivate="${esc(s.id)}" aria-label="Deactivate ${esc(s.companyName)}">⊘</button>
+        </td>
+      </tr>
     `;
   }
 
-  function renderRoster(state, helpers) {
+  function renderPagination(state, totalPages, esc) {
+    if (totalPages <= 1) return '';
+    const page = state.sponsorsPage || 1;
+    return `
+      <nav class="owner-sponsors-pagination" aria-label="Roster pages">
+        <button type="button" class="owner-sponsors-pagination__btn" data-sponsor-page="${page - 1}" ${page <= 1 ? 'disabled' : ''} aria-label="Previous page">‹</button>
+        ${Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => `
+          <button type="button" class="owner-sponsors-pagination__btn ${n === page ? 'is-active' : ''}" data-sponsor-page="${n}" ${n === page ? 'aria-current="page"' : ''}>${n}</button>
+        `).join('')}
+        <button type="button" class="owner-sponsors-pagination__btn" data-sponsor-page="${page + 1}" ${page >= totalPages ? 'disabled' : ''} aria-label="Next page">›</button>
+      </nav>
+    `;
+  }
+
+  function renderSidebar(data, esc) {
+    const o = data?.overview || {};
+    const active = o.activeCount ?? 0;
+    const mobileVisible = visibleCount(active, MOBILE_MAX_VISIBLE);
+    const desktopVisible = visibleCount(active, DESKTOP_MAX_VISIBLE);
+    const inactiveCount = o.inactiveCount ?? 0;
+
+    return `
+      <aside class="owner-sponsors-aside">
+        <div class="owner-sponsors-card">
+          <h3 class="owner-sponsors-card__title">Public Sponsor Bar</h3>
+          <p class="owner-muted">Active sponsors appear on the World Choir Map header belt.</p>
+          <div class="owner-sponsors-card__metrics">
+            <div><span class="owner-muted">Mobile</span><strong>${esc(mobileVisible)}</strong></div>
+            <div><span class="owner-muted">Desktop</span><strong>${esc(desktopVisible)}</strong></div>
+          </div>
+          <a class="owner-btn-ghost owner-sponsors-card__btn" href="/map" target="_blank" rel="noopener noreferrer">View Public Preview ↗</a>
+        </div>
+
+        <div class="owner-sponsors-card">
+          <h3 class="owner-sponsors-card__title">Information</h3>
+          <ul class="owner-sponsors-info">
+            <li><strong>Reorder</strong><span>Drag and drop to change the order of sponsors.</span></li>
+            <li><strong>Auto-Compaction</strong><span>When a sponsor is removed or deactivated, remaining sponsors move up automatically.</span></li>
+            <li><strong>Visibility</strong><span>Only active sponsors are included in the public rotation.</span></li>
+            <li><strong>Changes Apply Immediately</strong><span>All changes are reflected on the public sponsor bar after save.</span></li>
+          </ul>
+        </div>
+
+        ${inactiveCount > 0 ? `
+          <div class="owner-sponsors-card">
+            <h3 class="owner-sponsors-card__title">Inactive Companies</h3>
+            <p class="owner-muted">${esc(inactiveCount)} inactive ${inactiveCount === 1 ? 'company' : 'companies'} stored.</p>
+            <button type="button" class="owner-btn-ghost owner-sponsors-card__btn" data-sponsor-view="inactive">View inactive</button>
+          </div>
+        ` : ''}
+      </aside>
+    `;
+  }
+
+  function renderRosterTable(state, helpers) {
     const { esc } = helpers;
-    const data = state.sponsorsData || { slots: [], overview: {} };
-    const activeSlots = (data.slots || []).filter((slot) => slot.sponsor);
+    const data = state.sponsorsData || { slots: [], capacity: 20 };
+    const allSlots = data.slots || [];
+    const capacity = data.capacity ?? 20;
+    const totalPages = Math.max(1, Math.ceil(capacity / SPOTS_PER_PAGE));
+    const page = Math.min(Math.max(1, state.sponsorsPage || 1), totalPages);
+    const start = (page - 1) * SPOTS_PER_PAGE;
+    const pageSlots = allSlots.slice(start, start + SPOTS_PER_PAGE);
+
+    const activeSlots = allSlots.filter((slot) => slot.sponsor);
     const activeIds = activeSlots.map((slot) => slot.sponsor.id);
     const firstId = activeIds[0] || null;
     const lastId = activeIds[activeIds.length - 1] || null;
 
     return `
-      <section class="owner-section">
-        <p class="owner-section__label">Sponsor Rotation</p>
-        <p class="owner-sub">Drag to reorder the public Map belt. Empty positions never appear publicly.</p>
-        <div class="owner-sponsor-roster" data-sponsor-roster>
-          ${(data.slots || []).map((slot) => renderSlotRow(slot, esc, {
-            isFirst: slot.sponsor?.id === firstId,
-            isLast: slot.sponsor?.id === lastId,
-          })).join('')}
-        </div>
-      </section>
+      <div class="owner-sponsors-table-wrap">
+        <table class="owner-sponsors-table">
+          <thead>
+            <tr>
+              <th scope="col" class="owner-sponsors-row__drag"></th>
+              <th scope="col">Order</th>
+              <th scope="col">Company</th>
+              <th scope="col">Website</th>
+              <th scope="col">Status</th>
+              <th scope="col">Added</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody data-sponsor-roster>
+            ${pageSlots.map((slot) => renderTableRow(slot, esc, {
+              isFirst: slot.sponsor?.id === firstId,
+              isLast: slot.sponsor?.id === lastId,
+            })).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${renderPagination(state, totalPages, esc)}
     `;
   }
 
@@ -360,55 +518,45 @@ const OwnerMapSponsors = (() => {
       return '<p class="owner-muted">Loading sponsors…</p>';
     }
 
+    if (state.sponsorsView === 'inactive') {
+      return `
+        <div class="owner-sponsors-page">
+          ${renderSubNav()}
+          <header class="owner-sponsors-header">
+            <div>
+              <h2 class="owner-sponsors-header__title">Inactive Companies</h2>
+              <p class="owner-sponsors-header__sub">Stored companies not in the public rotation.</p>
+            </div>
+            <button type="button" class="owner-btn-ghost" data-sponsor-view="roster">← Back to roster</button>
+          </header>
+          <section class="owner-section">${renderInactiveList(state, helpers)}</section>
+        </div>
+      `;
+    }
+
     return `
-      <section class="owner-section">
-        <p class="owner-section__label">Map Sponsors</p>
-        <h2 class="owner-h1">Sponsor Management</h2>
-        <p class="owner-sub">Control the companies shown in the World Choir Map “supported by” belt. Changes go live immediately after save.</p>
-        ${renderOverview(data, esc)}
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-          <button type="button" class="owner-btn" data-sponsor-create>+ Add Company</button>
-          <button type="button" class="owner-btn-ghost" data-sponsor-refresh>Refresh</button>
-          <a class="owner-btn-ghost" href="/map" target="_blank" rel="noopener noreferrer">Preview Map ↗</a>
-        </div>
-        <input class="owner-input" type="search" placeholder="Search companies…" value="${esc(state.sponsorsQuery)}" data-sponsor-query style="margin-bottom:12px">
-        <div class="owner-chips" style="margin-bottom:16px">
-          ${[
-            ['roster', 'Roster'],
-            ['inactive', 'Inactive'],
-            ['all', 'All Companies'],
-          ].map(([id, label]) => `
-            <button type="button" class="owner-chip ${state.sponsorsView === id ? 'is-active' : ''}" data-sponsor-view="${id}">${label}</button>
-          `).join('')}
-        </div>
-      </section>
-      ${state.sponsorsView === 'inactive' ? `
-        <section class="owner-section">
-          <p class="owner-section__label">Inactive Companies</p>
-          ${renderInactiveList(state, helpers)}
-        </section>
-      ` : ''}
-      ${state.sponsorsView === 'all' ? `
-        <section class="owner-section">
-          <p class="owner-section__label">All Companies</p>
-          <div class="owner-table-wrap">
-            <table class="owner-table">
-              <thead><tr><th>Company</th><th>Status</th><th>Order</th><th></th></tr></thead>
-              <tbody>
-                ${filterCompanies(data.companies, state.sponsorsQuery, 'all').map((s) => `
-                  <tr>
-                    <td>${s.companyLogoUrl ? `<img src="${esc(s.companyLogoUrl)}" alt="" class="owner-dap-logo"> ` : ''}${esc(s.companyName)}</td>
-                    <td>${esc(statusLabel(s.isActive))}</td>
-                    <td>${s.isActive ? pad2(s.displayOrder) : '—'}</td>
-                    <td><button type="button" class="owner-btn-ghost" data-sponsor-edit="${esc(s.id)}">Edit</button></td>
-                  </tr>
-                `).join('') || '<tr><td colspan="4" class="owner-empty">No companies found.</td></tr>'}
-              </tbody>
-            </table>
+      <div class="owner-sponsors-page">
+        ${renderSubNav()}
+        <header class="owner-sponsors-header">
+          <div>
+            <h2 class="owner-sponsors-header__title">Sponsors</h2>
+            <p class="owner-sponsors-header__sub">Manage companies supporting World Choir. Active sponsors appear on the public map sponsor bar.</p>
           </div>
-        </section>
-      ` : ''}
-      ${state.sponsorsView === 'roster' || !state.sponsorsView ? renderRoster(state, helpers) : ''}
+          <div class="owner-sponsors-header__actions">
+            <a class="owner-btn-ghost" href="/map" target="_blank" rel="noopener noreferrer">View Public Preview ↗</a>
+            <button type="button" class="owner-btn" data-sponsor-create>+ Add Company</button>
+          </div>
+        </header>
+
+        ${renderStatCards(data, esc)}
+
+        <div class="owner-sponsors-layout">
+          <div class="owner-sponsors-main">
+            ${renderRosterTable(state, helpers)}
+          </div>
+          ${renderSidebar(data, esc)}
+        </div>
+      </div>
     `;
   }
 
@@ -457,34 +605,34 @@ const OwnerMapSponsors = (() => {
     const roster = root.querySelector('[data-sponsor-roster]');
     if (!roster) return;
 
-    roster.querySelectorAll('.owner-sponsor-slot[data-sponsor-id]').forEach((slot) => {
-      slot.addEventListener('dragstart', (e) => {
-        dragId = slot.getAttribute('data-sponsor-id');
-        slot.classList.add('is-dragging');
+    roster.querySelectorAll('.owner-sponsors-row[data-sponsor-id]').forEach((row) => {
+      row.addEventListener('dragstart', (e) => {
+        dragId = row.getAttribute('data-sponsor-id');
+        row.classList.add('is-dragging');
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', dragId);
       });
 
-      slot.addEventListener('dragend', () => {
+      row.addEventListener('dragend', () => {
         dragId = null;
-        slot.classList.remove('is-dragging');
-        roster.querySelectorAll('.owner-sponsor-slot').forEach((el) => el.classList.remove('is-drop-target'));
+        row.classList.remove('is-dragging');
+        roster.querySelectorAll('.owner-sponsors-row').forEach((el) => el.classList.remove('is-drop-target'));
       });
 
-      slot.addEventListener('dragover', (e) => {
+      row.addEventListener('dragover', (e) => {
         if (!dragId) return;
         e.preventDefault();
-        slot.classList.add('is-drop-target');
+        row.classList.add('is-drop-target');
       });
 
-      slot.addEventListener('dragleave', () => {
-        slot.classList.remove('is-drop-target');
+      row.addEventListener('dragleave', () => {
+        row.classList.remove('is-drop-target');
       });
 
-      slot.addEventListener('drop', async (e) => {
+      row.addEventListener('drop', async (e) => {
         e.preventDefault();
-        slot.classList.remove('is-drop-target');
-        const targetId = slot.getAttribute('data-sponsor-id');
+        row.classList.remove('is-drop-target');
+        const targetId = row.getAttribute('data-sponsor-id');
         if (!dragId || !targetId || dragId === targetId) return;
 
         const active = (state.sponsorsData?.slots || [])
@@ -527,6 +675,7 @@ const OwnerMapSponsors = (() => {
     root.querySelector('[data-sponsor-create]')?.addEventListener('click', () => {
       state.sponsorFormMode = 'create';
       state.sponsorDetail = { isActive: true, contacts: { primary: {}, secondary: {} }, contract: {} };
+      scrollToTop();
       ctx.onRender();
     });
 
@@ -534,6 +683,7 @@ const OwnerMapSponsors = (() => {
       btn.addEventListener('click', () => {
         state.sponsorFormMode = 'create';
         state.sponsorDetail = { isActive: true, contacts: { primary: {}, secondary: {} }, contract: {} };
+        scrollToTop();
         ctx.onRender();
       });
     });
@@ -541,12 +691,25 @@ const OwnerMapSponsors = (() => {
     root.querySelector('[data-sponsor-form-cancel]')?.addEventListener('click', () => {
       state.sponsorFormMode = null;
       state.sponsorDetail = null;
+      scrollToTop();
       ctx.onRender();
     });
 
     root.querySelectorAll('[data-sponsor-view]').forEach((btn) => {
       btn.addEventListener('click', () => {
         state.sponsorsView = btn.getAttribute('data-sponsor-view');
+        if (state.sponsorsView === 'roster') state.sponsorsPage = 1;
+        scrollToTop();
+        ctx.onRender();
+      });
+    });
+
+    root.querySelectorAll('[data-sponsor-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const next = Number(btn.getAttribute('data-sponsor-page'));
+        if (!Number.isFinite(next) || next < 1) return;
+        state.sponsorsPage = next;
+        scrollToTop();
         ctx.onRender();
       });
     });
@@ -563,6 +726,7 @@ const OwnerMapSponsors = (() => {
           const res = await ctx.api('map-sponsor', { query: `&id=${encodeURIComponent(id)}` });
           state.sponsorDetail = res.sponsor;
           state.sponsorFormMode = 'edit';
+          scrollToTop();
           ctx.onRender();
         } catch (err) {
           ctx.setFlash(err.message, 'err');

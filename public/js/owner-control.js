@@ -105,6 +105,7 @@ const OwnerControl = (() => {
     sponsorFormMode: null,
     sponsorDetail: null,
     sponsorsReorderBusy: false,
+    sponsorsPage: 1,
   };
 
   const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
