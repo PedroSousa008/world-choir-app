@@ -119,6 +119,18 @@ const PassportPage = (() => {
     `;
   }
 
+  function iconStamp() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 3h6v4.5H9z"/>
+        <rect x="6.5" y="7.5" width="11" height="7.5" rx="1.5"/>
+        <path d="M5.5 15h13v2.2a1.8 1.8 0 0 1-1.8 1.8H7.3a1.8 1.8 0 0 1-1.8-1.8V15z"/>
+        <path d="M8.5 10.2h7"/>
+        <path d="M8.5 12.4h4.8"/>
+      </svg>
+    `;
+  }
+
   function iconLaurel() {
     return `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -250,6 +262,17 @@ const PassportPage = (() => {
     updateJourneyStats(stats);
   }
 
+  function renderStampsCollectedStat(data = {}) {
+    return `
+      <section class="passport-stats passport-stats--single" aria-label="Stamps collected">
+        <div class="passport-stat">
+          <div class="passport-stat__icon passport-stat__icon--stamps">${iconStamp()}</div>
+          <p class="passport-stat__value">${esc(String(stampsEarnedCount(data)))}</p>
+          <p class="passport-stat__label">Stamps\nCollected</p>
+        </div>
+      </section>`;
+  }
+
   function renderParticipationStats(data = {}, { columns = 2 } = {}) {
     const events = Number(data.eventsJoined) || 0;
     const acts = Number(data.dailyActsCompleted) || 0;
@@ -286,6 +309,24 @@ const PassportPage = (() => {
             <p class="passport-stat__label">${stat.label}</p>
           </div>`).join('')}
       </section>`;
+  }
+
+  function renderMainStats(data = {}, chapter = 'cover') {
+    if (chapter === 'stamps') return renderStampsCollectedStat(data);
+    return renderParticipationStats(data, { columns: 2 });
+  }
+
+  function updateMainStats(chapter = activeChapter) {
+    const main = document.getElementById('passport-main');
+    if (!main || !passportData || chapter === 'story') return;
+    const statsChapter = chapter === 'stamps' ? 'stamps' : 'cover';
+    const next = renderMainStats(passportData, statsChapter);
+    const existing = main.querySelector('.passport-stats');
+    if (existing) {
+      existing.outerHTML = next;
+      return;
+    }
+    main.querySelector('.passport-permanence')?.insertAdjacentHTML('afterend', next);
   }
 
   function renderStoryView(data = {}) {
@@ -355,6 +396,7 @@ const PassportPage = (() => {
   }
 
   function render(data, chapter = 'cover') {
+    const statsChapter = chapter === 'stamps' ? 'stamps' : 'cover';
     return `
       <div id="passport-main" class="passport-main">
         <header class="passport-header">
@@ -373,7 +415,7 @@ const PassportPage = (() => {
           <p>This is your unique World Choir Passport.<br>It cannot be changed or transferred.</p>
         </div>
 
-        ${renderParticipationStats(data, { columns: 2 })}
+        ${renderMainStats(data, statsChapter)}
 
         <section class="passport-actions" aria-label="Passport actions">
           <button type="button" class="passport-action" id="passport-action-download" aria-label="Download World Choir Passport">
@@ -389,15 +431,6 @@ const PassportPage = (() => {
             <span class="passport-action__label">Share</span>
           </button>
         </section>
-
-        <button type="button" class="passport-journey-card" id="passport-journey-btn" aria-label="View your World Choir journey">
-          <span class="passport-journey-card__icon">${iconLaurel()}</span>
-          <span class="passport-journey-card__body">
-            <p class="passport-journey-card__title">View Your Journey</p>
-            <p class="passport-journey-card__copy">See your impact and milestones</p>
-          </span>
-          <span class="passport-journey-card__chevron" aria-hidden="true">›</span>
-        </button>
       </div>
       ${renderStoryView(data)}
     `;
@@ -444,6 +477,7 @@ const PassportPage = (() => {
           syncUrl: false,
         });
       }
+      updateMainStats(next);
     }
 
     if (syncUrl && typeof PassportRoute !== 'undefined') {
@@ -535,10 +569,6 @@ const PassportPage = (() => {
       } finally {
         setActionBusy(null);
       }
-    });
-
-    document.getElementById('passport-journey-btn')?.addEventListener('click', () => {
-      window.location.href = 'passport-journey.html';
     });
 
     bindStoryBack();

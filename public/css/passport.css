@@ -1070,6 +1070,14 @@
   color: var(--accent-blue);
 }
 
+.passport-stats--single {
+  grid-template-columns: 1fr;
+}
+
+.passport-stats--single .passport-stat + .passport-stat {
+  border-left: none;
+}
+
 .passport-stats--triple {
   grid-template-columns: repeat(3, 1fr);
   min-height: 132px;
