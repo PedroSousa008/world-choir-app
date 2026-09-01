@@ -82,6 +82,53 @@ const DailyActsPage = (() => {
     return null;
   }
 
+  function patchJourneyItemFromApi(apiData) {
+    if (!journeyData?.journey || !apiData?.userDailyAct) return;
+    const uda = apiData.userDailyAct;
+    const actId = apiData.act?.id || uda.actId;
+    const item = findItem(uda.date, actId);
+    if (!item) return;
+
+    const wasCompleted = item.status === 'completed';
+    item.status = 'completed';
+    item.assignment = item.assignment || {};
+    item.assignment.id = uda.id || item.assignment.id;
+    item.assignment.completedAt = uda.completedAt || item.assignment.completedAt || new Date().toISOString();
+    if (uda.reflection != null) {
+      item.assignment.reflection = uda.reflection;
+      item.assignment.reflectionAt = uda.reflectionAt;
+    }
+
+    if (!wasCompleted && journeyData.summary) {
+      journeyData.summary.momentsOfPeace = (journeyData.summary.momentsOfPeace || 0) + 1;
+    }
+  }
+
+  function snapshotCompletedItems() {
+    return allItems()
+      .filter((item) => item.status === 'completed')
+      .map((item) => ({
+        date: item.date,
+        actId: item.actId || item.key,
+        assignment: item.assignment ? { ...item.assignment } : {},
+      }));
+  }
+
+  function restoreCompletedSnapshots(snapshots) {
+    if (!snapshots.length || !journeyData?.journey) return;
+    for (const snap of snapshots) {
+      const item = findItem(snap.date, snap.actId);
+      if (!item || item.status === 'completed') continue;
+      item.status = 'completed';
+      item.assignment = { ...item.assignment, ...snap.assignment };
+    }
+  }
+
+  function itemIsJustCompleted(item) {
+    return justCompletedDate
+      && (justCompletedDate === item.date || justCompletedDate === item.key || justCompletedDate === item.actId);
+  }
+
   function filteredItems() {
     const items = allItems();
     const filtered = selectedCategory === 'all'
@@ -198,16 +245,18 @@ const DailyActsPage = (() => {
   }
 
   async function loadJourney() {
+    const completedSnap = snapshotCompletedItems();
     journeyData = await apiFetch(
-      `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&view=journey&date=${encodeURIComponent(localDateString())}`
+      `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&view=journey&date=${encodeURIComponent(localDateString())}&_t=${Date.now()}`
     );
+    restoreCompletedSnapshots(completedSnap);
     return journeyData;
   }
 
   function completedByDate() {
     const map = {};
     for (const item of allItems()) {
-      if (item.status === 'completed' && item.date) {
+      if ((item.status === 'completed' || itemIsJustCompleted(item)) && item.date) {
         map[item.date] = item;
       }
     }
@@ -279,21 +328,21 @@ const DailyActsPage = (() => {
   }
 
   function renderSquare(item) {
-    const status = item.status;
-    const isJustCompleted = justCompletedDate
-      && (justCompletedDate === item.date || justCompletedDate === item.key || justCompletedDate === item.actId);
+    const isJustCompleted = itemIsJustCompleted(item);
+    const isCompleted = item.status === 'completed' || isJustCompleted;
+    const displayStatus = isCompleted ? 'completed' : item.status;
     const stateClass =
-      status === 'completed' ? 'is-completed'
-        : status === 'future' ? 'is-future'
+      isCompleted ? 'is-completed'
+        : item.status === 'future' ? 'is-future'
           : 'is-available';
 
-    const inner = status === 'completed'
+    const inner = isCompleted
       ? '<span class="dap-square__mark" aria-hidden="true">✓</span>'
       : '<span class="dap-square__mystery" aria-hidden="true">?</span>';
 
     const aria =
-      status === 'completed' ? 'Completed act of peace'
-        : status === 'future' ? 'Act not yet revealed'
+      isCompleted ? 'Completed act of peace'
+        : item.status === 'future' ? 'Act not yet revealed'
           : 'Act available to complete';
 
     return `
@@ -302,7 +351,7 @@ const DailyActsPage = (() => {
         class="dap-square ${stateClass} ${isJustCompleted ? 'is-just-completed' : ''} ${item.isToday ? 'is-today' : ''}"
         data-open-date="${esc(item.date || '')}"
         data-item-key="${esc(item.key || item.actId || '')}"
-        data-status="${esc(status)}"
+        data-status="${esc(displayStatus)}"
         aria-label="${esc(aria)}"
       >
         ${inner}
@@ -623,15 +672,13 @@ const DailyActsPage = (() => {
     el.innerHTML = renderMain();
     bindGrid();
     markTodayViewed();
-
-    if (justCompletedDate) {
-      window.setTimeout(() => {
-        justCompletedDate = null;
-      }, 900);
-    }
   }
 
   function closeSheet() {
+    if (justCompletedDate) {
+      const item = findItem(justCompletedDate, justCompletedDate);
+      if (item?.status === 'completed') justCompletedDate = null;
+    }
     view = { mode: 'grid' };
     paint();
   }
@@ -746,10 +793,11 @@ const DailyActsPage = (() => {
         }),
       });
       if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
+      patchJourneyItemFromApi(data);
       justCompletedDate = assignmentDate;
-      await loadJourney();
       view = { mode: 'complete-moment', item: data };
       paint();
+      loadJourney().catch(() => {});
     } catch (err) {
       if (btn) {
         btn.disabled = false;
@@ -869,7 +917,7 @@ const DailyActsPage = (() => {
       const reflection = document.getElementById('dap-reflection-input')?.value || '';
       btn.disabled = true;
       try {
-        await apiFetch('/api/daily-peace', {
+        const data = await apiFetch('/api/daily-peace', {
           method: 'POST',
           body: JSON.stringify({
             deviceId: deviceId(),
@@ -879,6 +927,8 @@ const DailyActsPage = (() => {
             reflection,
           }),
         });
+        patchJourneyItemFromApi(data);
+        justCompletedDate = assignmentDate;
         await loadJourney();
         closeSheet();
         if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
