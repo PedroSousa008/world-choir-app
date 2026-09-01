@@ -66,11 +66,17 @@ const WorldChoirFlags = (() => {
     );
   }
 
+  function flagCircleUrl(countryOrCode) {
+    const iso = iso2ForCountry(countryOrCode);
+    if (!iso) return null;
+    return `https://hatscripts.github.io/circle-flags/flags/${iso.toLowerCase()}.svg`;
+  }
+
   function formatPlace(city, country) {
     const flag = flagEmoji(country);
     const place = [city, country].filter(Boolean).join(', ');
     return flag ? `${place} ${flag}` : place;
   }
 
-  return { iso2ForCountry, flagEmoji, formatPlace, NAME_TO_ISO2 };
+  return { iso2ForCountry, flagEmoji, flagCircleUrl, formatPlace, NAME_TO_ISO2 };
 })();

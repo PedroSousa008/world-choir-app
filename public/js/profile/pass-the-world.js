@@ -421,15 +421,25 @@ const PassTheWorld = (() => {
     }
   }
 
+  function renderItineraryFlag(entry) {
+    const url = typeof WorldChoirFlags !== 'undefined'
+      ? WorldChoirFlags.flagCircleUrl(entry.countryCode || entry.country)
+      : null;
+    if (!url) {
+      return '<span class="ptw-day-flag ptw-day-flag--empty" aria-hidden="true"></span>';
+    }
+    return `
+      <span class="ptw-day-flag" aria-hidden="true">
+        <img src="${esc(url)}" alt="" width="34" height="34" loading="lazy" decoding="async">
+      </span>`;
+  }
+
   function renderItinerary(itinerary) {
     if (!itinerary?.length) return '<p class="ptw-empty">The journey has not begun.</p>';
     return itinerary.map((entry) => {
       const date = formatItineraryDateParts(entry.arrivedAt || entry.createdAt);
       const city = toCaps(entry.city);
       const country = toCaps(entry.country);
-      const flag = typeof WorldChoirFlags !== 'undefined'
-        ? WorldChoirFlags.flagEmoji(entry.country)
-        : '';
       const calledHtml = entry.calledByVoiceNumber
         ? `
           <p class="ptw-day-called__label">Called by</p>
@@ -447,9 +457,7 @@ const PassTheWorld = (() => {
             ${city ? `<p class="ptw-day-city">${esc(city)}</p>` : ''}
             ${country ? `<p class="ptw-day-country">${esc(country)}</p>` : ''}
           </div>
-          ${flag
-            ? `<span class="ptw-day-flag" aria-hidden="true">${flag}</span>`
-            : '<span class="ptw-day-flag ptw-day-flag--empty" aria-hidden="true"></span>'}
+          ${renderItineraryFlag(entry)}
           <div class="ptw-day-called">${calledHtml}</div>
         </article>`;
     }).join('');
