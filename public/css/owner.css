@@ -2645,36 +2645,6 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   gap: 20px;
 }
 
-.owner-sponsors-subnav {
-  display: flex;
-  gap: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 2px;
-}
-
-.owner-sponsors-subnav__btn {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: #8a8d97;
-  font: inherit;
-  font-size: 0.88rem;
-  font-weight: 500;
-  padding: 10px 2px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-}
-
-.owner-sponsors-subnav__btn.is-active {
-  color: #f2efe8;
-  border-bottom-color: var(--accent-aurora);
-}
-
-.owner-sponsors-subnav__btn:not(.is-active):hover {
-  color: #d8dbe3;
-}
-
 .owner-sponsors-header {
   display: flex;
   align-items: flex-start;
@@ -3123,10 +3093,6 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 }
 
 /* Sponsor add/edit form */
-.owner-sponsors-form-page .owner-sponsors-subnav {
-  margin-bottom: 4px;
-}
-
 .owner-sponsor-form-toolbar {
   display: flex;
   align-items: center;

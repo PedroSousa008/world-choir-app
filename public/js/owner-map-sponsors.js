@@ -92,16 +92,6 @@ const OwnerMapSponsors = (() => {
     return Math.min(activeCount, max);
   }
 
-  function renderSubNav() {
-    return `
-      <nav class="owner-sponsors-subnav" aria-label="Related sections">
-        <button type="button" class="owner-sponsors-subnav__btn" data-section-jump="foundations">Creator Foundations</button>
-        <button type="button" class="owner-sponsors-subnav__btn is-active" aria-current="page">Sponsors</button>
-        <button type="button" class="owner-sponsors-subnav__btn" data-section-jump="event">Event</button>
-      </nav>
-    `;
-  }
-
   function renderStatCards(data, esc) {
     const o = data?.overview || {};
     const capacity = data?.capacity ?? 20;
@@ -597,8 +587,6 @@ const OwnerMapSponsors = (() => {
 
     return `
       <div class="owner-sponsors-page owner-sponsors-form-page">
-        ${renderSubNav()}
-
         <div class="owner-sponsor-form-toolbar">
           <button type="button" class="owner-sponsor-form-back" data-sponsor-form-cancel>‹ Back to Sponsors</button>
           <div class="owner-sponsor-form-toolbar__actions">
@@ -650,7 +638,6 @@ const OwnerMapSponsors = (() => {
     if (state.sponsorsView === 'inactive') {
       return `
         <div class="owner-sponsors-page">
-          ${renderSubNav()}
           <header class="owner-sponsors-header">
             <div>
               <h2 class="owner-sponsors-header__title">Inactive Companies</h2>
@@ -665,7 +652,6 @@ const OwnerMapSponsors = (() => {
 
     return `
       <div class="owner-sponsors-page">
-        ${renderSubNav()}
         <header class="owner-sponsors-header">
           <div>
             <h2 class="owner-sponsors-header__title">Sponsors</h2>
