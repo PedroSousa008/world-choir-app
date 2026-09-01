@@ -1062,7 +1062,10 @@
   color: var(--accent-blue);
 }
 
-.passport-stat__icon--stamps {
+.passport-stat__icon--stamps,
+.passport-stat__icon--km,
+.passport-stat__icon--countries,
+.passport-stat__icon--days {
   background: rgba(61, 124, 255, 0.14);
   color: var(--accent-blue);
 }

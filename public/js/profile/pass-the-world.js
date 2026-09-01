@@ -681,6 +681,9 @@ const PassTheWorld = (() => {
     if (typeof PassTheWorldMap !== 'undefined') {
       PassTheWorldMap.renderJourney(data);
     }
+    if (typeof PassportPage !== 'undefined' && PassportPage.updateJourneyStats) {
+      PassportPage.updateJourneyStats(data.stats);
+    }
     return data;
   }
 
@@ -815,5 +818,9 @@ const PassTheWorld = (() => {
     return mounted;
   }
 
-  return { mount, destroy, refresh, isMounted };
+  function getStats() {
+    return lastPayload?.stats || null;
+  }
+
+  return { mount, destroy, refresh, isMounted, getStats };
 })();

@@ -40,6 +40,36 @@ const PassportPage = (() => {
     `;
   }
 
+  function iconRoute() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 19h4l4-8 4 3 4-9"/>
+      </svg>
+    `;
+  }
+
+  function iconGlobe() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M3 12h18"/>
+        <path d="M12 3c2.6 2.8 4 6 4 9s-1.4 6.2-4 9"/>
+        <path d="M12 3c-2.6 2.8-4 6-4 9s1.4 6.2 4 9"/>
+      </svg>
+    `;
+  }
+
+  function iconCalendar() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="4" y="5" width="16" height="15" rx="2"/>
+        <path d="M8 3v4"/>
+        <path d="M16 3v4"/>
+        <path d="M4 10h16"/>
+      </svg>
+    `;
+  }
+
   function iconDownload() {
     return `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -118,6 +148,86 @@ const PassportPage = (() => {
     return (data.stamps || []).filter((stamp) => stamp.unlocked).length;
   }
 
+  function formatJourneyKm(n) {
+    if (n == null || Number.isNaN(Number(n))) return '0';
+    return Math.round(Number(n)).toLocaleString();
+  }
+
+  function defaultJourneyStats() {
+    return { totalKm: 0, countries: 0, daysSinceBegan: 0 };
+  }
+
+  function renderJourneyStats(stats = {}) {
+    const items = [
+      {
+        icon: iconRoute(),
+        iconClass: 'km',
+        value: formatJourneyKm(stats.totalKm),
+        label: 'Total KM\nTravelled',
+      },
+      {
+        icon: iconGlobe(),
+        iconClass: 'countries',
+        value: Number(stats.countries) || 0,
+        label: 'Countries',
+      },
+      {
+        icon: iconCalendar(),
+        iconClass: 'days',
+        value: Number(stats.daysSinceBegan) || 0,
+        label: 'Days Since the\nJourney Began',
+      },
+    ];
+
+    return `
+      <section class="passport-stats passport-stats--triple" aria-label="Pass the World journey statistics">
+        ${items.map((stat) => `
+          <div class="passport-stat">
+            <div class="passport-stat__icon passport-stat__icon--${stat.iconClass}">${stat.icon}</div>
+            <p class="passport-stat__value">${esc(String(stat.value))}</p>
+            <p class="passport-stat__label">${stat.label}</p>
+          </div>`).join('')}
+      </section>`;
+  }
+
+  async function fetchPassTheWorldStats() {
+    try {
+      let id = '';
+      if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getDeviceId) {
+        id = WorldChoirDB.getDeviceId() || '';
+      }
+      const params = new URLSearchParams({ eventId: 'world-choir-2027' });
+      if (id) params.set('deviceId', id);
+      const res = await fetch(`/api/pass-the-world?${params}`, { cache: 'no-store' });
+      if (!res.ok) return defaultJourneyStats();
+      const data = await res.json();
+      return data.stats || defaultJourneyStats();
+    } catch {
+      return defaultJourneyStats();
+    }
+  }
+
+  function updateJourneyStats(stats = {}) {
+    const story = document.getElementById('passport-story-view');
+    if (!story) return;
+    const existing = story.querySelector('.passport-stats');
+    const next = renderJourneyStats(stats);
+    if (existing) {
+      existing.outerHTML = next;
+      return;
+    }
+    story.querySelector('#passport-story-permanence')?.insertAdjacentHTML('afterend', next);
+  }
+
+  async function refreshJourneyStats() {
+    let stats = null;
+    if (typeof PassTheWorld !== 'undefined' && PassTheWorld.getStats) {
+      stats = PassTheWorld.getStats();
+    }
+    if (!stats) stats = await fetchPassTheWorldStats();
+    updateJourneyStats(stats);
+  }
+
   function renderParticipationStats(data = {}, { columns = 2 } = {}) {
     const events = Number(data.eventsJoined) || 0;
     const acts = Number(data.dailyActsCompleted) || 0;
@@ -190,7 +300,7 @@ const PassportPage = (() => {
           <p>This is your unique World Choir Passport.<br>It cannot be changed or transferred.</p>
         </div>
 
-        ${renderParticipationStats(data, { columns: 3 })}
+        ${renderJourneyStats()}
       </div>
     `;
   }
@@ -272,15 +382,7 @@ const PassportPage = (() => {
   }
 
   function updateStoryStats(data = {}) {
-    const story = document.getElementById('passport-story-view');
-    if (!story) return;
-    const existing = story.querySelector('.passport-stats');
-    const next = renderParticipationStats(data, { columns: 3 });
-    if (existing) {
-      existing.outerHTML = next;
-      return;
-    }
-    story.querySelector('#passport-story-permanence')?.insertAdjacentHTML('afterend', next);
+    refreshJourneyStats();
   }
 
   function openInfo() {
@@ -332,9 +434,10 @@ const PassportPage = (() => {
     if (!host || typeof PassTheWorld === 'undefined') return;
     if (PassTheWorld.isMounted?.() && host.querySelector('.ptw')) {
       if (typeof PassTheWorldMap !== 'undefined') PassTheWorldMap.invalidateSize?.();
+      refreshJourneyStats();
       return;
     }
-    PassTheWorld.mount(host);
+    PassTheWorld.mount(host).then(() => refreshJourneyStats()).catch(() => refreshJourneyStats());
   }
 
   function unmountPassTheWorld() {
@@ -512,5 +615,5 @@ const PassportPage = (() => {
     mount();
   }
 
-  return { init, showChapter };
+  return { init, showChapter, updateJourneyStats, refreshJourneyStats };
 })();
