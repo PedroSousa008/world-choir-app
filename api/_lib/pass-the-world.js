@@ -829,10 +829,18 @@ async function advanceStateMachine(nowInput) {
   const closeAt = new Date(openAt.getTime() + INVITATION_WINDOW_MS);
   const roundId = `round-${openAt.toISOString()}`;
 
-  // Active 60-second ritual window
+  // Active 60-second ritual window — always open the round while the clock is in-window,
+  // even if a prior request missed the transition (state can still be ARRIVED/INITIAL).
   if (now.getTime() >= openAt.getTime() && now.getTime() < closeAt.getTime()) {
+    const invitations = await readRoundInvites(roundId);
     const winner = await readWinner(roundId);
-    if (!winner?.invitationId) state = await openInvitationRound(state, now);
+    const roundAlreadyOpen = state.status === STATUS.INVITATION_OPEN
+      && state.activeRoundId === roundId;
+    const staleWinnerOnly = Boolean(winner?.invitationId && !invitations.length);
+
+    if (!roundAlreadyOpen && (!winner?.invitationId || staleWinnerOnly)) {
+      state = await openInvitationRound(state, now);
+    }
     return { state, itinerary, now };
   }
 
@@ -855,16 +863,29 @@ async function advanceStateMachine(nowInput) {
     (state.status === STATUS.ARRIVED || state.status === STATUS.INITIAL)
     && now.getTime() >= closeAt.getTime()
   ) {
+    const invitations = await readRoundInvites(roundId);
     const winner = await readWinner(roundId);
-    if (!winner?.invitationId) {
+    const hasRealWinner = Boolean(winner?.invitationId && invitations.length);
+
+    if (hasRealWinner) {
+      return { ...(await settleInvitationRound({
+        ...state,
+        status: STATUS.INVITATION_OPEN,
+        activeRoundId: roundId,
+        invitationOpenAt: state.invitationOpenAt || openAt.toISOString(),
+        invitationCloseAt: state.invitationCloseAt || closeAt.toISOString(),
+      }, itinerary, now)), now };
+    }
+
+    if (state.status !== STATUS.WAITING_FOR_FIRST_CALL || state.activeRoundId !== roundId) {
       state = await writeState({
         ...state,
         status: STATUS.WAITING_FOR_FIRST_CALL,
         activeRoundId: roundId,
         invitationOpenAt: openAt.toISOString(),
         invitationCloseAt: closeAt.toISOString(),
-        invitationCount: 0,
-        invitedCities: [],
+        invitationCount: invitations.length,
+        invitedCities: buildInvitedCities(invitations),
         version: (Number(state.version) || 1) + 1,
       });
     }

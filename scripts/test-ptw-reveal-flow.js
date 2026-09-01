@@ -146,6 +146,13 @@ async function main() {
   const roundId = r.state.activeRoundId;
   assert(roundId, 'active round id set');
 
+  // Missed live window: first request after 16:01 on a fresh day should heal to WAITING.
+  await seedArrived();
+  r = await ptw.advanceStateMachine(new Date('2026-09-01T16:05:00.000Z'));
+  assert(r.state.status === 'WAITING_FOR_FIRST_CALL', 'missed window heals to WAITING at 16:05');
+  assert(r.state.activeRoundId === 'round-2026-09-01T16:00:00.000Z', 'today round id attached');
+
+  await seedArrived();
   // 100 London + 1 Tokyo users
   for (let i = 0; i < 100; i += 1) {
     await writeInvite(roundId, {

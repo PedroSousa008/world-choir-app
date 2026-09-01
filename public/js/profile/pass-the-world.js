@@ -152,7 +152,7 @@ const PassTheWorld = (() => {
   function ctaKey(journey) {
     if (!journey) return 'empty';
     const v = journey.viewer || {};
-    return `${journey.status}|${v.sameCountry}|${v.countryLoaded}|${v.hasInvited}|${v.canInviteNow}|${v.countryEligible}|${journey.invitationCount || 0}`;
+    return `${journey.status}|${v.sameCountry}|${v.countryLoaded}|${v.hasInvited}|${v.canInviteNow}|${v.countryEligible}|${journey.invitationCount || 0}|${shouldShowVisitButton(journey)}`;
   }
 
   function revealKey(journey) {
@@ -349,14 +349,24 @@ const PassTheWorld = (() => {
     return journey?.viewer?.canInviteNow === true;
   }
 
+  function shouldShowVisitButton(journey) {
+    if (!journey) return false;
+    const viewer = journey.viewer || {};
+    const status = journey.status;
+
+    if (status === 'TRAVELLING' || status === 'REVEAL_PENDING') return false;
+    if (viewer.sameCountry && viewer.countryLoaded) return false;
+    if (!viewer.countryEligible) return false;
+    if (status !== 'INVITATION_OPEN' && status !== 'WAITING_FOR_FIRST_CALL') return false;
+    return isVisitButtonActive(journey);
+  }
+
   function renderVisitButton(journey, { showRing = false } = {}) {
+    if (!shouldShowVisitButton(journey)) return '';
     const active = isVisitButtonActive(journey);
-    const classes = active
-      ? 'ptw-visit-btn ptw-visit-btn--primary'
-      : 'ptw-visit-btn ptw-visit-btn--muted';
-    const disabled = active ? '' : ' disabled aria-disabled="true"';
+    const classes = 'ptw-visit-btn ptw-visit-btn--primary';
     return `
-      <button type="button" class="${classes}" data-ptw-invite${disabled} aria-label="Visit my city">
+      <button type="button" class="${classes}" data-ptw-invite aria-label="Visit my city">
         ${showRing && active ? '<span class="ptw-visit-ring" aria-hidden="true"></span>' : ''}
         <span class="ptw-visit-label">VISIT MY CITY</span>
       </button>`;
@@ -367,7 +377,8 @@ const PassTheWorld = (() => {
     const viewer = journey.viewer || {};
     const status = journey.status;
     const active = isVisitButtonActive(journey);
-    const showRing = status === 'INVITATION_OPEN';
+    const showVisit = shouldShowVisitButton(journey);
+    const showRing = status === 'INVITATION_OPEN' && showVisit;
 
     let lead = '';
     let note = '';
@@ -386,18 +397,26 @@ const PassTheWorld = (() => {
       note = 'Join World Choir with your city to invite the World.';
     }
 
+    const countdownHtml = showRing && active
+      ? '<p class="ptw-countdown" data-ptw-countdown aria-live="polite"></p>'
+      : '';
+    const revealCountdownHtml = status === 'REVEAL_PENDING'
+      ? '<p class="ptw-countdown" data-ptw-reveal-countdown aria-live="polite"></p>'
+      : '';
+    const inviteCountHtml = status === 'INVITATION_OPEN' && journey.invitationCount > 0 && active
+      ? `<p class="ptw-invite-count" aria-live="polite">${Number(journey.invitationCount).toLocaleString()} invitations</p>`
+      : '';
+
+    if (!lead && !note && !showVisit && !revealCountdownHtml) return '';
+
     return `
       <div class="ptw-cta">
         ${lead ? `<p class="ptw-cta-lead">${lead}</p>` : ''}
         ${note ? `<p class="ptw-cta-note">${note}</p>` : ''}
         ${renderVisitButton(journey, { showRing })}
-        ${showRing && active ? '<p class="ptw-countdown" data-ptw-countdown aria-live="polite"></p>' : ''}
-        ${status === 'REVEAL_PENDING'
-          ? '<p class="ptw-countdown" data-ptw-reveal-countdown aria-live="polite"></p>'
-          : ''}
-        ${status === 'INVITATION_OPEN' && journey.invitationCount > 0 && active
-          ? `<p class="ptw-invite-count" aria-live="polite">${Number(journey.invitationCount).toLocaleString()} invitations</p>`
-          : ''}
+        ${countdownHtml}
+        ${revealCountdownHtml}
+        ${inviteCountHtml}
       </div>`;
   }
 
