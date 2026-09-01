@@ -245,6 +245,50 @@ async function main() {
 
   console.log('\nIntegration flow passed.');
   console.log(`Winner: ${winner.city}, ${winner.country} (${winner.userId})`);
+
+  // Stale invalid winner must not block the first eligible post-window click.
+  await seedArrived();
+  mem.roundWinner.clear();
+  const staleRoundId = 'round-2026-09-03T16:00:00.000Z';
+  mem.state.status = 'WAITING_FOR_FIRST_CALL';
+  mem.state.activeRoundId = staleRoundId;
+  mem.state.invitationOpenAt = '2026-09-03T16:00:00.000Z';
+  mem.state.invitationCloseAt = '2026-09-03T16:01:00.000Z';
+  mem.roundWinner.set(`wc-data/pass-the-world/rounds/${staleRoundId}/winner.json`, {
+    invitationId: 'stale-pt',
+    id: 'stale-pt',
+    userId: 'user-pt',
+    city: 'Braga',
+    country: 'Portugal',
+    countryCode: 'PT',
+    latitude: 41.55,
+    longitude: -8.42,
+    voiceNumber: 4,
+  });
+  const store = require.cache[storePath].exports;
+  store.findUserByDevice = async () => ({
+    id: 'user-es',
+    city: 'Madrid',
+    country: 'Spain',
+    latitude: 40.4168,
+    longitude: -3.7038,
+  });
+  store.readPledge = async () => ({
+    city: 'Madrid',
+    country: 'Spain',
+    latitude: 40.4168,
+    longitude: -3.7038,
+    voice_number: 99,
+  });
+  delete require.cache[path.resolve(__dirname, '../api/_lib/pass-the-world.js')];
+  const ptwInvite = require('../api/_lib/pass-the-world');
+  const inviteRes = await ptwInvite.submitInvitation({
+    deviceId: 'dev-es',
+    now: '2026-09-03T16:05:00.000Z',
+  });
+  assert(inviteRes.journey.status === 'TRAVELLING', 'Spanish first call starts travel despite stale PT winner');
+  assert(inviteRes.journey.destination?.city === 'Madrid', 'destination is Madrid');
+  assert(!inviteRes.alreadyMoving, 'does not report false already moving');
 }
 
 main().catch((err) => {

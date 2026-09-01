@@ -581,14 +581,31 @@ async function readWinner(roundId) {
   try { return await readBlobJson(roundWinnerPath(roundId)); } catch { return null; }
 }
 
-async function claimWinner(roundId, winnerPayload) {
+async function claimWinner(roundId, winnerPayload, state = null) {
   const existing = await readWinner(roundId);
-  if (existing?.invitationId) return { winner: existing, created: false };
+  if (existing?.invitationId) {
+    if (state && !winnerEligibleForWorld(existing, state)) {
+      await writeJson(roundWinnerPath(roundId), winnerPayload, { overwrite: true });
+      const confirmed = await readWinner(roundId);
+      return {
+        winner: confirmed || winnerPayload,
+        created: true,
+      };
+    }
+    return { winner: existing, created: false };
+  }
   try {
     await writeJson(roundWinnerPath(roundId), winnerPayload, { overwrite: false });
   } catch {
     const raced = await readWinner(roundId);
-    if (raced?.invitationId) return { winner: raced, created: false };
+    if (raced?.invitationId) {
+      if (state && !winnerEligibleForWorld(raced, state)) {
+        await writeJson(roundWinnerPath(roundId), winnerPayload, { overwrite: true });
+        const confirmed = await readWinner(roundId);
+        return { winner: confirmed || winnerPayload, created: true };
+      }
+      return { winner: raced, created: false };
+    }
     await writeJson(roundWinnerPath(roundId), winnerPayload, { overwrite: true });
   }
   const confirmed = await readWinner(roundId);
@@ -1038,7 +1055,7 @@ async function resolveFirstCallIfPending(state, itinerary, now) {
       selectedAt: pick.submittedAt || now.toISOString(),
       selectionMode: 'first_call',
     };
-    const claimed = await claimWinner(roundId, winnerPayload);
+    const claimed = await claimWinner(roundId, winnerPayload, state);
     winner = claimed.winner;
   } else if (!winner.selectionMode) {
     winner = { ...winner, selectionMode: 'first_call' };
@@ -1319,17 +1336,19 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
 
   const roundId = state.activeRoundId;
   const existingWinner = await readWinner(roundId);
-  if (existingWinner?.invitationId) {
+  if (existingWinner?.invitationId && winnerEligibleForWorld(existingWinner, state)) {
     const invites = await readRoundInvites(roundId);
     const applied = await applyWinner(state, itinerary, existingWinner, invites);
-    return {
-      ok: false,
-      alreadyMoving: true,
-      message: 'The World is already moving.',
-      journey: buildPublicState(applied.state, applied.itinerary, clock, { ...viewer, hasInvited: true }),
-      itinerary: applied.itinerary,
-      stats: computeStats(applied.itinerary, applied.state, clock),
-    };
+    if (applied.state.status === STATUS.TRAVELLING) {
+      return {
+        ok: false,
+        alreadyMoving: true,
+        message: 'The World is already moving.',
+        journey: buildPublicState(applied.state, applied.itinerary, clock, { ...viewer, hasInvited: true }),
+        itinerary: applied.itinerary,
+        stats: computeStats(applied.itinerary, applied.state, clock),
+      };
+    }
   }
 
   let alreadyInvited = false;
@@ -1361,13 +1380,16 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
         selectedAt: clock.toISOString(),
         selectionMode: 'first_call',
       };
-      const { winner, created } = await claimWinner(roundId, winnerPayload);
+      const { winner, created } = await claimWinner(roundId, winnerPayload, state);
       const applied = await applyWinner(state, itinerary, winner, invites);
+      const started = applied.state.status === STATUS.TRAVELLING;
       return {
-        ok: created,
-        selected: created,
-        alreadyMoving: !created,
-        message: created ? null : 'The World is already moving.',
+        ok: started,
+        selected: started,
+        alreadyMoving: !started && !created && winnerEligibleForWorld(winner, state),
+        message: !started && !created && winnerEligibleForWorld(winner, state)
+          ? 'The World is already moving.'
+          : null,
         journey: buildPublicState(applied.state, applied.itinerary, clock, { ...viewer, hasInvited: true }),
         itinerary: applied.itinerary,
         stats: computeStats(applied.itinerary, applied.state, clock),

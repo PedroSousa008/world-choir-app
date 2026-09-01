@@ -702,7 +702,7 @@ const PassTheWorld = (() => {
       if (typeof PassTheWorldMap !== 'undefined') {
         PassTheWorldMap.renderJourney(lastPayload);
       }
-      if (result.alreadyMoving) {
+      if (result.alreadyMoving && result.journey?.status !== 'TRAVELLING') {
         const note = document.createElement('p');
         note.className = 'ptw-inline-note';
         note.setAttribute('role', 'status');
