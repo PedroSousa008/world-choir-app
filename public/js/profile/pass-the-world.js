@@ -268,10 +268,6 @@ const PassTheWorld = (() => {
     }
 
     if (status === 'ARRIVED' || status === 'INITIAL') {
-      if (viewer.sameCountry && viewer.countryLoaded) return lines;
-      if (stops <= 1) lines.push('The journey begins here.');
-      else lines.push('The World has arrived.');
-      if (journey.nextInvitationAt) lines.push('Next invitation · 16:00 UTC');
       return lines;
     }
 

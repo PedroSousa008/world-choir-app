@@ -272,6 +272,41 @@ function countriesMatch(a, b) {
   return Boolean(normalizeCountry(a) && normalizeCountry(a) === normalizeCountry(b));
 }
 
+/** Invites and destinations must be in a different country than where the World currently is. */
+function inviteEligibleForWorld(invite, worldCountry, worldCountryCode) {
+  if (!invite) return false;
+  const worldCode = resolveCountryCode(worldCountryCode || worldCountry);
+  const inviteCode = resolveCountryCode(invite.countryCode || invite.country);
+  if (worldCode && inviteCode) return worldCode !== inviteCode;
+  return !countriesMatch(worldCountry, invite.country);
+}
+
+function filterInvitesForWorld(invitations, state) {
+  return (invitations || []).filter((inv) => inviteEligibleForWorld(
+    inv,
+    state.currentCountry,
+    state.currentCountryCode
+  ));
+}
+
+function isInvalidItineraryEntry(entry) {
+  if (!entry || entry.isSeed) return false;
+  if (!entry.originCountry || !entry.country) return false;
+  return countriesMatch(entry.originCountry, entry.country);
+}
+
+function isInvalidTravelLeg(origin, destination) {
+  if (!origin?.country || !destination?.country) return false;
+  return countriesMatch(
+    origin.countryCode || origin.country,
+    destination.countryCode || destination.country
+  );
+}
+
+function winnerEligibleForWorld(winner, state) {
+  return inviteEligibleForWorld(winner, state.currentCountry, state.currentCountryCode);
+}
+
 function nextInvitationOpenAt(from = new Date()) {
   const d = new Date(from.getTime());
   const candidate = new Date(Date.UTC(
@@ -424,6 +459,63 @@ async function repairItineraryIfNeeded(state, itinerary) {
   return { state: nextState, itinerary: cleaned };
 }
 
+/** Remove same-country legs and reset state when an invalid in-country trip is in progress. */
+async function repairInvalidJourney(state, itinerary) {
+  let cleaned = (itinerary || []).filter((entry) => !isInvalidItineraryEntry(entry));
+  cleaned = dedupeItinerary(cleaned);
+
+  let nextState = state;
+  let changed = cleaned.length !== (itinerary || []).length;
+
+  const invalidTravel = nextState.status === STATUS.TRAVELLING
+    && isInvalidTravelLeg(nextState.origin, nextState.destination);
+  const currentMissing = nextState.currentItineraryEntryId
+    && !cleaned.some((e) => e.id === nextState.currentItineraryEntryId);
+
+  if (invalidTravel || currentMissing) {
+    changed = true;
+    const anchor = cleaned.length ? cleaned[cleaned.length - 1] : null;
+    if (anchor) {
+      const clearReveal = invalidTravel
+        || (nextState.lastReveal && countriesMatch(
+          nextState.lastReveal.originCountry || nextState.origin?.country,
+          nextState.lastReveal.country
+        ));
+      nextState = {
+        ...nextState,
+        status: STATUS.ARRIVED,
+        currentCity: anchor.city,
+        currentCountry: anchor.country,
+        currentCountryCode: anchor.countryCode || resolveCountryCode(anchor.country),
+        currentLatitude: anchor.latitude,
+        currentLongitude: anchor.longitude,
+        currentItineraryEntryId: anchor.id,
+        origin: null,
+        destination: null,
+        departureAt: null,
+        arrivalAt: null,
+        revealStartAt: null,
+        revealEndAt: null,
+        invitedCities: [],
+        invitationCount: 0,
+        lastReveal: clearReveal ? null : nextState.lastReveal,
+        version: (Number(nextState.version) || 1) + 1,
+      };
+    }
+  }
+
+  if (changed) {
+    if (cleaned.length !== (itinerary || []).length) {
+      await writeItinerary(cleaned);
+    }
+    if (nextState !== state) {
+      nextState = await writeState(nextState);
+    }
+  }
+
+  return { state: nextState, itinerary: cleaned };
+}
+
 async function readStateRaw() {
   try { return await readBlobJson(STATE_PATH); } catch { return null; }
 }
@@ -506,9 +598,12 @@ async function claimWinner(roundId, winnerPayload) {
   };
 }
 
-function buildInvitedCities(invitations) {
+function buildInvitedCities(invitations, worldState = null) {
   const byKey = new Map();
   for (const invite of invitations) {
+    if (worldState && !inviteEligibleForWorld(invite, worldState.currentCountry, worldState.currentCountryCode)) {
+      continue;
+    }
     const key = `${normalizeCountry(invite.country)}|${String(invite.city || '').trim().toLowerCase()}`;
     if (byKey.has(key)) continue;
     byKey.set(key, {
@@ -536,6 +631,10 @@ function publicReveal(winner, origin) {
 }
 
 async function applyWinner(state, itinerary, winner, invitations) {
+  if (!winnerEligibleForWorld(winner, state)) {
+    return { state, itinerary };
+  }
+
   const selectedAt = winner.selectedAt || new Date().toISOString();
 
   // Idempotent: heal/re-apply must not append duplicate itinerary stops.
@@ -655,7 +754,7 @@ async function beginRevealPhase(state, invitations, now) {
     revealStartAt,
     revealEndAt,
     invitationCount: invitations.length,
-    invitedCities: buildInvitedCities(invitations),
+    invitedCities: buildInvitedCities(invitations, state),
     version: (Number(state.version) || 1) + 1,
   });
 }
@@ -702,10 +801,11 @@ async function settleInvitationRound(state, itinerary, now) {
   if (state.status === STATUS.REVEAL_PENDING) {
     return { state, itinerary };
   }
-  const invitations = await readRoundInvites(roundId);
+  const allInvitations = await readRoundInvites(roundId);
+  const invitations = filterInvitesForWorld(allInvitations, state);
   if (!invitations.length) {
     try {
-      await finalizeRoundMeta(roundId, { invitations: [], wasEmpty: true, state, now });
+      await finalizeRoundMeta(roundId, { invitations: allInvitations, wasEmpty: true, state, now });
     } catch { /* non-blocking */ }
     const next = await writeState({
       ...state,
@@ -716,7 +816,10 @@ async function settleInvitationRound(state, itinerary, now) {
     });
     return { state: next, itinerary };
   }
-  const existingWinner = await readWinner(roundId);
+  let existingWinner = await readWinner(roundId);
+  if (existingWinner?.invitationId && !winnerEligibleForWorld(existingWinner, state)) {
+    existingWinner = null;
+  }
   if (!existingWinner?.invitationId) {
     // Random user selection — each invite is one user (same city may appear many times).
     const pick = invitations[Math.floor(Math.random() * invitations.length)];
@@ -731,8 +834,8 @@ async function settleInvitationRound(state, itinerary, now) {
   try {
     const winner = await readWinner(roundId);
     await finalizeRoundMeta(roundId, {
-      invitations,
-      winner,
+      invitations: allInvitations,
+      winner: winnerEligibleForWorld(winner, state) ? winner : null,
       state,
       now,
       wasEmpty: false,
@@ -748,6 +851,7 @@ async function advanceStateMachine(nowInput) {
   const now = nowInput instanceof Date ? nowInput : new Date();
   let { state, itinerary } = await ensureSeeded();
   ({ state, itinerary } = await repairItineraryIfNeeded(state, itinerary));
+  ({ state, itinerary } = await repairInvalidJourney(state, itinerary));
 
   // Correct any in-flight arrival that is not the canonical 15:59 UTC landing.
   if (
@@ -803,22 +907,27 @@ async function advanceStateMachine(nowInput) {
     if (state.revealEndAt && now.getTime() >= new Date(state.revealEndAt).getTime()) {
       const roundId = state.activeRoundId;
       const winner = roundId ? await readWinner(roundId) : null;
-      if (winner?.invitationId) {
+      if (winner?.invitationId && winnerEligibleForWorld(winner, state)) {
         const invitations = await readRoundInvites(roundId);
-        return {
-          ...(await applyWinner(state, itinerary, {
-            ...winner,
-            selectedAt: state.revealEndAt,
-          }, invitations)),
-          now,
-        };
+        const applied = await applyWinner(state, itinerary, {
+          ...winner,
+          selectedAt: state.revealEndAt,
+        }, invitations);
+        if (applied.state.status === STATUS.TRAVELLING) {
+          return { ...applied, now };
+        }
       }
       state = await writeState({
         ...state,
-        status: STATUS.WAITING_FOR_FIRST_CALL,
+        status: STATUS.ARRIVED,
+        origin: null,
+        destination: null,
+        departureAt: null,
+        arrivalAt: null,
         revealStartAt: null,
         revealEndAt: null,
         invitedCities: [],
+        lastReveal: null,
         version: (Number(state.version) || 1) + 1,
       });
     }
@@ -863,9 +972,14 @@ async function advanceStateMachine(nowInput) {
     (state.status === STATUS.ARRIVED || state.status === STATUS.INITIAL)
     && now.getTime() >= closeAt.getTime()
   ) {
-    const invitations = await readRoundInvites(roundId);
+    const allInvitations = await readRoundInvites(roundId);
+    const invitations = filterInvitesForWorld(allInvitations, state);
     const winner = await readWinner(roundId);
-    const hasRealWinner = Boolean(winner?.invitationId && invitations.length);
+    const hasRealWinner = Boolean(
+      winner?.invitationId
+      && invitations.length
+      && winnerEligibleForWorld(winner, state)
+    );
 
     if (hasRealWinner) {
       return { ...(await settleInvitationRound({
@@ -885,7 +999,7 @@ async function advanceStateMachine(nowInput) {
         invitationOpenAt: openAt.toISOString(),
         invitationCloseAt: closeAt.toISOString(),
         invitationCount: invitations.length,
-        invitedCities: buildInvitedCities(invitations),
+        invitedCities: buildInvitedCities(allInvitations, state),
         version: (Number(state.version) || 1) + 1,
       });
     }
@@ -906,11 +1020,12 @@ async function resolveFirstCallIfPending(state, itinerary, now) {
   const roundId = state.activeRoundId;
   if (!roundId) return null;
 
+  const allInvites = await readRoundInvites(roundId);
+  const invites = filterInvitesForWorld(allInvites, state);
+  if (!invites.length) return null;
+
   let winner = await readWinner(roundId);
-  if (!winner?.invitationId) {
-    const invites = await readRoundInvites(roundId);
-    if (!invites.length) return null;
-    // Earliest invite wins (first person who clicked after the window).
+  if (!winner?.invitationId || !winnerEligibleForWorld(winner, state)) {
     const sorted = [...invites].sort((a, b) => {
       const ta = new Date(a.submittedAt || 0).getTime();
       const tb = new Date(b.submittedAt || 0).getTime();
@@ -929,8 +1044,8 @@ async function resolveFirstCallIfPending(state, itinerary, now) {
     winner = { ...winner, selectionMode: 'first_call' };
   }
 
-  const invites = await readRoundInvites(roundId);
-  return applyWinner(state, itinerary, winner, invites);
+  if (!winnerEligibleForWorld(winner, state)) return null;
+  return applyWinner(state, itinerary, winner, allInvites);
 }
 
 function journeyProgress(state, now) {
@@ -1112,7 +1227,7 @@ async function syncOpenRoundInvites(state) {
   }
   const invites = await readRoundInvites(state.activeRoundId);
   const invitationCount = invites.length;
-  const invitedCities = buildInvitedCities(invites);
+  const invitedCities = buildInvitedCities(invites, state);
   if (
     invitationCount === (Number(state.invitationCount) || 0)
     && invitedCities.length === (state.invitedCities || []).length
@@ -1274,7 +1389,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     state = await writeState({
       ...state,
       invitationCount: invites.length,
-      invitedCities: buildInvitedCities(invites),
+      invitedCities: buildInvitedCities(invites, state),
     });
     return {
       ok: true,
@@ -1291,7 +1406,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     state = await writeState({
       ...state,
       invitationCount: invites.length,
-      invitedCities: buildInvitedCities(invites),
+      invitedCities: buildInvitedCities(invites, state),
     });
     return {
       ok: true,
@@ -1319,7 +1434,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
   state = await writeState({
     ...state,
     invitationCount: invites.length,
-    invitedCities: buildInvitedCities(invites),
+    invitedCities: buildInvitedCities(invites, state),
     version: (Number(state.version) || 1) + 1,
   });
 
@@ -1347,4 +1462,8 @@ module.exports = {
   nextInvitationOpenAt,
   nextArrivalAt,
   computeArrivalAt,
+  countriesMatch,
+  isInvalidItineraryEntry,
+  isInvalidTravelLeg,
+  inviteEligibleForWorld,
 };

@@ -152,6 +152,29 @@ async function main() {
   assert(r.state.status === 'WAITING_FOR_FIRST_CALL', 'missed window heals to WAITING at 16:05');
   assert(r.state.activeRoundId === 'round-2026-09-01T16:00:00.000Z', 'today round id attached');
 
+  // Same-country invites must never win or move the plane.
+  await seedArrived();
+  const sameCountryRound = 'round-2026-09-02T16:00:00.000Z';
+  mem.state.activeRoundId = sameCountryRound;
+  mem.state.status = 'INVITATION_OPEN';
+  mem.state.invitationOpenAt = '2026-09-02T16:00:00.000Z';
+  mem.state.invitationCloseAt = '2026-09-02T16:01:00.000Z';
+  await writeInvite(sameCountryRound, {
+    id: 'inv-pt',
+    roundId: sameCountryRound,
+    userId: 'user-pt',
+    voiceNumber: 4,
+    city: 'Porto',
+    country: 'Portugal',
+    countryCode: 'PT',
+    latitude: 41.15,
+    longitude: -8.61,
+    submittedAt: '2026-09-02T16:00:10.000Z',
+  });
+  r = await ptw.advanceStateMachine(new Date('2026-09-02T16:01:05.000Z'));
+  assert(r.state.status === 'WAITING_FOR_FIRST_CALL', 'same-country-only round stays waiting');
+  assert(!r.itinerary.some((e) => e.originCountry === 'Portugal' && e.country === 'Portugal' && !e.isSeed), 'no same-country leg added');
+
   await seedArrived();
   // 100 London + 1 Tokyo users
   for (let i = 0; i < 100; i += 1) {

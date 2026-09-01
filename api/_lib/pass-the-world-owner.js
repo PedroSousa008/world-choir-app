@@ -12,6 +12,8 @@ const {
   STATUS,
   INVITATION_WINDOW_MS,
   REVEAL_WINDOW_MS,
+  isInvalidItineraryEntry,
+  isInvalidTravelLeg,
 } = require('./pass-the-world');
 
 const ROOT = 'wc-data/pass-the-world';
@@ -365,7 +367,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
     }
   }
 
-  const journeyStops = itinerary.filter((e) => !e.isSeed);
+  const journeyStops = itinerary.filter((e) => !e.isSeed && !isInvalidItineraryEntry(e));
   const journeyCountries = new Set(
     itinerary.map((e) => resolveCountryCode(e.countryCode || e.country)).filter(Boolean)
   );
@@ -499,7 +501,9 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
     }))
     .sort((a, b) => b.invitations - a.invitations);
 
-  const journeyHistory = itinerary.map((entry, i) => ({
+  const journeyHistory = itinerary
+    .filter((entry) => !isInvalidItineraryEntry(entry))
+    .map((entry, i) => ({
     sequence: entry.sequence || i + 1,
     day: entry.sequence || i + 1,
     date: utcDate(entry.arrivedAt || entry.selectedAt || entry.createdAt),
@@ -546,6 +550,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
     }));
 
   const mapJourney = itinerary
+    .filter((e) => !isInvalidItineraryEntry(e))
     .filter((e) => e.latitude != null && e.longitude != null)
     .map((e) => ({
       city: e.city,
@@ -581,6 +586,11 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
     : null;
 
   const journeyBeganAt = beganAt || null;
+
+  const validTravel = stateStatus === STATUS.TRAVELLING
+    && journey.origin
+    && journey.destination
+    && !isInvalidTravelLeg(journey.origin, journey.destination);
 
   return {
     serverNow: now.toISOString(),
@@ -620,13 +630,13 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
       eligibleCount: todayEligible,
       currentCity: journey.current?.city,
       currentCountry: journey.current?.country,
-      nextDestination: journey.destination?.city || journey.lastReveal?.city || null,
-      nextDestinationCountry: journey.destination?.country || journey.lastReveal?.country || null,
-      calledByVoice: journey.lastReveal?.voiceNumber ?? null,
-      calledByCity: journey.lastReveal?.city || null,
-      calledByCountry: journey.lastReveal?.country || null,
+      nextDestination: validTravel ? journey.destination.city : null,
+      nextDestinationCountry: validTravel ? journey.destination.country : null,
+      calledByVoice: validTravel ? (journey.lastReveal?.voiceNumber ?? null) : null,
+      calledByCity: validTravel ? (journey.lastReveal?.city || null) : null,
+      calledByCountry: validTravel ? (journey.lastReveal?.country || null) : null,
     },
-    currentJourney: stateStatus === STATUS.TRAVELLING && journey.origin && journey.destination ? {
+    currentJourney: validTravel ? {
       originCity: journey.origin.city,
       originCountry: journey.origin.country,
       destinationCity: journey.destination.city,
