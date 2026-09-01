@@ -446,10 +446,11 @@
 .passport-card__brand-kicker {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 1.05rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.02;
+  text-transform: none;
   color: var(--accent-aurora);
   text-shadow:
     0 -0.5px 0 rgba(255, 255, 255, 0.22),
@@ -460,9 +461,10 @@
   margin: 5px 0 0;
   font-family: var(--font-sans);
   font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.02;
+  text-transform: none;
   color: #ffffff;
   text-shadow:
     0 -0.5px 0 rgba(255, 255, 255, 0.18),
@@ -1392,12 +1394,18 @@
 }
 
 .passport-export-host .passport-card__brand-kicker {
-  font-size: 2.7rem;
+  font-size: 4.5rem;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  line-height: 1.02;
 }
 
 .passport-export-host .passport-card__brand-title {
   font-size: 1.85rem;
   margin-top: 12px;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  line-height: 1.02;
 }
 
 .passport-export-host .passport-card__logo {
