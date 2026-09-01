@@ -110,6 +110,12 @@ const OwnerControl = (() => {
     sponsorAnalyticsId: null,
     sponsorAnalyticsDetail: null,
     sponsorAnalyticsBusy: false,
+    sponsorAnalyticsError: null,
+    sponsorAnalyticsRange: '30d',
+    sponsorAnalyticsRangeOpen: false,
+    sponsorAnalyticsCustomFrom: null,
+    sponsorAnalyticsCustomTo: null,
+    sponsorAnalyticsChartMetric: 'impressions',
   };
 
   const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));

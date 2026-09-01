@@ -43,6 +43,19 @@ const OwnerMapSponsors = (() => {
   const MOBILE_MAX_VISIBLE = 6;
   const DESKTOP_MAX_VISIBLE = 10;
   const SPOTS_PER_PAGE = 8;
+  const ANALYTICS_RANGES = [
+    ['7d', '7 Days'],
+    ['30d', '30 Days'],
+    ['90d', '90 Days'],
+    ['1y', '1 Year'],
+    ['lifetime', 'Lifetime'],
+    ['custom', 'Custom'],
+  ];
+  const ANALYTICS_CHART_METRICS = [
+    ['impressions', 'Impressions'],
+    ['clicks', 'Clicks'],
+    ['ctr', 'CTR'],
+  ];
 
   let dragId = null;
 
@@ -259,51 +272,197 @@ const OwnerMapSponsors = (() => {
   }
 
   function formatPct(value) {
-    return `${Number(value || 0).toFixed(2)}%`;
+    const n = Number(value || 0);
+    if (!Number.isFinite(n)) return '0.00%';
+    return `${n.toFixed(2)}%`;
   }
 
   function formatCount(value) {
     return Number(value || 0).toLocaleString();
   }
 
-  function renderSpark(daily, key = 'impressions') {
-    if (!daily?.length) return '<p class="owner-muted">No daily data yet.</p>';
-    const max = Math.max(1, ...daily.map((d) => Number(d[key] || 0)));
+  function formatMoney(value, currency = 'EUR') {
+    if (value == null || !Number.isFinite(Number(value))) return '—';
+    try {
+      return new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: currency || 'EUR',
+        maximumFractionDigits: 0,
+      }).format(Number(value));
+    } catch {
+      return `${currency || 'EUR'} ${Number(value).toLocaleString()}`;
+    }
+  }
+
+  function analyticsRangeLabel(state, detail) {
+    if (state.sponsorAnalyticsRange === 'custom') {
+      const from = state.sponsorAnalyticsCustomFrom || detail?.range?.from || '';
+      const to = state.sponsorAnalyticsCustomTo || detail?.range?.to || '';
+      return from && to ? `${from} – ${to}` : 'Custom';
+    }
+    return ANALYTICS_RANGES.find(([id]) => id === state.sponsorAnalyticsRange)?.[1]
+      || detail?.range?.label
+      || '30 Days';
+  }
+
+  function buildAnalyticsQuery(state) {
+    const id = encodeURIComponent(state.sponsorAnalyticsId || '');
+    const range = encodeURIComponent(state.sponsorAnalyticsRange || '30d');
+    let query = `&id=${id}&range=${range}`;
+    if (state.sponsorAnalyticsRange === 'custom') {
+      if (state.sponsorAnalyticsCustomFrom) {
+        query += `&from=${encodeURIComponent(state.sponsorAnalyticsCustomFrom)}`;
+      }
+      if (state.sponsorAnalyticsCustomTo) {
+        query += `&to=${encodeURIComponent(state.sponsorAnalyticsCustomTo)}`;
+      }
+    }
+    return query;
+  }
+
+  function renderSummaryMetrics(summary, esc) {
+    const s = summary || {};
     return `
-      <div class="owner-chart" role="img" aria-label="Daily ${key} trend">
-        ${daily.slice(-30).map((d) => {
-          const val = Number(d[key] || 0);
+      <div class="owner-groups owner-dap-impact owner-sponsor-analytics__metrics">
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(formatCount(s.impressions))}</span>
+          <span class="owner-metric__label">Total Impressions</span>
+        </div>
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(formatCount(s.uniqueReach))}</span>
+          <span class="owner-metric__label">Unique Reach</span>
+        </div>
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(formatCount(s.websiteClicks))}</span>
+          <span class="owner-metric__label">Website Clicks</span>
+        </div>
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(formatCount(s.uniqueClickers))}</span>
+          <span class="owner-metric__label">Unique Clickers</span>
+        </div>
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(formatPct(s.ctr))}</span>
+          <span class="owner-metric__label">CTR</span>
+        </div>
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(formatCount(s.daysActive))}</span>
+          <span class="owner-metric__label">Days Active</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPerformanceChart(series, metric, esc) {
+    const key = metric === 'ctr' ? 'ctr' : (metric === 'clicks' ? 'clicks' : 'impressions');
+    const points = series || [];
+    const hasData = points.some((point) => Number(point[key] || 0) > 0);
+    if (!hasData) {
+      return `
+        <div class="owner-growth-empty owner-sponsor-analytics__chart-empty">
+          <p class="owner-growth-empty__title">No performance data recorded for this period.</p>
+        </div>
+      `;
+    }
+    const max = Math.max(1, ...points.map((point) => Number(point[key] || 0)));
+    return `
+      <div class="owner-chart" role="img" aria-label="Performance over time">
+        ${points.map((point) => {
+          const val = Number(point[key] || 0);
           const h = Math.max(4, Math.round((val / max) * 100));
-          return `<span class="owner-chart__bar" style="height:${h}%" title="${d.date}: ${val}"></span>`;
+          const label = metric === 'ctr' ? formatPct(val) : formatCount(val);
+          return `<span class="owner-chart__bar" style="height:${h}%" title="${esc(point.date)}: ${esc(label)}"></span>`;
         }).join('')}
       </div>
     `;
   }
 
-  function renderMetricTiles(metrics, esc) {
+  function renderHighlights(highlights, esc) {
+    if (!highlights) {
+      return '<p class="owner-empty">No performance highlights yet.</p>';
+    }
+    const cards = [];
+    if (highlights.bestImpressionDay?.impressions) {
+      cards.push(`
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(formatCount(highlights.bestImpressionDay.impressions))}</span>
+          <span class="owner-metric__label">Best Impression Day · ${esc(highlights.bestImpressionDay.date)}</span>
+        </div>
+      `);
+    }
+    if (highlights.mostClicksDay?.clicks) {
+      cards.push(`
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(formatCount(highlights.mostClicksDay.clicks))}</span>
+          <span class="owner-metric__label">Most Clicks in One Day · ${esc(highlights.mostClicksDay.date)}</span>
+        </div>
+      `);
+    }
+    if (highlights.highestCtrDay?.ctr > 0) {
+      cards.push(`
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(formatPct(highlights.highestCtrDay.ctr))}</span>
+          <span class="owner-metric__label">Highest Daily CTR · ${esc(highlights.highestCtrDay.date)}</span>
+        </div>
+      `);
+    }
+    if (highlights.topCountry?.country) {
+      cards.push(`
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(highlights.topCountry.country)}</span>
+          <span class="owner-metric__label">Top Country · ${esc(formatCount(highlights.topCountry.impressions))} impressions</span>
+        </div>
+      `);
+    }
+    if (highlights.bestEvent?.eventId) {
+      cards.push(`
+        <div class="owner-group">
+          <span class="owner-metric__value">${esc(highlights.bestEvent.eventName || highlights.bestEvent.eventId)}</span>
+          <span class="owner-metric__label">Best Performing Event · ${esc(formatCount(highlights.bestEvent.impressions))} impressions</span>
+        </div>
+      `);
+    }
+    if (!cards.length) {
+      return '<p class="owner-empty">No performance highlights yet.</p>';
+    }
+    return `<div class="owner-groups owner-sponsor-analytics__metrics">${cards.join('')}</div>`;
+  }
+
+  function renderCommercialSection(commercial, esc) {
+    if (!commercial) return '';
+    if (!commercial.hasMonetaryValue) {
+      return `
+        <section class="owner-section">
+          <p class="owner-section__label">Commercial Performance</p>
+          <p class="owner-muted">Commercial efficiency metrics are not applicable for this partnership.</p>
+        </section>
+      `;
+    }
     return `
-      <div class="owner-groups owner-sponsor-analytics__metrics">
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatCount(metrics.impressions))}</span>
-          <span class="owner-metric__label">Total Impressions</span>
+      <section class="owner-section">
+        <p class="owner-section__label">Commercial Performance</p>
+        <div class="owner-groups owner-dap-impact owner-sponsor-analytics__metrics">
+          <div class="owner-group">
+            <span class="owner-metric__value">${esc(formatMoney(commercial.contractValue, commercial.currency))}</span>
+            <span class="owner-metric__label">Contract Value</span>
+          </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${esc(formatCount(commercial.impressionsDelivered))}</span>
+            <span class="owner-metric__label">Impressions Delivered</span>
+          </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${esc(formatCount(commercial.clicksDelivered))}</span>
+            <span class="owner-metric__label">Clicks Delivered</span>
+          </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${commercial.cpm == null ? '—' : esc(formatMoney(commercial.cpm, commercial.currency))}</span>
+            <span class="owner-metric__label">CPM</span>
+          </div>
+          <div class="owner-group">
+            <span class="owner-metric__value">${commercial.costPerClick == null ? '—' : esc(formatMoney(commercial.costPerClick, commercial.currency))}</span>
+            <span class="owner-metric__label">Cost Per Click</span>
+          </div>
         </div>
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatCount(metrics.totalClicks))}</span>
-          <span class="owner-metric__label">Total Clicks</span>
-        </div>
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatCount(metrics.uniqueClicks))}</span>
-          <span class="owner-metric__label">Unique Clicks</span>
-        </div>
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatPct(metrics.ctrUnique))}</span>
-          <span class="owner-metric__label">CTR (Unique)</span>
-        </div>
-        <div class="owner-group">
-          <span class="owner-metric__value">${esc(formatPct(metrics.ctrTotal))}</span>
-          <span class="owner-metric__label">CTR (Total)</span>
-        </div>
-      </div>
+      </section>
     `;
   }
 
@@ -313,7 +472,21 @@ const OwnerMapSponsors = (() => {
     if (state.sponsorAnalyticsBusy && !state.sponsorAnalyticsDetail) {
       return `
         <div class="owner-sponsors-page owner-sponsor-analytics">
-          <p class="owner-muted">Loading analytics…</p>
+          <section class="owner-section">
+            <p class="owner-muted">Loading analytics…</p>
+          </section>
+        </div>
+      `;
+    }
+
+    if (state.sponsorAnalyticsError && !state.sponsorAnalyticsDetail) {
+      return `
+        <div class="owner-sponsors-page owner-sponsor-analytics">
+          <section class="owner-section">
+            <button type="button" class="owner-btn-ghost" data-sponsor-analytics-back>← Back to roster</button>
+            <p class="owner-empty" style="margin-top:16px">Analytics could not be loaded.</p>
+            <button type="button" class="owner-btn-ghost" data-sponsor-analytics-refresh style="margin-top:12px">Retry</button>
+          </section>
         </div>
       `;
     }
@@ -322,61 +495,144 @@ const OwnerMapSponsors = (() => {
     if (!detail?.sponsor) {
       return `
         <div class="owner-sponsors-page owner-sponsor-analytics">
-          <button type="button" class="owner-btn-ghost" data-sponsor-analytics-back>← Back to roster</button>
-          <p class="owner-empty">Analytics could not be loaded.</p>
+          <section class="owner-section">
+            <button type="button" class="owner-btn-ghost" data-sponsor-analytics-back>← Back to roster</button>
+            <p class="owner-empty" style="margin-top:16px">Analytics could not be loaded.</p>
+          </section>
         </div>
       `;
     }
 
     const sponsor = detail.sponsor;
-    const lifetime = detail.lifetime || {};
-    const last7 = detail.last7Days || {};
-    const last30 = detail.last30Days || {};
-    const daily = detail.trends?.daily || [];
+    const summary = detail.summary || {};
+    const rangeLabel = analyticsRangeLabel(state, detail);
+    const chartMetric = state.sponsorAnalyticsChartMetric || 'impressions';
+    const countries = detail.countries || [];
+    const events = detail.events || [];
 
     return `
       <div class="owner-sponsors-page owner-sponsor-analytics">
-        <header class="owner-sponsors-header">
-          <div class="owner-sponsor-analytics__head">
+        <section class="owner-section">
+          <button type="button" class="owner-btn-ghost" data-sponsor-analytics-back>← Back to roster</button>
+          <div class="owner-sponsor-analytics__head" style="margin-top:16px">
             ${sponsor.companyLogoUrl
               ? `<img src="${esc(sponsor.companyLogoUrl)}" alt="" class="owner-sponsor-analytics__logo">`
               : '<span class="owner-sponsor-analytics__logo owner-sponsor-analytics__logo--empty" aria-hidden="true">—</span>'}
             <div>
-              <h2 class="owner-sponsors-header__title">${esc(sponsor.companyName)}</h2>
-              <p class="owner-sponsors-header__sub">Map sponsor bar analytics · ${sponsor.isActive ? 'Active on map' : 'Inactive'}</p>
+              <h2 class="owner-h1" style="font-size:1.35rem;margin:0 0 4px">${esc(sponsor.companyName)}</h2>
+              <p class="owner-muted">Sponsor Analytics · ${sponsor.isActive ? 'Active' : 'Inactive'}</p>
             </div>
           </div>
-          <div class="owner-sponsors-header__actions">
-            <button type="button" class="owner-btn-ghost" data-sponsor-analytics-back>← Back to roster</button>
+        </section>
+
+        <section class="owner-section">
+          <div class="owner-growth-toolbar">
+            <div class="owner-growth-range" data-sponsor-analytics-range-wrap>
+              <button type="button" class="owner-btn-ghost owner-growth-range__btn" data-sponsor-analytics-range-toggle aria-expanded="${state.sponsorAnalyticsRangeOpen ? 'true' : 'false'}">
+                Date range: ${esc(rangeLabel)}
+                <span class="owner-growth-range__caret" aria-hidden="true"></span>
+              </button>
+              ${state.sponsorAnalyticsRangeOpen ? `
+                <div class="owner-growth-range__menu" role="listbox" aria-label="Analytics date range">
+                  ${ANALYTICS_RANGES.map(([id, label]) => `
+                    <button type="button" class="owner-growth-range__option ${state.sponsorAnalyticsRange === id ? 'is-active' : ''}" data-sponsor-analytics-range="${id}" role="option">${esc(label)}</button>
+                  `).join('')}
+                  ${state.sponsorAnalyticsRange === 'custom' ? `
+                    <div class="owner-growth-range__custom">
+                      <label class="owner-field">
+                        <span>Start date</span>
+                        <input type="date" data-sponsor-analytics-custom="from" value="${esc(state.sponsorAnalyticsCustomFrom || detail.range?.from || '')}">
+                      </label>
+                      <label class="owner-field">
+                        <span>End date</span>
+                        <input type="date" data-sponsor-analytics-custom="to" value="${esc(state.sponsorAnalyticsCustomTo || detail.range?.to || '')}">
+                      </label>
+                    </div>
+                  ` : ''}
+                </div>
+              ` : ''}
+            </div>
             <button type="button" class="owner-btn-ghost" data-sponsor-analytics-refresh>Refresh</button>
           </div>
-        </header>
-
-        <section class="owner-section">
-          <p class="owner-section__label">Lifetime</p>
-          ${renderMetricTiles(lifetime, esc)}
-        </section>
-
-        <section class="owner-section owner-sponsor-analytics__periods">
-          <div class="owner-sponsor-analytics__period">
-            <p class="owner-section__label">Last 7 Days</p>
-            ${renderMetricTiles(last7, esc)}
-          </div>
-          <div class="owner-sponsor-analytics__period">
-            <p class="owner-section__label">Last 30 Days</p>
-            ${renderMetricTiles(last30, esc)}
-          </div>
         </section>
 
         <section class="owner-section">
-          <p class="owner-section__label">Trends</p>
-          <p class="owner-muted" style="margin-bottom:8px">Impressions (last 30 days)</p>
-          ${renderSpark(daily, 'impressions')}
-          <p class="owner-muted" style="margin:16px 0 8px">Total clicks (last 30 days)</p>
-          ${renderSpark(daily, 'totalClicks')}
-          <p class="owner-muted" style="margin:16px 0 8px">Unique clicks (last 30 days)</p>
-          ${renderSpark(daily, 'uniqueClicks')}
+          <p class="owner-section__label">Performance Summary</p>
+          ${detail.hasData
+            ? renderSummaryMetrics(summary, esc)
+            : '<p class="owner-empty">No analytics recorded yet.</p>'}
         </section>
+
+        <section class="owner-section">
+          <p class="owner-section__label">Performance Over Time</p>
+          <div class="owner-chips" style="margin-bottom:12px">
+            ${ANALYTICS_CHART_METRICS.map(([id, label]) => `
+              <button type="button" class="owner-chip ${chartMetric === id ? 'is-active' : ''}" data-sponsor-analytics-chart="${id}">${esc(label)}</button>
+            `).join('')}
+          </div>
+          ${renderPerformanceChart(detail.timeSeries, chartMetric, esc)}
+        </section>
+
+        <section class="owner-section">
+          <p class="owner-section__label">Global Reach</p>
+          <p class="owner-muted" style="margin-bottom:12px">${esc(formatCount(detail.countriesReached || 0))} Countries Reached</p>
+          <div class="owner-table-wrap">
+            <table class="owner-table">
+              <thead>
+                <tr><th>Country</th><th>Impressions</th><th>Clicks</th><th>CTR</th></tr>
+              </thead>
+              <tbody>
+                ${countries.length ? countries.map((row) => `
+                  <tr>
+                    <td>${esc(row.country)}</td>
+                    <td>${esc(formatCount(row.impressions))}</td>
+                    <td>${esc(formatCount(row.clicks))}</td>
+                    <td>${esc(formatPct(row.ctr))}</td>
+                  </tr>
+                `).join('') : '<tr><td colspan="4" class="owner-empty">No geographic data yet.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="owner-section">
+          <p class="owner-section__label">World Choir Event Performance</p>
+          <div class="owner-table-wrap">
+            <table class="owner-table">
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Date</th>
+                  <th>Impressions</th>
+                  <th>Unique Reach</th>
+                  <th>Clicks</th>
+                  <th>CTR</th>
+                  <th>Countries</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${events.length ? events.map((row) => `
+                  <tr>
+                    <td>${esc(row.eventName)}</td>
+                    <td>${row.eventDate ? esc(row.eventDate.slice(0, 10)) : '—'}</td>
+                    <td>${esc(formatCount(row.impressions))}</td>
+                    <td>${esc(formatCount(row.uniqueReach))}</td>
+                    <td>${esc(formatCount(row.websiteClicks))}</td>
+                    <td>${esc(formatPct(row.ctr))}</td>
+                    <td>${esc(formatCount(row.countriesReached))}</td>
+                  </tr>
+                `).join('') : '<tr><td colspan="7" class="owner-empty">No event performance recorded yet.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="owner-section">
+          <p class="owner-section__label">Performance Highlights</p>
+          ${renderHighlights(detail.highlights, esc)}
+        </section>
+
+        ${renderCommercialSection(detail.commercial, esc)}
       </div>
     `;
   }
@@ -1011,20 +1267,28 @@ const OwnerMapSponsors = (() => {
   function bind(root, state, helpers, ctx) {
     const { esc } = helpers;
 
-    if (state.sponsorAnalyticsId && !state.sponsorAnalyticsDetail && !state.sponsorAnalyticsBusy) {
+    const loadAnalytics = async ({ silent = false } = {}) => {
+      if (!state.sponsorAnalyticsId) return;
       state.sponsorAnalyticsBusy = true;
-      ctx.api('map-sponsor-analytics', { query: `&id=${encodeURIComponent(state.sponsorAnalyticsId)}` })
-        .then((detail) => {
-          state.sponsorAnalyticsDetail = detail;
-        })
-        .catch((err) => {
-          state.sponsorAnalyticsDetail = null;
-          ctx.setFlash(err.message || 'Could not load sponsor analytics.', 'err');
-        })
-        .finally(() => {
-          state.sponsorAnalyticsBusy = false;
-          ctx.onRender();
+      state.sponsorAnalyticsError = null;
+      if (!silent) state.sponsorAnalyticsDetail = null;
+      ctx.onRender();
+      try {
+        state.sponsorAnalyticsDetail = await ctx.api('map-sponsor-analytics', {
+          query: buildAnalyticsQuery(state),
         });
+      } catch (err) {
+        state.sponsorAnalyticsDetail = null;
+        state.sponsorAnalyticsError = err.message || 'Analytics could not be loaded.';
+        if (!silent) ctx.setFlash(state.sponsorAnalyticsError, 'err');
+      } finally {
+        state.sponsorAnalyticsBusy = false;
+        ctx.onRender();
+      }
+    };
+
+    if (state.sponsorAnalyticsId && !state.sponsorAnalyticsDetail && !state.sponsorAnalyticsBusy && !state.sponsorAnalyticsError) {
+      loadAnalytics();
     }
 
     root.querySelectorAll('[data-sponsor-stop]').forEach((el) => {
@@ -1113,6 +1377,10 @@ const OwnerMapSponsors = (() => {
         state.sponsorAnalyticsId = id;
         state.sponsorAnalyticsDetail = null;
         state.sponsorAnalyticsBusy = false;
+        state.sponsorAnalyticsError = null;
+        state.sponsorAnalyticsRange = '30d';
+        state.sponsorAnalyticsRangeOpen = false;
+        state.sponsorAnalyticsChartMetric = 'impressions';
         state.sponsorFormMode = null;
         state.sponsorDetail = null;
         scrollToTop();
@@ -1120,30 +1388,62 @@ const OwnerMapSponsors = (() => {
       });
     });
 
-    root.querySelector('[data-sponsor-analytics-back]')?.addEventListener('click', () => {
-      state.sponsorAnalyticsId = null;
-      state.sponsorAnalyticsDetail = null;
-      state.sponsorAnalyticsBusy = false;
-      scrollToTop();
+    root.querySelectorAll('[data-sponsor-analytics-back]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.sponsorAnalyticsId = null;
+        state.sponsorAnalyticsDetail = null;
+        state.sponsorAnalyticsBusy = false;
+        state.sponsorAnalyticsError = null;
+        state.sponsorAnalyticsRangeOpen = false;
+        scrollToTop();
+        ctx.onRender();
+      });
+    });
+
+    root.querySelectorAll('[data-sponsor-analytics-refresh]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!state.sponsorAnalyticsId) return;
+        await loadAnalytics();
+        if (!state.sponsorAnalyticsError) ctx.setFlash('Analytics refreshed.');
+      });
+    });
+
+    root.querySelector('[data-sponsor-analytics-range-toggle]')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.sponsorAnalyticsRangeOpen = !state.sponsorAnalyticsRangeOpen;
       ctx.onRender();
     });
 
-    root.querySelector('[data-sponsor-analytics-refresh]')?.addEventListener('click', async () => {
-      if (!state.sponsorAnalyticsId) return;
-      state.sponsorAnalyticsBusy = true;
-      state.sponsorAnalyticsDetail = null;
-      ctx.onRender();
-      try {
-        state.sponsorAnalyticsDetail = await ctx.api('map-sponsor-analytics', {
-          query: `&id=${encodeURIComponent(state.sponsorAnalyticsId)}`,
-        });
-        ctx.setFlash('Analytics refreshed.');
-      } catch (err) {
-        ctx.setFlash(err.message || 'Could not refresh analytics.', 'err');
-      } finally {
-        state.sponsorAnalyticsBusy = false;
+    root.querySelectorAll('[data-sponsor-analytics-range]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        state.sponsorAnalyticsRange = btn.getAttribute('data-sponsor-analytics-range') || '30d';
+        state.sponsorAnalyticsRangeOpen = state.sponsorAnalyticsRange === 'custom';
+        if (state.sponsorAnalyticsRange !== 'custom') {
+          await loadAnalytics();
+        } else {
+          ctx.onRender();
+        }
+      });
+    });
+
+    root.querySelectorAll('[data-sponsor-analytics-custom]').forEach((input) => {
+      input.addEventListener('change', async () => {
+        const field = input.getAttribute('data-sponsor-analytics-custom');
+        if (field === 'from') state.sponsorAnalyticsCustomFrom = input.value || null;
+        if (field === 'to') state.sponsorAnalyticsCustomTo = input.value || null;
+        if (state.sponsorAnalyticsRange === 'custom'
+          && state.sponsorAnalyticsCustomFrom
+          && state.sponsorAnalyticsCustomTo) {
+          await loadAnalytics();
+        }
+      });
+    });
+
+    root.querySelectorAll('[data-sponsor-analytics-chart]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.sponsorAnalyticsChartMetric = btn.getAttribute('data-sponsor-analytics-chart') || 'impressions';
         ctx.onRender();
-      }
+      });
     });
 
     root.querySelectorAll('[data-sponsor-deactivate]').forEach((btn) => {

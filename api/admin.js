@@ -358,7 +358,11 @@ module.exports = async function handler(req, res) {
       if (!requireOwner(req, res)) return;
       const id = req.query.id;
       if (!id) return res.status(400).json({ error: 'Sponsor id required' });
-      const analytics = await getMapSponsorAnalytics(id);
+      const analytics = await getMapSponsorAnalytics(id, {
+        range: req.query.range,
+        from: req.query.from,
+        to: req.query.to,
+      });
       return res.status(200).json(analytics);
     }
 

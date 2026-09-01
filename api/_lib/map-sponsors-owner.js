@@ -175,6 +175,7 @@ function normalizeSponsorRecord(raw) {
       : [],
 
     activatedAt: raw.activatedAt || null,
+    activationHistory: Array.isArray(raw.activationHistory) ? raw.activationHistory : [],
     createdAt: raw.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || raw.createdAt || new Date().toISOString(),
   };
@@ -389,6 +390,7 @@ async function createMapSponsor(payload = {}) {
     partnershipNotes: payload.partnershipNotes,
     contract: payload.contract,
     activatedAt: wantsActive ? now : null,
+    activationHistory: wantsActive ? [{ activatedAt: now, deactivatedAt: null }] : [],
     createdAt: now,
     updatedAt: now,
   });
@@ -473,6 +475,8 @@ async function setMapSponsorStatus(id, isActive) {
   if (nextActive === sponsor.isActive) return sponsor;
 
   const all = await loadAllSponsors({ fresh: true });
+  const now = new Date().toISOString();
+  sponsor.activationHistory = Array.isArray(sponsor.activationHistory) ? sponsor.activationHistory : [];
 
   if (nextActive) {
     const dup = findDuplicateActiveName(all, sponsor.companyName, sponsor.id);
@@ -483,10 +487,13 @@ async function setMapSponsorStatus(id, isActive) {
     }
     sponsor.isActive = true;
     sponsor.displayOrder = getActiveSponsors(all).length + 1;
-    sponsor.activatedAt = sponsor.activatedAt || new Date().toISOString();
+    sponsor.activatedAt = sponsor.activatedAt || now;
+    sponsor.activationHistory.push({ activatedAt: now, deactivatedAt: null });
   } else {
     sponsor.isActive = false;
     sponsor.displayOrder = 0;
+    const openPeriod = [...sponsor.activationHistory].reverse().find((period) => !period.deactivatedAt);
+    if (openPeriod) openPeriod.deactivatedAt = now;
   }
 
   await writeSponsor(sponsor);

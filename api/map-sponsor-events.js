@@ -14,8 +14,23 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { sponsorId, eventType, visitorId } = req.body || {};
-    const result = await recordMapSponsorEvent({ sponsorId, eventType, visitorId });
+    const {
+      sponsorId,
+      eventType,
+      visitorId,
+      country,
+      eventId,
+      destinationUrl,
+    } = req.body || {};
+
+    const result = await recordMapSponsorEvent({
+      sponsorId,
+      eventType,
+      visitorId,
+      country,
+      eventId,
+      destinationUrl,
+    });
     return res.status(200).json(result);
   } catch (err) {
     console.error('api/map-sponsor-events error:', err);

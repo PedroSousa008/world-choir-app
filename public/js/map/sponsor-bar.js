@@ -161,7 +161,11 @@ const MapSponsorBar = (() => {
       link.addEventListener('click', (event) => {
         event.stopPropagation();
         const sponsorId = link.getAttribute('data-sponsor-id');
-        if (sponsorId) trackSponsorEvent(sponsorId, 'click');
+        if (sponsorId) {
+          trackSponsorEvent(sponsorId, 'click', {
+            destinationUrl: link.getAttribute('href') || null,
+          });
+        }
       });
     });
 
@@ -191,8 +195,28 @@ const MapSponsorBar = (() => {
     }
   }
 
-  function trackSponsorEvent(sponsorId, eventType) {
+  let impressionObserver = null;
+  const impressionStates = new Map();
+
+  function getAnalyticsContext() {
+    const eventId = typeof WorldChoirConfig !== 'undefined'
+      ? (WorldChoirConfig.ACTIVE_EVENT?.id || 'world-choir-2027')
+      : 'world-choir-2027';
+    let country = null;
+    try {
+      const pledge = typeof WorldChoirDB !== 'undefined'
+        ? WorldChoirDB.getPledgeForCurrentUser?.()
+        : null;
+      country = pledge?.country ? String(pledge.country).trim() : null;
+    } catch {
+      /* ignore */
+    }
+    return { eventId, country };
+  }
+
+  function trackSponsorEvent(sponsorId, eventType, extra = {}) {
     if (!sponsorId) return;
+    const context = getAnalyticsContext();
     fetch('/api/map-sponsor-events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -201,35 +225,78 @@ const MapSponsorBar = (() => {
         sponsorId,
         eventType,
         visitorId: getMapVisitorId(),
+        country: context.country,
+        eventId: context.eventId,
+        destinationUrl: extra.destinationUrl || null,
       }),
     }).catch(() => {});
   }
 
+  function resetImpressionTracking() {
+    impressionStates.forEach((state) => {
+      if (state?.timer) clearTimeout(state.timer);
+    });
+    impressionStates.clear();
+    impressionObserver?.disconnect();
+    impressionObserver = null;
+  }
+
   function bindSponsorImpressions(container) {
-    const impressed = new Set();
+    resetImpressionTracking();
     const slots = container.querySelectorAll('.map-sponsor__slot[data-sponsor-id]');
     if (!slots.length) return;
 
-    const logImpression = (slot) => {
+    const getState = (sponsorId) => {
+      if (!impressionStates.has(sponsorId)) {
+        impressionStates.set(sponsorId, { timer: null, qualifiedInSession: false });
+      }
+      return impressionStates.get(sponsorId);
+    };
+
+    const clearTimer = (state) => {
+      if (state?.timer) {
+        clearTimeout(state.timer);
+        state.timer = null;
+      }
+    };
+
+    const startQualifyingTimer = (sponsorId) => {
+      const state = getState(sponsorId);
+      if (state.qualifiedInSession || state.timer) return;
+      state.timer = setTimeout(() => {
+        state.timer = null;
+        if (state.qualifiedInSession) return;
+        state.qualifiedInSession = true;
+        trackSponsorEvent(sponsorId, 'impression');
+      }, 1000);
+    };
+
+    const handleVisibility = (slot, ratio) => {
       const sponsorId = slot.getAttribute('data-sponsor-id');
-      if (!sponsorId || impressed.has(sponsorId)) return;
-      impressed.add(sponsorId);
-      trackSponsorEvent(sponsorId, 'impression');
+      if (!sponsorId) return;
+      const state = getState(sponsorId);
+
+      if (ratio >= 0.5) {
+        startQualifyingTimer(sponsorId);
+        return;
+      }
+
+      clearTimer(state);
+      state.qualifiedInSession = false;
     };
 
     if (typeof IntersectionObserver === 'undefined' || !viewportEl) {
-      slots.forEach(logImpression);
+      slots.forEach((slot) => handleVisibility(slot, 1));
       return;
     }
 
-    const observer = new IntersectionObserver((entries) => {
+    impressionObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        logImpression(entry.target);
+        handleVisibility(entry.target, entry.intersectionRatio);
       });
-    }, { root: viewportEl, threshold: 0.45 });
+    }, { root: viewportEl, threshold: [0, 0.5, 1] });
 
-    slots.forEach((slot) => observer.observe(slot));
+    slots.forEach((slot) => impressionObserver.observe(slot));
   }
 
   function applyDesignTokens() {
