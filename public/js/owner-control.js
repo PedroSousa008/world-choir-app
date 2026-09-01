@@ -522,9 +522,7 @@ const OwnerControl = (() => {
 
       <section class="owner-section owner-two-col">
         <div>
-          <p class="owner-section__label">Growth · Voices</p>
-          ${renderSpark(d.growth.voices)}
-          <p class="owner-muted" style="margin-top:10px">Daily new Voices from real pledge timestamps. Open Growth for more series.</p>
+          ${renderGrowthPanel({ embed: true, showCards: false })}
           <div style="margin-top:12px">
             <button type="button" class="owner-btn-ghost" data-section-jump="growth">Open Growth</button>
           </div>
@@ -578,21 +576,6 @@ const OwnerControl = (() => {
         </span>
         <span class="owner-metric__go">Explore</span>
       </button>
-    `;
-  }
-
-  function renderSpark(series = []) {
-    if (!series.length) {
-      return `<div class="owner-empty">Growth trends will appear as more data becomes available.</div>`;
-    }
-    const max = Math.max(...series.map((s) => s.count), 1);
-    const last = series.slice(-42);
-    return `
-      <div class="owner-chart" aria-label="Growth chart">
-        ${last.map((s) => `
-          <div class="owner-chart__bar" title="${esc(s.date)}: ${esc(s.count)}" style="height:${Math.max(4, (s.count / max) * 100)}%"></div>
-        `).join('')}
-      </div>
     `;
   }
 
@@ -1636,40 +1619,27 @@ const OwnerControl = (() => {
     `;
   }
 
-  function growthRecordedCopy(view) {
-    if (view.empty) return 'No historical records yet.';
-    if (view.recordedDays === 0) {
-      return `No days recorded in this range · ${formatGrowthDay(view.bounds.from, true)} – ${formatGrowthDay(view.bounds.to, true)}`;
+  function renderGrowthComparison(view) {
+    const cmp = view.comparison;
+    if (!cmp) {
+      return `<span class="owner-growth-delta is-flat">Not enough historical data</span>`;
     }
-    if (view.recordedDays === 1) {
-      return `Historical data available: 1 day · ${formatGrowthDay(view.points[0].date, true)}`;
+    if (cmp.pct === 0) {
+      return `<span class="owner-growth-delta is-flat">0.0% vs previous period</span>`;
     }
-    return `Historical data available: ${num(view.recordedDays)} days · ${formatGrowthDay(view.bounds.from)} – ${formatGrowthDay(view.bounds.to)}`;
+    return `<span class="owner-growth-delta ${cmp.pct > 0 ? 'is-up' : 'is-down'}">${cmp.pct > 0 ? '↑' : '↓'} ${esc(Math.abs(cmp.pct).toFixed(1))}% vs previous period</span>`;
   }
 
-  function renderGrowth() {
+  function renderGrowthPanel({ embed = false, showCards = true } = {}) {
     const view = buildGrowthView();
     const rangeLabel = state.growthRange === 'custom'
       ? view.bounds.label
       : (GROWTH_RANGES.find((r) => r.id === state.growthRange)?.label || view.bounds.label);
-    const cmp = view.comparison;
-    let cmpHtml;
-    if (!cmp) {
-      cmpHtml = `<span class="owner-growth-delta is-flat">Not enough historical data</span>`;
-    } else if (cmp.pct === 0) {
-      cmpHtml = `<span class="owner-growth-delta is-flat">0.0% vs previous period</span>`;
-    } else {
-      cmpHtml = `<span class="owner-growth-delta ${cmp.pct > 0 ? 'is-up' : 'is-down'}">${cmp.pct > 0 ? '↑' : '↓'} ${esc(Math.abs(cmp.pct).toFixed(1))}% vs previous period</span>`;
-    }
+    const cmpHtml = renderGrowthComparison(view);
 
     return `
-      <section class="owner-section owner-growth">
-        <p class="owner-section__label">Growth</p>
-        <h2 class="owner-h1">Historical Momentum</h2>
-        <p class="owner-sub">${view.empty
-          ? 'World Choir is just beginning to build its history.'
-          : 'See how World Choir is growing over time.'}</p>
-
+      <div class="owner-growth ${embed ? 'owner-growth--embed' : ''}">
+        ${embed ? '<p class="owner-section__label">Growth</p>' : ''}
         <div class="owner-growth-toolbar">
           <div class="owner-chips owner-growth-metrics">
             ${Object.entries(GROWTH_METRICS).map(([id, m]) => `
@@ -1716,7 +1686,7 @@ const OwnerControl = (() => {
           </div>
         </div>
 
-        ${view.empty ? '' : `
+        ${showCards && !view.empty ? `
           <div class="owner-groups owner-growth-cards">
             <div class="owner-group">
               <p class="owner-group__title">Data range</p>
@@ -1746,7 +1716,33 @@ const OwnerControl = (() => {
               </div>
             ` : ''}
           </div>
-        `}
+        ` : ''}
+      </div>
+    `;
+  }
+
+  function growthRecordedCopy(view) {
+    if (view.empty) return 'No historical records yet.';
+    if (view.recordedDays === 0) {
+      return `No days recorded in this range · ${formatGrowthDay(view.bounds.from, true)} – ${formatGrowthDay(view.bounds.to, true)}`;
+    }
+    if (view.recordedDays === 1) {
+      return `Historical data available: 1 day · ${formatGrowthDay(view.points[0].date, true)}`;
+    }
+    return `Historical data available: ${num(view.recordedDays)} days · ${formatGrowthDay(view.bounds.from)} – ${formatGrowthDay(view.bounds.to)}`;
+  }
+
+  function renderGrowth() {
+    const view = buildGrowthView();
+
+    return `
+      <section class="owner-section">
+        <p class="owner-section__label">Growth</p>
+        <h2 class="owner-h1">Historical Momentum</h2>
+        <p class="owner-sub">${view.empty
+          ? 'World Choir is just beginning to build its history.'
+          : 'See how World Choir is growing over time.'}</p>
+        ${renderGrowthPanel({ showCards: true })}
       </section>
     `;
   }

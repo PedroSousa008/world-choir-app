@@ -1298,6 +1298,18 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   to { opacity: 1; }
 }
 
+.owner-growth--embed .owner-growth-toolbar {
+  margin-top: 0;
+}
+
+.owner-growth--embed .owner-growth-hero {
+  margin-top: 12px;
+}
+
+.owner-growth--embed .owner-growth-hero__value {
+  font-size: clamp(1.35rem, 4vw, 1.75rem);
+}
+
 @media (min-width: 860px) {
   .owner-growth-cards {
     grid-template-columns: repeat(4, 1fr);
