@@ -3,7 +3,7 @@
  * Adjust values here to tune the public sponsor belt globally.
  */
 const MapSponsorConstants = (() => {
-  const LOGO_HEIGHT_PX = 22;
+  const LOGO_HEIGHT_PX = 16;
   const LOGO_GAP_PX = 28;
   const TRAVERSAL_DURATION_SEC = 60;
   const MOBILE_MAX_VISIBLE = 6;

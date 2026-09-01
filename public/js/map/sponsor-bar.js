@@ -59,9 +59,14 @@ const MapSponsorBar = (() => {
     const sponsorBlock = document.getElementById('map-header-sponsor');
     const header = document.getElementById('map-header');
 
-    defaultBlock?.toggleAttribute('hidden', hasSponsors);
-    sponsorBlock?.toggleAttribute('hidden', !hasSponsors);
-    header?.classList.toggle('map-header--sponsor', hasSponsors);
+    if (defaultBlock) {
+      if (hasSponsors) defaultBlock.setAttribute('hidden', '');
+      else defaultBlock.removeAttribute('hidden');
+    }
+    if (sponsorBlock) {
+      if (hasSponsors) sponsorBlock.removeAttribute('hidden');
+      else sponsorBlock.setAttribute('hidden', '');
+    }
 
     if (header) {
       const minimized = header.classList.contains('map-header--minimized');
@@ -304,6 +309,8 @@ const MapSponsorBar = (() => {
   }
 
   async function init() {
+    applyHeaderMode(false);
+
     prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     sponsors = await MapSponsorData.load();
 

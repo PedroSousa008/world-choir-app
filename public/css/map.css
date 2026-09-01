@@ -316,26 +316,22 @@ body.map-page {
   width: 100%;
 }
 
-.map-header--sponsor {
-  padding-bottom: 12px;
+.map-header__default[hidden],
+.map-header__sponsor[hidden] {
+  display: none !important;
 }
 
-.map-header__supported-by {
-  display: block;
-  font-size: 0.68rem;
-  font-weight: 500;
+.map-header__title--aurora {
   color: var(--accent-aurora);
-  letter-spacing: 0.04em;
-  margin-bottom: 8px;
 }
 
-/* Sponsor bar */
+/* Sponsor bar — compact belt within the original header footprint */
 .map-sponsor {
   width: 100%;
-  --map-sponsor-logo-height: 22px;
-  --map-sponsor-gap: 28px;
-  --map-sponsor-slot-min-width: 44px;
-  --map-sponsor-slot-padding-x: 4px;
+  --map-sponsor-logo-height: 16px;
+  --map-sponsor-gap: 24px;
+  --map-sponsor-slot-min-width: 40px;
+  --map-sponsor-slot-padding-x: 2px;
   --map-sponsor-belt-duration: 60s;
 }
 
@@ -343,14 +339,14 @@ body.map-page {
   width: 100%;
   overflow: hidden;
   position: relative;
-  min-height: calc(var(--map-sponsor-logo-height) + 8px);
+  height: var(--map-sponsor-logo-height);
 }
 
 .map-sponsor__track {
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: calc(var(--map-sponsor-logo-height) + 8px);
+  height: var(--map-sponsor-logo-height);
 }
 
 .map-sponsor__track--static {
@@ -373,6 +369,7 @@ body.map-page {
   align-items: center;
   flex-shrink: 0;
   gap: var(--map-sponsor-gap);
+  height: var(--map-sponsor-logo-height);
 }
 
 .map-sponsor__slot {
@@ -380,6 +377,7 @@ body.map-page {
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
+  height: var(--map-sponsor-logo-height);
   min-width: var(--map-sponsor-slot-min-width);
   padding-inline: var(--map-sponsor-slot-padding-x);
 }
@@ -388,13 +386,20 @@ body.map-page {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  height: var(--map-sponsor-logo-height);
   min-width: var(--map-sponsor-slot-min-width);
-  min-height: calc(var(--map-sponsor-logo-height) + 8px);
-  padding: 4px var(--map-sponsor-slot-padding-x);
-  border-radius: 6px;
+  padding: 0 var(--map-sponsor-slot-padding-x);
+  border-radius: 4px;
   text-decoration: none;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+.map-sponsor__logo--linked::before {
+  content: '';
+  position: absolute;
+  inset: -6px -4px;
 }
 
 .map-sponsor__logo--linked {
@@ -758,17 +763,9 @@ body.map-page {
     font-size: 0.64rem;
   }
 
-  .map-header--sponsor {
-    padding-bottom: 10px;
-  }
-
-  .map-header__supported-by {
-    font-size: 0.64rem;
-    margin-bottom: 6px;
-  }
-
   .map-sponsor {
-    --map-sponsor-gap: 22px;
+    --map-sponsor-gap: 18px;
+    --map-sponsor-logo-height: 14px;
   }
 
   /* Float above nav — balanced clearance without sitting too high */
