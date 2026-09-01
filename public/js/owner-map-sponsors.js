@@ -160,20 +160,24 @@ const OwnerMapSponsors = (() => {
     if (!s) {
       return `
         <tr class="owner-sponsors-row owner-sponsors-row--empty" data-sponsor-slot="${pos}">
-          <td class="owner-sponsors-row__drag" aria-hidden="true"></td>
+          <td class="owner-sponsors-row__drag" aria-hidden="true"><span class="owner-sponsors-row__drag-spacer"></span></td>
           <td class="owner-sponsors-row__order">${pad2(pos)}</td>
           <td class="owner-sponsors-row__company">
-            <span class="owner-sponsors-row__empty-icon" aria-hidden="true">+</span>
-            <span>
-              <strong>Available Spot</strong>
-              <span class="owner-muted owner-sponsors-row__hint">Add a company to this position</span>
-            </span>
+            <div class="owner-sponsors-row__company-inner">
+              <span class="owner-sponsors-row__empty-icon" aria-hidden="true">+</span>
+              <span>
+                <strong>Available Spot</strong>
+                <span class="owner-muted owner-sponsors-row__hint">Add a company to this position</span>
+              </span>
+            </div>
           </td>
           <td class="owner-sponsors-row__website">—</td>
           <td class="owner-sponsors-row__status">${renderStatusPill(false, true)}</td>
           <td class="owner-sponsors-row__added">—</td>
           <td class="owner-sponsors-row__actions">
-            <button type="button" class="owner-sponsors-icon-btn" data-sponsor-create-at="${pos}" aria-label="Add company to spot ${pad2(pos)}">+</button>
+            <div class="owner-sponsors-row__actions-inner">
+              <button type="button" class="owner-sponsors-icon-btn" data-sponsor-create-at="${pos}" aria-label="Add company to spot ${pad2(pos)}">+</button>
+            </div>
           </td>
         </tr>
       `;
@@ -197,17 +201,21 @@ const OwnerMapSponsors = (() => {
         <td class="owner-sponsors-row__drag" title="Drag to reorder" aria-label="Drag to reorder">⠿</td>
         <td class="owner-sponsors-row__order">${pad2(pos)}</td>
         <td class="owner-sponsors-row__company">
-          ${logo}
-          <strong>${esc(s.companyName)}</strong>
+          <div class="owner-sponsors-row__company-inner">
+            ${logo}
+            <strong>${esc(s.companyName)}</strong>
+          </div>
         </td>
         <td class="owner-sponsors-row__website">${websiteCell}</td>
         <td class="owner-sponsors-row__status">${renderStatusPill(s.isActive)}</td>
         <td class="owner-sponsors-row__added">${esc(formatAddedDate(s.createdAt))}</td>
         <td class="owner-sponsors-row__actions">
-          <button type="button" class="owner-sponsors-icon-btn" data-sponsor-edit="${esc(s.id)}" aria-label="Edit ${esc(s.companyName)}">✎</button>
-          <button type="button" class="owner-sponsors-icon-btn" data-sponsor-move="up" data-sponsor-id="${esc(s.id)}" ${isFirst ? 'disabled' : ''} aria-label="Move up">↑</button>
-          <button type="button" class="owner-sponsors-icon-btn" data-sponsor-move="down" data-sponsor-id="${esc(s.id)}" ${isLast ? 'disabled' : ''} aria-label="Move down">↓</button>
-          <button type="button" class="owner-sponsors-icon-btn" data-sponsor-deactivate="${esc(s.id)}" aria-label="Deactivate ${esc(s.companyName)}">⊘</button>
+          <div class="owner-sponsors-row__actions-inner">
+            <button type="button" class="owner-sponsors-icon-btn" data-sponsor-edit="${esc(s.id)}" aria-label="Edit ${esc(s.companyName)}">✎</button>
+            <button type="button" class="owner-sponsors-icon-btn" data-sponsor-move="up" data-sponsor-id="${esc(s.id)}" ${isFirst ? 'disabled' : ''} aria-label="Move up">↑</button>
+            <button type="button" class="owner-sponsors-icon-btn" data-sponsor-move="down" data-sponsor-id="${esc(s.id)}" ${isLast ? 'disabled' : ''} aria-label="Move down">↓</button>
+            <button type="button" class="owner-sponsors-icon-btn" data-sponsor-deactivate="${esc(s.id)}" aria-label="Deactivate ${esc(s.companyName)}">⊘</button>
+          </div>
         </td>
       </tr>
     `;
