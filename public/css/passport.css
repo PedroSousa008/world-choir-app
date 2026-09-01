@@ -2189,6 +2189,8 @@
 @media (prefers-reduced-motion: reduce) {
   .ptw-skel-line { animation: none; }
   .ptw-invite-pulse { animation: none !important; }
+  .ptw-invite-dot--open { animation: none !important; }
+  .ptw-invite-dot { transition: none !important; }
 }
 
 .ptw-panel {
@@ -2431,6 +2433,64 @@
   background: rgba(61, 124, 255, 0.75);
   box-shadow: 0 0 0 0 rgba(61, 124, 255, 0.4);
   animation: ptw-pulse 2.4s ease-out infinite;
+}
+
+.ptw-invite-overlay-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 36;
+  overflow: hidden;
+}
+
+.ptw-invite-dot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  will-change: transform, opacity;
+  transition:
+    opacity 0.42s ease,
+    box-shadow 0.42s ease,
+    background-color 0.42s ease;
+}
+
+.ptw-invite-dot--open {
+  background: rgba(240, 248, 255, 0.88);
+  box-shadow:
+    0 0 0 1px rgba(78, 197, 232, 0.25),
+    0 0 8px rgba(78, 197, 232, 0.42);
+  animation: ptw-invite-open-glow 2.6s ease-in-out infinite;
+}
+
+.ptw-invite-dot--reveal.ptw-invite-dot--lit {
+  opacity: 1;
+  background: rgba(240, 248, 255, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(78, 197, 232, 0.3),
+    0 0 10px rgba(78, 197, 232, 0.48);
+}
+
+.ptw-invite-dot--reveal.ptw-invite-dot--dim {
+  opacity: 0;
+  box-shadow: none;
+}
+
+@keyframes ptw-invite-open-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(78, 197, 232, 0.22),
+      0 0 6px rgba(78, 197, 232, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(78, 197, 232, 0.38),
+      0 0 12px rgba(78, 197, 232, 0.55);
+  }
 }
 
 @keyframes ptw-pulse {

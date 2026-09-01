@@ -14,6 +14,11 @@ const PassTheWorldMap = (() => {
   let map = null;
   let historyLayer = null;
   let inviteLayer = null;
+  let inviteOverlayLayer = null;
+  let inviteDotEls = [];
+  let revealAnim = null;
+  let revealAnimKey = '';
+  let inviteOpenKey = '';
   let planeEl = null;
   let destEl = null;
   let originEl = null;
@@ -160,6 +165,147 @@ const PassTheWorldMap = (() => {
     if (!points || points.length < 2) return 0;
     const idx = Math.max(0, Math.min(points.length - 2, Math.floor(progress * (points.length - 1))));
     return bearingDegrees(points[idx], points[Math.min(idx + 1, points.length - 1)]);
+  }
+
+  function cityKey(city) {
+    const country = String(city?.country || '').trim().toLowerCase();
+    const name = String(city?.city || '').trim().toLowerCase();
+    return `${country}|${name}`;
+  }
+
+  function ensureInviteOverlayLayer() {
+    const wrap = document.getElementById(containerId)?.parentElement;
+    if (!wrap) return null;
+    if (!inviteOverlayLayer || !inviteOverlayLayer.isConnected) {
+      inviteOverlayLayer = document.createElement('div');
+      inviteOverlayLayer.className = 'ptw-invite-overlay-layer';
+      inviteOverlayLayer.setAttribute('aria-hidden', 'true');
+      wrap.appendChild(inviteOverlayLayer);
+    }
+    return inviteOverlayLayer;
+  }
+
+  function stopRevealAnimation() {
+    if (revealAnim?.raf) {
+      cancelAnimationFrame(revealAnim.raf);
+    }
+    revealAnim = null;
+    revealAnimKey = '';
+  }
+
+  function clearInviteDots() {
+    stopRevealAnimation();
+    inviteDotEls = [];
+    if (inviteOverlayLayer) inviteOverlayLayer.innerHTML = '';
+  }
+
+  function syncInviteDots(frame) {
+    if (!inviteDotEls.length) return;
+    inviteDotEls.forEach(({ el, latlng }) => {
+      const pt = project(latlng, frame);
+      if (!pt) {
+        el.style.opacity = '0';
+        return;
+      }
+      const scale = el.dataset.scale || '1';
+      el.style.opacity = el.dataset.visible === '0' ? '0' : '1';
+      el.style.transform = `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px) scale(${scale})`;
+    });
+  }
+
+  function renderInvitationDots(cities, { mode = 'open' } = {}) {
+    clearInviteDots();
+    if (inviteLayer) inviteLayer.clearLayers();
+    const layer = ensureInviteOverlayLayer();
+    if (!layer) return;
+    (cities || []).forEach((city) => {
+      const ll = readLatLng(city);
+      if (!ll) return;
+      const el = document.createElement('span');
+      el.className = mode === 'open'
+        ? 'ptw-invite-dot ptw-invite-dot--open'
+        : 'ptw-invite-dot ptw-invite-dot--reveal ptw-invite-dot--lit';
+      el.dataset.cityKey = cityKey(city);
+      el.dataset.visible = '1';
+      el.dataset.scale = '1';
+      layer.appendChild(el);
+      inviteDotEls.push({ key: cityKey(city), el, latlng: ll });
+    });
+    syncInviteDots(animFrame);
+  }
+
+  /**
+   * Cinematic suspense — dots blink independently; winner is unknown to the client.
+   * Visible count shrinks toward the end; real destination appears only after revealEndAt.
+   */
+  function startRevealAnimation(cities, startMs, endMs) {
+    const key = `${startMs}|${endMs}|${(cities || []).map(cityKey).join(';')}`;
+    if (revealAnim && revealAnimKey === key) return;
+    stopRevealAnimation();
+    renderInvitationDots(cities, { mode: 'reveal' });
+    const keys = inviteDotEls.map((d) => d.key);
+    const n = keys.length;
+    if (!n) return;
+
+    revealAnimKey = key;
+    revealAnim = {
+      startMs,
+      endMs,
+      keys,
+      visible: new Set(keys),
+      nextFlipMs: 0,
+      raf: null,
+    };
+
+    const applyVisibility = () => {
+      inviteDotEls.forEach(({ key, el }) => {
+        const lit = revealAnim.visible.has(key);
+        el.dataset.visible = lit ? '1' : '0';
+        el.classList.toggle('ptw-invite-dot--lit', lit);
+        el.classList.toggle('ptw-invite-dot--dim', !lit);
+      });
+    };
+
+    const tick = () => {
+      if (!revealAnim || !map) return;
+      const now = nowMs();
+      const span = Math.max(1, revealAnim.endMs - revealAnim.startMs);
+      const t = Math.max(0, Math.min(1, (now - revealAnim.startMs) / span));
+
+      if (now < revealAnim.endMs && now >= revealAnim.nextFlipMs) {
+        revealAnim.nextFlipMs = now + 160 + Math.random() * 280;
+        const maxVisible = Math.max(1, Math.ceil(n * (1 - t * 0.75)));
+        const flipCount = n <= 2 ? 1 : (Math.random() < 0.45 ? 1 : 2);
+
+        for (let i = 0; i < flipCount; i += 1) {
+          const pick = keys[Math.floor(Math.random() * n)];
+          if (revealAnim.visible.has(pick) && revealAnim.visible.size > 1) {
+            revealAnim.visible.delete(pick);
+          } else if (revealAnim.visible.size < maxVisible) {
+            revealAnim.visible.add(pick);
+          }
+        }
+
+        while (revealAnim.visible.size > maxVisible) {
+          const arr = [...revealAnim.visible];
+          revealAnim.visible.delete(arr[Math.floor(Math.random() * arr.length)]);
+        }
+        if (revealAnim.visible.size === 0) {
+          revealAnim.visible.add(keys[Math.floor(Math.random() * n)]);
+        }
+        applyVisibility();
+      }
+
+      syncInviteDots(animFrame);
+      if (now < revealAnim.endMs + 500) {
+        revealAnim.raf = requestAnimationFrame(tick);
+      } else {
+        stopRevealAnimation();
+      }
+    };
+
+    applyVisibility();
+    revealAnim.raf = requestAnimationFrame(tick);
   }
 
   function inviteIcon() {
@@ -390,6 +536,7 @@ const PassTheWorldMap = (() => {
     syncOriginOverlay(f);
     syncDestOverlay(f);
     syncPlaneOverlay(f);
+    syncInviteDots(f);
   }
 
   function stopInteractLoop() {
@@ -755,7 +902,7 @@ const PassTheWorldMap = (() => {
     }
 
     historyLayer.clearLayers();
-    inviteLayer.clearLayers();
+    if (inviteLayer) inviteLayer.clearLayers();
 
     for (let i = 1; i < itinerary.length; i += 1) {
       const prev = itinerary[i - 1];
@@ -778,6 +925,7 @@ const PassTheWorldMap = (() => {
       && journey.departureAt
       && journey.arrivalAt
     ) {
+      clearInviteDots();
       const from = readLatLng(journey.origin);
       const to = readLatLng(journey.destination);
       if (!from || !to) return;
@@ -793,15 +941,37 @@ const PassTheWorldMap = (() => {
       planeLatLng = planePos;
       setFocus(planePos[0], planePos[1]);
       syncPlaneOverlay();
+    } else if (journey.status === 'INVITATION_OPEN') {
+      clearTravel();
+      inviteOpenKey = '';
+      const current = readLatLng(journey.current) || FALLBACK_CENTER;
+      setPlane(current, 0);
+      const openKey = (journey.invitedCities || []).map(cityKey).sort().join(';');
+      if (openKey !== inviteOpenKey) {
+        inviteOpenKey = openKey;
+        renderInvitationDots(journey.invitedCities || [], { mode: 'open' });
+      } else {
+        syncInviteDots(animFrame);
+      }
+    } else if (journey.status === 'REVEAL_PENDING') {
+      inviteOpenKey = '';
+      clearTravel();
+      const current = readLatLng(journey.current) || FALLBACK_CENTER;
+      setPlane(current, 0);
+      const startMs = new Date(journey.revealStartAt || journey.invitationCloseAt).getTime();
+      const endMs = new Date(journey.revealEndAt).getTime();
+      if (Number.isFinite(startMs) && Number.isFinite(endMs)) {
+        startRevealAnimation(journey.invitedCities || [], startMs, endMs);
+      } else {
+        renderInvitationDots(journey.invitedCities || [], { mode: 'reveal' });
+      }
     } else {
+      clearInviteDots();
+      inviteOpenKey = '';
       clearTravel();
       const current = readLatLng(journey.current) || FALLBACK_CENTER;
       setPlane(current, 0);
     }
-
-    renderInvites(
-      journey.status === 'INVITATION_OPEN' ? (journey.invitedCities || []) : []
-    );
 
     if (!userHasZoomed) {
       frameOnPlane({ animate: false });
@@ -812,18 +982,7 @@ const PassTheWorldMap = (() => {
   }
 
   function renderInvites(cities) {
-    if (!inviteLayer) return;
-    inviteLayer.clearLayers();
-    (cities || []).forEach((city) => {
-      const ll = readLatLng(city);
-      if (!ll) return;
-      L.marker(ll, {
-        icon: inviteIcon(),
-        interactive: false,
-        keyboard: false,
-        pane: 'ptwOverlay',
-      }).addTo(inviteLayer);
-    });
+    renderInvitationDots(cities, { mode: 'open' });
   }
 
   function invalidateSize() {
@@ -836,6 +995,7 @@ const PassTheWorldMap = (() => {
     stopTravelAnimation();
     stopEtaTimer();
     stopInteractLoop();
+    stopRevealAnimation();
     if (map) {
       map.off('move zoom viewreset', syncOverlays);
       map.off('zoomanim', onZoomAnim);
@@ -853,6 +1013,11 @@ const PassTheWorldMap = (() => {
       routePathEl = null;
       routeGlowEl = null;
     }
+    if (inviteOverlayLayer) {
+      inviteOverlayLayer.remove();
+      inviteOverlayLayer = null;
+    }
+    inviteDotEls = [];
     historyLayer = null;
     inviteLayer = null;
     planeLatLng = null;

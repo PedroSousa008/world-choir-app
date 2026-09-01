@@ -17,6 +17,8 @@ const ITINERARY_PATH = `${ROOT}/itinerary.json`;
 
 const INVITATION_HOUR_UTC = 16;
 const INVITATION_WINDOW_MS = 60 * 1000;
+/** Suspense reveal after the 60s window — winner is fixed; travel starts when this ends. */
+const REVEAL_WINDOW_MS = 10 * 1000;
 /** Journeys always land at 15:59 UTC so the World is ready for 16:00 UTC. */
 const ARRIVAL_HOUR_UTC = 15;
 const ARRIVAL_MINUTE_UTC = 59;
@@ -34,6 +36,7 @@ const STATUS = {
   TRAVELLING: 'TRAVELLING',
   ARRIVED: 'ARRIVED',
   INVITATION_OPEN: 'INVITATION_OPEN',
+  REVEAL_PENDING: 'REVEAL_PENDING',
   WAITING_FOR_FIRST_CALL: 'WAITING_FOR_FIRST_CALL',
 };
 
@@ -421,8 +424,10 @@ async function applyWinner(state, itinerary, winner, invitations) {
       arrivalAt,
       invitationOpenAt: null,
       invitationCloseAt: null,
+      revealStartAt: null,
+      revealEndAt: null,
       invitationCount: invitations.length,
-      invitedCities: buildInvitedCities(invitations),
+      invitedCities: [],
       lastReveal: state.lastReveal || publicReveal(winner, {
         city: already.originCity,
         country: already.originCountry,
@@ -483,11 +488,27 @@ async function applyWinner(state, itinerary, winner, invitations) {
     invitationOpenAt: null,
     invitationCloseAt: null,
     invitationCount: invitations.length,
-    invitedCities: buildInvitedCities(invitations),
+    invitedCities: [],
+    revealStartAt: null,
+    revealEndAt: null,
     lastReveal: publicReveal(winner, origin),
     version: (Number(state.version) || 1) + 1,
   });
   return { state: nextState, itinerary: nextItinerary };
+}
+
+async function beginRevealPhase(state, invitations, now) {
+  const revealStartAt = state.invitationCloseAt || now.toISOString();
+  const revealEndAt = new Date(new Date(revealStartAt).getTime() + REVEAL_WINDOW_MS).toISOString();
+  return writeState({
+    ...state,
+    status: STATUS.REVEAL_PENDING,
+    revealStartAt,
+    revealEndAt,
+    invitationCount: invitations.length,
+    invitedCities: buildInvitedCities(invitations),
+    version: (Number(state.version) || 1) + 1,
+  });
 }
 
 async function openInvitationRound(state, now) {
@@ -525,9 +546,8 @@ async function settleInvitationRound(state, itinerary, now) {
     });
     return { state: next, itinerary };
   }
-  const existingWinner = await readWinner(roundId);
-  if (existingWinner?.invitationId) {
-    return applyWinner(state, itinerary, existingWinner, await readRoundInvites(roundId));
+  if (state.status === STATUS.REVEAL_PENDING) {
+    return { state, itinerary };
   }
   const invitations = await readRoundInvites(roundId);
   if (!invitations.length) {
@@ -540,15 +560,22 @@ async function settleInvitationRound(state, itinerary, now) {
     });
     return { state: next, itinerary };
   }
-  const pick = invitations[Math.floor(Math.random() * invitations.length)];
-  const winnerPayload = {
-    ...pick,
-    invitationId: pick.id,
-    selectedAt: now.toISOString(),
-    selectionMode: 'window',
+  const existingWinner = await readWinner(roundId);
+  if (!existingWinner?.invitationId) {
+    // Random user selection — each invite is one user (same city may appear many times).
+    const pick = invitations[Math.floor(Math.random() * invitations.length)];
+    const winnerPayload = {
+      ...pick,
+      invitationId: pick.id,
+      selectedAt: now.toISOString(),
+      selectionMode: 'window',
+    };
+    await claimWinner(roundId, winnerPayload);
+  }
+  return {
+    state: await beginRevealPhase(state, invitations, now),
+    itinerary,
   };
-  const { winner } = await claimWinner(roundId, winnerPayload);
-  return applyWinner(state, itinerary, winner, invitations);
 }
 
 async function advanceStateMachine(nowInput) {
@@ -604,6 +631,33 @@ async function advanceStateMachine(nowInput) {
   }
 
   if (state.status === STATUS.TRAVELLING) return { state, itinerary, now };
+
+  // 10-second reveal after invitations close — winner already chosen; travel starts at revealEndAt.
+  if (state.status === STATUS.REVEAL_PENDING) {
+    if (state.revealEndAt && now.getTime() >= new Date(state.revealEndAt).getTime()) {
+      const roundId = state.activeRoundId;
+      const winner = roundId ? await readWinner(roundId) : null;
+      if (winner?.invitationId) {
+        const invitations = await readRoundInvites(roundId);
+        return {
+          ...(await applyWinner(state, itinerary, {
+            ...winner,
+            selectedAt: state.revealEndAt,
+          }, invitations)),
+          now,
+        };
+      }
+      state = await writeState({
+        ...state,
+        status: STATUS.WAITING_FOR_FIRST_CALL,
+        revealStartAt: null,
+        revealEndAt: null,
+        invitedCities: [],
+        version: (Number(state.version) || 1) + 1,
+      });
+    }
+    return { state, itinerary, now };
+  }
 
   const openAt = latestInvitationOpenAt(now);
   const closeAt = new Date(openAt.getTime() + INVITATION_WINDOW_MS);
@@ -748,6 +802,9 @@ function clientStatusLabel(state, progress, itinerary) {
   if (state.status === STATUS.INVITATION_OPEN) {
     return { headline: 'Where should the World go next?', detail: 'Invite it to your city.' };
   }
+  if (state.status === STATUS.REVEAL_PENDING) {
+    return { headline: 'The World is choosing.', detail: 'Where will the journey go next?' };
+  }
   if (state.status === STATUS.WAITING_FOR_FIRST_CALL) {
     return { headline: 'Waiting for its next invitation.', detail: 'Invite it to your city.' };
   }
@@ -805,6 +862,8 @@ function buildPublicState(state, itinerary, now, viewer = {}) {
     arrivalAt: state.arrivalAt,
     invitationOpenAt: state.invitationOpenAt,
     invitationCloseAt: state.invitationCloseAt,
+    revealStartAt: state.revealStartAt || null,
+    revealEndAt: state.revealEndAt || null,
     activeRoundId: state.activeRoundId,
     invitationCount: Number(state.invitationCount) || 0,
     invitedCities: state.invitedCities || [],
@@ -830,6 +889,7 @@ function buildPublicState(state, itinerary, now, viewer = {}) {
     constants: {
       invitationHourUtc: INVITATION_HOUR_UTC,
       invitationWindowMs: INVITATION_WINDOW_MS,
+      revealWindowMs: REVEAL_WINDOW_MS,
       arrivalHourUtc: ARRIVAL_HOUR_UTC,
       arrivalMinuteUtc: ARRIVAL_MINUTE_UTC,
     },
@@ -929,6 +989,11 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
   if (countriesMatch(viewer.countryCode || viewer.country, state.currentCountryCode || state.currentCountry)) {
     const err = new Error('The journey is currently in your country.');
     err.statusCode = 403;
+    throw err;
+  }
+  if (state.status === STATUS.REVEAL_PENDING) {
+    const err = new Error('The World is choosing its next destination.');
+    err.statusCode = 409;
     throw err;
   }
   if (state.status !== STATUS.INVITATION_OPEN && state.status !== STATUS.WAITING_FOR_FIRST_CALL) {
@@ -1084,6 +1149,7 @@ module.exports = {
   STATUS,
   INVITATION_HOUR_UTC,
   INVITATION_WINDOW_MS,
+  REVEAL_WINDOW_MS,
   ARRIVAL_HOUR_UTC,
   ARRIVAL_MINUTE_UTC,
   SEED_CITY,

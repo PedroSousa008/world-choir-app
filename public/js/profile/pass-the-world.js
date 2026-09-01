@@ -26,6 +26,7 @@ const PassTheWorld = (() => {
   let mockNow = null;
   let mounted = false;
   let arrivalRefreshScheduled = false;
+  let revealRefreshTimer = null;
 
   function esc(s) {
     return String(s ?? '')
@@ -258,6 +259,10 @@ const PassTheWorld = (() => {
       return lines;
     }
 
+    if (status === 'REVEAL_PENDING') {
+      return lines;
+    }
+
     if (status === 'WAITING_FOR_FIRST_CALL') {
       return lines;
     }
@@ -369,6 +374,9 @@ const PassTheWorld = (() => {
     if (status === 'INVITATION_OPEN' && active) {
       lead = 'WHERE SHOULD THE WORLD GO NEXT?';
       note = 'Invite it to your city.';
+    } else if (status === 'REVEAL_PENDING') {
+      lead = 'THE WORLD IS CHOOSING';
+      note = 'Where will the journey go next?';
     } else if (status === 'WAITING_FOR_FIRST_CALL' && active) {
       lead = 'WAITING FOR AN INVITATION';
       note = 'The World is waiting for its next invitation.';
@@ -384,6 +392,9 @@ const PassTheWorld = (() => {
         ${note ? `<p class="ptw-cta-note">${note}</p>` : ''}
         ${renderVisitButton(journey, { showRing })}
         ${showRing && active ? '<p class="ptw-countdown" data-ptw-countdown aria-live="polite"></p>' : ''}
+        ${status === 'REVEAL_PENDING'
+          ? '<p class="ptw-countdown" data-ptw-reveal-countdown aria-live="polite"></p>'
+          : ''}
         ${status === 'INVITATION_OPEN' && journey.invitationCount > 0 && active
           ? `<p class="ptw-invite-count" aria-live="polite">${Number(journey.invitationCount).toLocaleString()} invitations</p>`
           : ''}
@@ -487,7 +498,8 @@ const PassTheWorld = (() => {
           <button type="button" data-ptw-dev="seed">Noon UTC</button>
           <button type="button" data-ptw-dev="invite-open">Open 16:00</button>
           <button type="button" data-ptw-dev="invite-mid">Mid window</button>
-          <button type="button" data-ptw-dev="after-window">After window</button>
+          <button type="button" data-ptw-dev="after-window">Reveal 16:01:05</button>
+          <button type="button" data-ptw-dev="after-reveal">After reveal</button>
           <button type="button" data-ptw-dev="clear-now">Clear mock time</button>
           <button type="button" data-ptw-dev="reset-view">Reset map</button>
         </div>
@@ -576,35 +588,73 @@ const PassTheWorld = (() => {
     }
 
     updateCountdown(journey);
+    scheduleRevealRefresh(journey);
+  }
+
+  function scheduleRevealRefresh(journey) {
+    if (revealRefreshTimer) {
+      clearTimeout(revealRefreshTimer);
+      revealRefreshTimer = null;
+    }
+    if (journey?.status !== 'REVEAL_PENDING' || !journey.revealEndAt) return;
+    const serverSkew = journey.serverNow
+      ? Date.now() - new Date(journey.serverNow).getTime()
+      : 0;
+    const endMs = new Date(journey.revealEndAt).getTime();
+    const delay = endMs - (Date.now() - serverSkew) + 80;
+    if (delay > 0 && delay < 20000) {
+      revealRefreshTimer = setTimeout(async () => {
+        revealRefreshTimer = null;
+        try { await refresh(); } catch { /* keep */ }
+      }, delay);
+    }
   }
 
   function updateCountdown(journey) {
     clearInterval(countdownTimer);
-    const el = root?.querySelector('[data-ptw-countdown]');
-    const ring = root?.querySelector('.ptw-visit-ring');
-    if (!el || journey?.status !== 'INVITATION_OPEN' || !journey.invitationCloseAt) {
-      if (ring) ring.style.setProperty('--ptw-progress', '0');
-      return;
-    }
-    const closeAt = new Date(journey.invitationCloseAt).getTime();
-    const openAt = new Date(journey.invitationOpenAt || closeAt - 60000).getTime();
+    countdownTimer = null;
+
     const serverSkew = (() => {
-      if (!journey.serverNow) return 0;
+      if (!journey?.serverNow) return 0;
       return Date.now() - new Date(journey.serverNow).getTime();
     })();
-    const tick = () => {
-      const now = mockNow
-        ? new Date(mockNow).getTime()
-        : Date.now() - serverSkew;
-      const left = Math.max(0, Math.ceil((closeAt - now) / 1000));
-      el.textContent = left > 0 ? `Invitations close in ${left}s` : 'Invitations closing…';
-      const total = Math.max(1, closeAt - openAt);
-      const progress = Math.min(1, Math.max(0, (now - openAt) / total));
-      if (ring) ring.style.setProperty('--ptw-progress', String(progress));
-      if (left <= 0) clearInterval(countdownTimer);
-    };
-    tick();
-    countdownTimer = setInterval(tick, 250);
+
+    const el = root?.querySelector('[data-ptw-countdown]');
+    const ring = root?.querySelector('.ptw-visit-ring');
+    if (journey?.status === 'INVITATION_OPEN' && el && journey.invitationCloseAt) {
+      const closeAt = new Date(journey.invitationCloseAt).getTime();
+      const openAt = new Date(journey.invitationOpenAt || closeAt - 60000).getTime();
+      const tick = () => {
+        const now = mockNow
+          ? new Date(mockNow).getTime()
+          : Date.now() - serverSkew;
+        const left = Math.max(0, Math.ceil((closeAt - now) / 1000));
+        el.textContent = left > 0 ? `Invitations close in ${left}s` : 'Invitations closing…';
+        const total = Math.max(1, closeAt - openAt);
+        const progress = Math.min(1, Math.max(0, (now - openAt) / total));
+        if (ring) ring.style.setProperty('--ptw-progress', String(progress));
+        if (left <= 0) clearInterval(countdownTimer);
+      };
+      tick();
+      countdownTimer = setInterval(tick, 250);
+    } else if (ring) {
+      ring.style.setProperty('--ptw-progress', '0');
+    }
+
+    const revealEl = root?.querySelector('[data-ptw-reveal-countdown]');
+    if (journey?.status === 'REVEAL_PENDING' && revealEl && journey.revealEndAt) {
+      const revealEnd = new Date(journey.revealEndAt).getTime();
+      const revealTick = () => {
+        const now = mockNow
+          ? new Date(mockNow).getTime()
+          : Date.now() - serverSkew;
+        const left = Math.max(0, Math.ceil((revealEnd - now) / 1000));
+        revealEl.textContent = left > 0 ? `Revealing in ${left}s` : 'The journey continues…';
+        if (left <= 0) clearInterval(countdownTimer);
+      };
+      revealTick();
+      countdownTimer = setInterval(revealTick, 250);
+    }
   }
 
   async function onInvite() {
@@ -753,6 +803,7 @@ const PassTheWorld = (() => {
       const status = lastPayload?.journey?.status;
       let ms = POLL_MS;
       if (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL') ms = 2000;
+      else if (status === 'REVEAL_PENDING') ms = 800;
       else if (status === 'TRAVELLING') ms = TRAVEL_POLL_MS;
       pollTimer = setTimeout(tick, ms);
     };
@@ -764,6 +815,8 @@ const PassTheWorld = (() => {
     pollTimer = null;
     if (countdownTimer) clearInterval(countdownTimer);
     countdownTimer = null;
+    if (revealRefreshTimer) clearTimeout(revealRefreshTimer);
+    revealRefreshTimer = null;
   }
 
   function bindDev() {
@@ -783,7 +836,9 @@ const PassTheWorld = (() => {
         } else if (kind === 'invite-mid') {
           mockNow = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 16, 0, 30)).toISOString();
         } else if (kind === 'after-window') {
-          mockNow = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 16, 2, 0)).toISOString();
+          mockNow = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 16, 1, 5)).toISOString();
+        } else if (kind === 'after-reveal') {
+          mockNow = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 16, 1, 12)).toISOString();
         }
         try { await refresh(); } catch (e) { console.warn(e); }
       });
