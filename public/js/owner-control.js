@@ -76,6 +76,7 @@ const OwnerControl = (() => {
     ptwRange: '30d',
     ptwRoundId: null,
     ptwMapMode: 'invitations',
+    ptwGeoTab: 'countries',
     ptwCountryQuery: '',
     ptwCityQuery: '',
     ptwCityPage: 1,

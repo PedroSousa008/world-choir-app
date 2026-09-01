@@ -324,6 +324,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
   const countryNames = new Map();
   const cityInviteTotals = new Map();
   const inviteDatesByUser = new Map();
+  const inviteUsersByDate = new Map();
 
   for (const round of rounds) {
     const invs = await readRoundInvites(round.roundId);
@@ -331,6 +332,10 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
       participantIds.add(inv.userId);
       if (!inviteDatesByUser.has(inv.userId)) inviteDatesByUser.set(inv.userId, new Set());
       inviteDatesByUser.get(inv.userId).add(round.date);
+      if (round.date) {
+        if (!inviteUsersByDate.has(round.date)) inviteUsersByDate.set(round.date, new Set());
+        inviteUsersByDate.get(round.date).add(inv.userId);
+      }
 
       const cc = inv.countryCode || resolveCountryCode(inv.country) || inv.country;
       countryInviteTotals.set(cc, (countryInviteTotals.get(cc) || 0) + 1);
@@ -557,6 +562,26 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
 
   const selectedRound = roundId ? rounds.find((r) => r.roundId === roundId) : null;
 
+  const sortedDates = [...inviteUsersByDate.keys()].sort();
+  const cumulativeUsers = new Set();
+  const uniqueParticipantsOverTime = sortedDates.map((date) => {
+    for (const uid of inviteUsersByDate.get(date)) cumulativeUsers.add(uid);
+    return { date, value: cumulativeUsers.size };
+  });
+
+  const successfulRounds = rounds.filter((r) => r.selectedCity && !r.wasEmpty).length;
+  const invitationOutcomes = {
+    successful: successfulRounds,
+    empty: emptyRoundCount,
+    total: rounds.length,
+  };
+
+  const currentWaitSeconds = waitingSince
+    ? Math.max(0, Math.round((now.getTime() - new Date(waitingSince).getTime()) / 1000))
+    : null;
+
+  const journeyBeganAt = beganAt || null;
+
   return {
     serverNow: now.toISOString(),
     live: {
@@ -584,6 +609,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
       countriesVisited: journeyCountries.size,
       distanceTravelled: Math.round(totalDistance),
       daysActive,
+      journeyBeganAt,
     },
     today: {
       date: today,
@@ -596,7 +622,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
       currentCountry: journey.current?.country,
       nextDestination: journey.destination?.city || journey.lastReveal?.city || null,
       nextDestinationCountry: journey.destination?.country || journey.lastReveal?.country || null,
-      calledByVoice: journey.lastReveal?.voiceNumber ?? journey.destination ? null : null,
+      calledByVoice: journey.lastReveal?.voiceNumber ?? null,
       calledByCity: journey.lastReveal?.city || null,
       calledByCountry: journey.lastReveal?.country || null,
     },
@@ -623,6 +649,17 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
     charts: {
       invitationsOverTime: filterByRange(invitationsOverTime.map((p) => ({ date: p.date, invitations: p.value })), range),
       participationRateOverTime: filterByRange(participationOverTime, range),
+      uniqueParticipantsOverTime: filterByRange(uniqueParticipantsOverTime.map((p) => ({
+        date: p.date,
+        participants: p.value,
+      })), range),
+    },
+    invitationOutcomes,
+    waitTime: {
+      currentWaitSeconds,
+      averageTimeToFirstInvitation: avg(timeToFirst) != null ? Math.round(avg(timeToFirst)) : null,
+      averageTimeToDestination: avg(timeToDestination) != null ? Math.round(avg(timeToDestination)) : null,
+      medianTimeToFirstInvitation: median(timeToFirst) != null ? Math.round(median(timeToFirst)) : null,
     },
     uniqueParticipants: {
       today: uniqueToday,
