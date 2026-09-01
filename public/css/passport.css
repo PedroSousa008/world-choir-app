@@ -1062,6 +1062,40 @@
   color: var(--accent-blue);
 }
 
+.passport-stat__icon--stamps {
+  background: rgba(61, 124, 255, 0.14);
+  color: var(--accent-blue);
+}
+
+.passport-stats--triple {
+  grid-template-columns: repeat(3, 1fr);
+  min-height: 132px;
+}
+
+.passport-stats--triple .passport-stat {
+  padding: 18px 8px;
+  gap: 8px;
+}
+
+.passport-stats--triple .passport-stat__icon {
+  width: 36px;
+  height: 36px;
+}
+
+.passport-stats--triple .passport-stat__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.passport-stats--triple .passport-stat__value {
+  font-size: 1.45rem;
+}
+
+.passport-stats--triple .passport-stat__label {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+}
+
 .passport-stat__icon svg {
   width: 20px;
   height: 20px;

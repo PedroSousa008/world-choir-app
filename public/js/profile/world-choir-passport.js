@@ -540,6 +540,7 @@ const WorldChoirPassport = (() => {
       memberSince: user.created_at || pledge?.pledged_at || null,
       eventsJoined,
       dailyActsCompleted,
+      stampsEarned: stamps.filter((stamp) => stamp.unlocked).length,
       hasJoined: !!pledge || eventsJoined > 0,
       stamps,
       userId,

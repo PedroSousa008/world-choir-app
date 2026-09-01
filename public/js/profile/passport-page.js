@@ -31,6 +31,15 @@ const PassportPage = (() => {
     `;
   }
 
+  function iconAward() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="5"/>
+        <path d="M8.5 13 6 21l6-3 6 3-2.5-8"/>
+      </svg>
+    `;
+  }
+
   function iconDownload() {
     return `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -104,7 +113,50 @@ const PassportPage = (() => {
     return chapter === 'stamps' ? 'stamps' : 'cover';
   }
 
-  function renderStoryView() {
+  function stampsEarnedCount(data = {}) {
+    if (Number.isFinite(Number(data.stampsEarned))) return Number(data.stampsEarned);
+    return (data.stamps || []).filter((stamp) => stamp.unlocked).length;
+  }
+
+  function renderParticipationStats(data = {}, { columns = 2 } = {}) {
+    const events = Number(data.eventsJoined) || 0;
+    const acts = Number(data.dailyActsCompleted) || 0;
+    const stats = [
+      {
+        icon: iconPeople(),
+        iconClass: 'events',
+        value: events,
+        label: 'Events\nJoined',
+      },
+      {
+        icon: iconStar(),
+        iconClass: 'acts',
+        value: acts,
+        label: 'Daily Acts\nCompleted',
+      },
+    ];
+
+    if (columns >= 3) {
+      stats.push({
+        icon: iconAward(),
+        iconClass: 'stamps',
+        value: stampsEarnedCount(data),
+        label: 'Stamps\nEarned',
+      });
+    }
+
+    return `
+      <section class="passport-stats${columns >= 3 ? ' passport-stats--triple' : ''}" aria-label="Participation statistics">
+        ${stats.map((stat) => `
+          <div class="passport-stat">
+            <div class="passport-stat__icon passport-stat__icon--${stat.iconClass}">${stat.icon}</div>
+            <p class="passport-stat__value">${esc(String(stat.value))}</p>
+            <p class="passport-stat__label">${stat.label}</p>
+          </div>`).join('')}
+      </section>`;
+  }
+
+  function renderStoryView(data = {}) {
     return `
       <div id="passport-story-view" class="passport-story-view" hidden>
         <header class="passport-header">
@@ -135,8 +187,10 @@ const PassportPage = (() => {
 
         <div class="passport-permanence" id="passport-story-permanence">
           ${iconLock()}
-          <p>One world. One journey.<br>The World moves only when invited.</p>
+          <p>This is your unique World Choir Passport.<br>It cannot be changed or transferred.</p>
         </div>
+
+        ${renderParticipationStats(data, { columns: 3 })}
       </div>
     `;
   }
@@ -169,9 +223,6 @@ const PassportPage = (() => {
   }
 
   function render(data, chapter = 'cover') {
-    const events = Number(data.eventsJoined) || 0;
-    const acts = Number(data.dailyActsCompleted) || 0;
-
     return `
       <div id="passport-main" class="passport-main">
         <header class="passport-header">
@@ -190,20 +241,7 @@ const PassportPage = (() => {
           <p>This is your unique World Choir Passport.<br>It cannot be changed or transferred.</p>
         </div>
 
-        <section class="passport-stats" aria-label="Participation statistics">
-          <div class="passport-stat">
-            <div class="passport-stat__icon passport-stat__icon--events">${iconPeople()}</div>
-            <p class="passport-stat__value">${esc(String(events))}</p>
-            <p class="passport-stat__label">Events
-Joined</p>
-          </div>
-          <div class="passport-stat">
-            <div class="passport-stat__icon passport-stat__icon--acts">${iconStar()}</div>
-            <p class="passport-stat__value">${esc(String(acts))}</p>
-            <p class="passport-stat__label">Daily Acts
-Completed</p>
-          </div>
-        </section>
+        ${renderParticipationStats(data, { columns: 2 })}
 
         <section class="passport-actions" aria-label="Passport actions">
           <button type="button" class="passport-action" id="passport-action-download" aria-label="Download World Choir Passport">
@@ -229,8 +267,20 @@ Completed</p>
           <span class="passport-journey-card__chevron" aria-hidden="true">›</span>
         </button>
       </div>
-      ${renderStoryView()}
+      ${renderStoryView(data)}
     `;
+  }
+
+  function updateStoryStats(data = {}) {
+    const story = document.getElementById('passport-story-view');
+    if (!story) return;
+    const existing = story.querySelector('.passport-stats');
+    const next = renderParticipationStats(data, { columns: 3 });
+    if (existing) {
+      existing.outerHTML = next;
+      return;
+    }
+    story.querySelector('#passport-story-permanence')?.insertAdjacentHTML('afterend', next);
   }
 
   function openInfo() {
@@ -378,6 +428,7 @@ Completed</p>
     // Soft refresh on story: keep Pass the World mounted.
     if (chapter === 'story' && document.getElementById('passport-story-host')?.querySelector('.ptw')) {
       passportData = data;
+      updateStoryStats(data);
       applyChapter('story', { syncUrl: true, historyMode: 'replace' });
       return;
     }
