@@ -1531,8 +1531,35 @@ const OwnerMapSponsors = (() => {
     });
 
     root.querySelectorAll('[data-sponsor-analytics-export]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        ctx.setFlash('Export report is not available yet.');
+      btn.addEventListener('click', async () => {
+        if (!state.sponsorAnalyticsId) return;
+        btn.disabled = true;
+        try {
+          const query = buildAnalyticsQuery(state);
+          const res = await fetch(`/api/admin?action=map-sponsor-analytics-export${query}`, {
+            credentials: 'include',
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Could not export report.');
+          }
+          const blob = await res.blob();
+          const disposition = res.headers.get('Content-Disposition') || '';
+          const match = disposition.match(/filename="?([^";]+)"?/i);
+          const filename = match?.[1] || 'sponsor-analytics-report.html';
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(link.href);
+          ctx.setFlash('Analytics report downloaded.');
+        } catch (err) {
+          ctx.setFlash(err.message || 'Export failed.', 'err');
+        } finally {
+          btn.disabled = false;
+        }
       });
     });
 

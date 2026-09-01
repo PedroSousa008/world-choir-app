@@ -60,6 +60,10 @@ const {
   readMapSponsorDocument,
 } = require('./_lib/map-sponsors-owner');
 const { getMapSponsorAnalytics } = require('./_lib/map-sponsors-analytics');
+const {
+  buildMapSponsorAnalyticsReportHtml,
+  buildMapSponsorAnalyticsExportFilename,
+} = require('./_lib/map-sponsors-analytics-export');
 
 module.exports = async function handler(req, res) {
   corsHeaders(res);
@@ -364,6 +368,26 @@ module.exports = async function handler(req, res) {
         to: req.query.to,
       });
       return res.status(200).json(analytics);
+    }
+
+    if (action === 'map-sponsor-analytics-export' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const id = req.query.id;
+      if (!id) return res.status(400).json({ error: 'Sponsor id required' });
+      const analytics = await getMapSponsorAnalytics(id, {
+        range: req.query.range,
+        from: req.query.from,
+        to: req.query.to,
+      });
+      const host = req.headers['x-forwarded-host'] || req.headers.host || 'world-choir-app.vercel.app';
+      const proto = req.headers['x-forwarded-proto'] || 'https';
+      const origin = `${proto}://${host}`;
+      const html = await buildMapSponsorAnalyticsReportHtml(analytics, { origin });
+      const filename = buildMapSponsorAnalyticsExportFilename(analytics);
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      return res.status(200).send(html);
     }
 
     if (action === 'create-map-sponsor' && req.method === 'POST') {
