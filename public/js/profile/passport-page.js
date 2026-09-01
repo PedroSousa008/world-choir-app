@@ -410,6 +410,8 @@ const PassportPage = (() => {
           ${WorldChoirPassport.renderCard(data, { page: cardPageForChapter(chapter) })}
         </div>
 
+        ${renderWalletCta(chapter)}
+
         <div class="passport-permanence">
           ${iconLock()}
           <p>This is your unique World Choir Passport.<br>It cannot be changed or transferred.</p>
@@ -419,6 +421,76 @@ const PassportPage = (() => {
       </div>
       ${renderStoryView(data)}
     `;
+  }
+
+  function renderWalletCta(chapter = 'cover') {
+    const showApple = chapter === 'stamps'
+      && typeof PassportWallet !== 'undefined'
+      && PassportWallet.canAddAppleWalletPasses();
+    if (!showApple) return '';
+
+    return `
+      <div class="passport-wallet-cta" id="passport-wallet-cta">
+        <button
+          type="button"
+          class="passport-wallet-badge"
+          id="passport-wallet-badge"
+          aria-label="Add to Apple Wallet"
+        >
+          <img
+            src="images/wallet/add-to-apple-wallet.svg"
+            alt=""
+            width="220"
+            height="40"
+            decoding="async"
+          >
+        </button>
+        <p class="passport-wallet-cta__status" id="passport-wallet-status" hidden></p>
+      </div>
+    `;
+  }
+
+  function updateWalletCtaVisibility(chapter = activeChapter) {
+    const cta = document.getElementById('passport-wallet-cta');
+    if (!cta) return;
+    const showApple = chapter === 'stamps'
+      && typeof PassportWallet !== 'undefined'
+      && PassportWallet.canAddAppleWalletPasses();
+    cta.hidden = !showApple;
+  }
+
+  async function handleWalletAdd(triggerEl) {
+    if (!passportData || busyAction) return;
+    const statusEl = document.getElementById('passport-wallet-status');
+    const setStatus = (message, visible = true) => {
+      if (!statusEl) return;
+      statusEl.textContent = message || '';
+      statusEl.hidden = !visible || !message;
+    };
+
+    setActionBusy('wallet');
+    triggerEl?.setAttribute('aria-busy', 'true');
+    setStatus(PassportWallet.LOADING_MESSAGE);
+
+    try {
+      await PassportWallet.addToWallet(passportData, {
+        onStatus: (message) => setStatus(message),
+      });
+      setStatus('');
+      WorldChoirPassport.showToast('Opening Apple Wallet…');
+    } catch (err) {
+      if (err?.code === 'unsupported') {
+        WorldChoirPassport.showToast('Add to Apple Wallet is available on iPhone and iPad.');
+      } else if (err?.code === 'WALLET_NOT_CONFIGURED' || err?.code === 503 || err?.code === 501) {
+        WorldChoirPassport.showToast('Apple Wallet is being prepared — coming soon.');
+      } else {
+        WorldChoirPassport.showToast(PassportWallet.ERROR_MESSAGE);
+      }
+      setStatus('');
+    } finally {
+      setActionBusy(null);
+      triggerEl?.removeAttribute('aria-busy');
+    }
   }
 
   function updateInfoActionsVisibility(chapter = activeChapter) {
@@ -437,6 +509,7 @@ const PassportPage = (() => {
       actions.classList.toggle('passport-info-modal__actions--visible', isStamps);
     }
     overlay?.classList.toggle('is-stamps-actions', isStamps);
+    updateWalletCtaVisibility(chapter);
   }
 
   function updateStoryStats(data = {}) {
@@ -552,29 +625,12 @@ const PassportPage = (() => {
       setActionBusy(null);
     });
 
-    document.getElementById('passport-action-wallet')?.addEventListener('click', async () => {
-      if (!passportData || busyAction) return;
-      setActionBusy('wallet');
-      try {
-        await PassportWallet.addToWallet(passportData);
-        WorldChoirPassport.showToast('Opening Wallet…');
-      } catch (err) {
-        if (err?.code === 'unsupported' || err?.code === 404 || err?.code === 501) {
-          WorldChoirPassport.showToast(
-            PassportWallet.isSupported()
-              ? 'Wallet passes are being prepared — coming soon.'
-              : 'Add to Wallet works on iPhone and Android.'
-          );
-        } else {
-          WorldChoirPassport.showToast(
-            PassportWallet.isSupported()
-              ? 'Wallet passes are being prepared — coming soon.'
-              : (err.message || 'Could not add to Wallet')
-          );
-        }
-      } finally {
-        setActionBusy(null);
-      }
+    document.getElementById('passport-action-wallet')?.addEventListener('click', async (e) => {
+      await handleWalletAdd(e.currentTarget);
+    });
+
+    document.getElementById('passport-wallet-badge')?.addEventListener('click', async (e) => {
+      await handleWalletAdd(e.currentTarget);
     });
 
     bindStoryBack();
