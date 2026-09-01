@@ -88,16 +88,6 @@ const PassportPage = (() => {
     `;
   }
 
-  function iconWallet() {
-    return `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="2" y="6" width="20" height="14" rx="2"/>
-        <path d="M2 10h20"/>
-        <circle cx="17" cy="14" r="1.2" fill="currentColor" stroke="none"/>
-      </svg>
-    `;
-  }
-
   function iconShare() {
     return `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -146,7 +136,7 @@ const PassportPage = (() => {
 
   function setActionBusy(which) {
     busyAction = which;
-    ['download', 'wallet', 'share'].forEach((key) => {
+    ['download', 'share'].forEach((key) => {
       const btn = document.getElementById(`passport-action-${key}`);
       if (!btn) return;
       btn.disabled = !!which;
@@ -410,8 +400,6 @@ const PassportPage = (() => {
           ${WorldChoirPassport.renderCard(data, { page: cardPageForChapter(chapter) })}
         </div>
 
-        ${renderWalletCta(chapter)}
-
         <div class="passport-permanence">
           ${iconLock()}
           <p>This is your unique World Choir Passport.<br>It cannot be changed or transferred.</p>
@@ -423,98 +411,20 @@ const PassportPage = (() => {
     `;
   }
 
-  function renderWalletCta(chapter = 'cover') {
-    const showApple = chapter === 'stamps'
-      && typeof PassportWallet !== 'undefined'
-      && PassportWallet.canAddAppleWalletPasses();
-    if (!showApple) return '';
-
-    return `
-      <div class="passport-wallet-cta" id="passport-wallet-cta">
-        <button
-          type="button"
-          class="passport-wallet-badge"
-          id="passport-wallet-badge"
-          aria-label="Add to Apple Wallet"
-        >
-          <img
-            src="images/wallet/add-to-apple-wallet.svg"
-            alt=""
-            width="220"
-            height="40"
-            decoding="async"
-          >
-        </button>
-        <p class="passport-wallet-cta__status" id="passport-wallet-status" hidden></p>
-      </div>
-    `;
-  }
-
-  function updateWalletCtaVisibility(chapter = activeChapter) {
-    const cta = document.getElementById('passport-wallet-cta');
-    if (!cta) return;
-    const showApple = chapter === 'stamps'
-      && typeof PassportWallet !== 'undefined'
-      && PassportWallet.canAddAppleWalletPasses();
-    cta.hidden = !showApple;
-  }
-
-  async function handleWalletAdd(triggerEl) {
-    if (!passportData || busyAction) return;
-    const statusEl = document.getElementById('passport-wallet-status');
-    const setStatus = (message, visible = true) => {
-      if (!statusEl) return;
-      statusEl.textContent = message || '';
-      statusEl.hidden = !visible || !message;
-    };
-
-    setActionBusy('wallet');
-    triggerEl?.setAttribute('aria-busy', 'true');
-    setStatus(PassportWallet.LOADING_MESSAGE);
-
-    try {
-      await PassportWallet.addToWallet(passportData, {
-        onStatus: (message) => setStatus(message),
-      });
-      setStatus('');
-      WorldChoirPassport.showToast('Opening Apple Wallet…');
-    } catch (err) {
-      const code = String(err?.code || '');
-      if (code === 'unsupported') {
-        WorldChoirPassport.showToast('Add to Apple Wallet is available on iPhone and iPad.');
-      } else if (code === 'WALLET_NOT_CONFIGURED' || code === '503' || code === '501') {
-        WorldChoirPassport.showToast('Apple Wallet is being prepared — coming soon.');
-      } else if (code === '403') {
-        WorldChoirPassport.showToast('Join World Choir first to add your Passport to Wallet.');
-      } else if (code === '404') {
-        WorldChoirPassport.showToast('We could not find your Passport. Open Passport once, then try again.');
-      } else {
-        WorldChoirPassport.showToast(PassportWallet.ERROR_MESSAGE);
-      }
-      setStatus('');
-    } finally {
-      setActionBusy(null);
-      triggerEl?.removeAttribute('aria-busy');
-    }
-  }
-
   function updateInfoActionsVisibility(chapter = activeChapter) {
     const isStamps = chapter === 'stamps';
     const actions = document.getElementById('passport-info-actions');
     const download = document.getElementById('passport-action-download');
-    const wallet = document.getElementById('passport-action-wallet');
     const share = document.getElementById('passport-action-share');
     const overlay = document.getElementById('passport-info-overlay');
 
     if (download) download.hidden = !isStamps;
-    if (wallet) wallet.hidden = !isStamps;
     if (share) share.hidden = !isStamps;
     if (actions) {
       actions.hidden = !isStamps;
       actions.classList.toggle('passport-info-modal__actions--visible', isStamps);
     }
     overlay?.classList.toggle('is-stamps-actions', isStamps);
-    updateWalletCtaVisibility(chapter);
   }
 
   function updateStoryStats(data = {}) {
@@ -628,14 +538,6 @@ const PassportPage = (() => {
       setActionBusy('share');
       await WorldChoirPassport.sharePassport(passportData);
       setActionBusy(null);
-    });
-
-    document.getElementById('passport-action-wallet')?.addEventListener('click', async (e) => {
-      await handleWalletAdd(e.currentTarget);
-    });
-
-    document.getElementById('passport-wallet-badge')?.addEventListener('click', async (e) => {
-      await handleWalletAdd(e.currentTarget);
     });
 
     bindStoryBack();

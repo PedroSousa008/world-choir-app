@@ -7,7 +7,6 @@
     { "source": "/donate", "destination": "/donate.html" },
     { "source": "/memory", "destination": "/memory.html" },
     { "source": "/profile", "destination": "/profile.html" },
-    { "source": "/passport/:token", "destination": "/passport-public.html?token=:token" },
     { "source": "/owner-database", "destination": "/owner-database.html" },
     { "source": "/owner", "destination": "/owner.html" },
     { "source": "/members", "destination": "/members.html" }
