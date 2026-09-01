@@ -335,7 +335,7 @@ body.map-page {
   --map-sponsor-gap: 24px;
   --map-sponsor-slot-min-width: 40px;
   --map-sponsor-slot-padding-x: 2px;
-  --map-sponsor-belt-duration: 60s;
+  --map-sponsor-belt-duration: 30s;
 }
 
 .map-sponsor__viewport {
@@ -360,7 +360,7 @@ body.map-page {
   width: max-content;
   gap: 0;
   will-change: transform;
-  animation: mapSponsorBelt var(--map-sponsor-belt-duration, 60s) linear infinite;
+  animation: mapSponsorBelt var(--map-sponsor-belt-duration, 30s) linear infinite;
 }
 
 .map-sponsor__track--animated .map-sponsor__sequence {

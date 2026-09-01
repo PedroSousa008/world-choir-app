@@ -5,7 +5,7 @@
 const MapSponsorConstants = (() => {
   const LOGO_HEIGHT_PX = 16;
   const LOGO_GAP_PX = 28;
-  const TRAVERSAL_DURATION_SEC = 60;
+  const TRAVERSAL_DURATION_SEC = 30;
   const MOBILE_MAX_VISIBLE = 6;
   const DESKTOP_MAX_VISIBLE = 10;
   /** Matches primary mobile breakpoint in map.css */
