@@ -41,7 +41,14 @@ const sampleAnalytics = {
     country: 'Portugal',
     latitude: 38.72,
     longitude: -9.14,
-    clicks: 3,
+    uniqueClickers: 1,
+  }],
+  clickMapPoints: [{
+    city: 'Lisbon',
+    country: 'Portugal',
+    latitude: 38.72,
+    longitude: -9.14,
+    uniqueClickers: 1,
   }],
   events: [],
   timeSeries: [{ date: '2026-08-10', impressions: 50, uniqueReach: 40, clicks: 2, ctr: 4 }],
@@ -61,7 +68,7 @@ async function testReportHtml() {
   assert.ok(html.includes('Nike'));
   assert.ok(html.includes('Exported'));
   assert.ok(html.includes('Performance Summary'));
-  assert.ok(html.includes('Click-through Locations'));
+  assert.ok(html.includes('Unique Clickers by Location'));
   assert.ok(html.includes('Lisbon'));
   assert.ok(html.includes('World Choir'));
 }

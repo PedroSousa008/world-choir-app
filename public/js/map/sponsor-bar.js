@@ -216,6 +216,44 @@ const MapSponsorBar = (() => {
         latitude = Number.isFinite(Number(pledge.latitude)) ? Number(pledge.latitude) : null;
         longitude = Number.isFinite(Number(pledge.longitude)) ? Number(pledge.longitude) : null;
       }
+
+      if ((latitude == null || longitude == null) && city && country
+        && typeof WorldChoirDB.getAggregatedCities === 'function') {
+        const match = WorldChoirDB.getAggregatedCities().find(
+          (entry) => entry.city === city && entry.country === country
+        );
+        if (match && Number.isFinite(Number(match.latitude)) && Number.isFinite(Number(match.longitude))) {
+          latitude = Number(match.latitude);
+          longitude = Number(match.longitude);
+        }
+      }
+
+      if (latitude == null || longitude == null) {
+        const user = typeof WorldChoirDB.getCurrentUser === 'function'
+          ? WorldChoirDB.getCurrentUser()
+          : null;
+        if (user) {
+          city = city || (user.city ? String(user.city).trim() : null);
+          country = country || (user.country ? String(user.country).trim() : null);
+          if (Number.isFinite(Number(user.latitude)) && Number.isFinite(Number(user.longitude))) {
+            latitude = Number(user.latitude);
+            longitude = Number(user.longitude);
+          }
+        }
+      }
+
+      if (latitude == null || longitude == null) {
+        try {
+          const raw = localStorage.getItem('wc_map_user_home');
+          const cached = raw ? JSON.parse(raw) : null;
+          if (cached && Number.isFinite(Number(cached.lat)) && Number.isFinite(Number(cached.lng))) {
+            latitude = Number(cached.lat);
+            longitude = Number(cached.lng);
+          }
+        } catch {
+          /* ignore */
+        }
+      }
     } catch {
       /* ignore */
     }

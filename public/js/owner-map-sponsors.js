@@ -368,8 +368,8 @@ const OwnerMapSponsors = (() => {
     };
   }
 
-  function getAnalyticsMapCities(clickLocations) {
-    return (clickLocations || [])
+  function getAnalyticsMapCities(clickMapPoints) {
+    return (clickMapPoints || [])
       .filter((point) =>
         Number.isFinite(Number(point.latitude)) && Number.isFinite(Number(point.longitude))
       )
@@ -378,7 +378,8 @@ const OwnerMapSponsors = (() => {
         country: point.country || '',
         latitude: Number(point.latitude),
         longitude: Number(point.longitude),
-        count: Number(point.clicks || point.count || 1),
+        count: Number(point.uniqueClickers || 1),
+        mapMetric: 'uniqueClickers',
       }));
   }
 
@@ -555,13 +556,13 @@ const OwnerMapSponsors = (() => {
     `;
   }
 
-  function renderGlobalReachMap(clickLocations, esc) {
-    const hasClickLocations = (clickLocations || []).length > 0;
+  function renderGlobalReachMap(clickMapPoints, esc) {
+    const hasClickLocations = (clickMapPoints || []).length > 0;
     return `
       <div class="sa-map-card">
         <div class="sa-map-card__head">
           <h3 class="sa-panel__title">Global Reach</h3>
-          <p class="owner-muted">Locations of users who clicked through to the sponsor website</p>
+          <p class="owner-muted">Unique clickers by location — one dot per city/coordinate cluster</p>
         </div>
         <div class="sa-map-shell owner-leaflet-shell owner-leaflet-shell--compact">
           <div id="owner-sponsor-analytics-map"></div>
@@ -621,7 +622,7 @@ const OwnerMapSponsors = (() => {
     const summary = detail.summary || {};
     const comparison = detail.comparison || {};
     const periodLabel = comparison.periodLabel || 'previous period';
-    const clickLocations = detail.clickLocations || [];
+    const clickMapPoints = detail.clickMapPoints || [];
     const events = detail.events || [];
     const rangeFrom = detail.range?.from || state.sponsorAnalyticsCustomFrom;
     const rangeTo = detail.range?.to;
@@ -696,7 +697,7 @@ const OwnerMapSponsors = (() => {
                 <h3 class="sa-panel__title">Performance Over Time</h3>
                 ${renderSponsorLineChart(detail.timeSeries, esc)}
               </section>
-              ${renderGlobalReachMap(clickLocations, esc)}
+              ${renderGlobalReachMap(clickMapPoints, esc)}
             </div>
 
             <div class="sa-grid-3">

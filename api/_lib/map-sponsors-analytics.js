@@ -306,19 +306,14 @@ function mergeClickLocationsAgg(target, source) {
     const lat = Number(loc?.latitude);
     const lng = Number(loc?.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
-    const existing = target[visitorId];
-    if (existing) {
-      existing.clicks = Number(existing.clicks || 0) + Number(loc.clicks || 1);
-      return;
-    }
+    if (target[visitorId]) return;
 
     target[visitorId] = {
       city: loc.city || null,
       country: loc.country || null,
       latitude: lat,
       longitude: lng,
-      clicks: Number(loc.clicks || 1),
+      uniqueClickers: 1,
     };
   });
 }
@@ -332,19 +327,39 @@ function recordClickLocation(row, visitorId, { city, country, latitude, longitud
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
   row.clickLocations = row.clickLocations || {};
-  const existing = row.clickLocations[visitor];
-  if (existing) {
-    existing.clicks = Number(existing.clicks || 0) + 1;
-    return;
-  }
+  if (row.clickLocations[visitor]) return;
 
   row.clickLocations[visitor] = {
     city: String(city || '').trim() || null,
     country: normalizeCountry(country),
     latitude: lat,
     longitude: lng,
-    clicks: 1,
+    uniqueClickers: 1,
   };
+}
+
+function aggregateClickMapPoints(clickLocationsByVisitor) {
+  const buckets = new Map();
+  Object.values(clickLocationsByVisitor || {}).forEach((loc) => {
+    const lat = Number(loc.latitude);
+    const lng = Number(loc.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const key = `${lat.toFixed(4)}|${lng.toFixed(4)}`;
+    const existing = buckets.get(key) || {
+      city: loc.city || null,
+      country: loc.country || null,
+      latitude: lat,
+      longitude: lng,
+      uniqueClickers: 0,
+    };
+    existing.uniqueClickers += 1;
+    buckets.set(key, existing);
+  });
+  return [...buckets.values()].sort((a, b) =>
+    b.uniqueClickers - a.uniqueClickers
+    || String(a.country || '').localeCompare(String(b.country || ''))
+    || String(a.city || '').localeCompare(String(b.city || ''))
+  );
 }
 
 function mergeEventAgg(target, source) {
@@ -695,9 +710,12 @@ async function getMapSponsorAnalytics(sponsorId, options = {}) {
       country: loc.country || null,
       latitude: Number(loc.latitude),
       longitude: Number(loc.longitude),
-      clicks: Number(loc.clicks || 1),
+      uniqueClickers: 1,
     }))
-    .sort((a, b) => b.clicks - a.clicks || String(a.country || '').localeCompare(String(b.country || '')));
+    .sort((a, b) => String(a.country || '').localeCompare(String(b.country || ''))
+      || String(a.city || '').localeCompare(String(b.city || '')));
+
+  const clickMapPoints = aggregateClickMapPoints(clickLocations);
 
   const countriesReached = Object.values(countries).filter((stats) => Number(stats.impressions || 0) > 0).length;
   const countryRows = Object.entries(countries)
@@ -771,6 +789,7 @@ async function getMapSponsorAnalytics(sponsorId, options = {}) {
     countriesReached,
     countries: countryRows,
     clickLocations: clickLocationRows,
+    clickMapPoints,
     events: eventRows,
     timeSeries,
     highlights,
@@ -791,5 +810,6 @@ module.exports = {
   getMapSponsorAnalytics,
   mergeClickLocationsAgg,
   recordClickLocation,
+  aggregateClickMapPoints,
   DEFAULT_EVENT_ID,
 };

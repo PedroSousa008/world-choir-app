@@ -271,7 +271,14 @@ async function buildMapSponsorAnalyticsReportHtml(analytics, { origin } = {}) {
   const clickLocationRows = (analytics.clickLocations || []).map((row) => [
     esc(row.city || '—'),
     esc(row.country || '—'),
-    esc(formatCount(row.clicks)),
+    esc(formatCount(row.uniqueClickers || 1)),
+    esc(`${Number(row.latitude).toFixed(4)}, ${Number(row.longitude).toFixed(4)}`),
+  ]);
+
+  const clickMapRows = (analytics.clickMapPoints || []).map((row) => [
+    esc(row.city || '—'),
+    esc(row.country || '—'),
+    esc(formatCount(row.uniqueClickers || 0)),
     esc(`${Number(row.latitude).toFixed(4)}, ${Number(row.longitude).toFixed(4)}`),
   ]);
 
@@ -565,10 +572,10 @@ async function buildMapSponsorAnalyticsReportHtml(analytics, { origin } = {}) {
     </section>
 
     <section class="section">
-      <h3>Global Reach — Click-through Locations</h3>
+      <h3>Global Reach — Unique Clickers by Location</h3>
       ${renderTable(
-    ['City', 'Country', 'Clicks', 'Coordinates'],
-    clickLocationRows,
+    ['City', 'Country', 'Unique Clickers', 'Coordinates'],
+    clickMapRows.length ? clickMapRows : clickLocationRows,
     'No click-through locations recorded for this date range.'
   )}
     </section>

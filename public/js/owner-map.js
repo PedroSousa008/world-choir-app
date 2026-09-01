@@ -36,17 +36,22 @@ const OwnerMap = (() => {
     if (!card) return;
     document.getElementById('owner-city-card-place').textContent =
       `${city.city || 'Unknown'}, ${city.country || ''}`.replace(/, $/, '');
-    const voices = city.count || city.voices || 0;
-    const donors = city.donors || 0;
-    const raised = city.raised;
-    let line = `${formatNumber(voices)} voice${voices !== 1 ? 's' : ''}`;
-    if (donors > 0 || (raised != null && raised > 0)) {
-      line += ` · ${formatNumber(donors)} donor${donors !== 1 ? 's' : ''}`;
-      if (raised != null) {
-        try {
-          line += ` · ${new Intl.NumberFormat(undefined, { style: 'currency', currency: city.currency || 'EUR', maximumFractionDigits: 0 }).format(raised)}`;
-        } catch {
-          line += ` · ${raised}`;
+    const count = city.count || city.voices || 1;
+    let line;
+    if (city.mapMetric === 'uniqueClickers') {
+      line = `${formatNumber(count)} unique clicker${count !== 1 ? 's' : ''}`;
+    } else {
+      const donors = city.donors || 0;
+      const raised = city.raised;
+      line = `${formatNumber(count)} voice${count !== 1 ? 's' : ''}`;
+      if (donors > 0 || (raised != null && raised > 0)) {
+        line += ` · ${formatNumber(donors)} donor${donors !== 1 ? 's' : ''}`;
+        if (raised != null) {
+          try {
+            line += ` · ${new Intl.NumberFormat(undefined, { style: 'currency', currency: city.currency || 'EUR', maximumFractionDigits: 0 }).format(raised)}`;
+          } catch {
+            line += ` · ${raised}`;
+          }
         }
       }
     }
