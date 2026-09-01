@@ -698,6 +698,12 @@ const PassTheWorld = (() => {
       if (el && total > 0) {
         el.textContent = `${formatKm(travelled)} of ${formatKm(total)}`;
       }
+      if (typeof PassportPage !== 'undefined' && PassportPage.updateJourneyStatsKm) {
+        const liveTotal = PassportPage.liveJourneyTotalKm
+          ? PassportPage.liveJourneyTotalKm(lastPayload, travelled)
+          : (Number(lastPayload?.stats?.totalKm) || 0);
+        PassportPage.updateJourneyStatsKm(liveTotal);
+      }
       if (progress >= 1 && !arrivalRefreshScheduled) {
         arrivalRefreshScheduled = true;
         setTimeout(async () => {

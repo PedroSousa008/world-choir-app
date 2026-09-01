@@ -48,6 +48,14 @@ const PassportPage = (() => {
     `;
   }
 
+  function iconPlane() {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2.5 12h5.5l2-6 3.5 10 2.5-6.5h5"/>
+      </svg>
+    `;
+  }
+
   function iconGlobe() {
     return `
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -160,10 +168,11 @@ const PassportPage = (() => {
   function renderJourneyStats(stats = {}) {
     const items = [
       {
-        icon: iconRoute(),
+        icon: iconPlane(),
         iconClass: 'km',
         value: formatJourneyKm(stats.totalKm),
         label: 'Total KM\nTravelled',
+        valueAttr: 'data-ptw-stat-km',
       },
       {
         icon: iconGlobe(),
@@ -184,10 +193,23 @@ const PassportPage = (() => {
         ${items.map((stat) => `
           <div class="passport-stat">
             <div class="passport-stat__icon passport-stat__icon--${stat.iconClass}">${stat.icon}</div>
-            <p class="passport-stat__value">${esc(String(stat.value))}</p>
+            <p class="passport-stat__value"${stat.valueAttr ? ` ${stat.valueAttr}` : ''}>${esc(String(stat.value))}</p>
             <p class="passport-stat__label">${stat.label}</p>
           </div>`).join('')}
       </section>`;
+  }
+
+  function liveJourneyTotalKm(payload, travelledKm) {
+    if (!payload?.stats) return 0;
+    if (payload.journey?.status !== 'TRAVELLING') return Number(payload.stats.totalKm) || 0;
+    const fetchedTravelled = Number(payload.journey.progress?.travelledKm) || 0;
+    const base = (Number(payload.stats.totalKm) || 0) - fetchedTravelled;
+    return base + travelledKm;
+  }
+
+  function updateJourneyStatsKm(km) {
+    const el = document.querySelector('#passport-story-view [data-ptw-stat-km]');
+    if (el) el.textContent = formatJourneyKm(km);
   }
 
   async function fetchPassTheWorldStats() {
@@ -615,5 +637,5 @@ const PassportPage = (() => {
     mount();
   }
 
-  return { init, showChapter, updateJourneyStats, refreshJourneyStats };
+  return { init, showChapter, updateJourneyStats, refreshJourneyStats, updateJourneyStatsKm, liveJourneyTotalKm };
 })();

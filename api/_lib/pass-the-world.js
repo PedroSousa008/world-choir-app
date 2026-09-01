@@ -709,14 +709,23 @@ function journeyProgress(state, now) {
   return { progress, travelledKm: Math.round(totalKm * progress), totalKm };
 }
 
-function computeStats(itinerary) {
+function computeStats(itinerary, state = null, now = new Date()) {
   const stops = itinerary || [];
   const countries = new Set(stops.map((e) => normalizeCountry(e.country)).filter(Boolean));
-  const km = stops.reduce((sum, e) => sum + (Number(e.distanceKm) || 0), 0);
+  let km = 0;
+  if (state?.status === STATUS.TRAVELLING && state.currentItineraryEntryId) {
+    km = stops.reduce((sum, entry) => {
+      if (entry.id === state.currentItineraryEntryId) return sum;
+      return sum + (Number(entry.distanceKm) || 0);
+    }, 0);
+    km += journeyProgress(state, now).travelledKm || 0;
+  } else {
+    km = stops.reduce((sum, entry) => sum + (Number(entry.distanceKm) || 0), 0);
+  }
   const people = stops.filter((e) => e.calledByVoiceNumber != null).length;
   const beganAt = stops[0]?.arrivedAt || stops[0]?.createdAt || null;
   const daysSince = beganAt
-    ? Math.max(0, Math.floor((Date.now() - new Date(beganAt).getTime()) / 86400000))
+    ? Math.max(0, Math.floor((now.getTime() - new Date(beganAt).getTime()) / 86400000))
     : 0;
   return {
     totalKm: km,
@@ -886,7 +895,7 @@ async function getPassTheWorld({ deviceId, eventId = 'world-choir-2027', now } =
   return {
     journey: buildPublicState(state, itinerary, advanced.now, viewer),
     itinerary,
-    stats: computeStats(itinerary),
+    stats: computeStats(itinerary, state, advanced.now),
   };
 }
 
@@ -952,7 +961,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
       message: 'The World is already moving.',
       journey: buildPublicState(applied.state, applied.itinerary, clock, { ...viewer, hasInvited: true }),
       itinerary: applied.itinerary,
-      stats: computeStats(applied.itinerary),
+      stats: computeStats(applied.itinerary, applied.state, clock),
     };
   }
 
@@ -994,7 +1003,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
         message: created ? null : 'The World is already moving.',
         journey: buildPublicState(applied.state, applied.itinerary, clock, { ...viewer, hasInvited: true }),
         itinerary: applied.itinerary,
-        stats: computeStats(applied.itinerary),
+        stats: computeStats(applied.itinerary, applied.state, clock),
       };
     }
 
@@ -1007,7 +1016,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
         alreadyInvited: true,
         journey: buildPublicState(healed.state, healed.itinerary, clock, { ...viewer, hasInvited: true }),
         itinerary: healed.itinerary,
-        stats: computeStats(healed.itinerary),
+        stats: computeStats(healed.itinerary, healed.state, clock),
       };
     }
     state = await writeState({
@@ -1020,7 +1029,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
       alreadyInvited: true,
       journey: buildPublicState(state, itinerary, clock, { ...viewer, hasInvited: true }),
       itinerary,
-      stats: computeStats(itinerary),
+      stats: computeStats(itinerary, state, clock),
     };
   }
 
@@ -1037,7 +1046,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
       alreadyInvited: true,
       journey: buildPublicState(state, itinerary, clock, { ...viewer, hasInvited: true }),
       itinerary,
-      stats: computeStats(itinerary),
+      stats: computeStats(itinerary, state, clock),
     };
   }
 
@@ -1067,7 +1076,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     alreadyInvited: false,
     journey: buildPublicState(state, itinerary, clock, { ...viewer, hasInvited: true }),
     itinerary,
-    stats: computeStats(itinerary),
+    stats: computeStats(itinerary, state, clock),
   };
 }
 
