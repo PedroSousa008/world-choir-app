@@ -184,6 +184,29 @@ const MapSponsorBar = (() => {
     return sequenceEl.getBoundingClientRect().width;
   }
 
+  function getAnimatedBeltPhaseSec(sequenceWidth, viewportWidth) {
+    if (!sequenceWidth || !viewportWidth) return 0;
+
+    const pxPerSecond = viewportWidth / TRAVERSAL_DURATION_SEC;
+    const cyclePx = sequenceWidth;
+    const elapsedSec = Date.now() / 1000;
+    let offsetPx = (elapsedSec * pxPerSecond) % cyclePx;
+    if (offsetPx < 0) offsetPx += cyclePx;
+
+    return offsetPx / pxPerSecond;
+  }
+
+  function applyAnimatedBeltTiming(sequenceWidth, viewportWidth) {
+    if (!trackEl || !sequenceWidth || !viewportWidth) return;
+
+    const pxPerSecond = viewportWidth / TRAVERSAL_DURATION_SEC;
+    const durationSec = sequenceWidth / pxPerSecond;
+    const phaseSec = getAnimatedBeltPhaseSec(sequenceWidth, viewportWidth);
+
+    trackEl.style.setProperty(CSS_VARS.beltDuration, `${durationSec}s`);
+    trackEl.style.animationDelay = `-${phaseSec}s`;
+  }
+
   function layoutStaticTrack() {
     if (!trackEl || !viewportEl || mode !== 'static') return;
 
@@ -216,10 +239,7 @@ const MapSponsorBar = (() => {
 
     if (!sequenceWidth || !viewportWidth) return;
 
-    const pxPerSecond = viewportWidth / TRAVERSAL_DURATION_SEC;
-    const durationSec = sequenceWidth / pxPerSecond;
-
-    trackEl.style.setProperty(CSS_VARS.beltDuration, `${durationSec}s`);
+    applyAnimatedBeltTiming(sequenceWidth, viewportWidth);
   }
 
   function layoutTrack() {
@@ -313,6 +333,19 @@ const MapSponsorBar = (() => {
     }, { passive: true });
   }
 
+  function bindBeltContinuity() {
+    const resyncAnimatedBelt = () => {
+      if (mode !== 'animated') return;
+      scheduleLayout();
+    };
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) resyncAnimatedBelt();
+    });
+
+    window.addEventListener('pageshow', resyncAnimatedBelt);
+  }
+
   async function init() {
     applyHeaderMode(false);
 
@@ -335,6 +368,7 @@ const MapSponsorBar = (() => {
     bindResizeObserver();
     bindMotionPreference();
     bindWindowResize();
+    bindBeltContinuity();
   }
 
   function hasActiveSponsors() {
