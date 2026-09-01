@@ -1,0 +1,188 @@
+{
+  "sponsors": [
+    {
+      "id": "sponsor-01",
+      "companyName": "Aurora Sound",
+      "logo": "images/sponsors/sponsor-wide.svg",
+      "websiteUrl": "https://example.com/aurora-sound",
+      "isActive": true,
+      "displayOrder": 1
+    },
+    {
+      "id": "sponsor-02",
+      "companyName": "Northlight",
+      "logo": "images/sponsors/sponsor-narrow.svg",
+      "websiteUrl": "https://example.com/northlight",
+      "isActive": true,
+      "displayOrder": 2
+    },
+    {
+      "id": "sponsor-03",
+      "companyName": "Harmony Works",
+      "logo": "images/sponsors/sponsor-square.svg",
+      "websiteUrl": "https://example.com/harmony-works",
+      "isActive": true,
+      "displayOrder": 3
+    },
+    {
+      "id": "sponsor-04",
+      "companyName": "Civic Voice Collective",
+      "logo": "images/sponsors/sponsor-wide.svg",
+      "websiteUrl": "https://example.com/civic-voice",
+      "isActive": true,
+      "displayOrder": 4
+    },
+    {
+      "id": "sponsor-05",
+      "companyName": "Blue Meridian",
+      "logo": "images/sponsors/sponsor-narrow.svg",
+      "websiteUrl": "https://example.com/blue-meridian",
+      "isActive": true,
+      "displayOrder": 5
+    },
+    {
+      "id": "sponsor-06",
+      "companyName": "Open Chorus Foundation",
+      "logo": "images/sponsors/sponsor-square.svg",
+      "websiteUrl": "https://example.com/open-chorus",
+      "isActive": true,
+      "displayOrder": 6
+    },
+    {
+      "id": "sponsor-07",
+      "companyName": "Resonance Labs",
+      "logo": "images/sponsors/sponsor-wide.svg",
+      "websiteUrl": "https://example.com/resonance-labs",
+      "isActive": true,
+      "displayOrder": 7
+    },
+    {
+      "id": "sponsor-08",
+      "companyName": "Lumen Arts",
+      "logo": "images/sponsors/sponsor-narrow.svg",
+      "websiteUrl": "https://example.com/lumen-arts",
+      "isActive": true,
+      "displayOrder": 8
+    },
+    {
+      "id": "sponsor-09",
+      "companyName": "Global Song Trust",
+      "logo": "images/sponsors/sponsor-square.svg",
+      "websiteUrl": "https://example.com/global-song",
+      "isActive": true,
+      "displayOrder": 9
+    },
+    {
+      "id": "sponsor-10",
+      "companyName": "Evergreen Media",
+      "logo": "images/sponsors/sponsor-wide.svg",
+      "websiteUrl": "https://example.com/evergreen-media",
+      "isActive": true,
+      "displayOrder": 10
+    },
+    {
+      "id": "sponsor-11",
+      "companyName": "Pacific Harmony",
+      "logo": "images/sponsors/sponsor-narrow.svg",
+      "websiteUrl": "https://example.com/pacific-harmony",
+      "isActive": true,
+      "displayOrder": 11
+    },
+    {
+      "id": "sponsor-12",
+      "companyName": "Silver Note Partners",
+      "logo": "images/sponsors/sponsor-square.svg",
+      "websiteUrl": "https://example.com/silver-note",
+      "isActive": true,
+      "displayOrder": 12
+    },
+    {
+      "id": "sponsor-13",
+      "companyName": "Atlas Cultural Group",
+      "logo": "images/sponsors/sponsor-wide.svg",
+      "websiteUrl": "https://example.com/atlas-cultural",
+      "isActive": true,
+      "displayOrder": 13
+    },
+    {
+      "id": "sponsor-14",
+      "companyName": "Kindred Studios",
+      "logo": "images/sponsors/sponsor-narrow.svg",
+      "websiteUrl": "https://example.com/kindred-studios",
+      "isActive": true,
+      "displayOrder": 14
+    },
+    {
+      "id": "sponsor-15",
+      "companyName": "Unity Broadcast",
+      "logo": "images/sponsors/sponsor-square.svg",
+      "websiteUrl": "https://example.com/unity-broadcast",
+      "isActive": true,
+      "displayOrder": 15
+    },
+    {
+      "id": "sponsor-16",
+      "companyName": "Riverstone Creative",
+      "logo": "images/sponsors/sponsor-wide.svg",
+      "websiteUrl": "https://example.com/riverstone",
+      "isActive": true,
+      "displayOrder": 16
+    },
+    {
+      "id": "sponsor-17",
+      "companyName": "Nova Ensemble",
+      "logo": "images/sponsors/sponsor-narrow.svg",
+      "websiteUrl": "https://example.com/nova-ensemble",
+      "isActive": true,
+      "displayOrder": 17
+    },
+    {
+      "id": "sponsor-18",
+      "companyName": "Summit Arts Council",
+      "logo": "images/sponsors/sponsor-square.svg",
+      "websiteUrl": "https://example.com/summit-arts",
+      "isActive": true,
+      "displayOrder": 18
+    },
+    {
+      "id": "sponsor-19",
+      "companyName": "Horizon Voice Network",
+      "logo": "images/sponsors/sponsor-wide.svg",
+      "websiteUrl": "https://example.com/horizon-voice",
+      "isActive": true,
+      "displayOrder": 19
+    },
+    {
+      "id": "sponsor-20",
+      "companyName": "Quiet Current",
+      "logo": "images/sponsors/sponsor-narrow.svg",
+      "websiteUrl": "https://example.com/quiet-current",
+      "isActive": true,
+      "displayOrder": 20
+    },
+    {
+      "id": "sponsor-inactive",
+      "companyName": "Inactive Example Co",
+      "logo": "images/sponsors/sponsor-square.svg",
+      "websiteUrl": "https://example.com/inactive",
+      "isActive": false,
+      "displayOrder": 99
+    },
+    {
+      "id": "sponsor-broken-url",
+      "companyName": "Broken Link Co",
+      "logo": "images/sponsors/sponsor-square.svg",
+      "websiteUrl": "javascript:alert(1)",
+      "isActive": true,
+      "displayOrder": 21
+    },
+    {
+      "id": "sponsor-no-url",
+      "companyName": "No Website Co",
+      "logo": "images/sponsors/sponsor-narrow.svg",
+      "websiteUrl": "",
+      "isActive": true,
+      "displayOrder": 22
+    }
+  ]
+}

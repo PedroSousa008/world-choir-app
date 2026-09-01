@@ -395,10 +395,14 @@ const WorldChoirMap = (() => {
     if (!header) return;
     header.classList.toggle('map-header--minimized', minimized);
     header.setAttribute('aria-expanded', minimized ? 'false' : 'true');
-    header.setAttribute(
-      'aria-label',
-      minimized ? 'The Earth Breathes — tap to expand' : 'The Earth Breathes — tap to minimize'
-    );
+    if (typeof MapSponsorBar !== 'undefined' && MapSponsorBar.syncHeaderAriaLabel) {
+      MapSponsorBar.syncHeaderAriaLabel();
+    } else {
+      header.setAttribute(
+        'aria-label',
+        minimized ? 'The Earth Breathes — tap to expand' : 'The Earth Breathes — tap to minimize'
+      );
+    }
   }
 
   function persistMapHeaderMinimized(minimized) {
@@ -499,6 +503,11 @@ const WorldChoirMap = (() => {
 
     initMap();
     initMapHeader();
+    if (typeof MapSponsorBar !== 'undefined') {
+      MapSponsorBar.init().catch((err) => {
+        console.warn('Map sponsor bar failed to initialize:', err);
+      });
+    }
     refreshMapData();
     WorldChoirPledgeState.subscribe(() => updateEmptyState());
     updateCountdown();
