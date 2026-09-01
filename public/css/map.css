@@ -337,6 +337,7 @@ body.map-page {
   font-size: 10px;
   line-height: 0.95rem;
   min-height: 0.95rem;
+  margin-bottom: 12px;
 }
 
 /* Sponsor mode: title sits 14px from top of bar (1px border + 13px padding) */
