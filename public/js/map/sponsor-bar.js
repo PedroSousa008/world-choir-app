@@ -160,6 +160,8 @@ const MapSponsorBar = (() => {
     container.querySelectorAll('.map-sponsor__logo--linked').forEach((link) => {
       link.addEventListener('click', (event) => {
         event.stopPropagation();
+        const sponsorId = link.getAttribute('data-sponsor-id');
+        if (sponsorId) trackSponsorEvent(sponsorId, 'click');
       });
     });
 
@@ -169,6 +171,65 @@ const MapSponsorBar = (() => {
         logo?.classList.add('map-sponsor__logo--broken');
       }, { once: true });
     });
+
+    bindSponsorImpressions(container);
+  }
+
+  function getMapVisitorId() {
+    const KEY = 'wc_map_visitor_id';
+    try {
+      let id = localStorage.getItem(KEY);
+      if (!id) {
+        id = typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `v_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        localStorage.setItem(KEY, id);
+      }
+      return id;
+    } catch {
+      return `session_${Date.now()}`;
+    }
+  }
+
+  function trackSponsorEvent(sponsorId, eventType) {
+    if (!sponsorId) return;
+    fetch('/api/map-sponsor-events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: eventType === 'click',
+      body: JSON.stringify({
+        sponsorId,
+        eventType,
+        visitorId: getMapVisitorId(),
+      }),
+    }).catch(() => {});
+  }
+
+  function bindSponsorImpressions(container) {
+    const impressed = new Set();
+    const slots = container.querySelectorAll('.map-sponsor__slot[data-sponsor-id]');
+    if (!slots.length) return;
+
+    const logImpression = (slot) => {
+      const sponsorId = slot.getAttribute('data-sponsor-id');
+      if (!sponsorId || impressed.has(sponsorId)) return;
+      impressed.add(sponsorId);
+      trackSponsorEvent(sponsorId, 'impression');
+    };
+
+    if (typeof IntersectionObserver === 'undefined' || !viewportEl) {
+      slots.forEach(logImpression);
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        logImpression(entry.target);
+      });
+    }, { root: viewportEl, threshold: 0.45 });
+
+    slots.forEach((slot) => observer.observe(slot));
   }
 
   function applyDesignTokens() {

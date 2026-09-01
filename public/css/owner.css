@@ -3462,3 +3462,62 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   }
 }
 
+.owner-sponsor-analytics__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.owner-sponsor-analytics__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.owner-sponsor-analytics__logo--empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #8b90a0;
+}
+
+.owner-sponsor-analytics__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.owner-sponsor-analytics__metrics .owner-group {
+  padding: 14px 16px;
+}
+
+.owner-sponsor-analytics__metrics .owner-metric__value {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #f2efe8;
+}
+
+.owner-sponsor-analytics__metrics .owner-metric__label {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: #9aa0ad;
+}
+
+.owner-sponsor-analytics__periods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+@media (max-width: 900px) {
+  .owner-sponsor-analytics__periods {
+    grid-template-columns: 1fr;
+  }
+}
+

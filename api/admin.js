@@ -59,6 +59,7 @@ const {
   deleteMapSponsorDocument,
   readMapSponsorDocument,
 } = require('./_lib/map-sponsors-owner');
+const { getMapSponsorAnalytics } = require('./_lib/map-sponsors-analytics');
 
 module.exports = async function handler(req, res) {
   corsHeaders(res);
@@ -350,6 +351,15 @@ module.exports = async function handler(req, res) {
       const sponsor = await getSponsorById(id);
       if (!sponsor) return res.status(404).json({ error: 'Company not found' });
       return res.status(200).json({ sponsor });
+    }
+
+    if (action === 'map-sponsor-analytics' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const id = req.query.id;
+      if (!id) return res.status(400).json({ error: 'Sponsor id required' });
+      const analytics = await getMapSponsorAnalytics(id);
+      return res.status(200).json(analytics);
     }
 
     if (action === 'create-map-sponsor' && req.method === 'POST') {
