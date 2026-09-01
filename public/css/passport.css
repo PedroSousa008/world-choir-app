@@ -452,7 +452,7 @@
 
 .passport-card__brand-kicker {
   position: absolute;
-  top: 27px;
+  top: 5px;
   left: 0;
   margin: 0;
   font-family: var(--font-sans);
@@ -469,7 +469,7 @@
 
 .passport-card__brand-title {
   position: absolute;
-  top: 52px;
+  top: 42px;
   left: 0;
   margin: 0;
   font-family: var(--font-sans);
@@ -1407,7 +1407,7 @@
 }
 
 .passport-export-host .passport-card__brand-kicker {
-  top: 69px;
+  top: 13px;
   font-size: 4.5rem;
   letter-spacing: -0.025em;
   font-weight: 700;
@@ -1415,7 +1415,7 @@
 }
 
 .passport-export-host .passport-card__brand-title {
-  top: 134px;
+  top: 108px;
   font-size: 1.85rem;
   margin-top: 0;
   letter-spacing: -0.025em;
