@@ -323,6 +323,7 @@ body.map-page {
 
 .map-header__title--aurora {
   color: var(--accent-aurora);
+  font-size: 10px;
 }
 
 /* Sponsor bar — compact belt within the original header footprint */
@@ -752,6 +753,10 @@ body.map-page {
 
   .map-header__title {
     font-size: 0.88rem;
+  }
+
+  .map-header__title--aurora {
+    font-size: 9px;
   }
 
   .map-header__subtitle {
