@@ -28,6 +28,10 @@ const {
   findSpecificDateConflict,
 } = require('./_lib/daily-peace-partnerships');
 const {
+  buildPassTheWorldOwnerIntel,
+  exportPassTheWorldCsv,
+} = require('./_lib/pass-the-world-owner');
+const {
   listInfluencers,
   createInfluencer,
   updateInfluencer,
@@ -88,6 +92,27 @@ module.exports = async function handler(req, res) {
       if (!requireOwner(req, res)) return;
       const data = await buildDailyPeaceOwnerIntel();
       return res.status(200).json(data);
+    }
+
+    if (action === 'pass-the-world' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const range = String(req.query.range || '30d');
+      const roundId = req.query.roundId ? String(req.query.roundId) : null;
+      const data = await buildPassTheWorldOwnerIntel({ range, roundId });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'pass-the-world-export' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const kind = String(req.query.kind || 'rounds');
+      const range = String(req.query.range || 'all');
+      const intel = await buildPassTheWorldOwnerIntel({ range });
+      const csv = exportPassTheWorldCsv(intel, kind);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="pass-the-world-${kind}.csv"`);
+      return res.status(200).send(csv);
     }
 
     if (action === 'daily-peace-partnerships' && req.method === 'GET') {

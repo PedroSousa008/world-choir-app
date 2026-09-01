@@ -15,6 +15,7 @@ const OwnerControl = (() => {
     { id: 'foundations', label: 'Creator Foundations' },
     { id: 'event', label: 'Event' },
     { id: 'daily-acts', label: 'Daily Acts' },
+    { id: 'pass-the-world', label: 'Pass the World' },
     { id: 'growth', label: 'Growth' },
     { id: 'applications', label: 'Applications' },
     { id: 'operations', label: 'Operations' },
@@ -70,6 +71,14 @@ const OwnerControl = (() => {
       range: 'all',
       foundationId: '',
     },
+    ptwData: null,
+    ptwBusy: false,
+    ptwRange: '30d',
+    ptwRoundId: null,
+    ptwMapMode: 'invitations',
+    ptwCountryQuery: '',
+    ptwCityQuery: '',
+    ptwCityPage: 1,
   };
 
   const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
@@ -319,6 +328,8 @@ const OwnerControl = (() => {
         state.foundationDetail = null;
         state.cityDetail = null;
         state.countryDetail = null;
+        state.ptwRoundId = null;
+        if (typeof OwnerPassTheWorld !== 'undefined') OwnerPassTheWorld.stopPolling();
         setFlash(null);
         render();
       });
@@ -1717,6 +1728,32 @@ const OwnerControl = (() => {
     state.dapPartnershipDetail = await api('daily-peace-partnership', { query: `&id=${encodeURIComponent(id)}` });
   }
 
+  async function ensurePtwLoaded(silent = false) {
+    if (state.ptwBusy) return;
+    state.ptwBusy = true;
+    if (!silent) render();
+    try {
+      const q = new URLSearchParams({ range: state.ptwRange || '30d' });
+      if (state.ptwRoundId) q.set('roundId', state.ptwRoundId);
+      state.ptwData = await api('pass-the-world', { query: `&${q.toString()}` });
+    } catch (err) {
+      if (!silent) setFlash(err.message || 'Could not load Pass the World analytics.', 'err');
+    } finally {
+      state.ptwBusy = false;
+    }
+  }
+
+  function renderPassTheWorld() {
+    if (!state.ptwData && !state.ptwBusy) {
+      ensurePtwLoaded().then(() => render());
+      return `<section class="owner-section"><p class="owner-muted">Loading Pass the World…</p></section>`;
+    }
+    if (typeof OwnerPassTheWorld === 'undefined') {
+      return `<section class="owner-section"><p class="owner-muted">Pass the World module not loaded.</p></section>`;
+    }
+    return OwnerPassTheWorld.render(state, { esc, money, num, when });
+  }
+
   async function ensureDailyPeaceLoaded() {
     if (state.dailyPeace || state.dailyPeaceBusy) return;
     state.dailyPeaceBusy = true;
@@ -2242,6 +2279,7 @@ const OwnerControl = (() => {
       case 'foundations': return renderFoundations();
       case 'event': return renderEvent();
       case 'daily-acts': return renderDailyActs();
+      case 'pass-the-world': return renderPassTheWorld();
       case 'growth': return renderGrowth();
       case 'applications': return renderApplications();
       case 'operations': return renderOperations();
@@ -2779,6 +2817,19 @@ const OwnerControl = (() => {
         render();
       });
     });
+    if (typeof OwnerPassTheWorld !== 'undefined' && state.section === 'pass-the-world') {
+      OwnerPassTheWorld.bind(root(), state, { esc, money, num, when }, {
+        api,
+        onRender: () => render(),
+        loadData: async (silent) => {
+          await ensurePtwLoaded(silent);
+          render();
+        },
+      });
+    } else if (typeof OwnerPassTheWorld !== 'undefined') {
+      OwnerPassTheWorld.stopPolling();
+    }
+
     root().querySelectorAll('[data-export]').forEach((btn) => {
       btn.addEventListener('click', () => exportCsv(btn.getAttribute('data-export')));
     });

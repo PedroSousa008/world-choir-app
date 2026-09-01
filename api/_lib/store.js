@@ -963,6 +963,7 @@ module.exports = {
   listAllUsers,
   listAllPledges,
   listAllPromises,
+  listBlobs,
   assembleOwnerDatabaseRows,
   buildOwnerDatabaseRows,
   getWorldChoirStats,

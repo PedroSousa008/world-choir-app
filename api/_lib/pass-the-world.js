@@ -49,6 +49,148 @@ function roundWinnerPath(roundId) {
 function roundInvitesIndexPath(roundId) {
   return `${ROOT}/rounds/${roundId}/invitations-index.json`;
 }
+function roundMetaPath(roundId) {
+  return `${ROOT}/rounds/${roundId}/meta.json`;
+}
+function participantPath(userId) {
+  return `${ROOT}/participants/${userId}.json`;
+}
+
+async function readRoundMeta(roundId) {
+  try { return await readBlobJson(roundMetaPath(roundId)); } catch { return null; }
+}
+
+async function writeRoundMeta(roundId, patch) {
+  if (!roundId) return null;
+  const existing = await readRoundMeta(roundId);
+  const next = {
+    ...(existing || {}),
+    ...patch,
+    roundId,
+    updatedAt: new Date().toISOString(),
+  };
+  await writeJson(roundMetaPath(roundId), next, { overwrite: true });
+  return next;
+}
+
+async function readParticipant(userId) {
+  try { return await readBlobJson(participantPath(userId)); } catch { return null; }
+}
+
+async function recordParticipantInvite(invitation, roundOpenAt) {
+  if (!invitation?.userId) return invitation;
+  const openMs = roundOpenAt ? new Date(roundOpenAt).getTime() : null;
+  const submittedMs = new Date(invitation.submittedAt || Date.now()).getTime();
+  const secondsAfterOpen = openMs != null && Number.isFinite(submittedMs)
+    ? Math.max(0, Math.round((submittedMs - openMs) / 1000))
+    : null;
+
+  const existing = await readParticipant(invitation.userId);
+  const firstTimeEver = !existing?.firstInvitedAt;
+  const roundDate = openMs != null
+    ? new Date(openMs).toISOString().slice(0, 10)
+    : new Date(submittedMs).toISOString().slice(0, 10);
+  const roundDates = new Set(existing?.roundDates || []);
+  roundDates.add(roundDate);
+
+  const participant = {
+    userId: invitation.userId,
+    voiceNumber: invitation.voiceNumber ?? existing?.voiceNumber ?? null,
+    city: invitation.city || existing?.city || null,
+    country: invitation.country || existing?.country || null,
+    countryCode: invitation.countryCode || existing?.countryCode || null,
+    firstInvitedAt: existing?.firstInvitedAt || invitation.submittedAt,
+    lastInvitedAt: invitation.submittedAt,
+    totalInvites: (Number(existing?.totalInvites) || 0) + 1,
+    roundDates: [...roundDates].sort(),
+    roundCount: roundDates.size,
+    updatedAt: new Date().toISOString(),
+  };
+  await writeJson(participantPath(invitation.userId), participant, { overwrite: true });
+
+  return {
+    ...invitation,
+    firstTimeEver,
+    secondsAfterOpen,
+  };
+}
+
+async function snapshotRoundOpenMeta(state, roundId, openAt, closeAt) {
+  return writeRoundMeta(roundId, {
+    date: new Date(openAt).toISOString().slice(0, 10),
+    openAt,
+    closeAt,
+    startingCity: state.currentCity,
+    startingCountry: state.currentCountry,
+    startingCountryCode: state.currentCountryCode || resolveCountryCode(state.currentCountry),
+    startingLatitude: state.currentLatitude,
+    startingLongitude: state.currentLongitude,
+    status: 'in_progress',
+  });
+}
+
+async function finalizeRoundMeta(roundId, {
+  invitations = [],
+  winner = null,
+  state = null,
+  itinerary = [],
+  wasEmpty = false,
+  now = new Date(),
+} = {}) {
+  if (!roundId) return null;
+  const meta = await readRoundMeta(roundId);
+  const openAt = meta?.openAt || state?.invitationOpenAt;
+  const openMs = openAt ? new Date(openAt).getTime() : null;
+  const sorted = [...invitations].sort((a, b) => (
+    new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime()
+  ));
+  const first = sorted[0] || null;
+  const windowBuckets = new Array(60).fill(0);
+  for (const inv of invitations) {
+    if (openMs == null || !inv.submittedAt) continue;
+    const sec = Math.min(59, Math.max(0, Math.floor((new Date(inv.submittedAt).getTime() - openMs) / 1000)));
+    windowBuckets[sec] += 1;
+  }
+  const cityKeys = new Set();
+  const countryKeys = new Set();
+  for (const inv of invitations) {
+    cityKeys.add(`${normalizeCountry(inv.country)}|${String(inv.city || '').trim().toLowerCase()}`);
+    countryKeys.add(resolveCountryCode(inv.countryCode || inv.country) || normalizeCountry(inv.country));
+  }
+
+  let journeyDistanceKm = null;
+  if (winner && meta?.startingLatitude != null && winner.latitude != null) {
+    journeyDistanceKm = Math.round(haversineKm(
+      meta.startingLatitude, meta.startingLongitude,
+      winner.latitude, winner.longitude
+    ));
+  }
+
+  const patch = {
+    invitationCount: invitations.length,
+    uniqueParticipants: invitations.length,
+    uniqueCities: cityKeys.size,
+    uniqueCountries: countryKeys.size,
+    firstInvitationAt: first?.submittedAt || null,
+    firstInvitationSecondsAfterOpen: first?.secondsAfterOpen ?? (
+      first && openMs != null
+        ? Math.max(0, Math.round((new Date(first.submittedAt).getTime() - openMs) / 1000))
+        : null
+    ),
+    wasEmpty: Boolean(wasEmpty),
+    windowBuckets,
+    status: wasEmpty ? 'empty' : (winner ? 'settled' : 'waiting_first_call'),
+    selectionMethod: winner?.selectionMode || null,
+    selectedAt: winner?.selectedAt || null,
+    selectedVoiceNumber: winner?.voiceNumber ?? null,
+    selectedCity: winner?.city || null,
+    selectedCountry: winner?.country || null,
+    selectedUserId: winner?.userId || null,
+    journeyDistanceKm,
+    settledAt: now instanceof Date ? now.toISOString() : now,
+  };
+  return writeRoundMeta(roundId, patch);
+}
 
 function toRad(deg) {
   return (deg * Math.PI) / 180;
@@ -314,20 +456,27 @@ async function readRoundInvites(roundId) {
   } catch { return []; }
 }
 
-async function writeRoundInvite(roundId, invitation) {
-  await writeJson(roundInvitationPath(roundId, invitation.userId), invitation, { overwrite: true });
+async function writeRoundInvite(roundId, invitation, roundOpenAt = null) {
+  let enriched = invitation;
+  try {
+    enriched = await recordParticipantInvite(invitation, roundOpenAt);
+  } catch { /* analytics must not block invites */ }
+
+  await writeJson(roundInvitationPath(roundId, enriched.userId), enriched, { overwrite: true });
   const existing = await readRoundInvites(roundId);
-  const without = existing.filter((e) => e.userId !== invitation.userId);
+  const without = existing.filter((e) => e.userId !== enriched.userId);
   without.push({
-    id: invitation.id,
-    userId: invitation.userId,
-    voiceNumber: invitation.voiceNumber,
-    city: invitation.city,
-    country: invitation.country,
-    countryCode: invitation.countryCode,
-    latitude: invitation.latitude,
-    longitude: invitation.longitude,
-    submittedAt: invitation.submittedAt,
+    id: enriched.id,
+    userId: enriched.userId,
+    voiceNumber: enriched.voiceNumber,
+    city: enriched.city,
+    country: enriched.country,
+    countryCode: enriched.countryCode,
+    latitude: enriched.latitude,
+    longitude: enriched.longitude,
+    submittedAt: enriched.submittedAt,
+    firstTimeEver: enriched.firstTimeEver,
+    secondsAfterOpen: enriched.secondsAfterOpen,
   });
   await writeJson(roundInvitesIndexPath(roundId), {
     invitations: without,
@@ -519,7 +668,7 @@ async function openInvitationRound(state, now) {
     && (state.status === STATUS.INVITATION_OPEN || state.status === STATUS.WAITING_FOR_FIRST_CALL)) {
     return state;
   }
-  return writeState({
+  const next = await writeState({
     ...state,
     status: STATUS.INVITATION_OPEN,
     activeRoundId: roundId,
@@ -534,6 +683,10 @@ async function openInvitationRound(state, now) {
     arrivalAt: null,
     version: (Number(state.version) || 1) + 1,
   });
+  try {
+    await snapshotRoundOpenMeta(next, roundId, openAt.toISOString(), closeAt.toISOString());
+  } catch { /* non-blocking */ }
+  return next;
 }
 
 async function settleInvitationRound(state, itinerary, now) {
@@ -551,6 +704,9 @@ async function settleInvitationRound(state, itinerary, now) {
   }
   const invitations = await readRoundInvites(roundId);
   if (!invitations.length) {
+    try {
+      await finalizeRoundMeta(roundId, { invitations: [], wasEmpty: true, state, now });
+    } catch { /* non-blocking */ }
     const next = await writeState({
       ...state,
       status: STATUS.WAITING_FOR_FIRST_CALL,
@@ -572,6 +728,16 @@ async function settleInvitationRound(state, itinerary, now) {
     };
     await claimWinner(roundId, winnerPayload);
   }
+  try {
+    const winner = await readWinner(roundId);
+    await finalizeRoundMeta(roundId, {
+      invitations,
+      winner,
+      state,
+      now,
+      wasEmpty: false,
+    });
+  } catch { /* non-blocking */ }
   return {
     state: await beginRevealPhase(state, invitations, now),
     itinerary,
@@ -1052,7 +1218,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
         longitude: Number(viewer.longitude),
         submittedAt: clock.toISOString(),
       };
-      invites = await writeRoundInvite(roundId, invitation);
+      invites = await writeRoundInvite(roundId, invitation, state.invitationOpenAt);
       const winnerPayload = {
         ...invitation,
         invitationId: invitation.id,
@@ -1128,7 +1294,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     submittedAt: clock.toISOString(),
   };
 
-  const invites = await writeRoundInvite(roundId, invitation);
+  const invites = await writeRoundInvite(roundId, invitation, state.invitationOpenAt);
   state = await writeState({
     ...state,
     invitationCount: invites.length,
