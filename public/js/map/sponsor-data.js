@@ -7,6 +7,7 @@
 const MapSponsorData = (() => {
   const API_URL = '/api/map-sponsors';
   const SEED_URL = 'data/map-sponsors.seed.json';
+  const CACHE_KEY = 'wc_map_sponsors_v1';
 
   let cache = null;
   let loadPromise = null;
@@ -77,33 +78,79 @@ const MapSponsorData = (() => {
     return [];
   }
 
+  function readLocalCache() {
+    try {
+      const raw = sessionStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed?.sponsors)) return null;
+      return sortActiveSponsors(
+        parsed.sponsors.map(normalizeSponsor).filter(Boolean)
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  function writeLocalCache(sponsors) {
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+        sponsors,
+        savedAt: Date.now(),
+      }));
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }
+
+  async function fetchSponsorsFromNetwork() {
+    let rows = [];
+
+    if (isDemoMode()) {
+      try {
+        const seed = await fetchJson(SEED_URL);
+        rows = extractSponsorList(seed);
+      } catch (err) {
+        console.warn('Map sponsor seed data unavailable:', err);
+      }
+    } else {
+      try {
+        const api = await fetchJson(API_URL);
+        rows = extractSponsorList(api);
+      } catch (err) {
+        console.warn('Map sponsor API unavailable:', err);
+      }
+    }
+
+    return sortActiveSponsors(
+      rows.map(normalizeSponsor).filter(Boolean)
+    );
+  }
+
+  function refreshInBackground() {
+    fetchSponsorsFromNetwork()
+      .then((fresh) => {
+        if (!fresh.length) return;
+        cache = fresh;
+        writeLocalCache(fresh);
+      })
+      .catch(() => {});
+  }
+
   async function load() {
     if (cache) return cache.slice();
     if (loadPromise) return loadPromise;
 
+    const stale = readLocalCache();
+    if (stale?.length) {
+      cache = stale;
+      refreshInBackground();
+      return cache.slice();
+    }
+
     loadPromise = (async () => {
-      let rows = [];
-
-      if (isDemoMode()) {
-        try {
-          const seed = await fetchJson(SEED_URL);
-          rows = extractSponsorList(seed);
-        } catch (err) {
-          console.warn('Map sponsor seed data unavailable:', err);
-        }
-      } else {
-        try {
-          const api = await fetchJson(API_URL);
-          rows = extractSponsorList(api);
-        } catch (err) {
-          console.warn('Map sponsor API unavailable:', err);
-        }
-      }
-
-      cache = sortActiveSponsors(
-        rows.map(normalizeSponsor).filter(Boolean)
-      );
-
+      cache = await fetchSponsorsFromNetwork();
+      if (cache.length) writeLocalCache(cache);
       return cache.slice();
     })();
 
@@ -114,13 +161,32 @@ const MapSponsorData = (() => {
     }
   }
 
+  function prefetch() {
+    if (!cache && !loadPromise) load();
+  }
+
   function invalidate() {
     cache = null;
     loadPromise = null;
+    try {
+      sessionStorage.removeItem(CACHE_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    const warm = () => prefetch();
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(warm, { timeout: 800 });
+    } else {
+      window.setTimeout(warm, 0);
+    }
   }
 
   return {
     load,
+    prefetch,
     invalidate,
     normalizeSponsor,
     normalizeWebsiteUrl,

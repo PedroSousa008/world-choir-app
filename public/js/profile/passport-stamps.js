@@ -1373,6 +1373,62 @@ const PassportStamps = (() => {
     }
   }
 
+  function waitForPaint() {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
+  }
+
+  function waitForInsideBackground(scope) {
+    const bg = scope.querySelector('.passport-card__inside-bg');
+    if (!bg || bg.complete) return Promise.resolve();
+    return new Promise((resolve) => {
+      bg.addEventListener('load', resolve, { once: true });
+      bg.addEventListener('error', resolve, { once: true });
+    });
+  }
+
+  function preloadImageUrl(url) {
+    if (!url) return Promise.resolve();
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = img.onerror = resolve;
+      img.src = url;
+    });
+  }
+
+  async function preloadRevealImages(queue) {
+    const urls = new Set();
+    for (const el of queue) {
+      const stampDef = PASSPORT_STAMPS.find((entry) => entry.id === el.dataset.stampId);
+      if (!stampDef) continue;
+      const locked = resolveStampImage(stampDef, { unlocked: false });
+      const unlocked = resolveStampImage(stampDef, { unlocked: true });
+      const lockedSrc = locked?.url || locked?.src;
+      const unlockedSrc = unlocked?.url || unlocked?.src;
+      if (lockedSrc) urls.add(lockedSrc);
+      if (unlockedSrc) urls.add(unlockedSrc);
+    }
+    await Promise.all([...urls].map(preloadImageUrl));
+  }
+
+  async function scheduleRevealAnimations(root = document) {
+    const scope = root.querySelector?.('.passport-card') || root.closest?.('.passport-card') || root;
+    if (!scope) return;
+
+    await waitForPaint();
+    await waitForInsideBackground(scope);
+
+    const queue = [...scope.querySelectorAll('.passport-stamp--revealing')].sort((a, b) => {
+      const stampA = PASSPORT_STAMPS.find((entry) => entry.id === a.dataset.stampId);
+      const stampB = PASSPORT_STAMPS.find((entry) => entry.id === b.dataset.stampId);
+      return (Number(stampA?.revealOrder) || 999) - (Number(stampB?.revealOrder) || 999);
+    });
+
+    if (queue.length) await preloadRevealImages(queue);
+    return bindRevealAnimations(scope);
+  }
+
   return {
     UnlockType,
     PASSPORT_STAMPS,
@@ -1384,6 +1440,7 @@ const PassportStamps = (() => {
     resolveAllStatuses,
     renderGrid,
     bindRevealAnimations,
+    scheduleRevealAnimations,
     shouldAnimateReveal,
     markRevealSeen,
   };

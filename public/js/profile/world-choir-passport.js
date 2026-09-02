@@ -192,7 +192,7 @@ const WorldChoirPassport = (() => {
           width="1050"
           height="1498"
           decoding="async"
-          fetchpriority="low"
+          fetchpriority="high"
         >
         <div class="passport-card__inner passport-card__inner--inside">
           <header class="passport-inside-header">
@@ -311,7 +311,7 @@ const WorldChoirPassport = (() => {
       setCardPage(card, 'inside', { historyMode: 'push' });
       if (typeof PassportStamps !== 'undefined') {
         window.setTimeout(() => {
-          PassportStamps.bindRevealAnimations(card);
+          PassportStamps.scheduleRevealAnimations(card);
         }, 320);
       }
     });
@@ -348,7 +348,7 @@ const WorldChoirPassport = (() => {
       }
       setCardPage(card, page === 'stamps' ? 'inside' : 'cover', { syncUrl: false });
       if (page === 'stamps' && typeof PassportStamps !== 'undefined') {
-        PassportStamps.bindRevealAnimations(card);
+        PassportStamps.scheduleRevealAnimations(card);
       }
     });
   }
@@ -473,29 +473,20 @@ const WorldChoirPassport = (() => {
     return (Number(summary.partnerDailyActsCompleted) || 0) >= 1;
   }
 
-  async function loadPassportData() {
-    await WorldChoirDB.ready();
-    const user = WorldChoirDB.getCurrentUser() || {};
-    const pledge = WorldChoirDB.getPledgeForCurrentUser();
-    const history = WorldChoirDB.getParticipationHistory?.() || [];
-
-    let eventsJoined = history.length;
-    if (eventsJoined === 0 && WorldChoirDB.hasPledged?.()) {
-      eventsJoined = 1;
-    }
-
-    const [dailyPeaceImpact, worldStats, hasSupportedCreatorCause] = await Promise.all([
-      fetchDailyPeaceImpact(),
-      fetchWorldChoirStats(),
-      fetchHasSupportedCreatorCause(),
-    ]);
-
+  function assemblePassportData({
+    user,
+    pledge,
+    eventsJoined,
+    dailyPeaceImpact,
+    worldStats,
+    hasSupportedCreatorCause,
+    mapStats,
+  }) {
     const dailyActsCompleted = Number(dailyPeaceImpact?.totalCompleted) || 0;
     const hasCompletedPartnerDailyAct = dailyPeaceImpact?.hasCompletedPartnerDailyAct === true
       || (Number(dailyPeaceImpact?.partnerDailyActsCompleted) || 0) >= 1;
     const hasCompletedAllPeaceThemes = dailyPeaceImpact?.hasCompletedAllPeaceThemes === true
       || (Number(dailyPeaceImpact?.themesExperienced ?? dailyPeaceImpact?.categoriesExperienced) || 0) >= 8;
-    const mapStats = typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.getMapStats?.() : null;
     const userId = user.id || WorldChoirDB.getDeviceId?.() || 'anonymous';
     const userCountry = pledge?.country || user.country || null;
     const userCity = pledge?.city || user.city || null;
@@ -539,7 +530,7 @@ const WorldChoirPassport = (() => {
       })
       : [];
 
-    const data = {
+    return {
       voiceNumber: pledge?.voiceNumber ?? null,
       voiceName: pledge?.voiceName || pledge?.display_name || user.display_name || null,
       displayName: user.display_name || pledge?.display_name || null,
@@ -553,6 +544,56 @@ const WorldChoirPassport = (() => {
       stamps,
       userId,
     };
+  }
+
+  async function loadPassportData({ fast = false } = {}) {
+    await WorldChoirDB.ready();
+    const user = WorldChoirDB.getCurrentUser() || {};
+    const pledge = WorldChoirDB.getPledgeForCurrentUser();
+    const history = WorldChoirDB.getParticipationHistory?.() || [];
+
+    let eventsJoined = history.length;
+    if (eventsJoined === 0 && WorldChoirDB.hasPledged?.()) {
+      eventsJoined = 1;
+    }
+
+    const mapStats = typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.getMapStats?.() : null;
+
+    if (fast) {
+      return assemblePassportData({
+        user,
+        pledge,
+        eventsJoined,
+        dailyPeaceImpact: null,
+        worldStats: mapStats ? {
+          voices: mapStats.voices,
+          countries: mapStats.countries,
+          representedContinents: [],
+          majorCities: [],
+          milestones: {},
+        } : null,
+        hasSupportedCreatorCause: readLocalCreatorCauseSupport(),
+        mapStats,
+      });
+    }
+
+    const localCreatorSupport = readLocalCreatorCauseSupport();
+    const [dailyPeaceImpact, worldStats, apiCreatorSupport] = await Promise.all([
+      fetchDailyPeaceImpact(),
+      fetchWorldChoirStats(),
+      localCreatorSupport ? Promise.resolve(true) : fetchHasSupportedCreatorCause(),
+    ]);
+    const hasSupportedCreatorCause = localCreatorSupport || apiCreatorSupport === true;
+
+    const data = assemblePassportData({
+      user,
+      pledge,
+      eventsJoined,
+      dailyPeaceImpact,
+      worldStats,
+      hasSupportedCreatorCause,
+      mapStats,
+    });
 
     writePassportCache(data);
     return data;
@@ -634,7 +675,24 @@ const WorldChoirPassport = (() => {
     });
   }
 
+  async function ensureHtml2Canvas() {
+    if (typeof html2canvas === 'function') return html2canvas;
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Could not load export library'));
+      document.head.appendChild(script);
+    });
+    if (typeof html2canvas !== 'function') {
+      throw new Error('Passport export is unavailable on this device.');
+    }
+    return html2canvas;
+  }
+
   async function renderStampsCanvas(card, { width, height, dpr }) {
+    await ensureHtml2Canvas();
     return html2canvas(card, {
       backgroundColor: '#e6e4de',
       scale: dpr,
@@ -693,9 +751,7 @@ const WorldChoirPassport = (() => {
   }
 
   async function captureStampsCardImage(data) {
-    if (typeof html2canvas !== 'function') {
-      throw new Error('Passport export is unavailable on this device.');
-    }
+    await ensureHtml2Canvas();
 
     const liveCard = getLivePassportCard();
     if (isStampsCardVisible(liveCard)) {

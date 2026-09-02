@@ -95,8 +95,9 @@ const MapSponsorBar = (() => {
         class="map-sponsor__logo-image"
         src="${esc(sponsor.logo)}"
         alt="${esc(name)}"
-        loading="lazy"
+        loading="eager"
         decoding="async"
+        fetchpriority="high"
         draggable="false"
       >
       <span class="map-sponsor__logo-fallback" aria-hidden="true">${fallbackInitial}</span>
@@ -467,6 +468,15 @@ const MapSponsorBar = (() => {
     });
   }
 
+  function preloadSponsorLogos() {
+    sponsors.forEach((sponsor) => {
+      if (!sponsor?.logo) return;
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = sponsor.logo;
+    });
+  }
+
   function mountTrack(nextMode) {
     if (!viewportEl) return;
 
@@ -486,6 +496,7 @@ const MapSponsorBar = (() => {
     }
 
     applyHeaderMode(true);
+    preloadSponsorLogos();
     const nextMode = shouldAnimate() ? 'animated' : 'static';
     mountTrack(nextMode);
   }
@@ -508,16 +519,17 @@ const MapSponsorBar = (() => {
 
   function bindMotionPreference() {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => {
-      prefersReducedMotion = media.matches;
+    const onChange = () => {
+      const next = media.matches;
+      if (next === prefersReducedMotion) return;
+      prefersReducedMotion = next;
       rebuild();
     };
 
-    update();
     if (typeof media.addEventListener === 'function') {
-      media.addEventListener('change', update);
+      media.addEventListener('change', onChange);
     } else if (typeof media.addListener === 'function') {
-      media.addListener(update);
+      media.addListener(onChange);
     }
   }
 

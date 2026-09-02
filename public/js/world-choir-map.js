@@ -510,14 +510,16 @@ const WorldChoirMap = (() => {
 
     const hasVoiceJoinedSession = !!sessionStorage.getItem('wc_voice_joined');
 
-    initMap();
-    if (typeof MapSponsorBar !== 'undefined') {
-      try {
-        await MapSponsorBar.init();
-      } catch (err) {
+    if (typeof MapSponsorData !== 'undefined') MapSponsorData.prefetch?.();
+
+    const sponsorInit = (typeof MapSponsorBar !== 'undefined')
+      ? MapSponsorBar.init().catch((err) => {
         console.warn('Map sponsor bar failed to initialize:', err);
-      }
-    }
+      })
+      : Promise.resolve();
+
+    initMap();
+    await sponsorInit;
     initMapHeader();
     refreshMapData();
     WorldChoirPledgeState.subscribe(() => updateEmptyState());

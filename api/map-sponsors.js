@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const sponsors = await loadActivePublicSponsors();
-    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     return res.status(200).json({ sponsors });
   } catch (err) {
     console.error('api/map-sponsors error:', err);

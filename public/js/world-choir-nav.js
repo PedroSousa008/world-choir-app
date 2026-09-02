@@ -41,6 +41,10 @@ const WorldChoirNav = (() => {
     map: [
       'map.html',
       'css/map.css?v=20260826d',
+      'js/map/sponsor-constants.js?v=20260902k',
+      'js/map/sponsor-data.js?v=20260902a',
+      'js/map/sponsor-bar.js?v=20260902r',
+      '/api/map-sponsors',
       'js/world-choir-map-tiles.js?v=20260826d',
       'js/world-choir-map.js?v=20260826d',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',

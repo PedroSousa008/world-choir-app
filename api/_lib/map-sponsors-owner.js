@@ -54,7 +54,7 @@ const MAX_DOC_BYTES = 15 * 1024 * 1024;
 
 let sponsorsCache = null;
 let sponsorsCacheAt = 0;
-const CACHE_MS = 5000;
+const CACHE_MS = 60000;
 
 function sponsorPath(id) {
   return `${SPONSORS_ROOT}/${id}.json`;
@@ -232,16 +232,17 @@ async function loadAllSponsors({ fresh = false } = {}) {
 
   assertBlobConfigured();
   const ids = await readIndex();
-  const sponsors = [];
-  for (const id of ids) {
-    try {
-      const raw = await readBlobJson(sponsorPath(id));
-      const normalized = normalizeSponsorRecord(raw);
-      if (normalized) sponsors.push(normalized);
-    } catch {
-      /* skip malformed */
-    }
-  }
+  const entries = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const raw = await readBlobJson(sponsorPath(id));
+        return normalizeSponsorRecord(raw);
+      } catch {
+        return null;
+      }
+    })
+  );
+  const sponsors = entries.filter(Boolean);
 
   sponsorsCache = sponsors;
   sponsorsCacheAt = now;

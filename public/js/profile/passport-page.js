@@ -500,9 +500,7 @@ const PassportPage = (() => {
     if (next === 'stamps') {
       unmountPassTheWorld();
       const card = document.querySelector('.passport-card');
-      if (card && typeof PassportStamps !== 'undefined') {
-        PassportStamps.bindRevealAnimations(card);
-      }
+      scheduleStampReveals(card);
     } else if (next === 'story') {
       mountPassTheWorld();
     } else {
@@ -544,6 +542,54 @@ const PassportPage = (() => {
     WorldChoirPassport.bindCardPages(document.getElementById('passport-root') || document);
   }
 
+  function stampRevealActive() {
+    return !!document.querySelector(
+      '.passport-card--stamp-reveal-active, .passport-stamp--revealing, .passport-stamp--reveal-pending'
+    );
+  }
+
+  function stampSignature(data = {}) {
+    return (data.stamps || []).map((stamp) => {
+      const id = stamp.stamp?.id || stamp.id;
+      return `${id}:${stamp.unlocked ? 1 : 0}:${stamp.shouldReveal ? 1 : 0}`;
+    }).join('|');
+  }
+
+  function scheduleStampReveals(card) {
+    if (!card || typeof PassportStamps === 'undefined') return;
+    if (typeof PassportStamps.scheduleRevealAnimations === 'function') {
+      PassportStamps.scheduleRevealAnimations(card);
+      return;
+    }
+    PassportStamps.bindRevealAnimations(card);
+  }
+
+  function applyFreshPassportData(fresh, chapter, { hadWarmPaint = false } = {}) {
+    const prevSig = passportData ? stampSignature(passportData) : '';
+    const nextSig = stampSignature(fresh);
+    passportData = fresh;
+
+    if (chapter === 'story' && document.getElementById('passport-story-host')?.querySelector('.ptw')) {
+      updateStoryStats(fresh);
+      return;
+    }
+
+    if (stampRevealActive()) {
+      updateMainStats(chapter);
+      return;
+    }
+
+    const root = document.getElementById('passport-root');
+    if (root && prevSig === nextSig && root.querySelector('.passport-card')) {
+      updateMainStats(chapter);
+      return;
+    }
+
+    paint(fresh, chapter, {
+      animate: !hadWarmPaint && chapter !== 'story' && chapter !== 'stamps',
+    });
+  }
+
   function paint(data, chapter, { animate = false } = {}) {
     const root = document.getElementById('passport-root');
     const pageEl = document.getElementById('passport-page');
@@ -569,9 +615,7 @@ const PassportPage = (() => {
 
     if (chapter === 'stamps') {
       const card = root.querySelector('.passport-card');
-      if (card && typeof PassportStamps !== 'undefined') {
-        PassportStamps.bindRevealAnimations(card);
-      }
+      scheduleStampReveals(card);
     } else if (chapter === 'story') {
       mountPassTheWorld();
     }
@@ -586,32 +630,44 @@ const PassportPage = (() => {
     );
     activeChapter = chapter;
 
+    const freshPromise = (async () => {
+      await WorldChoirDB.ready();
+      return WorldChoirPassport.loadPassportData();
+    })();
+
     const cached = WorldChoirPassport.getCachedPassportData?.() || null;
+    let hadWarmPaint = false;
+
     if (cached) {
       passportData = cached;
       paint(cached, chapter, { animate: false });
+      hadWarmPaint = true;
     } else if (chapter === 'story') {
       root.innerHTML = renderLoading('story');
       bindStoryBack();
       applyChapter('story', { syncUrl: true, historyMode: 'replace' });
       mountPassTheWorld();
     } else {
-      root.innerHTML = renderLoading(chapter);
-      WorldChoirPassport.revealFeatureImages(root);
-      bindInteractions();
-      applyChapter(chapter, { syncUrl: true, historyMode: 'replace' });
+      try {
+        await WorldChoirDB.ready();
+        const fast = await WorldChoirPassport.loadPassportData({ fast: true });
+        passportData = fast;
+        paint(fast, chapter, { animate: false });
+        hadWarmPaint = true;
+      } catch {
+        root.innerHTML = renderLoading(chapter);
+        WorldChoirPassport.revealFeatureImages(root);
+        bindInteractions();
+        applyChapter(chapter, { syncUrl: true, historyMode: 'replace' });
+      }
     }
 
     try {
-      await WorldChoirDB.ready();
-      const fresh = await WorldChoirPassport.loadPassportData();
-      passportData = fresh;
-
-      // Avoid a full remount if user already switched chapters and content is warm.
+      const fresh = await freshPromise;
       const current = resolveChapter(
         typeof PassportRoute !== 'undefined' ? PassportRoute.getPage() : activeChapter
       );
-      paint(fresh, current, { animate: !cached && current !== 'story' });
+      applyFreshPassportData(fresh, current, { hadWarmPaint });
     } catch (err) {
       console.error(err);
       if (!passportData) {
@@ -633,8 +689,15 @@ const PassportPage = (() => {
     window.__passportShowChapter = showChapter;
     updateInfoActionsVisibility(activeChapter);
     WorldChoirNav.startWatcher('profile');
-    if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.start?.();
     mount();
+    if (typeof DailyActsPeace !== 'undefined') {
+      const startBanner = () => DailyActsPeace.start?.();
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(startBanner, { timeout: 1500 });
+      } else {
+        window.setTimeout(startBanner, 200);
+      }
+    }
   }
 
   return { init, showChapter, updateJourneyStats, refreshJourneyStats, updateJourneyStatsKm, liveJourneyTotalKm };
