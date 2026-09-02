@@ -160,6 +160,27 @@ const GlobalLiveEvent = (() => {
     return getPreEventWindowSec();
   }
 
+  function isSongStartValidForCurrentEvent(songStartIso) {
+    if (!songStartIso) return false;
+    const songStart = Date.parse(songStartIso);
+    if (Number.isNaN(songStart)) return false;
+    const preStart = WorldChoirLiveConfig.getPreEventStartMs();
+    const eventEnd = WorldChoirLiveConfig.getEventStartMs() + WorldChoirLiveConfig.getSongDurationMs();
+    return songStart >= preStart - 60_000 && songStart <= eventEnd + 120_000;
+  }
+
+  function getAuthoritativeSongStartUtc() {
+    return actualLiveSongStartUtc && isSongStartValidForCurrentEvent(actualLiveSongStartUtc)
+      ? actualLiveSongStartUtc
+      : null;
+  }
+
+  function shouldSkipPreEventVideo(nowMs) {
+    const songStartUtc = getAuthoritativeSongStartUtc();
+    if (songStartUtc && nowMs >= Date.parse(songStartUtc)) return true;
+    return hasPreEventVideoTimelineElapsed(nowMs);
+  }
+
   function hasPreEventVideoTimelineElapsed(nowMs) {
     const preStart = WorldChoirLiveConfig.getPreEventStartMs();
     const endMs = preStart + getActualVideoDurationSec() * 1000;
@@ -185,8 +206,9 @@ const GlobalLiveEvent = (() => {
 
   function getTargetSongPositionSec(nowMs) {
     const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
-    if (actualLiveSongStartUtc) {
-      const songStart = new Date(actualLiveSongStartUtc).getTime();
+    const songStartUtc = getAuthoritativeSongStartUtc();
+    if (songStartUtc) {
+      const songStart = new Date(songStartUtc).getTime();
       const elapsed = (nowMs - songStart) / 1000;
       return Math.max(0, Math.min(duration, elapsed));
     }
@@ -200,9 +222,10 @@ const GlobalLiveEvent = (() => {
     const eventStart = WorldChoirLiveConfig.getEventStartMs();
     const songDurationMs = WorldChoirLiveConfig.getSongDurationMs();
     const videoEndMs = preStart + getActualVideoDurationSec() * 1000;
+    const songStartUtc = getAuthoritativeSongStartUtc();
 
-    if (actualLiveSongStartUtc) {
-      const songStart = new Date(actualLiveSongStartUtc).getTime();
+    if (songStartUtc) {
+      const songStart = new Date(songStartUtc).getTime();
       const songEnd = songStart + songDurationMs;
       if (nowMs >= songEnd) return 'LIVE_FINISHED';
       if (nowMs >= songStart) return 'LIVE_SONG';
@@ -226,13 +249,14 @@ const GlobalLiveEvent = (() => {
       });
       if (!res.ok) return null;
       const data = await res.json();
-      if (data.serverNow) {
-        const serverMs = new Date(data.serverNow).getTime();
-        const localMs = Date.now();
-        /* gentle merge — server-time module owns offset; nudge if drift */
-      }
       if (data.actualLiveSongStartUtc) {
-        actualLiveSongStartUtc = data.actualLiveSongStartUtc;
+        if (isSongStartValidForCurrentEvent(data.actualLiveSongStartUtc)) {
+          actualLiveSongStartUtc = data.actualLiveSongStartUtc;
+        } else {
+          actualLiveSongStartUtc = null;
+        }
+      } else {
+        actualLiveSongStartUtc = null;
       }
       return data;
     } catch {
@@ -250,7 +274,7 @@ const GlobalLiveEvent = (() => {
       });
       if (!res.ok) return null;
       const data = await res.json();
-      if (data.actualLiveSongStartUtc) {
+      if (data.actualLiveSongStartUtc && isSongStartValidForCurrentEvent(data.actualLiveSongStartUtc)) {
         actualLiveSongStartUtc = data.actualLiveSongStartUtc;
       }
       return data;
@@ -442,7 +466,7 @@ const GlobalLiveEvent = (() => {
     const target = getTargetVideoPositionSec(nowMs);
     const windowSec = getPreEventWindowSec();
 
-    if (actualLiveSongStartUtc || hasPreEventVideoTimelineElapsed(nowMs)) {
+    if (shouldSkipPreEventVideo(nowMs)) {
       await onVideoEnded();
       return;
     }
@@ -635,7 +659,8 @@ const GlobalLiveEvent = (() => {
     }
 
     if (state === 'PRE_EVENT') {
-      if (actualLiveSongStartUtc) {
+      const songStartUtc = getAuthoritativeSongStartUtc();
+      if (songStartUtc && nowMs >= Date.parse(songStartUtc)) {
         await enterLiveSong();
         return;
       }
@@ -669,8 +694,12 @@ const GlobalLiveEvent = (() => {
   async function pollAuthoritative() {
     if (state !== 'PRE_EVENT' && state !== 'LIVE_SONG') return;
     await fetchAuthoritativeState();
-    if (actualLiveSongStartUtc && state === 'PRE_EVENT' && !videoEndedLocally) {
-      await enterLiveSong();
+    const songStartUtc = getAuthoritativeSongStartUtc();
+    if (songStartUtc && state === 'PRE_EVENT' && !videoEndedLocally) {
+      const nowMs = WorldChoirServerTime.nowMs();
+      if (nowMs >= Date.parse(songStartUtc)) {
+        await enterLiveSong();
+      }
     }
   }
 
@@ -714,6 +743,32 @@ const GlobalLiveEvent = (() => {
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('pageshow', onVisibility);
     WorldChoirServerTime.stopAutoResync();
+  }
+
+  async function reconcileStaleAuthoritativeState() {
+    if (typeof WorldChoirEventSchedule === 'undefined' || !WorldChoirEventSchedule.isTestOverrideActive()) {
+      return;
+    }
+
+    const hadStaleStart = actualLiveSongStartUtc && !isSongStartValidForCurrentEvent(actualLiveSongStartUtc);
+    if (!hadStaleStart) return;
+
+    actualLiveSongStartUtc = null;
+    videoEndedLocally = false;
+    transitioning = false;
+    try {
+      await fetch('/api/live-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          action: 'reset-test-state',
+          eventId: WorldChoirLiveConfig.EVENT.eventId,
+        }),
+      });
+    } catch {
+      /* best effort */
+    }
   }
 
   async function resetTestEventStateIfNeeded() {
@@ -762,6 +817,7 @@ const GlobalLiveEvent = (() => {
     await resetTestEventStateIfNeeded();
     await WorldChoirServerTime.sync(true);
     await fetchAuthoritativeState();
+    await reconcileStaleAuthoritativeState();
 
     const nowMs = WorldChoirServerTime.nowMs();
     const preStart = WorldChoirLiveConfig.getPreEventStartMs();

@@ -24,24 +24,46 @@ function emptyState(eventId = DEFAULT_EVENT_ID) {
   };
 }
 
+function isSongStartValidForCurrentSchedule(songStartUtc) {
+  if (!songStartUtc) return false;
+  const songStart = Date.parse(songStartUtc);
+  if (Number.isNaN(songStart)) return false;
+  const preStart = Date.parse(schedule.getPreEventStartUtc());
+  const eventEnd = Date.parse(schedule.getEventEndUtc());
+  return songStart >= preStart - 60_000 && songStart <= eventEnd + 120_000;
+}
+
+async function sanitizeLiveEventState(state, eventId = DEFAULT_EVENT_ID) {
+  if (
+    state.actualLiveSongStartUtc
+    && schedule.isTestOverrideActive()
+    && !isSongStartValidForCurrentSchedule(state.actualLiveSongStartUtc)
+  ) {
+    return clearLiveEventState(eventId);
+  }
+  return state;
+}
+
 async function readLiveEventState(eventId = DEFAULT_EVENT_ID) {
   if (memoryState && memoryState.eventId === eventId) {
-    return { ...memoryState };
+    return sanitizeLiveEventState({ ...memoryState }, eventId);
   }
   try {
     assertBlobConfigured();
     const raw = await readBlobJson(statePath(eventId));
     if (!raw || typeof raw !== 'object') return emptyState(eventId);
-    return {
+    const state = {
       eventId,
       actualLiveSongStartUtc: raw.actualLiveSongStartUtc || null,
       videoEndedRecordedAt: raw.videoEndedRecordedAt || null,
       updatedAt: raw.updatedAt || null,
     };
+    return sanitizeLiveEventState(state, eventId);
   } catch {
-    return memoryState && memoryState.eventId === eventId
+    const fallback = memoryState && memoryState.eventId === eventId
       ? { ...memoryState }
       : emptyState(eventId);
+    return sanitizeLiveEventState(fallback, eventId);
   }
 }
 
