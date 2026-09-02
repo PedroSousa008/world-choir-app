@@ -113,14 +113,6 @@ const ProfilePage = (() => {
         refresh();
         WorldChoirPledgeState.subscribe(() => refresh());
         maybeOpenPracticeFromQuery();
-        // Safety net: first-time accounts must see intro even if they open Profile first.
-        if (typeof WorldChoirOnboarding !== 'undefined') {
-          await WorldChoirOnboarding.maybeStartFirstTime({
-            onDone: () => {
-              if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
-            },
-          });
-        }
       })
       .catch((err) => {
         console.error('Failed to connect to World Choir database:', err);

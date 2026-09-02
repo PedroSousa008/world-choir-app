@@ -372,7 +372,7 @@ async function ensureUser(deviceId) {
       id: randomUUID(),
       anonymous_device_id: trimmed,
       created_at: new Date().toISOString(),
-      hasCompletedWorldChoirOnboarding: false,
+      hasCompletedWorldChoirOnboarding: true,
     };
     try {
       await writeJson(probePath, user, { overwrite: false });

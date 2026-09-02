@@ -260,17 +260,8 @@ const WorldChoirHome = (() => {
     }
   }
 
-  async function maybeLaunchAfterOnboardingGate() {
-    let startedOnboarding = false;
-    if (typeof WorldChoirOnboarding !== 'undefined' && WorldChoirOnboarding.maybeStartFirstTime) {
-      startedOnboarding = await WorldChoirOnboarding.maybeStartFirstTime({
-        onDone: () => {
-          if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
-          if (isPostEvent()) LiveEventMode.launch();
-        },
-      });
-    }
-    if (!startedOnboarding && isPostEvent()) {
+  function maybeLaunchHomeExtras() {
+    if (isPostEvent()) {
       LiveEventMode.launch();
     }
   }
@@ -281,13 +272,12 @@ const WorldChoirHome = (() => {
     WorldChoirPledgeState.init()
       .then(async () => {
         if (isPreEvent() && !LiveEventMode.isActive()) render();
-        await maybeLaunchAfterOnboardingGate();
+        maybeLaunchHomeExtras();
       })
       .catch(async (err) => {
         console.error('Failed to connect to World Choir database:', err);
         if (isPreEvent() && !LiveEventMode.isActive()) render();
-        // Still attempt the gate — maybeStartFirstTime awaits ready() itself.
-        await maybeLaunchAfterOnboardingGate();
+        maybeLaunchHomeExtras();
       });
   }
 

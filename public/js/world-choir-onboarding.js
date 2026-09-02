@@ -1,9 +1,5 @@
 /**
- * WorldChoirOnboarding — first-time introduction + Profile replay.
- *
- * Modes:
- * - firstTime: mark hasCompletedWorldChoirOnboarding when finished
- * - replay: never mutate completion; return to Profile (or caller onDone)
+ * WorldChoirOnboarding — optional replay from Profile (“How World Choir Works”).
  */
 const WorldChoirOnboarding = (() => {
   const CARDS = [
@@ -56,7 +52,6 @@ const WorldChoirOnboarding = (() => {
 
   let open = false;
   let index = 0;
-  let mode = 'firstTime';
   let locked = false;
   let onDone = null;
   let rootEl = null;
@@ -145,9 +140,9 @@ const WorldChoirOnboarding = (() => {
             ${renderCardInner(index)}
           </div>
         </button>
-        ${mode === 'replay' ? `
+        ${`
           <button type="button" class="wc-onboarding__close" id="wc-onboarding-close" aria-label="Close">Close</button>
-        ` : ''}
+        `}
       </div>
     `;
     bindFrame();
@@ -222,16 +217,6 @@ const WorldChoirOnboarding = (() => {
     open = false;
     locked = true;
 
-    if (mode === 'firstTime' && reachedEnd) {
-      try {
-        if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.completeWorldChoirOnboarding) {
-          await WorldChoirDB.completeWorldChoirOnboarding();
-        }
-      } catch (err) {
-        console.error('Could not persist onboarding completion:', err);
-      }
-    }
-
     const shell = ensureShell();
     shell.classList.remove('is-open');
     shell.setAttribute('aria-hidden', 'true');
@@ -241,12 +226,11 @@ const WorldChoirOnboarding = (() => {
 
     const cb = onDone;
     onDone = null;
-    if (typeof cb === 'function') cb({ mode, reachedEnd });
+    if (typeof cb === 'function') cb({ reachedEnd });
     if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
   }
 
   function openOnboarding(options = {}) {
-    mode = options.mode === 'replay' ? 'replay' : 'firstTime';
     onDone = typeof options.onDone === 'function' ? options.onDone : null;
     index = 0;
     locked = false;
@@ -259,37 +243,8 @@ const WorldChoirOnboarding = (() => {
     document.body.classList.add('is-onboarding-open');
   }
 
-  async function maybeStartFirstTime(options = {}) {
-    try {
-      if (typeof WorldChoirDB === 'undefined') return false;
-      // Must wait for the account record — checking before bootstrap always skipped new users.
-      if (typeof WorldChoirDB.ready === 'function') {
-        try {
-          await WorldChoirDB.ready();
-        } catch (err) {
-          console.error('Onboarding wait for user failed:', err);
-          return false;
-        }
-      }
-      if (!WorldChoirDB.needsWorldChoirOnboarding || !WorldChoirDB.needsWorldChoirOnboarding()) {
-        return false;
-      }
-      if (open) return true;
-      openOnboarding({
-        mode: 'firstTime',
-        onDone: options.onDone,
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   function openReplay(options = {}) {
-    openOnboarding({
-      mode: 'replay',
-      onDone: options.onDone,
-    });
+    openOnboarding(options);
   }
 
   function isOpen() {
@@ -297,7 +252,6 @@ const WorldChoirOnboarding = (() => {
   }
 
   return {
-    maybeStartFirstTime,
     openReplay,
     isOpen,
   };
