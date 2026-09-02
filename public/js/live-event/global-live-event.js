@@ -161,7 +161,8 @@ const GlobalLiveEvent = (() => {
   }
 
   function shouldLoopPreEventVideo() {
-    return getActualVideoDurationSec() < getPreEventWindowSec() - 0.5;
+    const gap = getPreEventWindowSec() - getActualVideoDurationSec();
+    return gap > 60;
   }
 
   function getTargetVideoPositionSec(nowMs) {
@@ -298,14 +299,17 @@ const GlobalLiveEvent = (() => {
     }
 
     return new Promise((resolve) => {
-      const done = () => {
-        videoEl.removeEventListener('loadedmetadata', done);
-        videoEl.removeEventListener('error', onErr);
+      const applyLoopSetting = () => {
         if (shouldLoopPreEventVideo()) {
           videoEl.loop = true;
         } else {
           videoEl.loop = false;
         }
+      };
+      const done = () => {
+        videoEl.removeEventListener('loadedmetadata', done);
+        videoEl.removeEventListener('error', onErr);
+        applyLoopSetting();
         resolve();
       };
       const onErr = () => {
@@ -317,6 +321,7 @@ const GlobalLiveEvent = (() => {
         done();
       };
       if (videoEl.readyState >= 1) {
+        applyLoopSetting();
         resolve();
         return;
       }

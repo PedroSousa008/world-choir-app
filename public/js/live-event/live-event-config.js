@@ -11,7 +11,7 @@ const WorldChoirLiveConfig = (() => {
       intendedStartUtc: '2027-09-21T15:55:00.000Z',
       /** Official film: public/video/pre-event.mp4 */
       videoUrl: '/video/pre-event.mp4',
-      /** Pre-event window: 15:55 → 16:00 UTC (5 minutes). Short clips loop until event start. */
+      /** Pre-event window: 15:55 → 16:00 UTC (300s). Short placeholders loop; ~5min films play once. */
       videoDurationSeconds: 300,
     },
 
