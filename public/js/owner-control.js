@@ -53,6 +53,7 @@ const OwnerControl = (() => {
     foundationSort: 'updated',
     foundationPage: 1,
     foundationDetail: null,
+    foundationCreateOpen: false,
     foundationActionMenu: null,
     cityDetail: null,
     countryDetail: null,
@@ -1502,8 +1503,6 @@ const OwnerControl = (() => {
               </nav>
             ` : ''}
 
-            <div id="owner-foundation-create-slot"></div>
-
             <section class="owner-section owner-group owner-cf-recover">
               <p class="owner-group__title">Recover Members login password</p>
               <p class="owner-muted" style="margin-bottom:14px">
@@ -1600,6 +1599,49 @@ const OwnerControl = (() => {
         </div>
       </div>
       ${detail ? renderFoundationDetail(detail) : ''}
+      ${state.foundationCreateOpen ? renderFoundationCreateModal() : ''}
+    `;
+  }
+
+  function renderFoundationCreateModal() {
+    return `
+      <div class="owner-cf-modal" role="dialog" aria-modal="true" aria-labelledby="owner-cf-create-title">
+        <button type="button" class="owner-cf-modal__backdrop" data-foundation-create-close aria-label="Close create panel"></button>
+        <div class="owner-cf-modal__card">
+          <button type="button" class="owner-cf-modal__close" data-foundation-create-close aria-label="Close">×</button>
+          <div class="owner-detail owner-cf-modal__content">
+            <h3 id="owner-cf-create-title">Create Creator Foundation</h3>
+            <p class="owner-muted" style="margin-bottom:14px">
+              Email and temporary password become their Influencer login at <strong>/members</strong>.
+              Passwords are never stored in plain text — copy them right after you create the foundation.
+              The foundation is published to Donate immediately.
+            </p>
+            <form class="owner-form" id="owner-foundation-create">
+              <div class="owner-field"><label>Email (Members login)</label><input name="email" type="email" required autocomplete="off"></div>
+              <div class="owner-field"><label>Temporary password (Members login)</label><input name="password" type="text" required minlength="8" autocomplete="off"></div>
+              <div class="owner-field"><label>Display name</label><input name="displayName" required></div>
+              <div class="owner-field"><label>Foundation name</label><input name="foundationName"></div>
+              <div class="owner-field"><label>Country</label><input name="country"></div>
+              <div class="owner-field">
+                <label>Primary cause</label>
+                <select name="primaryCategory" required>
+                  <option value="">Select a cause</option>
+                  <option value="Food &amp; Hunger">Food &amp; Hunger</option>
+                  <option value="Health">Health</option>
+                  <option value="Education">Education</option>
+                  <option value="Humanitarian Aid">Humanitarian Aid</option>
+                  <option value="Environment">Environment</option>
+                </select>
+              </div>
+              <div class="owner-field"><label>Mission</label><textarea name="mission"></textarea></div>
+              <div class="owner-actions">
+                <button class="owner-btn" type="submit">Create &amp; publish</button>
+                <button class="owner-btn-ghost" type="button" data-foundation-create-close>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -3488,6 +3530,12 @@ const OwnerControl = (() => {
         render();
       });
     });
+    root().querySelectorAll('[data-foundation-create-close]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.foundationCreateOpen = false;
+        render();
+      });
+    });
     if (state.foundationDetail) {
       const onEscape = (e) => {
         if (e.key !== 'Escape') return;
@@ -3497,10 +3545,20 @@ const OwnerControl = (() => {
       };
       document.addEventListener('keydown', onEscape);
     }
+    if (state.foundationCreateOpen) {
+      const onEscape = (e) => {
+        if (e.key !== 'Escape') return;
+        state.foundationCreateOpen = false;
+        document.removeEventListener('keydown', onEscape);
+        render();
+      };
+      document.addEventListener('keydown', onEscape);
+    }
     root().querySelectorAll('[data-foundation-id]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         if (e.target.closest('[data-foundation-export]') || e.target.closest('.owner-cf-menu-wrap')) return;
         state.foundationDetail = btn.getAttribute('data-foundation-id');
+        state.foundationCreateOpen = false;
         state.section = 'foundations';
         render();
       });
@@ -3564,6 +3622,21 @@ const OwnerControl = (() => {
 
     document.getElementById('owner-create-foundation')?.addEventListener('click', openCreateFoundation);
     document.getElementById('owner-cf-quick-create')?.addEventListener('click', openCreateFoundation);
+    document.getElementById('owner-foundation-create')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const email = String(fd.get('email') || '').trim();
+      const password = String(fd.get('password') || '');
+      try {
+        await api('create-influencer', { method: 'POST', body: Object.fromEntries(fd.entries()) });
+        state.foundationCreateOpen = false;
+        await copyMembersCredentials(email, password);
+        await loadCenter();
+      } catch (err) {
+        setFlash(err.message, 'err');
+        render();
+      }
+    });
     document.getElementById('owner-reset-influencer-password')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
@@ -3687,56 +3760,10 @@ const OwnerControl = (() => {
   }
 
   function openCreateFoundation() {
-    const slot = document.getElementById('owner-foundation-create-slot');
-    if (!slot) return;
-    slot.innerHTML = `
-      <div class="owner-detail">
-        <h3>Create Creator Foundation</h3>
-        <p class="owner-muted" style="margin-bottom:14px">
-          Email and temporary password become their Influencer login at <strong>/members</strong>.
-          Passwords are never stored in plain text — copy them right after you create the foundation.
-          The foundation is published to Donate immediately.
-        </p>
-        <form class="owner-form" id="owner-foundation-create" style="max-width:560px">
-          <div class="owner-field"><label>Email (Members login)</label><input name="email" type="email" required autocomplete="off"></div>
-          <div class="owner-field"><label>Temporary password (Members login)</label><input name="password" type="text" required minlength="8" autocomplete="off"></div>
-          <div class="owner-field"><label>Display name</label><input name="displayName" required></div>
-          <div class="owner-field"><label>Foundation name</label><input name="foundationName"></div>
-          <div class="owner-field"><label>Country</label><input name="country"></div>
-          <div class="owner-field">
-            <label>Primary cause</label>
-            <select name="primaryCategory" required>
-              <option value="">Select a cause</option>
-              <option value="Food &amp; Hunger">Food &amp; Hunger</option>
-              <option value="Health">Health</option>
-              <option value="Education">Education</option>
-              <option value="Humanitarian Aid">Humanitarian Aid</option>
-              <option value="Environment">Environment</option>
-            </select>
-          </div>
-          <div class="owner-field"><label>Mission</label><textarea name="mission"></textarea></div>
-          <div class="owner-actions">
-            <button class="owner-btn" type="submit">Create &amp; publish</button>
-            <button class="owner-btn-ghost" type="button" id="owner-create-cancel">Cancel</button>
-          </div>
-        </form>
-      </div>
-    `;
-    document.getElementById('owner-create-cancel')?.addEventListener('click', () => { slot.innerHTML = ''; });
-    document.getElementById('owner-foundation-create')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      const email = String(fd.get('email') || '').trim();
-      const password = String(fd.get('password') || '');
-      try {
-        await api('create-influencer', { method: 'POST', body: Object.fromEntries(fd.entries()) });
-        await copyMembersCredentials(email, password);
-        await loadCenter();
-      } catch (err) {
-        setFlash(err.message, 'err');
-        render();
-      }
-    });
+    state.foundationCreateOpen = true;
+    state.foundationDetail = null;
+    state.foundationActionMenu = null;
+    render();
   }
 
   function render() {
