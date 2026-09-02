@@ -126,6 +126,7 @@ const OwnerControl = (() => {
   };
 
   const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
+  let foundationSearchTimer = null;
 
   function applyOwnerRoute() {
     const parts = String(window.location.hash || '').replace(/^#/, '').split('/').filter(Boolean);
@@ -501,6 +502,17 @@ const OwnerControl = (() => {
       el.value = val;
       try { el.setSelectionRange(val.length, val.length); } catch { /* ignore */ }
     }
+  }
+
+  function keepFoundationSearchFocus() {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('owner-cf-search');
+      if (!el) return;
+      const val = state.foundationQuery;
+      el.focus();
+      el.value = val;
+      try { el.setSelectionRange(val.length, val.length); } catch { /* ignore */ }
+    });
   }
 
   /* ─── Overview ─── */
@@ -3456,7 +3468,11 @@ const OwnerControl = (() => {
     document.getElementById('owner-cf-search')?.addEventListener('input', (e) => {
       state.foundationQuery = e.target.value;
       state.foundationPage = 1;
-      render();
+      clearTimeout(foundationSearchTimer);
+      foundationSearchTimer = setTimeout(() => {
+        render();
+        keepFoundationSearchFocus();
+      }, 160);
     });
     document.getElementById('owner-cf-status-filter')?.addEventListener('change', (e) => {
       state.foundationStatusFilter = e.target.value;
