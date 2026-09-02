@@ -635,7 +635,8 @@ const PassTheWorld = (() => {
     const ring = root?.querySelector('.ptw-visit-ring');
     if (journey?.status === 'INVITATION_OPEN' && el && journey.invitationCloseAt) {
       const closeAt = new Date(journey.invitationCloseAt).getTime();
-      const openAt = new Date(journey.invitationOpenAt || closeAt - 60000).getTime();
+      const windowMs = journey.constants?.invitationWindowMs || 120000;
+      const openAt = new Date(journey.invitationOpenAt || closeAt - windowMs).getTime();
       const tick = () => {
         const now = mockNow
           ? new Date(mockNow).getTime()

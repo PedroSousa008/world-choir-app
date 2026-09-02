@@ -84,7 +84,7 @@ const OwnerPassTheWorld = (() => {
   }
 
   function selectionLabel(method) {
-    if (method === 'window') return 'Random 60-second selection';
+    if (method === 'window') return 'Random 120-second selection';
     if (method === 'first_call') return 'First invitation after empty window';
     return '—';
   }
@@ -163,14 +163,15 @@ const OwnerPassTheWorld = (() => {
   function renderWindowBuckets(buckets) {
     if (!buckets?.length) return '<p class="owner-ptw-empty">No second-by-second data yet.</p>';
     const max = Math.max(1, ...buckets);
+    const windowSec = buckets.length;
     return `
-      <div class="owner-ptw-window-chart" role="img" aria-label="Invitations during 60 seconds">
+      <div class="owner-ptw-window-chart" role="img" aria-label="Invitations during ${windowSec} seconds">
         ${buckets.map((val, i) => {
           const h = Math.max(2, Math.round((val / max) * 100));
           return `<span class="owner-ptw-window-chart__bar" style="height:${h}%" title="${i}s: ${val}"></span>`;
         }).join('')}
       </div>
-      <p class="owner-ptw-window-label">0s → 60s</p>`;
+      <p class="owner-ptw-window-label">0s → ${windowSec}s</p>`;
   }
 
   function renderRoundDetail(d, esc, state) {
@@ -200,7 +201,7 @@ const OwnerPassTheWorld = (() => {
             <p class="owner-ptw-muted">Selected ${fmtDateTime(r.selectedAt)} · ${fmt(r.journeyDistanceKm)} km</p>
           </article>` : '<p class="owner-ptw-empty">No destination selected (empty round).</p>'}
         <article class="owner-ptw-panel">
-          <h3 class="owner-ptw-panel__title">Invitations during the 60 seconds</h3>
+          <h3 class="owner-ptw-panel__title">Invitations during the 120 seconds</h3>
           ${renderWindowBuckets(r.windowBuckets)}
         </article>
         <div class="owner-ptw-split">

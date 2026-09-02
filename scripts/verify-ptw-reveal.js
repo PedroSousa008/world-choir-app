@@ -28,7 +28,7 @@ function assert(cond, msg) {
 }
 
 async function main() {
-  assert(INVITATION_WINDOW_MS === 60000, 'invitation window is 60 seconds');
+  assert(INVITATION_WINDOW_MS === 120000, 'invitation window is 120 seconds');
   assert(REVEAL_WINDOW_MS === 10000, 'reveal window is 10 seconds');
   assert(STATUS.REVEAL_PENDING === 'REVEAL_PENDING', 'REVEAL_PENDING status exists');
 

@@ -1,6 +1,6 @@
 /**
  * Pass the World — shared global journey (Vercel Blob).
- * Ritual at 16:00 UTC · 60s window · World never moves by itself.
+ * Ritual at 16:00 UTC · 120s window · World never moves by itself.
  */
 const { randomUUID } = require('crypto');
 const {
@@ -16,8 +16,9 @@ const STATE_PATH = `${ROOT}/state.json`;
 const ITINERARY_PATH = `${ROOT}/itinerary.json`;
 
 const INVITATION_HOUR_UTC = 16;
-const INVITATION_WINDOW_MS = 60 * 1000;
-/** Suspense reveal after the 60s window — winner is fixed; travel starts when this ends. */
+const INVITATION_WINDOW_MS = 120 * 1000;
+const INVITATION_WINDOW_SEC = INVITATION_WINDOW_MS / 1000;
+/** Suspense reveal after the invitation window — winner is fixed; travel starts when this ends. */
 const REVEAL_WINDOW_MS = 10 * 1000;
 /** Journeys always land at 15:59 UTC so the World is ready for 16:00 UTC. */
 const ARRIVAL_HOUR_UTC = 15;
@@ -145,10 +146,10 @@ async function finalizeRoundMeta(roundId, {
     new Date(a.submittedAt || 0).getTime() - new Date(b.submittedAt || 0).getTime()
   ));
   const first = sorted[0] || null;
-  const windowBuckets = new Array(60).fill(0);
+  const windowBuckets = new Array(INVITATION_WINDOW_SEC).fill(0);
   for (const inv of invitations) {
     if (openMs == null || !inv.submittedAt) continue;
-    const sec = Math.min(59, Math.max(0, Math.floor((new Date(inv.submittedAt).getTime() - openMs) / 1000)));
+    const sec = Math.min(INVITATION_WINDOW_SEC - 1, Math.max(0, Math.floor((new Date(inv.submittedAt).getTime() - openMs) / 1000)));
     windowBuckets[sec] += 1;
   }
   const cityKeys = new Set();
@@ -955,7 +956,7 @@ async function advanceStateMachine(nowInput) {
   const closeAt = new Date(openAt.getTime() + INVITATION_WINDOW_MS);
   const roundId = `round-${openAt.toISOString()}`;
 
-  // Active 60-second ritual window — always open the round while the clock is in-window,
+  // Active invitation ritual window — always open the round while the clock is in-window,
   // even if a prior request missed the transition (state can still be ARRIVED/INITIAL).
   if (now.getTime() >= openAt.getTime() && now.getTime() < closeAt.getTime()) {
     const invitations = await readRoundInvites(roundId);
@@ -1023,7 +1024,7 @@ async function advanceStateMachine(nowInput) {
   }
 
   // Heal WAITING: any pending winner/invite must start travelling immediately
-  // (first person after the empty 60s window sends the plane — no collecting).
+  // (first person after the empty invitation window sends the plane — no collecting).
   if (state.status === STATUS.WAITING_FOR_FIRST_CALL && state.activeRoundId) {
     const healed = await resolveFirstCallIfPending(state, itinerary, now);
     if (healed) return { ...healed, now };
@@ -1357,7 +1358,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     alreadyInvited = true;
   } catch { /* first invite */ }
 
-  // After the empty 60s window: first click sends the plane immediately (no collecting).
+  // After the empty invitation window: first click sends the plane immediately (no collecting).
   if (state.status === STATUS.WAITING_FOR_FIRST_CALL) {
     let invites = await readRoundInvites(roundId);
     if (!alreadyInvited) {
@@ -1422,7 +1423,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     };
   }
 
-  // Active 60-second ritual window — collect invitations only.
+  // Active invitation ritual window — collect invitations only.
   if (alreadyInvited) {
     const invites = await readRoundInvites(roundId);
     state = await writeState({
@@ -1473,6 +1474,7 @@ module.exports = {
   STATUS,
   INVITATION_HOUR_UTC,
   INVITATION_WINDOW_MS,
+  INVITATION_WINDOW_SEC,
   REVEAL_WINDOW_MS,
   ARRIVAL_HOUR_UTC,
   ARRIVAL_MINUTE_UTC,

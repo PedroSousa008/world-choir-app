@@ -11,6 +11,7 @@ const {
   haversineKm,
   STATUS,
   INVITATION_WINDOW_MS,
+  INVITATION_WINDOW_SEC,
   REVEAL_WINDOW_MS,
   isInvalidItineraryEntry,
   isInvalidTravelLeg,
@@ -123,12 +124,12 @@ function buildRoundFromData(roundId, meta, invites, winner, itinerary) {
   const countryMap = new Map();
   let firstTimeCount = 0;
   let returningCount = 0;
-  const windowBuckets = meta?.windowBuckets || new Array(60).fill(0);
+  const windowBuckets = meta?.windowBuckets || new Array(INVITATION_WINDOW_SEC).fill(0);
 
   if (!meta?.windowBuckets?.length) {
     for (const inv of invites) {
       if (openMs == null || !inv.submittedAt) continue;
-      const sec = Math.min(59, Math.max(0, Math.floor((new Date(inv.submittedAt).getTime() - openMs) / 1000)));
+      const sec = Math.min(INVITATION_WINDOW_SEC - 1, Math.max(0, Math.floor((new Date(inv.submittedAt).getTime() - openMs) / 1000)));
       windowBuckets[sec] += 1;
     }
   }
