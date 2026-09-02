@@ -3,6 +3,7 @@
  */
 const WorldChoirHome = (() => {
   let countdownTimer = null;
+  let homeReady = false;
 
   function esc(str) {
     const d = document.createElement('div');
@@ -16,6 +17,14 @@ const WorldChoirHome = (() => {
 
   function isPostEvent() {
     return LiveEventMode.isPostEvent();
+  }
+
+  function isHomeDataReady() {
+    const pledgeReady = typeof WorldChoirPledgeState === 'undefined'
+      || WorldChoirPledgeState.isLoaded();
+    const voicesReady = typeof WorldChoirDB === 'undefined'
+      || WorldChoirDB.isPledgesLoaded();
+    return pledgeReady && voicesReady;
   }
 
   /* ─── Subtle cinematic background ─── */
@@ -107,6 +116,12 @@ const WorldChoirHome = (() => {
     const el = document.getElementById('home-voices-counter');
     if (!el || !isPreEvent() || LiveEventMode.isActive()) return;
 
+    // If still on the skeleton shell, swap to real UI as soon as data lands.
+    if (!homeReady && isHomeDataReady()) {
+      revealHome();
+      return;
+    }
+
     const { text, loading } = getVoicesCounterContent();
     const prev = el.textContent;
     el.textContent = text;
@@ -132,6 +147,32 @@ const WorldChoirHome = (() => {
         <span class="btn-hero__glow"></span>
         <span class="btn-hero__text">${pledged ? "You're Singing" : "I'll Sing"}</span>
       </button>
+    `;
+  }
+
+  /** Full-page skeleton matching the Home layout (shown only until data is ready). */
+  function renderHomeSkeleton() {
+    return `
+      <div class="home-skeleton" aria-busy="true" aria-live="polite">
+        <span class="sr-only">Loading World Choir…</span>
+        <div class="home-skel home-skel--voices"></div>
+        <div class="home-skel home-skel--logo"></div>
+        <div class="home-skel home-skel--headline"></div>
+        <div class="home-skel-countdown" aria-hidden="true">
+          <div class="home-skel home-skel--unit"></div>
+          <div class="home-skel home-skel--unit"></div>
+          <div class="home-skel home-skel--unit"></div>
+          <div class="home-skel home-skel--unit"></div>
+        </div>
+        <div class="home-skel home-skel--meta"></div>
+        <div class="home-skel home-skel--song"></div>
+        <div class="home-skel home-skel--cta"></div>
+        <div class="home-skel-actions" aria-hidden="true">
+          <div class="home-skel home-skel--icon"></div>
+          <div class="home-skel home-skel--icon"></div>
+          <div class="home-skel home-skel--icon"></div>
+        </div>
+      </div>
     `;
   }
 
@@ -185,25 +226,48 @@ const WorldChoirHome = (() => {
     `;
   }
 
+  function revealHome() {
+    if (homeReady) return;
+    if (!isHomeDataReady()) return;
+    homeReady = true;
+    render();
+  }
+
   function render() {
     const root = document.getElementById('home-content');
+    if (!root) return;
     if (LiveEventMode.isActive()) return;
     if (typeof GlobalLiveEvent !== 'undefined' && GlobalLiveEvent.isActive()) return;
 
     if (isPostEvent() && LiveEventMode.hasCompletedFlow()) {
+      homeReady = true;
       root.innerHTML = renderPostEventHome();
-    } else if (isPreEvent()) {
+      return;
+    }
+
+    if (isPreEvent()) {
+      if (!homeReady && !isHomeDataReady()) {
+        root.innerHTML = renderHomeSkeleton();
+        return;
+      }
+      homeReady = true;
       root.innerHTML = renderCountdownHome();
       bindActions();
-    } else if (LiveEventMode.isDuringLiveSong()) {
+      return;
+    }
+
+    if (LiveEventMode.isDuringLiveSong()) {
+      homeReady = true;
       root.innerHTML = `
         <p class="home-brand home-brand--live"><span class="live-dot"></span> LIVE</p>
         <h1 class="home-headline">The world is singing now.</h1>
         <p class="home-song">${esc(WorldChoirConfig.ACTIVE_EVENT.songName)} — ${esc(WorldChoirConfig.ACTIVE_EVENT.artistName)}</p>
       `;
-    } else {
-      root.innerHTML = renderPostEventHome();
+      return;
     }
+
+    homeReady = true;
+    root.innerHTML = renderPostEventHome();
   }
 
   function updateCountdown() {
@@ -214,6 +278,11 @@ const WorldChoirHome = (() => {
         LiveEventMode.launch();
       }
       if (!LiveEventMode.isActive()) render();
+      return;
+    }
+
+    if (!homeReady) {
+      revealHome();
       return;
     }
 
@@ -267,16 +336,27 @@ const WorldChoirHome = (() => {
   }
 
   function init() {
-    // Paint immediately — never wait on network for the first Home frame.
+    homeReady = false;
     startHome();
+    // Never leave the skeleton up for long — reveal as soon as data is ready,
+    // or after a short fallback so Home never feels stuck.
+    const fallback = setTimeout(() => {
+      if (!homeReady) {
+        homeReady = true;
+        render();
+      }
+    }, 1200);
     WorldChoirPledgeState.init()
       .then(async () => {
-        if (isPreEvent() && !LiveEventMode.isActive()) render();
+        clearTimeout(fallback);
+        revealHome();
         maybeLaunchHomeExtras();
       })
       .catch(async (err) => {
+        clearTimeout(fallback);
         console.error('Failed to connect to World Choir database:', err);
-        if (isPreEvent() && !LiveEventMode.isActive()) render();
+        homeReady = true;
+        render();
         maybeLaunchHomeExtras();
       });
   }
@@ -298,7 +378,10 @@ const WorldChoirHome = (() => {
 
     WorldChoirReminders.init();
     WorldChoirPledgeState.subscribe(() => {
-      if (isPreEvent() && !LiveEventMode.isActive()) render();
+      if (isPreEvent() && !LiveEventMode.isActive()) {
+        if (!homeReady) revealHome();
+        else render();
+      }
     });
 
     window.addEventListener('wc-pledges-synced', updateVoicesCounter);
