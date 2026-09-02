@@ -1146,48 +1146,6 @@ const OwnerControl = (() => {
         </div>
       </section>
 
-      <section class="owner-section owner-group">
-        <p class="owner-group__title">Recover Members login</p>
-        <p class="owner-muted" style="margin-bottom:14px">
-          Set a new temporary password using the Creator’s login email.
-          You cannot view a password they chose themselves — only reset it here.
-        </p>
-        <form class="owner-form" id="owner-reset-influencer-password" style="max-width:560px">
-          <div class="owner-field">
-            <label for="owner-reset-email">Login email</label>
-            <input
-              id="owner-reset-email"
-              name="email"
-              type="email"
-              list="owner-foundation-emails"
-              required
-              autocomplete="off"
-              placeholder="creator@example.com"
-            >
-            <datalist id="owner-foundation-emails">
-              ${list.map((f) => `<option value="${esc(f.email || '')}"></option>`).join('')}
-            </datalist>
-          </div>
-          <div class="owner-field">
-            <label for="owner-reset-password">New temporary password</label>
-            <div class="owner-password-row">
-              <input
-                id="owner-reset-password"
-                name="newPassword"
-                type="text"
-                required
-                minlength="8"
-                autocomplete="off"
-                spellcheck="false"
-                placeholder="At least 8 characters"
-              >
-              <button type="button" class="owner-btn-ghost" id="owner-reset-copy-credentials" title="Copy email and password">Copy</button>
-            </div>
-          </div>
-          <button class="owner-btn" type="submit">Reset password</button>
-        </form>
-      </section>
-
       ${!list.length
         ? `<p class="owner-empty">No Creator Foundations yet. Create the first profile to publish it to Donate.</p>`
         : state.foundationView === 'curated'
@@ -1241,6 +1199,48 @@ const OwnerControl = (() => {
 
       ${detail ? renderFoundationDetail(detail) : ''}
       <div id="owner-foundation-create-slot"></div>
+
+      <section class="owner-section owner-group" style="margin-top:32px">
+        <p class="owner-group__title">Recover Members login password</p>
+        <p class="owner-muted" style="margin-bottom:14px">
+          Set a new temporary password using the Creator’s login email.
+          You cannot view a password they chose themselves — only reset it here.
+        </p>
+        <form class="owner-form" id="owner-reset-influencer-password" style="max-width:560px">
+          <div class="owner-field">
+            <label for="owner-reset-email">Login email</label>
+            <input
+              id="owner-reset-email"
+              name="email"
+              type="email"
+              list="owner-foundation-emails"
+              required
+              autocomplete="off"
+              placeholder="creator@example.com"
+            >
+            <datalist id="owner-foundation-emails">
+              ${list.map((f) => `<option value="${esc(f.email || '')}"></option>`).join('')}
+            </datalist>
+          </div>
+          <div class="owner-field">
+            <label for="owner-reset-password">New temporary password</label>
+            <div class="owner-password-row">
+              <input
+                id="owner-reset-password"
+                name="newPassword"
+                type="text"
+                required
+                minlength="8"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="At least 8 characters"
+              >
+              <button type="button" class="owner-btn-ghost" id="owner-reset-copy-credentials" title="Copy email and password">Copy</button>
+            </div>
+          </div>
+          <button class="owner-btn" type="submit">Reset password</button>
+        </form>
+      </section>
     `;
   }
 
