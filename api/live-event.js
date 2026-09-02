@@ -7,6 +7,7 @@ const {
   DEFAULT_EVENT_ID,
   readLiveEventState,
   recordVideoEnded,
+  clearLiveEventState,
   getLiveEventSchedule,
 } = require('./_lib/live-event-state');
 
@@ -46,6 +47,22 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           created,
+          serverNow,
+          actualLiveSongStartUtc: state.actualLiveSongStartUtc,
+        });
+      }
+
+      if (action === 'reset-test-state') {
+        const schedule = getLiveEventSchedule();
+        if (!schedule.testOverrideEnabled) {
+          return res.status(403).json({ error: 'Test reset is only available while the event test override is enabled.' });
+        }
+        const state = await clearLiveEventState(eventId);
+        const serverNow = new Date().toISOString();
+        res.setHeader('Cache-Control', 'no-store');
+        return res.status(200).json({
+          ok: true,
+          reset: true,
           serverNow,
           actualLiveSongStartUtc: state.actualLiveSongStartUtc,
         });

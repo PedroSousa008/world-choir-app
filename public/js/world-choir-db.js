@@ -265,7 +265,7 @@ const WorldChoirDB = (() => {
         title: WorldChoirConfig.ACTIVE_EVENT.title,
         song_name: WorldChoirConfig.ACTIVE_EVENT.songName,
         artist_name: WorldChoirConfig.ACTIVE_EVENT.artistName,
-        event_date_utc: WorldChoirConfig.ACTIVE_EVENT.eventDateUTC,
+        event_date_utc: WorldChoirConfig.ACTIVE_EVENT.activeEventDateUTC,
         status: 'upcoming',
         official_hashtag: WorldChoirConfig.ACTIVE_EVENT.hashtag,
         theme: WorldChoirConfig.ACTIVE_EVENT.theme,

@@ -232,9 +232,11 @@ async function getPromiseDetail(promiseId) {
   };
 }
 
+const schedule = require('./world-choir-event-schedule');
+
 function isLiveSubmissionWindow() {
   const now = Date.now();
-  const eventEnd = new Date('2027-09-21T16:03:03.000Z').getTime();
+  const eventEnd = Date.parse(schedule.getEventEndUtc());
   const windowEnd = eventEnd + 30 * 24 * 60 * 60 * 1000;
   return now >= eventEnd && now <= windowEnd;
 }

@@ -200,7 +200,7 @@ const WorldChoirHome = (() => {
         </div>
       </div>
 
-      <p class="home-meta">${esc(WorldChoirConfig.formatEventDate())} · 16:00 UTC</p>
+      <p class="home-meta">${esc(WorldChoirConfig.formatEventDate())} · ${esc(WorldChoirConfig.formatEventTime())}</p>
       <p class="home-song">${esc(e.songName)} — ${esc(e.artistName)}</p>
 
       ${renderPledgeButton()}
@@ -324,7 +324,9 @@ const WorldChoirHome = (() => {
 
   function shareCountdown() {
     const url = window.location.origin + window.location.pathname.replace(/index\.html$/, '') || 'https://world-choir-app.vercel.app';
-    const text = `I'm joining World Choir 2027. On September 21, 2027 at 16:00 UTC, the world sings together. Add your voice: ${url}`;
+    const eventDate = WorldChoirConfig.formatEventDate();
+    const eventTime = WorldChoirConfig.formatEventTime();
+    const text = `I'm joining World Choir 2027. On ${eventDate} at ${eventTime}, the world sings together. Add your voice: ${url}`;
     if (navigator.share) {
       navigator.share({ title: 'World Choir 2027', text });
     } else {

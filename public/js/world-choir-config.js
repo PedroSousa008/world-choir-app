@@ -56,19 +56,32 @@ const WorldChoirConfig = (() => {
     title: 'World Choir 2027',
     songName: 'Imagine',
     artistName: 'John Lennon',
-    eventDateUTC: '2027-09-21T16:00:00.000Z', // 21 Sep 2027 · 16:00 UTC
+    eventDateUTC: '2027-09-21T16:00:00.000Z', // OFFICIAL — overridden at runtime when test mode is on
     songDurationSeconds: 183,
     hashtag: '#WorldChoir2027',
     theme: 'Hope & Unity',
+    get activeEventDateUTC() {
+      if (typeof WorldChoirEventSchedule !== 'undefined') {
+        return WorldChoirEventSchedule.getEventStartUtc();
+      }
+      return this.eventDateUTC;
+    },
   };
 
   // Backward-compatible alias used across the app
+  function getActiveEventDateUtc() {
+    if (typeof WorldChoirEventSchedule !== 'undefined') {
+      return WorldChoirEventSchedule.getEventStartUtc();
+    }
+    return ACTIVE_EVENT.eventDateUTC;
+  }
+
   const CURRENT_EVENT = {
     id: ACTIVE_EVENT.id,
     title: ACTIVE_EVENT.title,
     songName: ACTIVE_EVENT.songName,
     artistName: ACTIVE_EVENT.artistName,
-    eventDateUtc: ACTIVE_EVENT.eventDateUTC,
+    get eventDateUtc() { return getActiveEventDateUtc(); },
     officialHashtag: ACTIVE_EVENT.hashtag,
     theme: ACTIVE_EVENT.theme,
   };
@@ -558,6 +571,9 @@ const WorldChoirConfig = (() => {
   const AppState = EventState;
 
   function getEventStart() {
+    if (typeof WorldChoirEventSchedule !== 'undefined') {
+      return new Date(WorldChoirEventSchedule.getEventStartUtc());
+    }
     const iso = String(ACTIVE_EVENT.eventDateUTC || '');
     const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(iso);
     if (m) {
@@ -763,6 +779,9 @@ const WorldChoirConfig = (() => {
   }
 
   function formatEventTime() {
+    if (typeof WorldChoirEventSchedule !== 'undefined' && WorldChoirEventSchedule.isTestOverrideActive()) {
+      return `${getEventStart().toISOString().slice(11, 16)} UTC`;
+    }
     return '16:00 UTC';
   }
 

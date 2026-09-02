@@ -160,6 +160,12 @@ const GlobalLiveEvent = (() => {
     return getPreEventWindowSec();
   }
 
+  function hasPreEventVideoTimelineElapsed(nowMs) {
+    const preStart = WorldChoirLiveConfig.getPreEventStartMs();
+    const endMs = preStart + getActualVideoDurationSec() * 1000;
+    return nowMs >= endMs - 200;
+  }
+
   function shouldLoopPreEventVideo() {
     const gap = getPreEventWindowSec() - getActualVideoDurationSec();
     return gap > 60;
@@ -401,9 +407,8 @@ const GlobalLiveEvent = (() => {
     const nowMs = WorldChoirServerTime.nowMs();
     const target = getTargetVideoPositionSec(nowMs);
     const windowSec = getPreEventWindowSec();
-    const eventStart = WorldChoirLiveConfig.getEventStartMs();
 
-    if (nowMs >= eventStart - 250 || target >= windowSec - 0.5) {
+    if (actualLiveSongStartUtc || hasPreEventVideoTimelineElapsed(nowMs)) {
       await onVideoEnded();
       return;
     }
@@ -411,7 +416,7 @@ const GlobalLiveEvent = (() => {
     if (!videoEl._wcBound) {
       videoEl._wcBound = true;
       videoEl.addEventListener('ended', () => {
-        if (shouldLoopPreEventVideo() && WorldChoirServerTime.nowMs() < eventStart - 250) {
+        if (shouldLoopPreEventVideo() && !hasPreEventVideoTimelineElapsed(WorldChoirServerTime.nowMs())) {
           videoEl.currentTime = 0;
           videoEl.play().catch(() => {});
           return;
@@ -574,12 +579,9 @@ const GlobalLiveEvent = (() => {
         return;
       }
       syncVideoToGlobal(nowMs);
-      const target = getTargetVideoPositionSec(nowMs);
-      const windowSec = getPreEventWindowSec();
-      const eventStart = WorldChoirLiveConfig.getEventStartMs();
       if (
         !videoEndedLocally
-        && (nowMs >= eventStart - 250 || target >= windowSec - 0.25)
+        && hasPreEventVideoTimelineElapsed(nowMs)
         && !videoFailed
       ) {
         await onVideoEnded();
@@ -635,6 +637,35 @@ const GlobalLiveEvent = (() => {
     WorldChoirServerTime.stopAutoResync();
   }
 
+  async function resetTestEventStateIfNeeded() {
+    if (typeof WorldChoirEventSchedule === 'undefined' || !WorldChoirEventSchedule.isTestOverrideActive()) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('wcEventTestReset')) {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('wc_live_flow_complete_')) localStorage.removeItem(key);
+      });
+      try {
+        await fetch('/api/live-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: 'reset-test-state',
+            eventId: WorldChoirLiveConfig.EVENT.eventId,
+          }),
+        });
+      } catch {
+        /* best effort */
+      }
+      actualLiveSongStartUtc = null;
+      videoEndedLocally = false;
+      transitioning = false;
+    }
+  }
+
   async function init() {
     ensureShell();
     if (typeof LiveEventMode !== 'undefined') {
@@ -649,6 +680,7 @@ const GlobalLiveEvent = (() => {
     }
     bindUnlockHandlers();
 
+    await resetTestEventStateIfNeeded();
     await WorldChoirServerTime.sync(true);
     await fetchAuthoritativeState();
 

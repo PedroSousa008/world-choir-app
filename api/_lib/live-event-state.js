@@ -3,6 +3,7 @@
  * Stores when the pre-event video ended and the live song began (first write wins).
  */
 const { readBlobJson, writeJson, assertBlobConfigured } = require('./store');
+const schedule = require('./world-choir-event-schedule');
 
 const LIVE_EVENT_ROOT = 'wc-data/live-event';
 const DEFAULT_EVENT_ID = 'world-choir-2027';
@@ -72,13 +73,27 @@ async function recordVideoEnded(eventId = DEFAULT_EVENT_ID, serverNowIso = new D
   return { state: { ...next }, created: true };
 }
 
+async function clearLiveEventState(eventId = DEFAULT_EVENT_ID) {
+  const next = emptyState(eventId);
+  try {
+    assertBlobConfigured();
+    await writeJson(statePath(eventId), next);
+  } catch {
+    /* fall through to memory */
+  }
+  memoryState = { ...next };
+  return { ...next };
+}
+
 function getLiveEventSchedule() {
   return {
     eventId: DEFAULT_EVENT_ID,
-    eventStartUtc: '2027-09-21T16:00:00.000Z',
-    preEventIntendedStartUtc: '2027-09-21T15:55:00.000Z',
-    songDurationSeconds: 183,
-    preEventVideoDurationSeconds: 300,
+    eventStartUtc: schedule.getEventStartUtc(),
+    preEventIntendedStartUtc: schedule.getPreEventStartUtc(),
+    songDurationSeconds: schedule.SONG_DURATION_SECONDS,
+    preEventVideoDurationSeconds: schedule.PRE_EVENT_VIDEO_DURATION_SECONDS,
+    testOverrideEnabled: schedule.isTestOverrideActive(),
+    officialEventStartUtc: schedule.OFFICIAL_EVENT_START_UTC,
   };
 }
 
@@ -86,5 +101,6 @@ module.exports = {
   DEFAULT_EVENT_ID,
   readLiveEventState,
   recordVideoEnded,
+  clearLiveEventState,
   getLiveEventSchedule,
 };
