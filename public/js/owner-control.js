@@ -237,6 +237,18 @@ const OwnerControl = (() => {
     state.flash = message ? { message, type } : null;
   }
 
+  async function copyMembersCredentials(email, password) {
+    const text = `Email: ${email}\nPassword: ${password}\nLogin: /members`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setFlash('Credentials copied. Share them securely with the Creator.');
+      render();
+    } catch {
+      setFlash('Could not copy — select the fields manually.', 'err');
+      render();
+    }
+  }
+
   function flashHtml() {
     if (!state.flash) return '';
     return `<div class="owner-flash is-${esc(state.flash.type)}">${esc(state.flash.message)}</div>`;
@@ -1134,6 +1146,48 @@ const OwnerControl = (() => {
         </div>
       </section>
 
+      <section class="owner-section owner-group">
+        <p class="owner-group__title">Recover Members login</p>
+        <p class="owner-muted" style="margin-bottom:14px">
+          Set a new temporary password using the Creator’s login email.
+          You cannot view a password they chose themselves — only reset it here.
+        </p>
+        <form class="owner-form" id="owner-reset-influencer-password" style="max-width:560px">
+          <div class="owner-field">
+            <label for="owner-reset-email">Login email</label>
+            <input
+              id="owner-reset-email"
+              name="email"
+              type="email"
+              list="owner-foundation-emails"
+              required
+              autocomplete="off"
+              placeholder="creator@example.com"
+            >
+            <datalist id="owner-foundation-emails">
+              ${list.map((f) => `<option value="${esc(f.email || '')}"></option>`).join('')}
+            </datalist>
+          </div>
+          <div class="owner-field">
+            <label for="owner-reset-password">New temporary password</label>
+            <div class="owner-password-row">
+              <input
+                id="owner-reset-password"
+                name="newPassword"
+                type="text"
+                required
+                minlength="8"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="At least 8 characters"
+              >
+              <button type="button" class="owner-btn-ghost" id="owner-reset-copy-credentials" title="Copy email and password">Copy</button>
+            </div>
+          </div>
+          <button class="owner-btn" type="submit">Reset password</button>
+        </form>
+      </section>
+
       ${!list.length
         ? `<p class="owner-empty">No Creator Foundations yet. Create the first profile to publish it to Donate.</p>`
         : state.foundationView === 'curated'
@@ -1192,7 +1246,6 @@ const OwnerControl = (() => {
 
   function renderFoundationDetail(f) {
     const currency = state.data.currency || 'EUR';
-    const hasStoredPassword = !!f.ownerLoginPassword;
     return `
       <div class="owner-detail">
         <h3>${esc(f.foundation || f.creator)}</h3>
@@ -1200,37 +1253,36 @@ const OwnerControl = (() => {
         ${f.mission ? `<p style="margin-top:12px;line-height:1.6">${esc(f.mission)}</p>` : ''}
 
         <div class="owner-group" style="margin-top:22px">
-          <p class="owner-group__title">Members login credentials</p>
+          <p class="owner-group__title">Members login</p>
           <p class="owner-muted" style="margin-bottom:14px">
-            These credentials open <strong>/members</strong> (Foundation Control Center) for this Creator.
-            Change them here anytime — the Influencer signs in with the values you save.
+            Login email for <strong>/members</strong>. Passwords chosen by the Creator are never shown here.
           </p>
           <form class="owner-form" id="owner-foundation-credentials" style="max-width:560px">
             <input type="hidden" name="id" value="${esc(f.id)}">
             <div class="owner-field">
-              <label>Email</label>
+              <label>Login email</label>
               <input name="email" type="email" value="${esc(f.email || '')}" required autocomplete="off">
             </div>
+            <button class="owner-btn" type="submit">Save login email</button>
+          </form>
+          <form class="owner-form" id="owner-foundation-reset-password" style="max-width:560px;margin-top:18px">
             <div class="owner-field">
-              <label>Password</label>
+              <label>New temporary password</label>
               <div class="owner-password-row">
                 <input
-                  id="owner-foundation-password"
-                  name="password"
+                  id="owner-foundation-reset-password-input"
+                  name="newPassword"
                   type="text"
-                  value="${esc(f.ownerLoginPassword || '')}"
-                  ${hasStoredPassword ? '' : 'placeholder="Set a password to store and display it here"'}
                   minlength="8"
+                  required
                   autocomplete="off"
                   spellcheck="false"
+                  placeholder="Set a new password to share with them"
                 >
-                <button type="button" class="owner-btn-ghost" id="owner-copy-credentials" title="Copy email and password">Copy</button>
+                <button type="button" class="owner-btn-ghost" id="owner-foundation-reset-copy" title="Copy email and password">Copy</button>
               </div>
             </div>
-            ${hasStoredPassword
-              ? ''
-              : `<p class="owner-muted">No recoverable password on file yet (older accounts). Enter a new password and save to set and display it.</p>`}
-            <button class="owner-btn" type="submit">Save credentials</button>
+            <button class="owner-btn" type="submit">Reset password for this Creator</button>
           </form>
         </div>
 
@@ -2967,40 +3019,85 @@ const OwnerControl = (() => {
     });
 
     document.getElementById('owner-create-foundation')?.addEventListener('click', openCreateFoundation);
+    document.getElementById('owner-reset-influencer-password')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const email = String(fd.get('email') || '').trim();
+      const newPassword = String(fd.get('newPassword') || '');
+      if (newPassword.length < 8) {
+        setFlash('Password must be at least 8 characters.', 'err');
+        render();
+        return;
+      }
+      try {
+        await api('reset-influencer-password', { method: 'POST', body: { email, newPassword } });
+        await copyMembersCredentials(email, newPassword);
+      } catch (err) {
+        setFlash(err.message, 'err');
+        render();
+      }
+    });
+    document.getElementById('owner-reset-copy-credentials')?.addEventListener('click', async () => {
+      const email = document.getElementById('owner-reset-email')?.value || '';
+      const password = document.getElementById('owner-reset-password')?.value || '';
+      if (!email || password.length < 8) {
+        setFlash('Enter the login email and a password of at least 8 characters first.', 'err');
+        render();
+        return;
+      }
+      await copyMembersCredentials(email, password);
+    });
     document.getElementById('owner-foundation-credentials')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
       const body = {
         id: fd.get('id'),
         email: String(fd.get('email') || '').trim(),
-        password: String(fd.get('password') || ''),
       };
-      if (!body.password || body.password.length < 8) {
-        setFlash('Password must be at least 8 characters.', 'err');
-        render();
-        return;
-      }
       try {
         await api('update-influencer', { method: 'POST', body });
-        setFlash('Members login credentials updated. They can sign in at /members with these values.');
+        setFlash('Members login email updated.');
         await loadCenter();
       } catch (err) {
         setFlash(err.message, 'err');
         render();
       }
     });
-    document.getElementById('owner-copy-credentials')?.addEventListener('click', async () => {
-      const email = document.querySelector('#owner-foundation-credentials [name="email"]')?.value || '';
-      const password = document.getElementById('owner-foundation-password')?.value || '';
-      const text = `Email: ${email}\nPassword: ${password}\nLogin: /members`;
-      try {
-        await navigator.clipboard.writeText(text);
-        setFlash('Credentials copied.');
+    document.getElementById('owner-foundation-reset-password')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const detail = (state.data.foundations || []).find((f) => f.id === state.foundationDetail);
+      const email = String(detail?.email || '').trim();
+      const newPassword = String(fd.get('newPassword') || '');
+      if (!email) {
+        setFlash('Save a login email for this foundation first.', 'err');
         render();
-      } catch {
-        setFlash('Could not copy — select the fields manually.', 'err');
+        return;
+      }
+      if (newPassword.length < 8) {
+        setFlash('Password must be at least 8 characters.', 'err');
+        render();
+        return;
+      }
+      try {
+        await api('reset-influencer-password', { method: 'POST', body: { email, newPassword } });
+        e.target.reset();
+        await copyMembersCredentials(email, newPassword);
+      } catch (err) {
+        setFlash(err.message, 'err');
         render();
       }
+    });
+    document.getElementById('owner-foundation-reset-copy')?.addEventListener('click', async () => {
+      const detail = (state.data.foundations || []).find((f) => f.id === state.foundationDetail);
+      const email = String(detail?.email || '').trim();
+      const password = document.getElementById('owner-foundation-reset-password-input')?.value || '';
+      if (!email || password.length < 8) {
+        setFlash('Enter a new password of at least 8 characters first.', 'err');
+        render();
+        return;
+      }
+      await copyMembersCredentials(email, password);
     });
     document.getElementById('owner-foundation-edit')?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -3067,6 +3164,7 @@ const OwnerControl = (() => {
         <h3>Create Creator Foundation</h3>
         <p class="owner-muted" style="margin-bottom:14px">
           Email and temporary password become their Influencer login at <strong>/members</strong>.
+          Passwords are never stored in plain text — copy them right after you create the foundation.
           The foundation is published to Donate immediately.
         </p>
         <form class="owner-form" id="owner-foundation-create" style="max-width:560px">
@@ -3098,9 +3196,11 @@ const OwnerControl = (() => {
     document.getElementById('owner-foundation-create')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
+      const email = String(fd.get('email') || '').trim();
+      const password = String(fd.get('password') || '');
       try {
         await api('create-influencer', { method: 'POST', body: Object.fromEntries(fd.entries()) });
-        setFlash('Creator Foundation created. They can sign in at /members with the email and password you set.');
+        await copyMembersCredentials(email, password);
         await loadCenter();
       } catch (err) {
         setFlash(err.message, 'err');

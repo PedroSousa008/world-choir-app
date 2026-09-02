@@ -45,6 +45,7 @@ const {
   listInfluencers,
   createInfluencer,
   updateInfluencer,
+  resetInfluencerPasswordByEmail,
 } = require('./_lib/members-store');
 const {
   buildOwnerSponsorsLibrary,
@@ -329,6 +330,14 @@ module.exports = async function handler(req, res) {
       const { id, ...updates } = req.body || {};
       if (!id) return res.status(400).json({ error: 'Influencer id is required' });
       const result = await updateInfluencer(id, updates, { allowEmailChange: true });
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'reset-influencer-password' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { email, newPassword } = req.body || {};
+      const result = await resetInfluencerPasswordByEmail({ email, newPassword });
       if (!result.ok) return res.status(400).json({ error: result.error });
       return res.status(200).json(result);
     }

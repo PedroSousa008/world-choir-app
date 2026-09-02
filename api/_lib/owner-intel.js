@@ -632,7 +632,6 @@ async function buildOwnerControlCenter() {
     foundations: influencers.map((f) => ({
       id: f.id,
       email: f.email,
-      ownerLoginPassword: f.ownerLoginPassword || null,
       creator: f.displayName,
       foundation: f.foundationName || '',
       country: f.country || '',

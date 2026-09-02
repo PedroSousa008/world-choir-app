@@ -146,8 +146,6 @@ async function createInfluencer({
     id: randomUUID(),
     email: normalizedEmail,
     passwordHash,
-    // Owner-only recoverable note for /members credentials (never public).
-    ownerLoginPassword: String(password),
     displayName: String(displayName).trim(),
     foundationName: String(foundationName || '').trim(),
     mission: String(mission || '').trim(),
@@ -245,27 +243,20 @@ async function updateInfluencer(id, updates = {}, { allowEmailChange = false } =
   }
 
   if (updates.password) {
-    if (String(updates.password).length < MIN_PASSWORD_LENGTH) {
-      return { ok: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` };
-    }
-    next.passwordHash = await bcrypt.hash(String(updates.password), 12);
-    next.ownerLoginPassword = String(updates.password);
+    return { ok: false, error: 'Use password reset to set a new Members login password.' };
   }
 
-  next.updatedAt = new Date().toISOString();
+  delete next.ownerLoginPassword;
   doc.influencers[index] = next;
   await writeInfluencersDoc(doc);
   return { ok: true, influencer: publicInfluencer(next) };
 }
 
-/** Owner Control Center view — includes Members login password note. Never public. */
+/** Owner Control Center view — never includes passwords. */
 async function listInfluencersOwnerView() {
   const doc = await readInfluencersDoc();
   return doc.influencers
-    .map((row) => ({
-      ...publicInfluencer(row),
-      ownerLoginPassword: row.ownerLoginPassword ? String(row.ownerLoginPassword) : null,
-    }))
+    .map((row) => publicInfluencer(row))
     .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 }
 
@@ -301,7 +292,8 @@ async function changeInfluencerPassword(id, { currentPassword, newPassword, conf
   if (!match) return { ok: false, error: 'Current password is incorrect' };
 
   row.passwordHash = await bcrypt.hash(String(newPassword), 12);
-  row.ownerLoginPassword = String(newPassword);
+  delete row.ownerLoginPassword;
+  row.passwordChangedByCreatorAt = new Date().toISOString();
   row.updatedAt = new Date().toISOString();
   doc.influencers[index] = row;
   await writeInfluencersDoc(doc);
@@ -339,6 +331,40 @@ async function changeInfluencerEmail(id, { currentPassword, newEmail, confirmEma
   doc.influencers[index] = row;
   await writeInfluencersDoc(doc);
   return { ok: true, email: normalized };
+}
+
+async function resetInfluencerPasswordByEmail({ email, newPassword }) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    return { ok: false, error: 'A valid email is required' };
+  }
+  if (!newPassword || String(newPassword).length < MIN_PASSWORD_LENGTH) {
+    return { ok: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` };
+  }
+
+  const doc = await readInfluencersDoc();
+  const index = doc.influencers.findIndex((row) => row.email === normalizedEmail);
+  if (index === -1) {
+    return { ok: false, error: 'No Creator Foundation found with that login email' };
+  }
+
+  const row = doc.influencers[index];
+  if (row.active === false) {
+    return { ok: false, error: 'This foundation is paused. Activate it before resetting the login.' };
+  }
+
+  row.passwordHash = await bcrypt.hash(String(newPassword), 12);
+  delete row.ownerLoginPassword;
+  row.passwordResetByOwnerAt = new Date().toISOString();
+  row.updatedAt = new Date().toISOString();
+  doc.influencers[index] = row;
+  await writeInfluencersDoc(doc);
+
+  return {
+    ok: true,
+    influencer: publicInfluencer(row),
+    email: normalizedEmail,
+  };
 }
 
 /**
@@ -544,6 +570,7 @@ module.exports = {
   verifyInfluencerCredentials,
   changeInfluencerPassword,
   changeInfluencerEmail,
+  resetInfluencerPasswordByEmail,
   getOperationsOverview,
   getPublicCreatorFoundationsCatalog,
   publicInfluencer,
