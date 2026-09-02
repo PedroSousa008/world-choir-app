@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260902z">
-  <link rel="stylesheet" href="css/home.css?v=20260902z">
+  <link rel="stylesheet" href="css/home.css?v=20260903h">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
   <link rel="stylesheet" href="css/live-event.css?v=20260903g">
   <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
@@ -22,8 +22,18 @@
   <div class="ambient-bg" id="ambient-bg"></div>
 
   <main class="home-page home-page--centered" id="home-page">
-    <div id="home-content" class="fade-in"></div>
+    <div id="home-content"></div>
   </main>
+
+  <div class="home-promise-sheet" id="home-promise-sheet" hidden aria-hidden="true">
+    <button type="button" class="home-promise-sheet__backdrop" id="home-promise-close" aria-label="Close"></button>
+    <div class="home-promise-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="home-promise-title">
+      <button type="button" class="home-promise-sheet__x" id="home-promise-close-x" aria-label="Close">×</button>
+      <p class="home-promise-sheet__label">My Promise to the World</p>
+      <h2 class="home-promise-sheet__title" id="home-promise-title">Your promise</h2>
+      <p class="home-promise-sheet__text" id="home-promise-text"></p>
+    </div>
+  </div>
 
   <!-- Participation location modal — no GPS -->
   <div class="overlay" id="participation-overlay" aria-hidden="true">
@@ -58,6 +68,7 @@
 
   <script src="js/world-choir-event-schedule.js?v=20260903f"></script>
   <script src="js/world-choir-config.js?v=20260903f"></script>
+  <script src="js/world-choir-thank-you.js?v=20260903h"></script>
   <script src="js/world-choir-calendar.js?v=20260902u"></script>
   <script src="js/reminders/reminders.web.js?v=20260902u"></script>
   <script src="js/reminders/reminders.native.js"></script>
@@ -76,7 +87,7 @@
   <script src="js/world-choir-live-event.js?v=20260903g"></script>
   <script src="js/world-choir-global-live-bootstrap.js?v=20260903c"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260819a"></script>
-  <script src="js/world-choir-home.js?v=20260903g"></script>
+  <script src="js/world-choir-home.js?v=20260903h"></script>
   <script>WorldChoirHome.init();</script>
 </body>
 </html>

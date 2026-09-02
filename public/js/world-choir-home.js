@@ -213,21 +213,216 @@ const WorldChoirHome = (() => {
     `;
   }
 
-  function renderPostEventHome() {
-    const pledgeState = WorldChoirPledgeState.getState();
-    const pledged = pledgeState === 'pledged';
-    const hasPromise = WorldChoirDB.hasSubmittedPromise();
+  let postEventStats = null;
+  let postEventStatsPromise = null;
+  let confettiStarted = false;
+
+  function formatStat(n) {
+    if (n == null || Number.isNaN(n)) return '—';
+    return Number(n).toLocaleString('en-US');
+  }
+
+  function fetchPostEventStats() {
+    if (postEventStats) return Promise.resolve(postEventStats);
+    if (postEventStatsPromise) return postEventStatsPromise;
+    postEventStatsPromise = fetch(`/api/stats?eventId=${encodeURIComponent(WorldChoirConfig.CURRENT_EVENT.id)}`, {
+      cache: 'no-store',
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        postEventStats = data || {};
+        return postEventStats;
+      })
+      .catch(() => {
+        postEventStats = {};
+        return postEventStats;
+      });
+    return postEventStatsPromise;
+  }
+
+  function getPostEventStatsFallback() {
+    const map = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
+    return {
+      voices: map?.voices ?? 0,
+      cities: map?.cities ?? 0,
+      songs: 1,
+      dailyActsCompleted: null,
+    };
+  }
+
+  function statIcon(type) {
+    const icons = {
+      voices:
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3c-2.2 0-4 1.8-4 4v5a4 4 0 108 0V7c0-2.2-1.8-4-4-4z"/><path d="M6 18c0-2.2 2.7-4 6-4s6 1.8 6 4"/></svg>',
+      cities:
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 21h18"/><path d="M6 21V9l6-4 6 4v12"/><path d="M10 13h4v8h-4z"/></svg>',
+      songs:
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="7" cy="18" r="3"/><circle cx="19" cy="16" r="3"/></svg>',
+      acts:
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>',
+      memory:
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 19V5a2 2 0 012-2h11l3 3v13a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><path d="M15 3v4h4"/><path d="M8 12h8M8 16h5"/></svg>',
+      promise:
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 21s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.6-7 10-7 10z"/></svg>',
+    };
+    return icons[type] || '';
+  }
+
+  function initPostEventConfetti(container) {
+    if (!container || confettiStarted) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (reduced) return;
+    confettiStarted = true;
+    const colors = ['#4ec5e8', '#3d7cff', '#6b5ce7', '#c9a962', '#e8f4ff', '#8ab4ff'];
+    const pieces = 48;
+    let html = '';
+    for (let i = 0; i < pieces; i++) {
+      const left = Math.random() * 100;
+      const delay = Math.random() * 4;
+      const duration = 4 + Math.random() * 5;
+      const size = 4 + Math.random() * 6;
+      const color = colors[i % colors.length];
+      const rotate = Math.random() * 360;
+      html += `<span class="home-post-confetti__piece" style="left:${left}%;animation-delay:${delay}s;animation-duration:${duration}s;width:${size}px;height:${size * (0.4 + Math.random())}px;background:${color};--rot:${rotate}deg"></span>`;
+    }
+    container.innerHTML = html;
+  }
+
+  function renderPostEventHome(stats = {}) {
+    const merged = { ...getPostEventStatsFallback(), ...stats };
+    const thankYou = typeof WorldChoirThankYou !== 'undefined'
+      ? WorldChoirThankYou.getThankYou()
+      : 'Thank You';
+    const promise = WorldChoirDB.getPromiseForCurrentUser();
+    const hasPromise = !!promise?.promise_text;
     const e = WorldChoirConfig.ACTIVE_EVENT;
 
     return `
-      <div class="home-post-event">
-        <p class="home-brand">${esc(e.title)}</p>
-        <h1 class="home-post-event__title">Thank you for singing with the world.</h1>
-        <p class="home-post-event__copy">${esc(e.songName)} — ${esc(e.artistName)}</p>
-        ${pledged && hasPromise ? '<p class="home-meta home-meta--pledged">Your promise lives on in your profile.</p>' : ''}
-        ${pledged && !hasPromise ? '<p class="home-copy">Share your promise when you\'re ready.</p>' : ''}
+      <div class="home-post">
+        <header class="home-post-hero">
+          <div class="home-post-confetti" id="home-post-confetti" aria-hidden="true"></div>
+          <div class="home-post-hero__glow" aria-hidden="true"></div>
+          <div class="home-post-hero__globe-wrap">
+            <div class="home-post-hero__globe" aria-hidden="true">
+              <div class="home-post-hero__globe-placeholder"></div>
+            </div>
+          </div>
+          <p class="home-post-hero__brand">${esc(e.title)}</p>
+          <h1 class="home-post-hero__thanks">${esc(thankYou)}</h1>
+          <p class="home-post-hero__message">You were part of a moment that will go down in history. Together, we sang for peace, unity and a better world. Your voice made it possible.</p>
+        </header>
+
+        <section class="home-post-stats" aria-label="World Choir event statistics">
+          <div class="home-post-stat">
+            <span class="home-post-stat__icon">${statIcon('voices')}</span>
+            <span class="home-post-stat__value" id="home-stat-voices">${formatStat(merged.voices)}</span>
+            <span class="home-post-stat__label">People sang</span>
+          </div>
+          <div class="home-post-stat">
+            <span class="home-post-stat__icon">${statIcon('cities')}</span>
+            <span class="home-post-stat__value" id="home-stat-cities">${formatStat(merged.cities)}</span>
+            <span class="home-post-stat__label">Cities</span>
+          </div>
+          <div class="home-post-stat">
+            <span class="home-post-stat__icon">${statIcon('songs')}</span>
+            <span class="home-post-stat__value" id="home-stat-songs">${formatStat(merged.songs ?? 1)}</span>
+            <span class="home-post-stat__label">Song</span>
+          </div>
+        </section>
+
+        <section class="home-post-actions">
+          <button type="button" class="home-post-memory-btn" id="home-open-memory">
+            <span class="home-post-memory-btn__icon">${statIcon('memory')}</span>
+            <span class="home-post-memory-btn__text">Open your Memory</span>
+            <span class="home-post-memory-btn__chevron" aria-hidden="true">›</span>
+          </button>
+
+          <div class="home-post-card home-post-card--acts">
+            <span class="home-post-card__icon">${statIcon('acts')}</span>
+            <div class="home-post-card__body">
+              <p class="home-post-card__value" id="home-stat-acts">${formatStat(merged.dailyActsCompleted)}</p>
+              <p class="home-post-card__label">Daily Acts of Peace completed on this journey</p>
+            </div>
+          </div>
+
+          ${hasPromise ? `
+            <button type="button" class="home-post-card home-post-card--promise" id="home-view-promise">
+              <span class="home-post-card__icon home-post-card__icon--gold">${statIcon('promise')}</span>
+              <div class="home-post-card__body">
+                <p class="home-post-card__label home-post-card__label--title">My Promise to the World</p>
+                <p class="home-post-card__preview">"${esc(promise.promise_text)}"</p>
+              </div>
+              <span class="home-post-memory-btn__chevron" aria-hidden="true">›</span>
+            </button>
+          ` : `
+            <div class="home-post-card home-post-card--promise home-post-card--empty">
+              <span class="home-post-card__icon home-post-card__icon--gold">${statIcon('promise')}</span>
+              <div class="home-post-card__body">
+                <p class="home-post-card__label home-post-card__label--title">My Promise to the World</p>
+                <p class="home-post-card__preview home-post-card__preview--muted">Your promise will appear here once shared.</p>
+              </div>
+            </div>
+          `}
+        </section>
       </div>
     `;
+  }
+
+  function updatePostEventStatsUI(stats) {
+    const voices = document.getElementById('home-stat-voices');
+    const cities = document.getElementById('home-stat-cities');
+    const acts = document.getElementById('home-stat-acts');
+    if (voices && stats.voices != null) voices.textContent = formatStat(stats.voices);
+    if (cities && stats.cities != null) cities.textContent = formatStat(stats.cities);
+    if (acts && stats.dailyActsCompleted != null) acts.textContent = formatStat(stats.dailyActsCompleted);
+  }
+
+  function bindPostEventActions() {
+    document.getElementById('home-open-memory')?.addEventListener('click', () => {
+      window.location.href = 'memory.html';
+    });
+
+    const openPromise = () => {
+      const promise = WorldChoirDB.getPromiseForCurrentUser();
+      if (!promise?.promise_text) return;
+      const sheet = document.getElementById('home-promise-sheet');
+      const text = document.getElementById('home-promise-text');
+      if (text) text.textContent = `"${promise.promise_text}"`;
+      sheet?.removeAttribute('hidden');
+      sheet?.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    };
+
+    const closePromise = () => {
+      const sheet = document.getElementById('home-promise-sheet');
+      sheet?.setAttribute('hidden', '');
+      sheet?.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    };
+
+    document.getElementById('home-view-promise')?.addEventListener('click', openPromise);
+    document.getElementById('home-promise-close')?.addEventListener('click', closePromise);
+    document.getElementById('home-promise-close-x')?.addEventListener('click', closePromise);
+  }
+
+  function mountPostEventHome() {
+    const root = document.getElementById('home-content');
+    const page = document.getElementById('home-page');
+    if (!root) return;
+
+    page?.classList.remove('home-page--centered');
+    page?.classList.add('home-page--post-event');
+
+    const fallback = getPostEventStatsFallback();
+    root.innerHTML = renderPostEventHome(fallback);
+    initPostEventConfetti(document.getElementById('home-post-confetti'));
+    bindPostEventActions();
+
+    fetchPostEventStats().then((stats) => {
+      if (homeView === 'post-event' || homeView === 'post-event-complete') {
+        updatePostEventStatsUI(stats);
+      }
+    });
   }
 
   function revealHome() {
@@ -248,7 +443,7 @@ const WorldChoirHome = (() => {
     if (isPostEvent() && LiveEventMode.hasCompletedFlow()) {
       homeReady = true;
       if (homeView !== 'post-event-complete') {
-        root.innerHTML = renderPostEventHome();
+        mountPostEventHome();
         homeView = 'post-event-complete';
       }
       return;
@@ -262,6 +457,8 @@ const WorldChoirHome = (() => {
       }
       homeReady = true;
       if (homeView !== 'countdown') {
+        document.getElementById('home-page')?.classList.add('home-page--centered');
+        document.getElementById('home-page')?.classList.remove('home-page--post-event');
         root.innerHTML = renderCountdownHome();
         bindActions();
         homeView = 'countdown';
@@ -284,7 +481,7 @@ const WorldChoirHome = (() => {
 
     homeReady = true;
     if (homeView !== 'post-event') {
-      root.innerHTML = renderPostEventHome();
+      mountPostEventHome();
       homeView = 'post-event';
     }
   }
