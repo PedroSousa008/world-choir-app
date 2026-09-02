@@ -1466,7 +1466,6 @@ const OwnerControl = (() => {
               </nav>
             ` : ''}
 
-            ${detail ? renderFoundationDetail(detail) : ''}
             <div id="owner-foundation-create-slot"></div>
 
             <section class="owner-section owner-group owner-cf-recover">
@@ -1564,14 +1563,19 @@ const OwnerControl = (() => {
           </aside>
         </div>
       </div>
+      ${detail ? renderFoundationDetail(detail) : ''}
     `;
   }
 
   function renderFoundationDetail(f) {
     const currency = state.data.currency || 'EUR';
     return `
-      <div class="owner-detail">
-        <h3>${esc(f.foundation || f.creator)}</h3>
+      <div class="owner-cf-modal" role="dialog" aria-modal="true" aria-labelledby="owner-cf-modal-title">
+        <button type="button" class="owner-cf-modal__backdrop" data-foundation-detail-close aria-label="Close edit panel"></button>
+        <div class="owner-cf-modal__card">
+          <button type="button" class="owner-cf-modal__close" data-foundation-detail-close aria-label="Close">×</button>
+          <div class="owner-detail owner-cf-modal__content">
+            <h3 id="owner-cf-modal-title">${esc(f.foundation || f.creator)}</h3>
         <p class="owner-muted">Founded by ${esc(f.creator)} · ${esc(f.status)} · ${esc(f.country || 'Country not set')}</p>
         ${f.mission ? `<p style="margin-top:12px;line-height:1.6">${esc(f.mission)}</p>` : ''}
 
@@ -1642,6 +1646,8 @@ const OwnerControl = (() => {
           <div class="owner-field"><label>Biography</label><textarea name="biography">${esc(f.biography || '')}</textarea></div>
           <button class="owner-btn" type="submit">Save profile</button>
         </form>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -3360,6 +3366,21 @@ const OwnerControl = (() => {
         render();
       });
     });
+    root().querySelectorAll('[data-foundation-detail-close]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.foundationDetail = null;
+        render();
+      });
+    });
+    if (state.foundationDetail) {
+      const onEscape = (e) => {
+        if (e.key !== 'Escape') return;
+        state.foundationDetail = null;
+        document.removeEventListener('keydown', onEscape);
+        render();
+      };
+      document.addEventListener('keydown', onEscape);
+    }
     root().querySelectorAll('[data-foundation-id]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         if (e.target.closest('[data-foundation-export]') || e.target.closest('[data-foundation-more]')) return;

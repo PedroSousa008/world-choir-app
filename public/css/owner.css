@@ -1340,6 +1340,67 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   text-align: center;
 }
 
+.owner-cf-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.owner-cf-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.72);
+  cursor: pointer;
+}
+
+.owner-cf-modal__card {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: #0d0f14;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  padding: 24px 24px 28px;
+}
+
+.owner-cf-modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  appearance: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #c8cad0;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.owner-cf-modal__close:hover {
+  color: #f2efe8;
+  border-color: rgba(78, 197, 232, 0.35);
+}
+
+.owner-cf-modal__content {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+  padding-right: 36px;
+}
+
+.owner-cf-modal__content .owner-form {
+  max-width: none;
+}
+
 .owner-badge {
   display: inline-block;
   font-size: 0.62rem;
