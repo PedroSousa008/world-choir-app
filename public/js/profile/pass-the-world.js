@@ -290,6 +290,25 @@ const PassTheWorld = (() => {
       </p>`;
   }
 
+  function formatUtcHm(hour, minute) {
+    const h = String(Number(hour) || 0).padStart(2, '0');
+    const m = String(Number(minute) || 0).padStart(2, '0');
+    return `${h}:${m} UTC`;
+  }
+
+  function ritualTimeCopy(journey) {
+    const c = journey?.constants || {};
+    const arrive = formatUtcHm(
+      c.arrivalHourUtc ?? 15,
+      c.arrivalMinuteUtc ?? 59
+    );
+    const invite = formatUtcHm(
+      c.invitationHourUtc ?? 16,
+      c.invitationMinuteUtc ?? 0
+    );
+    return `Arrives · ${arrive} · Next invitation · ${invite}`;
+  }
+
   function ensureStatusModal() {
     let modal = document.getElementById('ptw-status-modal');
     if (modal) return modal;
@@ -299,7 +318,7 @@ const PassTheWorld = (() => {
     modal.hidden = true;
     modal.innerHTML = `
       <button type="button" class="ptw-status-modal__backdrop" data-ptw-status-backdrop aria-label="Close"></button>
-      <div class="ptw-status__detail-box" data-ptw-status-detail role="dialog" aria-modal="true">Arrives · 15:59 UTC · Next invitation · 16:00 UTC</div>`;
+      <div class="ptw-status__detail-box" data-ptw-status-detail role="dialog" aria-modal="true"></div>`;
     document.body.appendChild(modal);
     return modal;
   }
@@ -311,12 +330,14 @@ const PassTheWorld = (() => {
     return statusLines(journey, itinerary).map((l) => `<p>${l}</p>`).join('');
   }
 
-  function bindTravellingStatusInfo(body) {
+  function bindTravellingStatusInfo(body, journey) {
     const btn = body?.querySelector('[data-ptw-status-info]');
     if (!btn) return;
 
     const modal = ensureStatusModal();
     const backdrop = modal.querySelector('[data-ptw-status-backdrop]');
+    const detail = modal.querySelector('[data-ptw-status-detail]');
+    if (detail) detail.textContent = ritualTimeCopy(journey);
 
     const close = () => {
       modal.hidden = true;
@@ -332,6 +353,7 @@ const PassTheWorld = (() => {
 
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (detail) detail.textContent = ritualTimeCopy(journey);
       if (modal.hidden) {
         modal.hidden = false;
         btn.setAttribute('aria-expanded', 'true');
@@ -508,7 +530,7 @@ const PassTheWorld = (() => {
         <summary>Pass the World · Dev</summary>
         <div class="ptw-dev-row">
           <button type="button" data-ptw-dev="seed">Noon UTC</button>
-          <button type="button" data-ptw-dev="invite-open">Open 16:00</button>
+          <button type="button" data-ptw-dev="invite-open">Open invitation</button>
           <button type="button" data-ptw-dev="invite-mid">Mid window</button>
           <button type="button" data-ptw-dev="after-window">Reveal 16:01:05</button>
           <button type="button" data-ptw-dev="after-reveal">After reveal</button>
@@ -580,7 +602,7 @@ const PassTheWorld = (() => {
     if (statusSlot.dataset.key !== sk) {
       statusSlot.innerHTML = `<div class="ptw-status">${renderStatus(journey, payload.itinerary)}</div>`;
       statusSlot.dataset.key = sk;
-      bindTravellingStatusInfo(statusSlot);
+      bindTravellingStatusInfo(statusSlot, journey);
     } else if (journey.status === 'TRAVELLING') {
       updateTravellingProgress(journey);
     }

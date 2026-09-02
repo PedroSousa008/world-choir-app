@@ -1,6 +1,6 @@
 /**
  * Pass the World — shared global journey (Vercel Blob).
- * Ritual at 16:00 UTC · 120s window · World never moves by itself.
+ * Ritual at INVITATION_HOUR:MINUTE UTC · 120s window · World never moves by itself.
  */
 const { randomUUID } = require('crypto');
 const {
@@ -15,14 +15,26 @@ const ROOT = 'wc-data/pass-the-world';
 const STATE_PATH = `${ROOT}/state.json`;
 const ITINERARY_PATH = `${ROOT}/itinerary.json`;
 
+/**
+ * Daily invitation open time (UTC).
+ * TEMP PREVIEW: 16:25 UTC for testing. Set INVITATION_MINUTE_UTC back to 0 for production 16:00 UTC.
+ */
 const INVITATION_HOUR_UTC = 16;
+const INVITATION_MINUTE_UTC = 25;
 const INVITATION_WINDOW_MS = 120 * 1000;
 const INVITATION_WINDOW_SEC = INVITATION_WINDOW_MS / 1000;
 /** Suspense reveal after the invitation window — winner is fixed; travel starts when this ends. */
 const REVEAL_WINDOW_MS = 10 * 1000;
-/** Journeys always land at 15:59 UTC so the World is ready for 16:00 UTC. */
-const ARRIVAL_HOUR_UTC = 15;
-const ARRIVAL_MINUTE_UTC = 59;
+/**
+ * Journeys always land 1 minute before the invitation window
+ * so the World is ready when invitations open.
+ */
+const ARRIVAL_HOUR_UTC = INVITATION_MINUTE_UTC === 0
+  ? (INVITATION_HOUR_UTC + 23) % 24
+  : INVITATION_HOUR_UTC;
+const ARRIVAL_MINUTE_UTC = INVITATION_MINUTE_UTC === 0
+  ? 59
+  : INVITATION_MINUTE_UTC - 1;
 
 const SEED_CITY = {
   city: 'Braga',
@@ -312,23 +324,23 @@ function nextInvitationOpenAt(from = new Date()) {
   const d = new Date(from.getTime());
   const candidate = new Date(Date.UTC(
     d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(),
-    INVITATION_HOUR_UTC, 0, 0, 0
+    INVITATION_HOUR_UTC, INVITATION_MINUTE_UTC, 0, 0
   ));
   if (candidate.getTime() <= from.getTime()) candidate.setUTCDate(candidate.getUTCDate() + 1);
   return candidate;
 }
 
-/** Today's ritual open at 16:00:00.000 UTC (never yesterday). */
+/** Today's ritual open (never yesterday). */
 function todayInvitationOpenAt(now = new Date()) {
   return new Date(Date.UTC(
     now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
-    INVITATION_HOUR_UTC, 0, 0, 0
+    INVITATION_HOUR_UTC, INVITATION_MINUTE_UTC, 0, 0
   ));
 }
 
 /**
- * Latest ritual that has already opened: today's 16:00 if now >= that, else yesterday's.
- * Used for round IDs after the window — never for opening WAITING before today's 16:00.
+ * Latest ritual that has already opened: today's open if now >= that, else yesterday's.
+ * Used for round IDs after the window — never for opening WAITING before today's open.
  */
 function latestInvitationOpenAt(now = new Date()) {
   const todayOpen = todayInvitationOpenAt(now);
@@ -389,7 +401,7 @@ function resolveWorldPresentLocation(state, itinerary, now = new Date()) {
 }
 
 /**
- * Next 15:59:00.000 UTC strictly after departure.
+ * Next canonical landing (1 minute before invitation open) strictly after departure.
  * Closer cities therefore move slower; longer hops move faster — same arrival clock.
  */
 function nextArrivalAt(from = new Date()) {
@@ -1018,7 +1030,8 @@ async function advanceStateMachine(nowInput) {
   ({ state, itinerary } = await repairInvalidJourney(state, itinerary));
   ({ state, itinerary } = await healWorldLocation(state, itinerary, now));
 
-  // Correct any in-flight arrival that is not the canonical 15:59 UTC landing.
+  // Correct any in-flight arrival that is not the canonical landing
+  // (1 minute before invitation open).
   if (
     state.status === STATUS.TRAVELLING
     && state.departureAt
@@ -1100,12 +1113,12 @@ async function advanceStateMachine(nowInput) {
     return { state, itinerary, now };
   }
 
-  // Ritual clock is always TODAY's 16:00 UTC — never open WAITING from yesterday before 16:00.
+  // Ritual clock is always TODAY's invitation open — never open WAITING from yesterday before that.
   const todayOpen = todayInvitationOpenAt(now);
   const todayClose = new Date(todayOpen.getTime() + INVITATION_WINDOW_MS);
   const todayRoundId = `round-${todayOpen.toISOString()}`;
 
-  // Before today's 16:00 UTC: World stays ARRIVED. Button must not appear.
+  // Before today's invitation open: World stays ARRIVED. Button must not appear.
   if (now.getTime() < todayOpen.getTime()) {
     if (state.status === STATUS.WAITING_FOR_FIRST_CALL
       || state.status === STATUS.INVITATION_OPEN) {
@@ -1123,7 +1136,7 @@ async function advanceStateMachine(nowInput) {
     return { state, itinerary, now };
   }
 
-  // Active invitation ritual window — exactly [16:00:00.000, 16:00:00.000 + window)
+  // Active invitation ritual window — exactly [open, open + window)
   if (now.getTime() >= todayOpen.getTime() && now.getTime() < todayClose.getTime()) {
     const invitations = await readRoundInvites(todayRoundId);
     const winner = await readWinner(todayRoundId);
@@ -1373,6 +1386,7 @@ function buildPublicState(state, itinerary, now, viewer = {}) {
     },
     constants: {
       invitationHourUtc: INVITATION_HOUR_UTC,
+      invitationMinuteUtc: INVITATION_MINUTE_UTC,
       invitationWindowMs: INVITATION_WINDOW_MS,
       revealWindowMs: REVEAL_WINDOW_MS,
       arrivalHourUtc: ARRIVAL_HOUR_UTC,
@@ -1638,6 +1652,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
 module.exports = {
   STATUS,
   INVITATION_HOUR_UTC,
+  INVITATION_MINUTE_UTC,
   INVITATION_WINDOW_MS,
   INVITATION_WINDOW_SEC,
   REVEAL_WINDOW_MS,
