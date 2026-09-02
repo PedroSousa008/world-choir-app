@@ -285,8 +285,6 @@ const WorldChoirDonate = (() => {
 
         <div class="df-intro__text">
           <h1 class="df-intro__title">Discover Impact</h1>
-          <p class="df-intro__lead">Support people you trust.<br>Causes you can change.</p>
-          <p class="df-intro__copy">Verified creators turning their influence into real, meaningful and measurable action.</p>
         </div>
       </header>
     `;
