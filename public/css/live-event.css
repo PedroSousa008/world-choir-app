@@ -70,7 +70,7 @@ body.wc-global-live-active #nav-root {
   height: 100%;
   max-width: none;
   max-height: none;
-  object-fit: cover;
+  object-fit: contain;
   background: #000;
 }
 

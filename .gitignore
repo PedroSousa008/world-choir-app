@@ -38,3 +38,6 @@ yarn-error.*
 .vercel
 .tools/
 .env*
+
+# Large source masters (deploy the optimized public/video/pre-event.mp4 only)
+public/video/pre-event-source.mp4

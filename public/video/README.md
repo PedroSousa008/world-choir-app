@@ -12,7 +12,7 @@ Place the official World Choir pre-event video here.
 
 The global live event loads this automatically at **15:55 UTC** on event day. No code changes are needed if you use this exact filename.
 
-> **Current file is a placeholder** (20 seconds). It loops until **16:00 UTC** on event day. Replace with your official ~5-minute landscape film before the event; set `videoDurationSeconds` to its exact runtime if it differs from 300.
+> **Official pre-event film** (~5 minutes). Plays once from **15:55 UTC**; the app transitions to the live song at **16:00 UTC**.
 
 ## Before event day — update duration
 
