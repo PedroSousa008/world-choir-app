@@ -81,7 +81,7 @@ const LiveEventMode = (() => {
     if (!contentEl) return;
 
     contentEl.innerHTML = `
-      <div class="live-promise fade-in">
+      <div class="live-promise">
         <p class="live-promise__label">My Promise to the World</p>
         <h2 class="live-promise__title">What do you promise the world?</h2>
         <p class="live-promise__copy">You sang with millions. Now leave your promise — one honest intention for the world ahead.</p>
@@ -119,7 +119,7 @@ const LiveEventMode = (() => {
     if (!contentEl) return;
 
     contentEl.innerHTML = `
-      <div class="live-final fade-in">
+      <div class="live-final">
         <p class="live-final__line">You didn't just sing a song.</p>
         <p class="live-final__line live-final__line--emphasis">You became part of something greater.</p>
         <p class="live-final__line live-final__line--calm">Put your phone down and simply feel this moment.</p>

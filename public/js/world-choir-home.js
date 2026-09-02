@@ -237,6 +237,8 @@ const WorldChoirHome = (() => {
     render();
   }
 
+  let homeView = 'unknown';
+
   function render() {
     const root = document.getElementById('home-content');
     if (!root) return;
@@ -245,33 +247,46 @@ const WorldChoirHome = (() => {
 
     if (isPostEvent() && LiveEventMode.hasCompletedFlow()) {
       homeReady = true;
-      root.innerHTML = renderPostEventHome();
+      if (homeView !== 'post-event-complete') {
+        root.innerHTML = renderPostEventHome();
+        homeView = 'post-event-complete';
+      }
       return;
     }
 
     if (isPreEvent()) {
       if (!homeReady && !isHomeDataReady()) {
         root.innerHTML = renderHomeSkeleton();
+        homeView = 'skeleton';
         return;
       }
       homeReady = true;
-      root.innerHTML = renderCountdownHome();
-      bindActions();
+      if (homeView !== 'countdown') {
+        root.innerHTML = renderCountdownHome();
+        bindActions();
+        homeView = 'countdown';
+      }
       return;
     }
 
     if (LiveEventMode.isDuringLiveSong()) {
       homeReady = true;
-      root.innerHTML = `
+      if (homeView !== 'live') {
+        root.innerHTML = `
         <p class="home-brand home-brand--live"><span class="live-dot"></span> LIVE</p>
         <h1 class="home-headline">The world is singing now.</h1>
         <p class="home-song">${esc(WorldChoirConfig.ACTIVE_EVENT.songName)} — ${esc(WorldChoirConfig.ACTIVE_EVENT.artistName)}</p>
       `;
+        homeView = 'live';
+      }
       return;
     }
 
     homeReady = true;
-    root.innerHTML = renderPostEventHome();
+    if (homeView !== 'post-event') {
+      root.innerHTML = renderPostEventHome();
+      homeView = 'post-event';
+    }
   }
 
   function updateCountdown() {
@@ -281,7 +296,9 @@ const WorldChoirHome = (() => {
       if (isPostEvent() && !LiveEventMode.isActive()) {
         LiveEventMode.launch();
       }
-      if (!LiveEventMode.isActive()) render();
+      if (!LiveEventMode.isActive() && homeView !== 'post-event-complete' && homeView !== 'post-event') {
+        render();
+      }
       return;
     }
 

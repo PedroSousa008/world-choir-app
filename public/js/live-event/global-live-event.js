@@ -184,22 +184,34 @@ const GlobalLiveEvent = (() => {
   }
 
   function getTargetSongPositionSec(nowMs) {
-    if (!actualLiveSongStartUtc) return 0;
-    const songStart = new Date(actualLiveSongStartUtc).getTime();
     const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
-    const elapsed = (nowMs - songStart) / 1000;
+    if (actualLiveSongStartUtc) {
+      const songStart = new Date(actualLiveSongStartUtc).getTime();
+      const elapsed = (nowMs - songStart) / 1000;
+      return Math.max(0, Math.min(duration, elapsed));
+    }
+    const eventStart = WorldChoirLiveConfig.getEventStartMs();
+    const elapsed = (nowMs - eventStart) / 1000;
     return Math.max(0, Math.min(duration, elapsed));
   }
 
   function computeState(nowMs) {
     const preStart = WorldChoirLiveConfig.getPreEventStartMs();
+    const eventStart = WorldChoirLiveConfig.getEventStartMs();
     const songDurationMs = WorldChoirLiveConfig.getSongDurationMs();
+    const videoEndMs = preStart + getActualVideoDurationSec() * 1000;
 
     if (actualLiveSongStartUtc) {
       const songStart = new Date(actualLiveSongStartUtc).getTime();
       const songEnd = songStart + songDurationMs;
       if (nowMs >= songEnd) return 'LIVE_FINISHED';
       if (nowMs >= songStart) return 'LIVE_SONG';
+    }
+
+    if (nowMs >= videoEndMs - 200) {
+      const songEnd = eventStart + songDurationMs;
+      if (nowMs >= songEnd) return 'LIVE_FINISHED';
+      if (nowMs >= eventStart) return 'LIVE_SONG';
     }
 
     if (nowMs >= preStart) return 'PRE_EVENT';
@@ -288,10 +300,40 @@ const GlobalLiveEvent = (() => {
     showTakeover();
   }
 
-  function showSongUI() {
-    document.getElementById('wc-global-live-pre')?.setAttribute('hidden', '');
-    document.getElementById('wc-global-live-song')?.removeAttribute('hidden');
-    showTakeover();
+  function hideLiveSongShell() {
+    const mode = document.getElementById('live-event-mode');
+    if (mode) {
+      mode.classList.remove('active');
+      mode.setAttribute('aria-hidden', 'true');
+    }
+    document.getElementById('wc-live-song-unlock')?.setAttribute('hidden', '');
+    document.getElementById('nav-root')?.removeAttribute('hidden');
+    if (state !== 'PRE_EVENT') {
+      document.body.style.overflow = '';
+    }
+  }
+
+  function showLiveSongShell() {
+    hideTakeover();
+    const mode = document.getElementById('live-event-mode');
+    const content = document.getElementById('live-event-content');
+    if (!mode || !content) return false;
+
+    mode.classList.add('active');
+    mode.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('nav-root')?.setAttribute('hidden', '');
+    active = true;
+
+    LyricsDisplay.mount(content);
+    document.getElementById('practice-controls-inner')?.setAttribute('hidden', '');
+    const communityTitle = content.querySelector('.pm-community__title');
+    if (communityTitle) communityTitle.textContent = 'The world is singing';
+    const communityPrimary = content.querySelector('.pm-community__primary');
+    if (communityPrimary) communityPrimary.textContent = 'You are part of this moment.';
+    const communitySecondary = content.querySelector('.pm-community__secondary');
+    if (communitySecondary) communitySecondary.hidden = true;
+    return true;
   }
 
   async function prepareVideo() {
@@ -340,28 +382,22 @@ const GlobalLiveEvent = (() => {
     if (!videoEl || videoFailed) return;
     const actualDur = getActualVideoDurationSec();
     const clamped = Math.max(0, Math.min(targetSec, actualDur - 0.05));
-    videoEl.style.opacity = '0';
 
-    if (Math.abs(videoEl.currentTime - clamped) > 0.15) {
+    if (Math.abs(videoEl.currentTime - clamped) > 0.35) {
       videoEl.currentTime = clamped;
     }
 
     if (autoplay) {
       try {
-        videoEl.muted = true;
-        await videoEl.play();
-        if (audioUnlocked) {
-          videoEl.muted = false;
-        }
+        videoEl.muted = !audioUnlocked;
+        if (videoEl.paused) await videoEl.play();
+        if (audioUnlocked) videoEl.muted = false;
       } catch {
-        try { await videoEl.play(); } catch { /* fallback UI stays */ }
         if (!audioUnlocked) {
           document.getElementById('wc-global-live-unlock')?.removeAttribute('hidden');
         }
       }
     }
-
-    videoEl.style.opacity = '1';
   }
 
   function syncVideoToGlobal(nowMs) {
@@ -370,17 +406,15 @@ const GlobalLiveEvent = (() => {
     const actual = videoEl.currentTime;
     const diff = expected - actual;
 
-    if (Math.abs(diff) > SYNC.SEEK_THRESHOLD_S) {
+    // Desktop: only hard-seek on large drift — avoid playback-rate nudging (causes audio glitches).
+    if (Math.abs(diff) > 2.5) {
       videoEl.playbackRate = 1;
       videoEl.currentTime = expected;
+      if (videoEl.paused) videoEl.play().catch(() => {});
       return;
     }
 
-    if (Math.abs(diff) > SYNC.RATE_THRESHOLD_S) {
-      videoEl.playbackRate = Math.max(SYNC.MIN_RATE, Math.min(SYNC.MAX_RATE, 1 + diff * 0.15));
-    } else {
-      videoEl.playbackRate = 1;
-    }
+    videoEl.playbackRate = 1;
   }
 
   async function onVideoEnded() {
@@ -430,16 +464,7 @@ const GlobalLiveEvent = (() => {
   }
 
   function mountLiveLyrics() {
-    const container = document.getElementById('wc-global-live-song-content');
-    if (!container) return;
-    if (typeof LyricsDisplay.mountLive === 'function') {
-      LyricsDisplay.mountLive(container);
-    } else {
-      LyricsDisplay.mount(container);
-      document.getElementById('practice-controls-inner')?.setAttribute('hidden', '');
-      const community = document.querySelector('.pm-community__title');
-      if (community) community.textContent = 'The world is singing';
-    }
+    return showLiveSongShell();
   }
 
   async function waitForAudioReady(el) {
@@ -450,12 +475,53 @@ const GlobalLiveEvent = (() => {
     });
   }
 
-  async function enterLiveSong({ fromVideoEnd = false } = {}) {
-    state = 'LIVE_SONG';
-    cleanupVideo();
-    showSongUI();
-    mountLiveLyrics();
+  async function startLiveAudio(target) {
+    if (!audioEl) {
+      audioEl = new Audio(WorldChoirLiveConfig.EVENT.liveSong.audioUrl);
+      audioEl.preload = 'auto';
+      audioEl.addEventListener('ended', onSongEnded);
+      audioEl.addEventListener('error', onSongError);
+      await waitForAudioReady(audioEl);
+    }
 
+    const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
+    const seekTo = Math.min(target, audioEl.duration || target, duration - 0.05);
+    if (Math.abs(audioEl.currentTime - seekTo) > 0.35) {
+      audioEl.currentTime = seekTo;
+    }
+
+    try {
+      await audioEl.play();
+      LyricsDisplay.startSync(audioEl);
+      LyricsDisplay.update(audioEl.currentTime, audioEl);
+      document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
+    } catch (err) {
+      console.warn('Live song autoplay blocked:', err);
+      showLiveSongUnlock();
+    }
+  }
+
+  function showLiveSongUnlock() {
+    let btn = document.getElementById('wc-live-song-unlock');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'wc-live-song-unlock';
+      btn.className = 'wc-global-live__unlock';
+      btn.textContent = 'Tap to join the live song';
+      document.body.appendChild(btn);
+    }
+    btn.removeAttribute('hidden');
+    btn.onclick = async () => {
+      try {
+        await audioEl?.play();
+        LyricsDisplay.startSync(audioEl);
+        btn.setAttribute('hidden', '');
+      } catch { /* still blocked */ }
+    };
+  }
+
+  async function enterLiveSong({ fromVideoEnd = false, forceRejoin = false } = {}) {
     const nowMs = WorldChoirServerTime.nowMs();
     const target = getTargetSongPositionSec(nowMs);
     const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
@@ -466,28 +532,21 @@ const GlobalLiveEvent = (() => {
       return;
     }
 
-    audioEl = new Audio(WorldChoirLiveConfig.EVENT.liveSong.audioUrl);
-    audioEl.addEventListener('ended', onSongEnded);
-    audioEl.addEventListener('error', onSongError);
-
-    try {
-      await waitForAudioReady(audioEl);
-      audioEl.currentTime = Math.min(target, audioEl.duration || target);
-      await audioEl.play();
-      LyricsDisplay.startSync(audioEl);
-      LyricsDisplay.update(audioEl.currentTime, audioEl);
-    } catch (err) {
-      console.warn('Live song autoplay blocked:', err);
-      document.getElementById('wc-global-live-unlock')?.removeAttribute('hidden');
-      const unlockBtn = document.getElementById('wc-global-live-unlock');
-      unlockBtn?.removeAttribute('hidden');
-      unlockBtn?.addEventListener('click', async () => {
-        try {
-          await audioEl.play();
-          LyricsDisplay.startSync(audioEl);
-        } catch { /* still blocked */ }
-      }, { once: true });
+    if (state === 'LIVE_SONG' && audioEl && !forceRejoin) {
+      syncSongToGlobal(nowMs);
+      if (audioEl.paused) await audioEl.play().catch(() => {});
+      return;
     }
+
+    state = 'LIVE_SONG';
+    if (forceRejoin) cleanupAudio();
+    cleanupVideo();
+    if (!mountLiveLyrics()) {
+      onSongError();
+      return;
+    }
+
+    await startLiveAudio(target);
   }
 
   function syncSongToGlobal(nowMs) {
@@ -515,6 +574,8 @@ const GlobalLiveEvent = (() => {
     cleanupAudio();
     state = 'LIVE_FINISHED';
     hideTakeover();
+    hideLiveSongShell();
+    active = false;
     if (typeof LiveEventMode !== 'undefined' && LiveEventMode.showPostSongFlow) {
       LiveEventMode.showPostSongFlow();
     }
@@ -522,12 +583,12 @@ const GlobalLiveEvent = (() => {
 
   function onSongError() {
     cleanupAudio();
-    const container = document.getElementById('wc-global-live-song-content');
-    if (container) {
-      container.innerHTML = `
-        <div class="live-event-error">
-          <h2 class="live-event-error__title">Audio unavailable</h2>
-          <p class="live-event-error__copy">The world is still singing — join in wherever you are.</p>
+    const content = document.getElementById('live-event-content');
+    if (content) {
+      content.innerHTML = `
+        <div class="practice-error">
+          <h2 class="practice-error__title">Audio unavailable</h2>
+          <p class="practice-error__copy">The world is still singing — join in wherever you are.</p>
         </div>
       `;
     }
@@ -615,7 +676,25 @@ const GlobalLiveEvent = (() => {
 
   function onVisibility() {
     if (document.hidden) return;
-    WorldChoirServerTime.sync(true).then(() => tick()).catch(() => {});
+    WorldChoirServerTime.sync(true).then(async () => {
+      await fetchAuthoritativeState();
+      if (state === 'LIVE_SONG') {
+        const nowMs = WorldChoirServerTime.nowMs();
+        const needsRejoin = !audioEl || audioEl.ended || audioEl.readyState < 1;
+        if (needsRejoin) {
+          await enterLiveSong({ forceRejoin: true });
+        } else {
+          syncSongToGlobal(nowMs);
+          await audioEl.play().catch(() => {});
+        }
+        return;
+      }
+      if (state === 'PRE_EVENT' && videoEl && !videoFailed && !videoEndedLocally) {
+        const target = getTargetVideoPositionSec(WorldChoirServerTime.nowMs());
+        await seekVideoTo(target, { autoplay: true });
+      }
+      await tick();
+    }).catch(() => {});
   }
 
   function startLoops() {
@@ -695,7 +774,9 @@ const GlobalLiveEvent = (() => {
   }
 
   function isActive() {
-    return active;
+    return active
+      || document.getElementById('wc-global-live')?.classList.contains('is-active')
+      || document.getElementById('live-event-mode')?.classList.contains('active');
   }
 
   function getState() {
