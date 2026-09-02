@@ -12,7 +12,7 @@ Place the official World Choir pre-event video here.
 
 The global live event loads this automatically at **15:55 UTC** on event day. No code changes are needed if you use this exact filename.
 
-> **Current file is a placeholder** (20 seconds, on-screen reminder text). Replace it with your official landscape film before the event, then update `videoDurationSeconds` in `public/js/live-event/live-event-config.js`.
+> **Current file is a placeholder** (20 seconds). It loops until **16:00 UTC** on event day. Replace with your official ~5-minute landscape film before the event; set `videoDurationSeconds` to its exact runtime if it differs from 300.
 
 ## Before event day — update duration
 

@@ -9,13 +9,10 @@ const WorldChoirLiveConfig = (() => {
 
     preEvent: {
       intendedStartUtc: '2027-09-21T15:55:00.000Z',
-      /** Official film: replace public/video/pre-event.mp4 (currently a placeholder clip) */
+      /** Official film: public/video/pre-event.mp4 */
       videoUrl: '/video/pre-event.mp4',
-      /**
-       * PLACEHOLDER: 20s demo clip — when you add the real film, replace the file AND
-       * set this to the exact runtime in seconds (target ~300s for 15:55 → 16:00 UTC).
-       */
-      videoDurationSeconds: 20,
+      /** Pre-event window: 15:55 → 16:00 UTC (5 minutes). Short clips loop until event start. */
+      videoDurationSeconds: 300,
     },
 
     liveSong: {

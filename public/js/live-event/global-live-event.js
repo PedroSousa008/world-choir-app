@@ -56,6 +56,8 @@ const GlobalLiveEvent = (() => {
                 playsinline
                 webkit-playsinline
                 preload="auto"
+                muted
+                autoplay
                 crossorigin="anonymous"
               ></video>
             </div>
@@ -92,6 +94,10 @@ const GlobalLiveEvent = (() => {
       if (audioUnlocked) return;
       audioUnlocked = true;
       document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
+      const preVideo = document.getElementById('wc-global-live-video');
+      if (preVideo && state === 'PRE_EVENT') {
+        preVideo.muted = false;
+      }
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         if (ctx.state === 'suspended') ctx.resume();
@@ -143,11 +149,31 @@ const GlobalLiveEvent = (() => {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
+  function getPreEventWindowSec() {
+    return WorldChoirLiveConfig.EVENT.preEvent.videoDurationSeconds;
+  }
+
+  function getActualVideoDurationSec() {
+    if (videoEl && videoEl.duration && Number.isFinite(videoEl.duration) && videoEl.duration > 0) {
+      return videoEl.duration;
+    }
+    return getPreEventWindowSec();
+  }
+
+  function shouldLoopPreEventVideo() {
+    return getActualVideoDurationSec() < getPreEventWindowSec() - 0.5;
+  }
+
   function getTargetVideoPositionSec(nowMs) {
     const preStart = WorldChoirLiveConfig.getPreEventStartMs();
-    const duration = WorldChoirLiveConfig.EVENT.preEvent.videoDurationSeconds;
+    const windowSec = getPreEventWindowSec();
     const elapsed = (nowMs - preStart) / 1000;
-    return Math.max(0, Math.min(duration, elapsed));
+    const clamped = Math.max(0, Math.min(windowSec, elapsed));
+    const actualDur = getActualVideoDurationSec();
+    if (shouldLoopPreEventVideo()) {
+      return clamped % actualDur;
+    }
+    return clamped;
   }
 
   function getTargetSongPositionSec(nowMs) {
@@ -275,6 +301,11 @@ const GlobalLiveEvent = (() => {
       const done = () => {
         videoEl.removeEventListener('loadedmetadata', done);
         videoEl.removeEventListener('error', onErr);
+        if (shouldLoopPreEventVideo()) {
+          videoEl.loop = true;
+        } else {
+          videoEl.loop = false;
+        }
         resolve();
       };
       const onErr = () => {
@@ -296,11 +327,8 @@ const GlobalLiveEvent = (() => {
 
   async function seekVideoTo(targetSec, { autoplay = true } = {}) {
     if (!videoEl || videoFailed) return;
-    const duration = videoEl.duration && Number.isFinite(videoEl.duration)
-      ? videoEl.duration
-      : WorldChoirLiveConfig.EVENT.preEvent.videoDurationSeconds;
-
-    const clamped = Math.max(0, Math.min(targetSec, duration - 0.05));
+    const actualDur = getActualVideoDurationSec();
+    const clamped = Math.max(0, Math.min(targetSec, actualDur - 0.05));
     videoEl.style.opacity = '0';
 
     if (Math.abs(videoEl.currentTime - clamped) > 0.15) {
@@ -309,10 +337,12 @@ const GlobalLiveEvent = (() => {
 
     if (autoplay) {
       try {
-        videoEl.muted = false;
-        await videoEl.play();
-      } catch {
         videoEl.muted = true;
+        await videoEl.play();
+        if (audioUnlocked) {
+          videoEl.muted = false;
+        }
+      } catch {
         try { await videoEl.play(); } catch { /* fallback UI stays */ }
         if (!audioUnlocked) {
           document.getElementById('wc-global-live-unlock')?.removeAttribute('hidden');
@@ -365,16 +395,24 @@ const GlobalLiveEvent = (() => {
 
     const nowMs = WorldChoirServerTime.nowMs();
     const target = getTargetVideoPositionSec(nowMs);
-    const duration = WorldChoirLiveConfig.EVENT.preEvent.videoDurationSeconds;
+    const windowSec = getPreEventWindowSec();
+    const eventStart = WorldChoirLiveConfig.getEventStartMs();
 
-    if (target >= duration - 0.5) {
+    if (nowMs >= eventStart - 250 || target >= windowSec - 0.5) {
       await onVideoEnded();
       return;
     }
 
     if (!videoEl._wcBound) {
       videoEl._wcBound = true;
-      videoEl.addEventListener('ended', () => onVideoEnded());
+      videoEl.addEventListener('ended', () => {
+        if (shouldLoopPreEventVideo() && WorldChoirServerTime.nowMs() < eventStart - 250) {
+          videoEl.currentTime = 0;
+          videoEl.play().catch(() => {});
+          return;
+        }
+        onVideoEnded();
+      });
     }
 
     await seekVideoTo(target, { autoplay: true });
@@ -532,8 +570,13 @@ const GlobalLiveEvent = (() => {
       }
       syncVideoToGlobal(nowMs);
       const target = getTargetVideoPositionSec(nowMs);
-      const duration = WorldChoirLiveConfig.EVENT.preEvent.videoDurationSeconds;
-      if (!videoEndedLocally && target >= duration - 0.25 && !videoFailed) {
+      const windowSec = getPreEventWindowSec();
+      const eventStart = WorldChoirLiveConfig.getEventStartMs();
+      if (
+        !videoEndedLocally
+        && (nowMs >= eventStart - 250 || target >= windowSec - 0.25)
+        && !videoFailed
+      ) {
         await onVideoEnded();
       }
       return;
