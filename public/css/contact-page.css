@@ -35,7 +35,7 @@
   font-weight: 600;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: #8b7fd4;
+  color: var(--accent-blue);
 }
 
 .contact-title {
