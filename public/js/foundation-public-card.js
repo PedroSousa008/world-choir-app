@@ -137,7 +137,7 @@ const FoundationPublicCard = (() => {
     const name = foundation.foundationName || '';
     const cls = `df-fcard${interactive ? '' : ' df-fcard--preview'}`;
     const openAttrs = interactive
-      ? `type="button" data-open-foundation="${esc(foundation.id || '')}"`
+      ? `type="button" data-open-foundation="${esc(foundation.id || '')}" aria-label="${esc([name, foundation.creatorName].filter(Boolean).join(' — ') || 'Open foundation')}"`
       : '';
     const tag = interactive ? 'button' : 'div';
 
@@ -148,7 +148,7 @@ const FoundationPublicCard = (() => {
             ? `<img src="${esc(img)}" alt="">`
             : `<span class="df-fcard__glyph">${esc(identityGlyph(foundation))}</span>`}
         </span>
-        <span class="df-fcard__body">
+        <span class="df-fcard__body" aria-hidden="${interactive ? 'true' : 'false'}">
           ${isNewFoundation(foundation)
             ? '<span class="df-fcard__badge">New to World Choir</span>'
             : ''}

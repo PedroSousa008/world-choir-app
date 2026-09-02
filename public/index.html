@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260902t">
-  <link rel="stylesheet" href="css/home.css?v=20260902v">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260902x">
+  <link rel="stylesheet" href="css/home.css?v=20260902x">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
   <link rel="stylesheet" href="css/live-event.css?v=20260903b">
   <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
@@ -26,8 +26,8 @@
   </main>
 
   <!-- Participation location modal — no GPS -->
-  <div class="overlay" id="participation-overlay">
-    <div class="modal" role="dialog" aria-labelledby="participation-title">
+  <div class="overlay" id="participation-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="participation-title">
       <h2 class="modal-title" id="participation-title">Where will you sing from?</h2>
       <p class="modal-copy">Choose the city and country where you plan to join World Choir. You can change this later in your profile.</p>
 
@@ -44,7 +44,7 @@
 
       <div class="actions-row">
         <button class="btn btn-primary" id="participation-confirm" type="button">Confirm Participation</button>
-        <button class="btn btn-secondary" id="participation-cancel" type="button">Cancel</button>
+        <button class="btn btn-secondary" id="participation-cancel" type="button" data-a11y-close>Cancel</button>
       </div>
     </div>
   </div>
@@ -64,7 +64,8 @@
   <script src="js/world-choir-countries.js?v=20260831a"></script>
   <script src="js/world-choir-db.js?v=20260819h"></script>
   <script src="js/world-choir-pledge-state.js"></script>
-  <script src="js/world-choir-nav.js?v=20260902t"></script>
+  <script src="js/world-choir-a11y.js?v=20260902x"></script>
+  <script src="js/world-choir-nav.js?v=20260902x"></script>
   <script src="js/world-choir-participation.js"></script>
   <script src="js/world-choir-practice-config.js"></script>
   <script src="js/profile/lyrics-display.js"></script>
@@ -74,7 +75,7 @@
   <script src="js/world-choir-live-event.js?v=20260903b"></script>
   <script src="js/world-choir-global-live-bootstrap.js?v=20260903b"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260819a"></script>
-  <script src="js/world-choir-home.js?v=20260902v"></script>
+  <script src="js/world-choir-home.js?v=20260902x"></script>
   <script>WorldChoirHome.init();</script>
 </body>
 </html>

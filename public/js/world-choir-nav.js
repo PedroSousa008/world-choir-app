@@ -25,17 +25,17 @@ const WorldChoirNav = (() => {
 
   function renderNavIcon(page) {
     if (page.iconSvg) {
-      return `<span class="nav-icon">${page.iconSvg}</span>`;
+      return `<span class="nav-icon" aria-hidden="true">${page.iconSvg}</span>`;
     }
-    return `<span class="nav-icon">${page.icon}</span>`;
+    return `<span class="nav-icon" aria-hidden="true">${page.icon}</span>`;
   }
 
   /** Critical assets per tab — warm the cache before the user taps. */
   const TAB_ASSETS = {
     home: [
       'index.html',
-      'css/home.css?v=20270707h',
-      'js/world-choir-home.js?v=20260816a',
+      'css/home.css?v=20260902x',
+      'js/world-choir-home.js?v=20260902x',
       'js/world-choir-db.js?v=20260817j',
     ],
     map: [
@@ -60,8 +60,8 @@ const WorldChoirNav = (() => {
       'css/donate.css?v=20260819d',
       'js/donate/creator-foundations-store.js?v=20260831a',
       'js/donate/donation-flow.js?v=20260831a',
-      'js/foundation-public-card.js?v=20260819d',
-      'js/donate/donate-page.js?v=20260902w',
+      'js/foundation-public-card.js?v=20260902x',
+      'js/donate/donate-page.js?v=20260902x',
       '/api/creator-foundations',
       '/api/donations?action=config',
     ],
@@ -186,6 +186,7 @@ const WorldChoirNav = (() => {
       const link = document.createElement('a');
       link.href = page.href;
       link.className = 'nav-item' + (activePage === page.id ? ' active' : '');
+      if (activePage === page.id) link.setAttribute('aria-current', 'page');
       link.innerHTML = `${renderNavIcon(page)}<span>${page.label}</span>`;
       const warm = () => prefetchOnIntent(page.href);
       link.addEventListener('pointerdown', warm, { passive: true });
@@ -198,6 +199,10 @@ const WorldChoirNav = (() => {
   }
 
   function mount(activePage) {
+    if (typeof WorldChoirA11y !== 'undefined') {
+      WorldChoirA11y.ensureSkipLink?.();
+      WorldChoirA11y.bindOverlays?.();
+    }
     const root = document.getElementById('nav-root');
     if (!root) return;
     root.innerHTML = '';

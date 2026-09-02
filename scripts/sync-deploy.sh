@@ -8,6 +8,11 @@ MESSAGE="${1:-Update World Choir App}"
 
 export PATH="$ROOT/.tools/node-v22.22.0-darwin-arm64/bin:$PATH"
 
+# Lightweight a11y guard (contrast token + shared helper present)
+if [[ -f "$ROOT/scripts/check-a11y-basics.js" ]] && command -v node >/dev/null 2>&1; then
+  node "$ROOT/scripts/check-a11y-basics.js"
+fi
+
 if [[ -z "$(git status --porcelain)" ]]; then
   echo "No changes to deploy."
   exit 0

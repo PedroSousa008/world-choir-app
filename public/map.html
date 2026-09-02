@@ -16,7 +16,7 @@
   <link rel="preload" href="https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json" as="fetch" crossorigin>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260902t">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260902x">
   <link rel="stylesheet" href="css/map.css?v=20260902l">
   <link rel="stylesheet" href="css/live-event.css?v=20260903b">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
@@ -115,8 +115,8 @@
   </div>
 
   <!-- Shared participation modal -->
-  <div class="overlay" id="participation-overlay">
-    <div class="modal" role="dialog" aria-labelledby="participation-title">
+  <div class="overlay" id="participation-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="participation-title">
       <h2 class="modal-title" id="participation-title">Where will you sing from?</h2>
       <p class="modal-copy">Choose the city and country where you plan to join World Choir. You can change this later in your profile.</p>
       <div class="form-group">
@@ -131,7 +131,7 @@
       </div>
       <div class="actions-row">
         <button class="btn btn-primary" id="participation-confirm" type="button">Confirm Participation</button>
-        <button class="btn btn-secondary" id="participation-cancel" type="button">Cancel</button>
+        <button class="btn btn-secondary" id="participation-cancel" type="button" data-a11y-close>Cancel</button>
       </div>
     </div>
   </div>
@@ -145,7 +145,8 @@
   <script src="js/world-choir-countries.js?v=20260831a"></script>
   <script src="js/world-choir-db.js?v=20260819h"></script>
   <script src="js/world-choir-pledge-state.js?v=20270707g"></script>
-  <script src="js/world-choir-nav.js?v=20260902t"></script>
+  <script src="js/world-choir-a11y.js?v=20260902x"></script>
+  <script src="js/world-choir-nav.js?v=20260902x"></script>
   <script src="js/world-choir-participation.js?v=20270707g"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260819a"></script>
   <script src="js/world-choir-map-tiles.js?v=20260826h"></script>

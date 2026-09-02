@@ -29,7 +29,7 @@ const WorldChoirRemindersWeb = (() => {
           <div class="remind-fallback-actions">
             <button class="btn btn-primary" id="remind-fallback-add" type="button">Add to Reminders</button>
             <button class="btn btn-secondary" id="remind-fallback-copy" type="button">Copy Reminder Details</button>
-            <button class="btn btn-ghost" id="remind-fallback-cancel" type="button">Cancel</button>
+            <button class="btn btn-secondary" id="remind-fallback-cancel" type="button" data-a11y-close>Cancel</button>
           </div>
         </div>
       </div>

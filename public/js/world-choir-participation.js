@@ -29,11 +29,15 @@ const WorldChoirParticipation = (() => {
     const pledge = WorldChoirDB.getPledgeForCurrentUser();
     document.getElementById('pledge-country').value = pledge?.country || user.country || '';
     document.getElementById('pledge-city').value = pledge?.city || user.city || '';
-    document.getElementById('participation-overlay').classList.add('active');
+    const overlay = document.getElementById('participation-overlay');
+    overlay?.classList.add('active');
+    WorldChoirA11y?.syncOverlayState?.(overlay, true);
   }
 
   function close() {
-    document.getElementById('participation-overlay').classList.remove('active');
+    const overlay = document.getElementById('participation-overlay');
+    overlay?.classList.remove('active');
+    WorldChoirA11y?.syncOverlayState?.(overlay, false);
   }
 
   async function confirm() {

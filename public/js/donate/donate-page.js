@@ -762,13 +762,13 @@ const WorldChoirDonate = (() => {
     const avatar = foundation.profileImage || '';
     return `
       <li>
-        <button type="button" class="df-srow" data-open-foundation="${esc(foundation.id)}">
+        <button type="button" class="df-srow" data-open-foundation="${esc(foundation.id)}" aria-label="${esc([foundation.foundationName, foundation.creatorName].filter(Boolean).join(' — ') || 'Open foundation')}">
           <span class="df-srow__avatar ${avatar ? 'has-image' : ''}" aria-hidden="true">
             ${avatar
               ? `<img src="${esc(avatar)}" alt="">`
               : `<span>${esc(identityGlyph(foundation))}</span>`}
           </span>
-          <span class="df-srow__text">
+          <span class="df-srow__text" aria-hidden="true">
             <span class="df-srow__creator">${esc(foundation.creatorName || '—')}</span>
             <span class="df-srow__foundation">${esc(foundation.foundationName || '—')}</span>
           </span>
@@ -1511,7 +1511,7 @@ const WorldChoirDonate = (() => {
 
       <div class="actions-row donate-modal__actions">
         <button class="btn btn-primary" type="button" id="donate-confirm-btn">Continue</button>
-        <button class="btn btn-secondary" type="button" id="donate-cancel-btn">Cancel</button>
+        <button class="btn btn-secondary" type="button" id="donate-cancel-btn" data-a11y-close>Cancel</button>
       </div>
     `;
   }

@@ -97,7 +97,7 @@ const WorldChoirCalendar = (() => {
           </p>
           <div class="actions-row">
             <button class="btn btn-primary" id="ios-calendar-download" type="button">Download Calendar File</button>
-            <button class="btn btn-secondary" id="ios-calendar-cancel" type="button">Cancel</button>
+            <button class="btn btn-secondary" id="ios-calendar-cancel" type="button" data-a11y-close>Cancel</button>
           </div>
         </div>
       </div>

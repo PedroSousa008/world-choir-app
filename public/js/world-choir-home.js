@@ -31,6 +31,7 @@ const WorldChoirHome = (() => {
   function initBackground() {
     const canvas = document.getElementById('earth-canvas');
     if (!canvas) return;
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     const ctx = canvas.getContext('2d');
     const stars = [];
 
@@ -52,26 +53,31 @@ const WorldChoirHome = (() => {
       }
     }
 
-    function draw() {
+    function paintFrame(animate) {
       const w = window.innerWidth;
       const h = window.innerHeight;
       ctx.clearRect(0, 0, w, h);
-
-      const t = Date.now() / 1000;
+      const t = animate ? Date.now() / 1000 : 0;
       stars.forEach((s) => {
-        const a = 0.12 + 0.35 * Math.abs(Math.sin(t * 0.5 + s.phase));
+        const a = animate
+          ? (0.12 + 0.35 * Math.abs(Math.sin(t * 0.5 + s.phase)))
+          : 0.28;
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(220, 220, 220, ${a})`;
         ctx.fill();
       });
+    }
 
+    function draw() {
+      paintFrame(true);
       requestAnimationFrame(draw);
     }
 
     resize();
     window.addEventListener('resize', resize);
-    draw();
+    if (reducedMotion) paintFrame(false);
+    else draw();
   }
 
   function actionIcon(type) {

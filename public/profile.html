@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260902t">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260902x">
   <link rel="stylesheet" href="css/profile.css?v=20260902b">
   <link rel="stylesheet" href="css/world-choir-onboarding.css?v=20260816a">
   <link rel="stylesheet" href="css/live-event.css?v=20260903b">
@@ -44,8 +44,8 @@
   </main>
 
   <!-- Change participation location modal — manual city/country, no GPS -->
-  <div class="overlay" id="change-location-overlay">
-    <div class="modal" role="dialog" aria-labelledby="location-modal-title">
+  <div class="overlay" id="change-location-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="location-modal-title">
       <h2 class="modal-title" id="location-modal-title">Change Participation Location</h2>
       <p class="modal-copy" id="location-modal-copy">
         Update where you will sing from. Your light on the map will move to your new city.
@@ -83,7 +83,8 @@
   <script src="js/world-choir-pledge-state.js"></script>
   <script src="js/world-choir-participation.js"></script>
   <script src="js/world-choir-practice-config.js"></script>
-  <script src="js/world-choir-nav.js?v=20260902t"></script>
+  <script src="js/world-choir-a11y.js?v=20260902x"></script>
+  <script src="js/world-choir-nav.js?v=20260902x"></script>
   <script src="js/world-choir-onboarding.js?v=20260816a"></script>
   <script src="js/profile/change-location-modal.js"></script>
   <script src="js/profile/user-identity-card.js?v=20260820a"></script>
