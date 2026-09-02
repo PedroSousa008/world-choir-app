@@ -1,8 +1,11 @@
-/* World Choir — Contact page (mobile-first) */
+/* World Choir — Contact page (mobile-first, desktop-ready) */
 
 .contact-page {
   padding-top: 12px;
+  width: 100%;
   max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .contact-back {
@@ -36,26 +39,12 @@
 }
 
 .contact-title {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: clamp(2rem, 8vw, 2.5rem);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.05;
   color: var(--text-primary);
-}
-
-.contact-location {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0;
-  font-size: 0.82rem;
-  color: #9b8fd8;
-}
-
-.contact-location__pin {
-  flex-shrink: 0;
-  color: #8b7fd4;
 }
 
 .contact-list {
@@ -145,21 +134,43 @@
   place-items: center;
   flex-shrink: 0;
   color: rgba(255, 255, 255, 0.28);
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .contact-card--email:hover,
 .contact-card--email:focus-visible {
   border-color: rgba(111, 140, 255, 0.35);
+  background: linear-gradient(
+    165deg,
+    rgba(22, 22, 30, 0.98) 0%,
+    rgba(14, 14, 20, 0.94) 100%
+  );
 }
 
 .contact-card--instagram:hover,
 .contact-card--instagram:focus-visible {
   border-color: rgba(240, 109, 168, 0.35);
+  background: linear-gradient(
+    165deg,
+    rgba(22, 22, 30, 0.98) 0%,
+    rgba(14, 14, 20, 0.94) 100%
+  );
 }
 
 .contact-card--tiktok:hover,
 .contact-card--tiktok:focus-visible {
   border-color: rgba(61, 216, 216, 0.35);
+  background: linear-gradient(
+    165deg,
+    rgba(22, 22, 30, 0.98) 0%,
+    rgba(14, 14, 20, 0.94) 100%
+  );
+}
+
+.contact-card:hover .contact-card__chevron,
+.contact-card:focus-visible .contact-card__chevron {
+  color: rgba(255, 255, 255, 0.5);
+  transform: translateX(2px);
 }
 
 .contact-info-card {
@@ -197,12 +208,99 @@
   color: var(--text-secondary);
 }
 
-@media (min-width: 480px) {
+/* Tablet */
+@media (min-width: 600px) {
   .contact-page {
     padding-top: 20px;
+    max-width: 520px;
+  }
+
+  .contact-header {
+    margin-bottom: 32px;
   }
 
   .contact-card__value {
     font-size: 0.96rem;
+  }
+
+  .contact-info-card__text {
+    font-size: 0.88rem;
+  }
+}
+
+/* Desktop */
+@media (min-width: 900px) {
+  .contact-page {
+    max-width: 560px;
+    padding-top: 28px;
+  }
+
+  .contact-back {
+    margin-bottom: 36px;
+    font-size: 0.88rem;
+  }
+
+  .contact-brand {
+    font-size: 0.66rem;
+    margin-bottom: 12px;
+  }
+
+  .contact-title {
+    font-size: 2.75rem;
+  }
+
+  .contact-header {
+    margin-bottom: 36px;
+  }
+
+  .contact-list {
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .contact-card {
+    min-height: 84px;
+    padding: 16px 20px 16px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+  }
+
+  .contact-card:active {
+    transform: none;
+  }
+
+  .contact-card__icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .contact-card__value {
+    font-size: 1rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+  }
+
+  .contact-info-card {
+    padding: 18px 20px 18px 16px;
+    border-radius: 20px;
+  }
+
+  .contact-info-card__icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .contact-info-card__text {
+    font-size: 0.92rem;
+    line-height: 1.7;
+    max-width: 42rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .contact-page {
+    max-width: 600px;
+    padding-top: 36px;
   }
 }
