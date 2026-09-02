@@ -16,6 +16,7 @@ const {
   getOperationsOverview,
   PLATFORM_FEE_PERCENT,
 } = require('./members-store');
+const { readWorkspace } = require('./foundation-workspace');
 
 const SUCCESS_STATUSES = new Set(['succeeded', 'completed', 'paid']);
 const EXCLUDED_STATUSES = new Set([
@@ -418,6 +419,24 @@ function countToday(dates) {
   }).length;
 }
 
+async function projectCountsForFoundations(influencers) {
+  return Promise.all(
+    influencers.map(async (f) => {
+      try {
+        const ws = await readWorkspace(f.id);
+        const projects = Array.isArray(ws.projects) ? ws.projects : [];
+        const activeProjects = projects.filter((p) => p.status === 'active').length;
+        return {
+          activeProjects,
+          totalProjects: projects.length,
+        };
+      } catch {
+        return { activeProjects: 0, totalProjects: 0 };
+      }
+    })
+  );
+}
+
 /**
  * Full Owner Control Center payload.
  */
@@ -470,6 +489,8 @@ async function buildOwnerControlCenter() {
 
   const needsAttention = [];
   // Real alerts only — none fabricated.
+
+  const foundationProjectCounts = await projectCountsForFoundations(influencers);
 
   const systemHealth = {
     overall: 'operational',
@@ -609,6 +630,8 @@ async function buildOwnerControlCenter() {
       byFoundation: activeFoundations.map((f) => {
         const rows = verifiedDonations.filter((d) => d.foundationId === f.id);
         const raised = sumAmounts(rows);
+        const idx = influencers.findIndex((i) => i.id === f.id);
+        const counts = foundationProjectCounts[idx] || { activeProjects: 0, totalProjects: 0 };
         return {
           id: f.id,
           creator: f.displayName,
@@ -620,7 +643,8 @@ async function buildOwnerControlCenter() {
           averageDonation: rows.length
             ? Math.round((raised / rows.length) * 100) / 100
             : null,
-          activeProjects: 0,
+          activeProjects: counts.activeProjects,
+          totalProjects: counts.totalProjects,
           lastActivity: f.updatedAt || f.createdAt,
         };
       }),
@@ -629,32 +653,38 @@ async function buildOwnerControlCenter() {
         'Failed payment rate',
       ],
     },
-    foundations: influencers.map((f) => ({
-      id: f.id,
-      email: f.email,
-      creator: f.displayName,
-      foundation: f.foundationName || '',
-      country: f.country || '',
-      mission: f.mission || '',
-      biography: f.biography || '',
-      whyStarted: f.whyStarted || '',
-      howItWorks: f.howItWorks || '',
-      primaryCategory: f.primaryCategory || '',
-      categories: f.categories || [],
-      profileImage: f.profileImage || '',
-      coverImage: f.coverImage || '',
-      status: f.active === false ? 'paused' : (f.published ? 'active' : 'draft'),
-      active: f.active !== false,
-      published: f.published === true,
-      uniqueDonors: uniqueDonors(verifiedDonations.filter((d) => d.foundationId === f.id)),
-      totalRaised: sumAmounts(verifiedDonations.filter((d) => d.foundationId === f.id)),
-      activeProjects: 0,
-      completedProjects: 0,
-      growth: null,
-      lastActivity: f.updatedAt || f.createdAt,
-      createdAt: f.createdAt,
-      updatedAt: f.updatedAt,
-    })),
+    foundations: influencers.map((f, index) => {
+      const counts = foundationProjectCounts[index] || { activeProjects: 0, totalProjects: 0 };
+      return {
+        id: f.id,
+        email: f.email,
+        creator: f.displayName,
+        foundation: f.foundationName || '',
+        country: f.country || '',
+        mission: f.mission || '',
+        biography: f.biography || '',
+        whyStarted: f.whyStarted || '',
+        howItWorks: f.howItWorks || '',
+        primaryCategory: f.primaryCategory || '',
+        categories: f.categories || [],
+        profileImage: f.profileImage || '',
+        coverImage: f.coverImage || '',
+        website: f.website || '',
+        verificationStatus: f.verificationStatus || 'unverified',
+        status: f.active === false ? 'paused' : (f.published ? 'active' : 'draft'),
+        active: f.active !== false,
+        published: f.published === true,
+        uniqueDonors: uniqueDonors(verifiedDonations.filter((d) => d.foundationId === f.id)),
+        totalRaised: sumAmounts(verifiedDonations.filter((d) => d.foundationId === f.id)),
+        activeProjects: counts.activeProjects,
+        totalProjects: counts.totalProjects,
+        completedProjects: Math.max(0, counts.totalProjects - counts.activeProjects),
+        growth: null,
+        lastActivity: f.updatedAt || f.createdAt,
+        createdAt: f.createdAt,
+        updatedAt: f.updatedAt,
+      };
+    }),
     event: {
       voicesPledged: choirDb.totals.participants,
       countries: countries.length,

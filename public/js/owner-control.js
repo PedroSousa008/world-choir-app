@@ -46,7 +46,12 @@ const OwnerControl = (() => {
     growthRangeOpen: false,
     citySort: 'voices',
     countrySort: 'voices',
-    foundationView: 'curated',
+    foundationLayout: 'list',
+    foundationQuery: '',
+    foundationStatusFilter: 'all',
+    foundationCategoryFilter: 'all',
+    foundationSort: 'updated',
+    foundationPage: 1,
     foundationDetail: null,
     cityDetail: null,
     countryDetail: null,
@@ -1124,123 +1129,441 @@ const OwnerControl = (() => {
     `;
   }
 
+  const FOUNDATION_PAGE_SIZE = 10;
+
+  function foundationDateShort(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'short', year: 'numeric',
+      });
+    } catch {
+      return '—';
+    }
+  }
+
+  function displayWebsite(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return '';
+    try {
+      const u = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+      return u.hostname.replace(/^www\./, '');
+    } catch {
+      return raw.replace(/^https?:\/\//, '').split('/')[0];
+    }
+  }
+
+  function foundationGlyph(name) {
+    return String(name || '?')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase() || '?';
+  }
+
+  function foundationStatusMeta(status) {
+    if (status === 'active') return { label: 'Active', tone: 'active' };
+    if (status === 'draft') return { label: 'Draft', tone: 'draft' };
+    if (status === 'paused') return { label: 'Inactive', tone: 'paused' };
+    return { label: status || '—', tone: 'paused' };
+  }
+
+  function getFoundationCategories(list) {
+    const cats = new Set();
+    list.forEach((f) => {
+      if (f.primaryCategory) cats.add(f.primaryCategory);
+    });
+    return [...cats].sort((a, b) => a.localeCompare(b));
+  }
+
+  function filterSortFoundations(list) {
+    let items = list.slice();
+    const q = String(state.foundationQuery || '').trim().toLowerCase();
+    if (q) {
+      items = items.filter((f) => (
+        String(f.foundation || '').toLowerCase().includes(q)
+        || String(f.creator || '').toLowerCase().includes(q)
+        || String(f.email || '').toLowerCase().includes(q)
+        || String(f.country || '').toLowerCase().includes(q)
+        || String(f.primaryCategory || '').toLowerCase().includes(q)
+        || displayWebsite(f.website).toLowerCase().includes(q)
+      ));
+    }
+    if (state.foundationStatusFilter && state.foundationStatusFilter !== 'all') {
+      items = items.filter((f) => f.status === state.foundationStatusFilter);
+    }
+    if (state.foundationCategoryFilter && state.foundationCategoryFilter !== 'all') {
+      items = items.filter((f) => f.primaryCategory === state.foundationCategoryFilter);
+    }
+    const sort = state.foundationSort || 'updated';
+    items.sort((a, b) => {
+      if (sort === 'created') {
+        return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+      }
+      if (sort === 'raised') {
+        return (Number(b.totalRaised) || 0) - (Number(a.totalRaised) || 0);
+      }
+      if (sort === 'name') {
+        return String(a.foundation || a.creator || '').localeCompare(String(b.foundation || b.creator || ''));
+      }
+      if (sort === 'projects') {
+        return (Number(b.totalProjects) || 0) - (Number(a.totalProjects) || 0);
+      }
+      return String(b.updatedAt || b.lastActivity || '').localeCompare(String(a.updatedAt || a.lastActivity || ''));
+    });
+    return items;
+  }
+
+  function paginateFoundations(items, page) {
+    const totalPages = Math.max(1, Math.ceil(items.length / FOUNDATION_PAGE_SIZE));
+    const safePage = Math.min(Math.max(1, page || 1), totalPages);
+    const start = (safePage - 1) * FOUNDATION_PAGE_SIZE;
+    return {
+      items: items.slice(start, start + FOUNDATION_PAGE_SIZE),
+      page: safePage,
+      totalPages,
+      total: items.length,
+    };
+  }
+
+  function foundationActivityThumb(item, list) {
+    if (item.type === 'foundations' && String(item.id || '').startsWith('inf-')) {
+      const id = String(item.id).slice(4);
+      const f = list.find((x) => x.id === id);
+      return f?.profileImage || f?.coverImage || '';
+    }
+    return '';
+  }
+
+  function renderFoundationRow(f, currency) {
+    const status = foundationStatusMeta(f.status);
+    const coverGlyph = foundationGlyph(f.foundation || f.creator);
+    const creatorGlyph = foundationGlyph(f.creator);
+    const websiteLabel = displayWebsite(f.website);
+    const projectCount = Number.isFinite(Number(f.totalProjects))
+      ? Number(f.totalProjects)
+      : Number(f.activeProjects) || 0;
+    return `
+      <tr data-foundation-id="${esc(f.id)}" class="owner-cf-row">
+        <td>
+          <div class="owner-cf-foundation">
+            <span class="owner-cf-foundation__cover ${f.coverImage ? 'has-image' : ''}" aria-hidden="true">
+              ${f.coverImage
+                ? `<img src="${esc(f.coverImage)}" alt="">`
+                : `<span>${esc(coverGlyph)}</span>`}
+            </span>
+            <span class="owner-cf-foundation__meta">
+              <span class="owner-cf-foundation__name">${esc(f.foundation || f.creator)}</span>
+              ${f.verificationStatus === 'verified'
+                ? '<span class="owner-cf-badge">VERIFIED</span>'
+                : ''}
+              ${websiteLabel
+                ? `<span class="owner-cf-foundation__url">${esc(websiteLabel)}</span>`
+                : (f.email ? `<span class="owner-cf-foundation__url">${esc(f.email)}</span>` : '')}
+            </span>
+          </div>
+        </td>
+        <td>
+          <div class="owner-cf-creator">
+            <span class="owner-cf-creator__avatar ${f.profileImage ? 'has-image' : ''}" aria-hidden="true">
+              ${f.profileImage
+                ? `<img src="${esc(f.profileImage)}" alt="">`
+                : `<span>${esc(creatorGlyph)}</span>`}
+            </span>
+            <span>${esc(f.creator)}</span>
+          </div>
+        </td>
+        <td>
+          <span class="owner-cf-status owner-cf-status--${status.tone}">
+            <span class="owner-cf-status__dot" aria-hidden="true"></span>
+            ${esc(status.label)}
+          </span>
+        </td>
+        <td>${esc(num(projectCount))}</td>
+        <td>${esc(f.primaryCategory || '—')}</td>
+        <td>${esc(foundationDateShort(f.createdAt))}</td>
+        <td>
+          <div class="owner-cf-actions">
+            <button type="button" class="owner-cf-action" data-foundation-id="${esc(f.id)}" title="Edit foundation" aria-label="Edit foundation">✎</button>
+            <button type="button" class="owner-cf-action" data-foundation-export="${esc(f.id)}" title="Export foundation" aria-label="Export foundation">⤓</button>
+            <button type="button" class="owner-cf-action" data-foundation-more="${esc(f.id)}" title="More actions" aria-label="More actions">⋯</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  function renderFoundationGridCard(f, currency) {
+    const status = foundationStatusMeta(f.status);
+    const coverGlyph = foundationGlyph(f.foundation || f.creator);
+    const creatorGlyph = foundationGlyph(f.creator);
+    const projectCount = Number.isFinite(Number(f.totalProjects))
+      ? Number(f.totalProjects)
+      : Number(f.activeProjects) || 0;
+    return `
+      <button type="button" class="owner-cf-card" data-foundation-id="${esc(f.id)}">
+        <span class="owner-cf-card__cover ${f.coverImage ? 'has-image' : ''}">
+          ${f.coverImage
+            ? `<img src="${esc(f.coverImage)}" alt="">`
+            : `<span>${esc(coverGlyph)}</span>`}
+        </span>
+        <span class="owner-cf-card__body">
+          <span class="owner-cf-card__title">
+            ${esc(f.foundation || f.creator)}
+            ${f.verificationStatus === 'verified' ? '<span class="owner-cf-badge">VERIFIED</span>' : ''}
+          </span>
+          <span class="owner-cf-card__creator">
+            <span class="owner-cf-creator__avatar ${f.profileImage ? 'has-image' : ''}" aria-hidden="true">
+              ${f.profileImage
+                ? `<img src="${esc(f.profileImage)}" alt="">`
+                : `<span>${esc(creatorGlyph)}</span>`}
+            </span>
+            ${esc(f.creator)}
+          </span>
+          <span class="owner-cf-card__meta">
+            <span class="owner-cf-status owner-cf-status--${status.tone}">
+              <span class="owner-cf-status__dot" aria-hidden="true"></span>
+              ${esc(status.label)}
+            </span>
+            · ${esc(num(projectCount))} projects · ${esc(money(f.totalRaised, currency))}
+          </span>
+        </span>
+      </button>
+    `;
+  }
+
   function renderFoundations() {
     const list = state.data.foundations || [];
     const currency = state.data.currency || 'EUR';
+    const platformFee = Number(state.data.platformFeePercent);
+    const foundationShare = Number.isFinite(platformFee) ? 100 - platformFee : 90;
     const detail = state.foundationDetail
       ? list.find((f) => f.id === state.foundationDetail)
       : null;
+    const categories = getFoundationCategories(list);
+    const filtered = filterSortFoundations(list);
+    const pageData = paginateFoundations(filtered, state.foundationPage);
+    const activeCount = list.filter((f) => f.status === 'active').length;
+    const draftCount = list.filter((f) => f.status === 'draft').length;
+    const pausedCount = list.filter((f) => f.status === 'paused').length;
+    const totalProjects = list.reduce((sum, f) => sum + (Number(f.totalProjects) || Number(f.activeProjects) || 0), 0);
+    const totalRaised = list.reduce((sum, f) => sum + (Number(f.totalRaised) || 0), 0);
+    const statusTotal = Math.max(1, list.length);
+    const donutActive = Math.round((activeCount / statusTotal) * 100);
+    const donutDraft = Math.round((draftCount / statusTotal) * 100);
+    const donutPaused = Math.max(0, 100 - donutActive - donutDraft);
+    const foundationActivity = (state.data.activity || [])
+      .filter((item) => item.type === 'foundations' || item.type === 'donations')
+      .slice(0, 6);
+    const pageButtons = Array.from({ length: pageData.totalPages }, (_, i) => i + 1);
 
     return `
-      <section class="owner-section">
-        <div class="owner-panel__head">
-          <div>
-            <p class="owner-section__label">Creator Foundations</p>
-            <h2 class="owner-h1" style="font-size:1.35rem;margin:0">Curated management</h2>
-          </div>
-          <div class="owner-chips">
-            <button type="button" class="owner-chip ${state.foundationView === 'curated' ? 'is-active' : ''}" data-foundation-view="curated">Curated</button>
-            <button type="button" class="owner-chip ${state.foundationView === 'data' ? 'is-active' : ''}" data-foundation-view="data">Data</button>
-            <button type="button" class="owner-btn" id="owner-create-foundation">Create</button>
-          </div>
-        </div>
-      </section>
+      <div class="owner-cf">
+        <div class="owner-cf__layout">
+          <div class="owner-cf__main">
+            <header class="owner-cf__header">
+              <div>
+                <h2 class="owner-cf__title">Creator Foundations</h2>
+                <p class="owner-muted owner-cf__subtitle">
+                  Manage creator foundations, public profiles, and Members logins.
+                </p>
+              </div>
+              <button type="button" class="owner-btn" id="owner-create-foundation">+ Create Foundation</button>
+            </header>
 
-      ${!list.length
-        ? `<p class="owner-empty">No Creator Foundations yet. Create the first profile to publish it to Donate.</p>`
-        : state.foundationView === 'curated'
-          ? `<div class="owner-foundation-grid">
-              ${list.map((f) => {
-                const avatar = f.profileImage || '';
-                const glyph = String(f.foundation || f.creator || '?')
-                  .split(/\s+/)
-                  .filter(Boolean)
-                  .slice(0, 2)
-                  .map((w) => w[0])
-                  .join('')
-                  .toUpperCase();
-                return `
-                <button type="button" class="owner-foundation-card" data-foundation-id="${esc(f.id)}">
-                  <span class="owner-foundation-card__body">
-                    <h3>${esc(f.foundation || f.creator)} <span class="owner-badge ${f.status === 'active' ? 'is-on' : ''}">${esc(f.status)}</span></h3>
-                    <p class="owner-muted">${esc(f.creator)}${f.country ? ` · ${esc(f.country)}` : ''}</p>
-                    <p class="owner-muted" style="margin-top:8px">Login: ${esc(f.email || '—')}</p>
-                    <p class="owner-muted" style="margin-top:10px">${esc(money(f.totalRaised, currency))} raised · ${esc(num(f.uniqueDonors))} donors · ${esc(num(f.activeProjects))} projects</p>
-                  </span>
-                  <span class="owner-foundation-card__media ${avatar ? 'has-image' : ''}" aria-hidden="true">
-                    ${avatar
-                      ? `<img src="${esc(avatar)}" alt="">`
-                      : `<span class="owner-foundation-card__glyph">${esc(glyph || '?')}</span>`}
-                  </span>
-                </button>
-              `;
-              }).join('')}
-            </div>`
-          : `<div class="owner-table-wrap"><table class="owner-table">
-              <thead><tr>
-                <th>Creator</th><th>Foundation</th><th>Login email</th><th>Country</th><th>Status</th>
-                <th>Donors</th><th>Raised</th><th>Last activity</th>
-              </tr></thead>
-              <tbody>
-                ${list.map((f) => `
-                  <tr data-foundation-id="${esc(f.id)}" style="cursor:pointer">
-                    <td>${esc(f.creator)}</td>
-                    <td>${esc(f.foundation || '—')}</td>
-                    <td>${esc(f.email || '—')}</td>
-                    <td>${esc(f.country || '—')}</td>
-                    <td>${esc(f.status)}</td>
-                    <td>${esc(num(f.uniqueDonors))}</td>
-                    <td>${esc(money(f.totalRaised, currency))}</td>
-                    <td>${esc(when(f.lastActivity))}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table></div>`}
-
-      ${detail ? renderFoundationDetail(detail) : ''}
-      <div id="owner-foundation-create-slot"></div>
-
-      <section class="owner-section owner-group" style="margin-top:32px">
-        <p class="owner-group__title">Recover Members login password</p>
-        <p class="owner-muted" style="margin-bottom:14px">
-          Set a new temporary password using the Creator’s login email.
-          You cannot view a password they chose themselves — only reset it here.
-        </p>
-        <form class="owner-form" id="owner-reset-influencer-password" style="max-width:560px">
-          <div class="owner-field">
-            <label for="owner-reset-email">Login email</label>
-            <input
-              id="owner-reset-email"
-              name="email"
-              type="email"
-              list="owner-foundation-emails"
-              required
-              autocomplete="off"
-              placeholder="creator@example.com"
-            >
-            <datalist id="owner-foundation-emails">
-              ${list.map((f) => `<option value="${esc(f.email || '')}"></option>`).join('')}
-            </datalist>
-          </div>
-          <div class="owner-field">
-            <label for="owner-reset-password">New temporary password</label>
-            <div class="owner-password-row">
-              <input
-                id="owner-reset-password"
-                name="newPassword"
-                type="text"
-                required
-                minlength="8"
-                autocomplete="off"
-                spellcheck="false"
-                placeholder="At least 8 characters"
-              >
-              <button type="button" class="owner-btn-ghost" id="owner-reset-copy-credentials" title="Copy email and password">Copy</button>
+            <div class="owner-cf__stats">
+              <article class="owner-cf-stat">
+                <p class="owner-cf-stat__label">Total Foundations</p>
+                <p class="owner-cf-stat__value">${esc(num(list.length))}</p>
+              </article>
+              <article class="owner-cf-stat">
+                <p class="owner-cf-stat__label">Active Foundations</p>
+                <p class="owner-cf-stat__value">${esc(num(activeCount))}</p>
+              </article>
+              <article class="owner-cf-stat">
+                <p class="owner-cf-stat__label">Total Projects</p>
+                <p class="owner-cf-stat__value">${esc(num(totalProjects))}</p>
+              </article>
+              <article class="owner-cf-stat">
+                <p class="owner-cf-stat__label">Total Raised</p>
+                <p class="owner-cf-stat__value">${esc(money(totalRaised, currency))}</p>
+                <p class="owner-cf-stat__note">${esc(foundationShare)}% goes to foundations</p>
+              </article>
             </div>
+
+            <div class="owner-cf__toolbar">
+              <label class="owner-cf-search">
+                <span class="owner-cf-search__icon" aria-hidden="true">⌕</span>
+                <input
+                  id="owner-cf-search"
+                  class="owner-cf-search__input"
+                  type="search"
+                  placeholder="Search foundations..."
+                  value="${esc(state.foundationQuery)}"
+                >
+              </label>
+              <select class="owner-cf-select" id="owner-cf-status-filter" aria-label="Filter by status">
+                <option value="all" ${state.foundationStatusFilter === 'all' ? 'selected' : ''}>All statuses</option>
+                <option value="active" ${state.foundationStatusFilter === 'active' ? 'selected' : ''}>Active</option>
+                <option value="draft" ${state.foundationStatusFilter === 'draft' ? 'selected' : ''}>Draft</option>
+                <option value="paused" ${state.foundationStatusFilter === 'paused' ? 'selected' : ''}>Inactive</option>
+              </select>
+              <select class="owner-cf-select" id="owner-cf-category-filter" aria-label="Filter by category">
+                <option value="all" ${state.foundationCategoryFilter === 'all' ? 'selected' : ''}>All categories</option>
+                ${categories.map((cat) => `
+                  <option value="${esc(cat)}" ${state.foundationCategoryFilter === cat ? 'selected' : ''}>${esc(cat)}</option>
+                `).join('')}
+              </select>
+              <select class="owner-cf-select" id="owner-cf-sort" aria-label="Sort foundations">
+                <option value="updated" ${state.foundationSort === 'updated' ? 'selected' : ''}>Sort by: Recently Updated</option>
+                <option value="created" ${state.foundationSort === 'created' ? 'selected' : ''}>Sort by: Created Date</option>
+                <option value="raised" ${state.foundationSort === 'raised' ? 'selected' : ''}>Sort by: Total Raised</option>
+                <option value="projects" ${state.foundationSort === 'projects' ? 'selected' : ''}>Sort by: Projects</option>
+                <option value="name" ${state.foundationSort === 'name' ? 'selected' : ''}>Sort by: Name</option>
+              </select>
+              <div class="owner-cf-view-toggle" role="group" aria-label="View mode">
+                <button type="button" class="owner-cf-view-btn ${state.foundationLayout === 'list' ? 'is-active' : ''}" data-foundation-layout="list" title="List view" aria-label="List view">☰</button>
+                <button type="button" class="owner-cf-view-btn ${state.foundationLayout === 'grid' ? 'is-active' : ''}" data-foundation-layout="grid" title="Grid view" aria-label="Grid view">▦</button>
+              </div>
+            </div>
+
+            ${!list.length
+              ? `<p class="owner-empty owner-cf__empty">No Creator Foundations yet. Create the first profile to publish it to Donate.</p>`
+              : !pageData.total
+                ? `<p class="owner-empty owner-cf__empty">No foundations match your filters.</p>`
+                : state.foundationLayout === 'grid'
+                  ? `<div class="owner-cf-grid">
+                      ${pageData.items.map((f) => renderFoundationGridCard(f, currency)).join('')}
+                    </div>`
+                  : `<div class="owner-cf-table-wrap">
+                      <table class="owner-cf-table">
+                        <thead>
+                          <tr>
+                            <th>Foundation</th>
+                            <th>Creator</th>
+                            <th>Status</th>
+                            <th>Projects</th>
+                            <th>Focus Area</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${pageData.items.map((f) => renderFoundationRow(f, currency)).join('')}
+                        </tbody>
+                      </table>
+                    </div>`}
+
+            ${pageData.total > FOUNDATION_PAGE_SIZE ? `
+              <nav class="owner-cf-pagination" aria-label="Foundations pagination">
+                <button type="button" class="owner-cf-page-btn" data-foundation-page="${esc(pageData.page - 1)}" ${pageData.page <= 1 ? 'disabled' : ''} aria-label="Previous page">‹</button>
+                ${pageButtons.map((n) => `
+                  <button type="button" class="owner-cf-page-btn ${n === pageData.page ? 'is-active' : ''}" data-foundation-page="${n}">${n}</button>
+                `).join('')}
+                <button type="button" class="owner-cf-page-btn" data-foundation-page="${esc(pageData.page + 1)}" ${pageData.page >= pageData.totalPages ? 'disabled' : ''} aria-label="Next page">›</button>
+              </nav>
+            ` : ''}
+
+            ${detail ? renderFoundationDetail(detail) : ''}
+            <div id="owner-foundation-create-slot"></div>
+
+            <section class="owner-section owner-group owner-cf-recover">
+              <p class="owner-group__title">Recover Members login password</p>
+              <p class="owner-muted" style="margin-bottom:14px">
+                Set a new temporary password using the Creator’s login email.
+                You cannot view a password they chose themselves — only reset it here.
+              </p>
+              <form class="owner-form" id="owner-reset-influencer-password" style="max-width:560px">
+                <div class="owner-field">
+                  <label for="owner-reset-email">Login email</label>
+                  <input
+                    id="owner-reset-email"
+                    name="email"
+                    type="email"
+                    list="owner-foundation-emails"
+                    required
+                    autocomplete="off"
+                    placeholder="creator@example.com"
+                  >
+                  <datalist id="owner-foundation-emails">
+                    ${list.map((f) => `<option value="${esc(f.email || '')}"></option>`).join('')}
+                  </datalist>
+                </div>
+                <div class="owner-field">
+                  <label for="owner-reset-password">New temporary password</label>
+                  <div class="owner-password-row">
+                    <input
+                      id="owner-reset-password"
+                      name="newPassword"
+                      type="text"
+                      required
+                      minlength="8"
+                      autocomplete="off"
+                      spellcheck="false"
+                      placeholder="At least 8 characters"
+                    >
+                    <button type="button" class="owner-btn-ghost" id="owner-reset-copy-credentials" title="Copy email and password">Copy</button>
+                  </div>
+                </div>
+                <button class="owner-btn" type="submit">Reset password</button>
+              </form>
+            </section>
           </div>
-          <button class="owner-btn" type="submit">Reset password</button>
-        </form>
-      </section>
+
+          <aside class="owner-cf__aside">
+            <section class="owner-cf-panel">
+              <h3 class="owner-cf-panel__title">Foundation Status</h3>
+              <div class="owner-cf-donut-wrap">
+                <div
+                  class="owner-cf-donut"
+                  style="--cf-active:${donutActive}%;--cf-draft:${donutDraft}%;--cf-paused:${donutPaused}%"
+                  aria-hidden="true"
+                ></div>
+                <ul class="owner-cf-donut-legend">
+                  <li><span class="owner-cf-dot owner-cf-dot--active"></span> Active <strong>${esc(donutActive)}%</strong></li>
+                  <li><span class="owner-cf-dot owner-cf-dot--draft"></span> Draft <strong>${esc(donutDraft)}%</strong></li>
+                  <li><span class="owner-cf-dot owner-cf-dot--paused"></span> Inactive <strong>${esc(donutPaused)}%</strong></li>
+                </ul>
+              </div>
+            </section>
+
+            <section class="owner-cf-panel">
+              <h3 class="owner-cf-panel__title">Quick Actions</h3>
+              <div class="owner-cf-quick">
+                <button type="button" class="owner-cf-quick__btn" id="owner-cf-quick-create">Create Foundation</button>
+                <a class="owner-cf-quick__btn" href="/members" target="_blank" rel="noopener">Open Members Portal</a>
+                <a class="owner-cf-quick__btn" href="/donate" target="_blank" rel="noopener">View Donate Page</a>
+                <button type="button" class="owner-cf-quick__btn" data-export="foundations">Export Foundations</button>
+              </div>
+            </section>
+
+            <section class="owner-cf-panel">
+              <h3 class="owner-cf-panel__title">Recent Activity</h3>
+              ${foundationActivity.length
+                ? `<ul class="owner-cf-activity">
+                    ${foundationActivity.map((item) => {
+                      const thumb = foundationActivityThumb(item, list);
+                      return `
+                        <li class="owner-cf-activity__item">
+                          <span class="owner-cf-activity__thumb ${thumb ? 'has-image' : ''}">
+                            ${thumb ? `<img src="${esc(thumb)}" alt="">` : '<span>•</span>'}
+                          </span>
+                          <span class="owner-cf-activity__copy">
+                            <strong>${esc(item.label)}</strong>
+                            <span>${esc(item.detail)}</span>
+                            <time>${esc(when(item.at))}</time>
+                          </span>
+                        </li>
+                      `;
+                    }).join('')}
+                  </ul>`
+                : '<p class="owner-muted">No recent foundation activity yet.</p>'}
+            </section>
+          </aside>
+        </div>
+      </div>
     `;
   }
 
@@ -2387,6 +2710,35 @@ const OwnerControl = (() => {
 
   /* ─── Export ─── */
 
+  function exportFoundationCsv(foundationId) {
+    const f = (state.data.foundations || []).find((row) => row.id === foundationId);
+    if (!f) return;
+    const rows = [
+      ['creator', 'foundation', 'email', 'country', 'status', 'category', 'donors', 'raised', 'projects', 'website', 'created'],
+      [
+        f.creator,
+        f.foundation,
+        f.email,
+        f.country,
+        f.status,
+        f.primaryCategory,
+        f.uniqueDonors,
+        f.totalRaised,
+        f.totalProjects ?? f.activeProjects,
+        f.website,
+        f.createdAt,
+      ],
+    ];
+    const csv = rows.map((r) => r.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `world-choir-foundation-${String(f.foundation || f.creator || f.id).replace(/[^\w.-]+/g, '-').toLowerCase()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function exportCsv(kind) {
     let rows = [];
     if (kind === 'cities') {
@@ -2398,8 +2750,20 @@ const OwnerControl = (() => {
         state.data.countries.map((c) => [c.country, c.voices, c.cities, c.foundations, c.donors, c.totalDonated])
       );
     } else if (kind === 'foundations') {
-      rows = [['creator', 'foundation', 'country', 'status', 'donors', 'raised']].concat(
-        state.data.foundations.map((f) => [f.creator, f.foundation, f.country, f.status, f.uniqueDonors, f.totalRaised])
+      rows = [['creator', 'foundation', 'email', 'country', 'status', 'category', 'donors', 'raised', 'projects', 'website', 'created']].concat(
+        state.data.foundations.map((f) => [
+          f.creator,
+          f.foundation,
+          f.email,
+          f.country,
+          f.status,
+          f.primaryCategory,
+          f.uniqueDonors,
+          f.totalRaised,
+          f.totalProjects ?? f.activeProjects,
+          f.website,
+          f.createdAt,
+        ])
       );
     } else if (kind === 'executive') {
       const ex = state.data.reports.executiveSummary;
@@ -2948,14 +3312,57 @@ const OwnerControl = (() => {
         render();
       });
     });
-    root().querySelectorAll('[data-foundation-view]').forEach((btn) => {
+    root().querySelectorAll('[data-foundation-layout]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        state.foundationView = btn.getAttribute('data-foundation-view');
+        state.foundationLayout = btn.getAttribute('data-foundation-layout') || 'list';
+        render();
+      });
+    });
+    document.getElementById('owner-cf-search')?.addEventListener('input', (e) => {
+      state.foundationQuery = e.target.value;
+      state.foundationPage = 1;
+      render();
+    });
+    document.getElementById('owner-cf-status-filter')?.addEventListener('change', (e) => {
+      state.foundationStatusFilter = e.target.value;
+      state.foundationPage = 1;
+      render();
+    });
+    document.getElementById('owner-cf-category-filter')?.addEventListener('change', (e) => {
+      state.foundationCategoryFilter = e.target.value;
+      state.foundationPage = 1;
+      render();
+    });
+    document.getElementById('owner-cf-sort')?.addEventListener('change', (e) => {
+      state.foundationSort = e.target.value;
+      state.foundationPage = 1;
+      render();
+    });
+    root().querySelectorAll('[data-foundation-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const next = Number(btn.getAttribute('data-foundation-page'));
+        if (!Number.isFinite(next) || btn.disabled) return;
+        state.foundationPage = next;
+        render();
+      });
+    });
+    root().querySelectorAll('[data-foundation-export]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        exportFoundationCsv(btn.getAttribute('data-foundation-export'));
+      });
+    });
+    root().querySelectorAll('[data-foundation-more]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.foundationDetail = btn.getAttribute('data-foundation-more');
+        state.section = 'foundations';
         render();
       });
     });
     root().querySelectorAll('[data-foundation-id]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        if (e.target.closest('[data-foundation-export]') || e.target.closest('[data-foundation-more]')) return;
         state.foundationDetail = btn.getAttribute('data-foundation-id');
         state.section = 'foundations';
         render();
@@ -3019,6 +3426,7 @@ const OwnerControl = (() => {
     });
 
     document.getElementById('owner-create-foundation')?.addEventListener('click', openCreateFoundation);
+    document.getElementById('owner-cf-quick-create')?.addEventListener('click', openCreateFoundation);
     document.getElementById('owner-reset-influencer-password')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
