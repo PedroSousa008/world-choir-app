@@ -53,6 +53,7 @@ const OwnerControl = (() => {
     foundationSort: 'updated',
     foundationPage: 1,
     foundationDetail: null,
+    foundationActionMenu: null,
     cityDetail: null,
     countryDetail: null,
     dailyPeace: null,
@@ -1288,7 +1289,42 @@ const OwnerControl = (() => {
           <div class="owner-cf-actions">
             <button type="button" class="owner-cf-action" data-foundation-id="${esc(f.id)}" title="Edit foundation" aria-label="Edit foundation">✎</button>
             <button type="button" class="owner-cf-action" data-foundation-export="${esc(f.id)}" title="Export foundation" aria-label="Export foundation">⤓</button>
-            <button type="button" class="owner-cf-action" data-foundation-more="${esc(f.id)}" title="More actions" aria-label="More actions">⋯</button>
+            <div class="owner-cf-menu-wrap">
+              <button
+                type="button"
+                class="owner-cf-action ${state.foundationActionMenu === f.id ? 'is-open' : ''}"
+                data-foundation-menu-toggle="${esc(f.id)}"
+                title="More actions"
+                aria-label="More actions"
+                aria-expanded="${state.foundationActionMenu === f.id ? 'true' : 'false'}"
+              >⋯</button>
+              ${state.foundationActionMenu === f.id ? `
+                <div class="owner-cf-menu" role="menu">
+                  <button
+                    type="button"
+                    class="owner-cf-menu__item ${f.status === 'active' ? 'is-current' : ''}"
+                    data-foundation-status="${esc(f.id)}"
+                    data-status="active"
+                    role="menuitem"
+                    ${f.status === 'active' ? 'disabled' : ''}
+                  >Active</button>
+                  <button
+                    type="button"
+                    class="owner-cf-menu__item ${f.status === 'paused' ? 'is-current' : ''}"
+                    data-foundation-status="${esc(f.id)}"
+                    data-status="inactive"
+                    role="menuitem"
+                    ${f.status === 'paused' ? 'disabled' : ''}
+                  >Inactive</button>
+                  <button
+                    type="button"
+                    class="owner-cf-menu__item owner-cf-menu__item--danger"
+                    data-foundation-delete="${esc(f.id)}"
+                    role="menuitem"
+                  >Delete</button>
+                </div>
+              ` : ''}
+            </div>
           </div>
         </td>
       </tr>
@@ -1621,9 +1657,13 @@ const OwnerControl = (() => {
           <div class="owner-group">
             <p class="owner-group__title">Management</p>
             <div class="owner-actions" style="margin-top:8px">
-              <button type="button" class="owner-btn-ghost" data-toggle-foundation="${esc(f.id)}" data-active="${f.active ? 'false' : 'true'}">
-                ${f.active ? 'Pause' : 'Activate'}
-              </button>
+              ${f.status !== 'active'
+                ? `<button type="button" class="owner-btn-ghost" data-foundation-status="${esc(f.id)}" data-status="active">Set Active</button>`
+                : ''}
+              ${f.status === 'active'
+                ? `<button type="button" class="owner-btn-ghost" data-foundation-status="${esc(f.id)}" data-status="inactive">Set Inactive</button>`
+                : ''}
+              <button type="button" class="owner-btn-ghost owner-btn-ghost--danger" data-foundation-delete="${esc(f.id)}">Delete foundation</button>
               <a class="owner-btn-ghost" href="/donate" target="_blank" rel="noopener">View public Donate</a>
             </div>
           </div>
@@ -2716,6 +2756,53 @@ const OwnerControl = (() => {
 
   /* ─── Export ─── */
 
+  function foundationDisplayName(f) {
+    return f?.foundation || f?.creator || 'this foundation';
+  }
+
+  async function applyFoundationStatus(id, status) {
+    const f = (state.data.foundations || []).find((row) => row.id === id);
+    if (!f) return;
+    const name = foundationDisplayName(f);
+    const msg = status === 'active'
+      ? `Set "${name}" to Active? It will appear on the Donate page for users.`
+      : `Set "${name}" to Inactive? It will be hidden from the Donate page but kept in Creator Foundations.`;
+    if (!window.confirm(msg)) return;
+    try {
+      await api('update-influencer', {
+        method: 'POST',
+        body: status === 'active'
+          ? { id, active: true, published: true }
+          : { id, active: false, published: true },
+      });
+      state.foundationActionMenu = null;
+      setFlash(status === 'active' ? 'Foundation set to Active.' : 'Foundation set to Inactive.');
+      await loadCenter();
+    } catch (err) {
+      setFlash(err.message, 'err');
+      render();
+    }
+  }
+
+  async function deleteFoundation(id) {
+    const f = (state.data.foundations || []).find((row) => row.id === id);
+    if (!f) return;
+    const name = foundationDisplayName(f);
+    if (!window.confirm(
+      `Permanently delete "${name}"? It will be removed from Creator Foundations and from Donations. This cannot be undone.`
+    )) return;
+    try {
+      await api('delete-influencer', { method: 'POST', body: { id } });
+      if (state.foundationDetail === id) state.foundationDetail = null;
+      state.foundationActionMenu = null;
+      setFlash('Foundation deleted.');
+      await loadCenter();
+    } catch (err) {
+      setFlash(err.message, 'err');
+      render();
+    }
+  }
+
   function exportFoundationCsv(foundationId) {
     const f = (state.data.foundations || []).find((row) => row.id === foundationId);
     if (!f) return;
@@ -3358,14 +3445,43 @@ const OwnerControl = (() => {
         exportFoundationCsv(btn.getAttribute('data-foundation-export'));
       });
     });
-    root().querySelectorAll('[data-foundation-more]').forEach((btn) => {
+    root().querySelectorAll('.owner-cf-menu-wrap').forEach((wrap) => {
+      wrap.addEventListener('click', (e) => e.stopPropagation());
+    });
+    root().querySelectorAll('[data-foundation-menu-toggle]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        state.foundationDetail = btn.getAttribute('data-foundation-more');
-        state.section = 'foundations';
+        const id = btn.getAttribute('data-foundation-menu-toggle');
+        state.foundationActionMenu = state.foundationActionMenu === id ? null : id;
         render();
       });
     });
+    root().querySelectorAll('[data-foundation-status]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-foundation-status');
+        const status = btn.getAttribute('data-status');
+        if (!id || !status || btn.disabled) return;
+        await applyFoundationStatus(id, status);
+      });
+    });
+    root().querySelectorAll('[data-foundation-delete]').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-foundation-delete');
+        if (!id) return;
+        await deleteFoundation(id);
+      });
+    });
+    if (state.foundationActionMenu) {
+      const closeMenu = (e) => {
+        if (e.target.closest('.owner-cf-menu-wrap')) return;
+        state.foundationActionMenu = null;
+        document.removeEventListener('click', closeMenu);
+        render();
+      };
+      setTimeout(() => document.addEventListener('click', closeMenu), 0);
+    }
     root().querySelectorAll('[data-foundation-detail-close]').forEach((btn) => {
       btn.addEventListener('click', () => {
         state.foundationDetail = null;
@@ -3383,7 +3499,7 @@ const OwnerControl = (() => {
     }
     root().querySelectorAll('[data-foundation-id]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
-        if (e.target.closest('[data-foundation-export]') || e.target.closest('[data-foundation-more]')) return;
+        if (e.target.closest('[data-foundation-export]') || e.target.closest('.owner-cf-menu-wrap')) return;
         state.foundationDetail = btn.getAttribute('data-foundation-id');
         state.section = 'foundations';
         render();
@@ -3539,21 +3655,6 @@ const OwnerControl = (() => {
         setFlash(err.message, 'err');
         render();
       }
-    });
-    root().querySelectorAll('[data-toggle-foundation]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.getAttribute('data-toggle-foundation');
-        const active = btn.getAttribute('data-active') === 'true';
-        if (!window.confirm(active ? 'Activate this foundation?' : 'Pause this foundation?')) return;
-        try {
-          await api('update-influencer', { method: 'POST', body: { id, active } });
-          setFlash(active ? 'Foundation activated.' : 'Foundation paused.');
-          await loadCenter();
-        } catch (err) {
-          setFlash(err.message, 'err');
-          render();
-        }
-      });
     });
 
     document.getElementById('owner-email-form')?.addEventListener('submit', async (e) => {

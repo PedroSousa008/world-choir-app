@@ -1068,6 +1068,70 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 .owner-cf-actions {
   display: inline-flex;
   gap: 4px;
+  position: relative;
+}
+
+.owner-cf-menu-wrap {
+  position: relative;
+}
+
+.owner-cf-action.is-open {
+  border-color: rgba(78, 197, 232, 0.35);
+  color: var(--accent-aurora);
+}
+
+.owner-cf-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 148px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #11141b;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  padding: 6px;
+}
+
+.owner-cf-menu__item {
+  appearance: none;
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #f2efe8;
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.owner-cf-menu__item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.owner-cf-menu__item.is-current,
+.owner-cf-menu__item:disabled {
+  color: #8a8d97;
+  cursor: default;
+}
+
+.owner-cf-menu__item--danger {
+  color: #e07070;
+}
+
+.owner-cf-menu__item--danger:hover:not(:disabled) {
+  background: rgba(224, 112, 112, 0.12);
+  color: #f2a0a0;
+}
+
+.owner-btn-ghost--danger {
+  color: #e07070;
+}
+
+.owner-btn-ghost--danger:hover {
+  color: #f2a0a0;
+  border-color: rgba(224, 112, 112, 0.35);
 }
 
 .owner-cf-action {

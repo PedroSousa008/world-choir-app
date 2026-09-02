@@ -252,6 +252,27 @@ async function updateInfluencer(id, updates = {}, { allowEmailChange = false } =
   return { ok: true, influencer: publicInfluencer(next) };
 }
 
+async function deleteInfluencer(id) {
+  const foundationId = String(id || '').trim();
+  if (!foundationId) return { ok: false, error: 'Influencer id is required' };
+
+  const doc = await readInfluencersDoc();
+  const index = doc.influencers.findIndex((row) => row.id === foundationId);
+  if (index === -1) return { ok: false, error: 'Influencer not found' };
+
+  doc.influencers.splice(index, 1);
+  await writeInfluencersDoc(doc);
+
+  const { writeDonationsLedger } = require('./donations');
+  const ledger = await readDonationsLedger();
+  const remaining = ledger.filter((d) => d.foundationId !== foundationId);
+  if (remaining.length !== ledger.length) {
+    await writeDonationsLedger(remaining);
+  }
+
+  return { ok: true, removedDonations: ledger.length - remaining.length };
+}
+
 /** Owner Control Center view — never includes passwords. */
 async function listInfluencersOwnerView() {
   const doc = await readInfluencersDoc();
@@ -567,6 +588,7 @@ module.exports = {
   findInfluencerById,
   createInfluencer,
   updateInfluencer,
+  deleteInfluencer,
   verifyInfluencerCredentials,
   changeInfluencerPassword,
   changeInfluencerEmail,

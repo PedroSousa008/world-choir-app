@@ -45,6 +45,7 @@ const {
   listInfluencers,
   createInfluencer,
   updateInfluencer,
+  deleteInfluencer,
   resetInfluencerPasswordByEmail,
 } = require('./_lib/members-store');
 const {
@@ -330,6 +331,15 @@ module.exports = async function handler(req, res) {
       const { id, ...updates } = req.body || {};
       if (!id) return res.status(400).json({ error: 'Influencer id is required' });
       const result = await updateInfluencer(id, updates, { allowEmailChange: true });
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'delete-influencer' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const { id } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'Influencer id is required' });
+      const result = await deleteInfluencer(id);
       if (!result.ok) return res.status(400).json({ error: result.error });
       return res.status(200).json(result);
     }
