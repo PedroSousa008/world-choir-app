@@ -12,9 +12,11 @@ const ProfilePage = (() => {
     dailyActs: 'profile-daily-acts-root',
   };
 
+  let profileReady = false;
+
   function getVoicesCounterContent() {
     if (typeof WorldChoirDB === 'undefined' || !WorldChoirDB.isPledgesLoaded()) {
-      return { text: 'LOADING VOICES', loading: true };
+      return { text: '', loading: true };
     }
 
     const stats = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
@@ -29,15 +31,48 @@ const ProfilePage = (() => {
     if (!el) return;
 
     const { text, loading } = getVoicesCounterContent();
+    if (loading) {
+      el.className = 'wc-skel wc-skel--voices';
+      el.textContent = '';
+      el.setAttribute('aria-hidden', 'true');
+      return;
+    }
+
+    el.className = 'profile-voices-counter';
+    el.removeAttribute('aria-hidden');
     const prev = el.textContent;
     el.textContent = text;
-    el.classList.toggle('profile-voices-counter--loading', loading);
+    el.classList.toggle('profile-voices-counter--loading', false);
 
-    if (!loading && text !== prev && prev !== 'LOADING VOICES') {
+    if (text !== prev && prev) {
       el.classList.remove('profile-voices-counter--bump');
       void el.offsetWidth;
       el.classList.add('profile-voices-counter--bump');
     }
+  }
+
+  function renderSkeleton() {
+    updateVoicesCounter();
+    const card = `
+      <div class="wc-skel-card wc-skel-card--row" aria-hidden="true">
+        <span class="wc-skel wc-skel--avatar"></span>
+        <span style="flex:1;min-width:0">
+          <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+          <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+        </span>
+      </div>`;
+    const block = `
+      <div class="wc-skel-card" aria-hidden="true">
+        <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+        <span class="wc-skel wc-skel--line"></span>
+        <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+      </div>`;
+
+    Object.entries(SECTIONS).forEach(([key, id], index) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = index === 0 ? card : block;
+    });
   }
 
   function render() {
@@ -80,6 +115,15 @@ const ProfilePage = (() => {
     render();
   }
 
+  function revealProfile() {
+    if (profileReady) {
+      refresh();
+      return;
+    }
+    profileReady = true;
+    render();
+  }
+
   function maybeOpenPracticeFromQuery() {
     try {
       const params = new URLSearchParams(window.location.search || '');
@@ -94,13 +138,19 @@ const ProfilePage = (() => {
   }
 
   function init() {
-    // Instant first paint — same idea as Donate.
     ChangeLocationModal.init();
     PracticeMode.init();
     DailyActsPeace.init();
     OwnerAccess.init();
     WorldChoirNav.startWatcher('profile');
-    render();
+
+    const warm = typeof WorldChoirPledgeState !== 'undefined' && WorldChoirPledgeState.isLoaded();
+    if (warm) {
+      profileReady = true;
+      render();
+    } else {
+      renderSkeleton();
+    }
 
     window.addEventListener('wc-pledges-synced', updateVoicesCounter);
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
@@ -108,15 +158,19 @@ const ProfilePage = (() => {
     window.addEventListener('wc-voices-live-update', updateVoicesCounter);
     WorldChoirDB.startLiveSync({ intervalMs: 2000 });
 
+    const fallback = setTimeout(() => revealProfile(), 350);
+
     WorldChoirPledgeState.init()
       .then(async () => {
-        refresh();
+        clearTimeout(fallback);
+        revealProfile();
         WorldChoirPledgeState.subscribe(() => refresh());
         maybeOpenPracticeFromQuery();
       })
       .catch((err) => {
+        clearTimeout(fallback);
         console.error('Failed to connect to World Choir database:', err);
-        refresh();
+        revealProfile();
       });
   }
 

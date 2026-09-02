@@ -508,6 +508,16 @@ const WorldChoirMap = (() => {
     document.body.classList.add('map-page');
     WorldChoirNav.startWatcher('map');
 
+    const clearBootSkel = () => {
+      const skel = document.getElementById('map-boot-skel');
+      if (!skel || skel.classList.contains('is-done')) return;
+      skel.classList.add('is-done');
+      skel.setAttribute('aria-busy', 'false');
+      setTimeout(() => skel.remove(), 220);
+    };
+    // Keep map boot skeleton extremely short.
+    setTimeout(clearBootSkel, 280);
+
     const hasVoiceJoinedSession = !!sessionStorage.getItem('wc_voice_joined');
 
     if (typeof MapSponsorData !== 'undefined') MapSponsorData.prefetch?.();
@@ -522,6 +532,7 @@ const WorldChoirMap = (() => {
     await sponsorInit;
     initMapHeader();
     refreshMapData();
+    clearBootSkel();
     WorldChoirPledgeState.subscribe(() => updateEmptyState());
     updateCountdown();
     setInterval(updateCountdown, 1000);

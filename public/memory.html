@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260902x">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260902y">
   <link rel="stylesheet" href="css/live-event.css?v=20260903b">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
   <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
@@ -25,7 +25,26 @@
       <p>A living memory of millions of voices, one song, one moment.</p>
     </div>
 
-    <div id="memory-content"></div>
+    <div id="memory-content" aria-live="polite">
+      <div class="wc-skel-page" aria-busy="true">
+        <span class="sr-only">Loading Memory…</span>
+        <div class="wc-skel-card" aria-hidden="true">
+          <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+          <span class="wc-skel wc-skel--line"></span>
+          <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+        </div>
+        <div class="stats-grid" style="margin-top:0" aria-hidden="true">
+          <div class="stat-card"><div class="wc-skel" style="height:1.6rem;width:3.2rem;margin:0 auto 8px"></div><div class="wc-skel wc-skel--line" style="width:3rem;margin:0 auto"></div></div>
+          <div class="stat-card"><div class="wc-skel" style="height:1.6rem;width:3.2rem;margin:0 auto 8px"></div><div class="wc-skel wc-skel--line" style="width:4rem;margin:0 auto"></div></div>
+          <div class="stat-card"><div class="wc-skel" style="height:1.6rem;width:4rem;margin:0 auto 8px"></div><div class="wc-skel wc-skel--line" style="width:2.5rem;margin:0 auto"></div></div>
+        </div>
+        <div class="wc-skel-card" aria-hidden="true" style="margin-top:24px">
+          <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+          <span class="wc-skel wc-skel--line"></span>
+          <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+        </div>
+      </div>
+    </div>
   </main>
 
   <div id="nav-root"></div>
@@ -103,11 +122,19 @@
 
     initParticles(document.getElementById('particles'));
 
-    WorldChoirDB.ready().then(() => {
+    // Skeleton is already painted in HTML; swap as soon as data is ready.
+    const boot = WorldChoirDB.ready().then(() => {
       if (!WorldChoirNav.guardMemoryRoute()) return;
       WorldChoirNav.startWatcher('memory');
       render();
     });
+    // Fail-safe so Memory never sits on skeleton if ready hangs.
+    setTimeout(() => {
+      const el = document.getElementById('memory-content');
+      if (el && el.querySelector('[aria-busy="true"]')) {
+        boot.catch(() => {});
+      }
+    }, 400);
   </script>
 </body>
 </html>

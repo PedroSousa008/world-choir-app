@@ -1650,10 +1650,11 @@ const WorldChoirDonate = (() => {
 
   function renderPendingFoundations() {
     return `
-      <section class="df-foundations" aria-hidden="true">
-        <p class="df-section-label">Foundations</p>
-        <ul class="df-fcards">
-          ${[0, 1, 2].map(() => `
+      <section class="df-foundations" aria-busy="true" aria-live="polite">
+        <span class="sr-only">Loading foundations…</span>
+        <p class="df-section-label" aria-hidden="true">Foundations</p>
+        <ul class="df-fcards" aria-hidden="true">
+          ${[0, 1, 2, 3].map(() => `
             <li>
               <div class="df-fcard df-fcard--pending">
                 <span class="df-fcard__media df-fcard__media--pending" aria-hidden="true"></span>

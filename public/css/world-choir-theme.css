@@ -736,6 +736,90 @@ a:focus-visible {
   background: var(--bg-void) !important;
 }
 
+/* ── Shared skeleton loaders (app-wide, brief first paint) ── */
+.wc-skel {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.045) 0%,
+    rgba(255, 255, 255, 0.11) 50%,
+    rgba(255, 255, 255, 0.045) 100%
+  );
+  background-size: 200% 100%;
+  animation: wcSkelShimmer 0.9s ease-in-out infinite;
+}
+
+@keyframes wcSkelShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.wc-skel--voices {
+  width: 7.5rem;
+  height: 0.55rem;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+}
+
+.wc-skel--line {
+  height: 0.72rem;
+  width: 100%;
+  margin: 0 0 10px;
+}
+
+.wc-skel--line-short { width: 62%; }
+.wc-skel--line-mid { width: 78%; }
+.wc-skel--title {
+  height: 1.25rem;
+  width: min(16rem, 72%);
+  margin: 0 auto 16px;
+}
+
+.wc-skel-card {
+  padding: 18px 16px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.wc-skel-card--row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.wc-skel--avatar {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.wc-skel--media {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.wc-skel-page {
+  width: 100%;
+  padding: 8px 0 24px;
+}
+
+.wc-skel-page[aria-busy="true"] {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wc-skel,
+  .home-skel {
+    animation: none !important;
+  }
+}
+
 /* Utility */
 .text-center { text-align: center; }
 .hidden { display: none !important; }

@@ -978,10 +978,36 @@ const DailyActsPage = (() => {
     }).catch(() => {});
   }
 
+  function renderLoadingSkeleton() {
+    return `
+      <div class="wc-skel-page" aria-busy="true" aria-live="polite">
+        <span class="sr-only">Loading Daily Acts of Peace…</span>
+        <div class="dap-header" aria-hidden="true">
+          <div class="wc-skel wc-skel--line wc-skel--line-short" style="margin:0 auto 10px;width:9rem"></div>
+          <div class="wc-skel wc-skel--title"></div>
+          <div class="wc-skel wc-skel--line wc-skel--line-mid" style="margin:0 auto"></div>
+        </div>
+        <div class="wc-skel-card" aria-hidden="true" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+          <span class="wc-skel" style="width:4.5rem;height:2rem;border-radius:999px"></span>
+          <span class="wc-skel" style="width:5.5rem;height:2rem;border-radius:999px"></span>
+          <span class="wc-skel" style="width:4.8rem;height:2rem;border-radius:999px"></span>
+        </div>
+        ${[0, 1, 2].map(() => `
+          <div class="wc-skel-card" aria-hidden="true">
+            <span class="wc-skel wc-skel--media" style="aspect-ratio:2.4/1;margin-bottom:12px"></span>
+            <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+            <span class="wc-skel wc-skel--line"></span>
+            <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
   async function init() {
     WorldChoirNav.startWatcher('daily-acts');
     selectedCategory = 'all';
-    root().innerHTML = '<p class="dap-loading">Loading…</p>';
+    root().innerHTML = renderLoadingSkeleton();
 
     try {
       await WorldChoirDB.ready();

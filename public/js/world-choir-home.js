@@ -20,11 +20,9 @@ const WorldChoirHome = (() => {
   }
 
   function isHomeDataReady() {
-    const pledgeReady = typeof WorldChoirPledgeState === 'undefined'
+    // Only gate on pledge state — countdown/date/song are local; voices stream in after.
+    return typeof WorldChoirPledgeState === 'undefined'
       || WorldChoirPledgeState.isLoaded();
-    const voicesReady = typeof WorldChoirDB === 'undefined'
-      || WorldChoirDB.isPledgesLoaded();
-    return pledgeReady && voicesReady;
   }
 
   /* ─── Subtle cinematic background ─── */
@@ -343,15 +341,20 @@ const WorldChoirHome = (() => {
 
   function init() {
     homeReady = false;
+    // Warm navigations (data already in memory) skip the skeleton entirely.
+    if (isHomeDataReady()) homeReady = true;
     startHome();
-    // Never leave the skeleton up for long — reveal as soon as data is ready,
-    // or after a short fallback so Home never feels stuck.
+    if (homeReady) {
+      maybeLaunchHomeExtras();
+      return;
+    }
+    // Keep skeleton extremely brief — reveal as soon as pledge resolves, else ≤320ms.
     const fallback = setTimeout(() => {
       if (!homeReady) {
         homeReady = true;
         render();
       }
-    }, 1200);
+    }, 320);
     WorldChoirPledgeState.init()
       .then(async () => {
         clearTimeout(fallback);

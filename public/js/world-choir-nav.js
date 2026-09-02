@@ -34,19 +34,19 @@ const WorldChoirNav = (() => {
   const TAB_ASSETS = {
     home: [
       'index.html',
-      'css/home.css?v=20260902x',
-      'js/world-choir-home.js?v=20260902x',
+      'css/home.css?v=20260902y',
+      'js/world-choir-home.js?v=20260902y',
       'js/world-choir-db.js?v=20260817j',
     ],
     map: [
       'map.html',
-      'css/map.css?v=20260826d',
+      'css/map.css?v=20260902y',
       'js/map/sponsor-constants.js?v=20260902k',
       'js/map/sponsor-data.js?v=20260902a',
       'js/map/sponsor-bar.js?v=20260902r',
       '/api/map-sponsors',
       'js/world-choir-map-tiles.js?v=20260826d',
-      'js/world-choir-map.js?v=20260826d',
+      'js/world-choir-map.js?v=20260902y',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
@@ -61,14 +61,14 @@ const WorldChoirNav = (() => {
       'js/donate/creator-foundations-store.js?v=20260831a',
       'js/donate/donation-flow.js?v=20260831a',
       'js/foundation-public-card.js?v=20260902x',
-      'js/donate/donate-page.js?v=20260902x',
+      'js/donate/donate-page.js?v=20260902y',
       '/api/creator-foundations',
       '/api/donations?action=config',
     ],
     profile: [
       'profile.html',
-      'css/profile.css?v=20260820b',
-      'js/profile/profile-page.js?v=20260820c',
+      'css/profile.css?v=20260902y',
+      'js/profile/profile-page.js?v=20260902y',
       'js/profile/daily-acts-peace.js?v=20260819a',
       'js/profile/daily-acts-button.js?v=20260810i',
       'js/world-choir-onboarding.js?v=20260816a',
@@ -97,8 +97,8 @@ const WorldChoirNav = (() => {
     ],
     'daily-acts': [
       'daily-acts.html',
-      'css/daily-acts-page.css?v=20260817b',
-      'js/daily-acts-page.js?v=20260817j',
+      'css/daily-acts-page.css?v=20260902y',
+      'js/daily-acts-page.js?v=20260902y',
     ],
   };
 
