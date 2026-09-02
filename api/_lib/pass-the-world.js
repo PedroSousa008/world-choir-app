@@ -18,10 +18,10 @@ const ITINERARY_PATH = `${ROOT}/itinerary.json`;
 
 /**
  * Daily invitation open time (UTC).
- * TEMP PREVIEW: 16:40 UTC for testing. Set INVITATION_MINUTE_UTC back to 0 for production 16:00 UTC.
+ * Production: 16:00 UTC every day (lands 15:59).
  */
 const INVITATION_HOUR_UTC = 16;
-const INVITATION_MINUTE_UTC = 40;
+const INVITATION_MINUTE_UTC = 0;
 const INVITATION_WINDOW_MS = 120 * 1000;
 const INVITATION_WINDOW_SEC = INVITATION_WINDOW_MS / 1000;
 /** Suspense reveal after the invitation window — winner is fixed; travel starts when this ends. */
