@@ -32,14 +32,31 @@ async function main() {
   assert(REVEAL_WINDOW_MS === 10000, 'reveal window is 10 seconds');
   assert(STATUS.REVEAL_PENDING === 'REVEAL_PENDING', 'REVEAL_PENDING status exists');
 
-  // User-based pool vs city-based dots
+  // Selection is user-based; map lights are also one-per-user (not unique cities).
   const invites = [];
   for (let i = 0; i < 100; i += 1) {
-    invites.push({ city: 'London', country: 'UK', countryCode: 'GB', latitude: 51.5, longitude: -0.12, userId: `u-l-${i}` });
+    invites.push({
+      id: `inv-l-${i}`,
+      city: 'London',
+      country: 'UK',
+      countryCode: 'GB',
+      latitude: 51.5,
+      longitude: -0.12,
+      userId: `u-l-${i}`,
+    });
   }
-  invites.push({ city: 'Tokyo', country: 'Japan', countryCode: 'JP', latitude: 35.68, longitude: 139.69, userId: 'u-t-0' });
+  invites.push({
+    id: 'inv-t-0',
+    city: 'Tokyo',
+    country: 'Japan',
+    countryCode: 'JP',
+    latitude: 35.68,
+    longitude: 139.69,
+    userId: 'u-t-0',
+  });
   assert(invites.length === 101, '101 users in selection pool');
-  assert(dedupeCities(invites) === 2, 'only 2 unique city dots on map');
+  assert(dedupeCities(invites) === 2, '101 invites span only 2 unique cities');
+  assert(invites.length === 101, 'map lights match inviting users (one per invite)');
 
   const picks = new Map();
   for (let i = 0; i < 5000; i += 1) {

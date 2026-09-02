@@ -9,6 +9,7 @@ const {
   findUserByDevice,
   readPledge,
   assertBlobConfigured,
+  listBlobs,
 } = require('./store');
 
 const ROOT = 'wc-data/pass-the-world';
@@ -17,10 +18,10 @@ const ITINERARY_PATH = `${ROOT}/itinerary.json`;
 
 /**
  * Daily invitation open time (UTC).
- * TEMP PREVIEW: 16:25 UTC for testing. Set INVITATION_MINUTE_UTC back to 0 for production 16:00 UTC.
+ * TEMP PREVIEW: 16:40 UTC for testing. Set INVITATION_MINUTE_UTC back to 0 for production 16:00 UTC.
  */
 const INVITATION_HOUR_UTC = 16;
-const INVITATION_MINUTE_UTC = 25;
+const INVITATION_MINUTE_UTC = 40;
 const INVITATION_WINDOW_MS = 120 * 1000;
 const INVITATION_WINDOW_SEC = INVITATION_WINDOW_MS / 1000;
 /** Suspense reveal after the invitation window — winner is fixed; travel starts when this ends. */
@@ -694,10 +695,50 @@ async function ensureSeeded() {
 }
 
 async function readRoundInvites(roundId) {
+  if (!roundId) return [];
+
+  const byUser = new Map();
+
+  // Index is a fast cache — may miss concurrent writes.
   try {
     const index = await readBlobJson(roundInvitesIndexPath(roundId));
-    return Array.isArray(index?.invitations) ? index.invitations : [];
-  } catch { return []; }
+    (index?.invitations || []).forEach((inv) => {
+      if (inv?.userId) byUser.set(inv.userId, inv);
+    });
+  } catch { /* empty */ }
+
+  // Per-user files are authoritative — union fixes index races.
+  try {
+    const prefix = `${ROOT}/rounds/${roundId}/invitations/`;
+    const blobs = await listBlobs(prefix);
+    const files = (blobs || []).filter((b) => {
+      const pathname = String(b.pathname || '');
+      return pathname.endsWith('.json') && !pathname.endsWith('/invitations-index.json');
+    });
+    await Promise.all(files.map(async (blob) => {
+      try {
+        const data = await readBlobJson(blob.pathname);
+        if (!data?.userId) return;
+        byUser.set(data.userId, {
+          id: data.id,
+          userId: data.userId,
+          voiceNumber: data.voiceNumber,
+          city: data.city,
+          country: data.country,
+          countryCode: data.countryCode,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          submittedAt: data.submittedAt,
+          firstTimeEver: data.firstTimeEver,
+          secondsAfterOpen: data.secondsAfterOpen,
+        });
+      } catch { /* skip unreadable */ }
+    }));
+  } catch { /* listing unavailable — keep index */ }
+
+  return Array.from(byUser.values()).sort((a, b) => (
+    String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''))
+  ));
 }
 
 async function writeRoundInvite(roundId, invitation, roundOpenAt = null) {
@@ -706,10 +747,7 @@ async function writeRoundInvite(roundId, invitation, roundOpenAt = null) {
     enriched = await recordParticipantInvite(invitation, roundOpenAt);
   } catch { /* analytics must not block invites */ }
 
-  await writeJson(roundInvitationPath(roundId, enriched.userId), enriched, { overwrite: true });
-  const existing = await readRoundInvites(roundId);
-  const without = existing.filter((e) => e.userId !== enriched.userId);
-  without.push({
+  const summary = {
     id: enriched.id,
     userId: enriched.userId,
     voiceNumber: enriched.voiceNumber,
@@ -721,12 +759,31 @@ async function writeRoundInvite(roundId, invitation, roundOpenAt = null) {
     submittedAt: enriched.submittedAt,
     firstTimeEver: enriched.firstTimeEver,
     secondsAfterOpen: enriched.secondsAfterOpen,
-  });
-  await writeJson(roundInvitesIndexPath(roundId), {
-    invitations: without,
-    updatedAt: new Date().toISOString(),
-  }, { overwrite: true });
-  return without;
+  };
+
+  // Authoritative write: per-user file first (survives concurrent index races).
+  await writeJson(roundInvitationPath(roundId, enriched.userId), enriched, { overwrite: true });
+
+  // Merge into index with retries so concurrent invites are not overwritten.
+  let merged = [];
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const existing = await readRoundInvites(roundId);
+    const byUser = new Map(existing.map((inv) => [inv.userId, inv]));
+    byUser.set(enriched.userId, summary);
+    merged = Array.from(byUser.values()).sort((a, b) => (
+      String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''))
+    ));
+    await writeJson(roundInvitesIndexPath(roundId), {
+      invitations: merged,
+      updatedAt: new Date().toISOString(),
+    }, { overwrite: true });
+
+    const verified = await readRoundInvites(roundId);
+    if (verified.some((inv) => inv.userId === enriched.userId)) {
+      return verified;
+    }
+  }
+  return merged;
 }
 
 async function readWinner(roundId) {
@@ -768,22 +825,25 @@ async function claimWinner(roundId, winnerPayload, state = null) {
 }
 
 function buildInvitedCities(invitations, worldState = null) {
-  const byKey = new Map();
-  for (const invite of invitations) {
+  // One light per inviting user (not one per unique city).
+  const dots = [];
+  for (const invite of invitations || []) {
     if (worldState && !inviteEligibleForWorld(invite, worldState.currentCountry, worldState.currentCountryCode)) {
       continue;
     }
-    const key = `${normalizeCountry(invite.country)}|${String(invite.city || '').trim().toLowerCase()}`;
-    if (byKey.has(key)) continue;
-    byKey.set(key, {
+    if (invite.latitude == null || invite.longitude == null) continue;
+    dots.push({
       city: invite.city,
       country: invite.country,
       countryCode: invite.countryCode || null,
       latitude: invite.latitude,
       longitude: invite.longitude,
+      userId: invite.userId || null,
+      inviteId: invite.id || null,
+      voiceNumber: invite.voiceNumber ?? null,
     });
   }
-  return Array.from(byKey.values());
+  return dots;
 }
 
 function publicReveal(winner, origin) {
@@ -1419,15 +1479,27 @@ async function getViewerContext(deviceId, eventId) {
 
 async function syncOpenRoundInvites(state) {
   if (!state?.activeRoundId) return state;
-  if (state.status !== STATUS.INVITATION_OPEN && state.status !== STATUS.WAITING_FOR_FIRST_CALL) {
+  if (
+    state.status !== STATUS.INVITATION_OPEN
+    && state.status !== STATUS.WAITING_FOR_FIRST_CALL
+    && state.status !== STATUS.REVEAL_PENDING
+  ) {
     return state;
   }
   const invites = await readRoundInvites(state.activeRoundId);
   const invitationCount = invites.length;
   const invitedCities = buildInvitedCities(invites, state);
+  const prevKeys = (state.invitedCities || [])
+    .map((c) => c.inviteId || c.userId || `${c.city}|${c.country}`)
+    .sort()
+    .join(';');
+  const nextKeys = invitedCities
+    .map((c) => c.inviteId || c.userId || `${c.city}|${c.country}`)
+    .sort()
+    .join(';');
   if (
     invitationCount === (Number(state.invitationCount) || 0)
-    && invitedCities.length === (state.invitedCities || []).length
+    && prevKeys === nextKeys
   ) {
     return state;
   }

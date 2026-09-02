@@ -340,8 +340,16 @@ async function main() {
   assert(r.state.status === 'INVITATION_OPEN', 'window open mid-ritual');
   const mid = await ptw.getPassTheWorld({ now: new Date(new Date(openIso).getTime() + 45000).toISOString() });
   assert(mid.journey.status === 'INVITATION_OPEN', 'still open mid-window');
-  assert(mid.journey.invitedCities.length === 2, 'map gets 2 city dots');
+  assert(mid.journey.invitedCities.length === 101, 'map gets one light per inviting user');
   assert(mid.journey.invitationCount === 101, '101 users in pool');
+  assert(
+    mid.journey.invitedCities.filter((c) => c.city === 'London').length === 100,
+    '100 London invite lights'
+  );
+  assert(
+    mid.journey.invitedCities.some((c) => c.city === 'Tokyo' && c.userId === 'user-t-0'),
+    'Tokyo invite light present'
+  );
 
   r = await ptw.advanceStateMachine(closeDate);
   assert(r.state.status === 'REVEAL_PENDING', 'window close enters REVEAL_PENDING');

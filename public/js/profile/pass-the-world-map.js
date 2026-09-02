@@ -168,9 +168,22 @@ const PassTheWorldMap = (() => {
   }
 
   function cityKey(city) {
+    if (city?.inviteId) return `inv:${city.inviteId}`;
+    if (city?.userId) return `user:${city.userId}`;
     const country = String(city?.country || '').trim().toLowerCase();
     const name = String(city?.city || '').trim().toLowerCase();
     return `${country}|${name}`;
+  }
+
+  /** Spread overlapping invite dots so every user light is visible. */
+  function offsetInviteLatLng(ll, index, total) {
+    if (!ll || total <= 1) return ll;
+    const angle = (index / total) * Math.PI * 2;
+    const radius = 0.045; // ~a few km — enough to separate stacked dots
+    return [
+      ll[0] + Math.sin(angle) * radius,
+      ll[1] + Math.cos(angle) * radius,
+    ];
   }
 
   function ensureInviteOverlayLayer() {
@@ -218,9 +231,11 @@ const PassTheWorldMap = (() => {
     if (inviteLayer) inviteLayer.clearLayers();
     const layer = ensureInviteOverlayLayer();
     if (!layer) return;
-    (cities || []).forEach((city) => {
-      const ll = readLatLng(city);
-      if (!ll) return;
+    const list = cities || [];
+    list.forEach((city, index) => {
+      const base = readLatLng(city);
+      if (!base) return;
+      const ll = offsetInviteLatLng(base, index, list.length);
       const el = document.createElement('span');
       el.className = mode === 'open'
         ? 'ptw-invite-dot ptw-invite-dot--open'
@@ -235,8 +250,8 @@ const PassTheWorldMap = (() => {
   }
 
   /**
-   * Cinematic suspense — dots blink independently; winner is unknown to the client.
-   * Visible count shrinks toward the end; real destination appears only after revealEndAt.
+   * Reveal suspense — every invite light keeps blinking independently
+   * on its own random rhythm (about once per second). No lights are removed.
    */
   function startRevealAnimation(cities, startMs, endMs) {
     const key = `${startMs}|${endMs}|${(cities || []).map(cityKey).join(';')}`;
@@ -248,18 +263,24 @@ const PassTheWorldMap = (() => {
     if (!n) return;
 
     revealAnimKey = key;
+    const nextFlipByKey = {};
+    const now0 = nowMs();
+    keys.forEach((k, i) => {
+      // Stagger first flips so dots don't blink in sync.
+      nextFlipByKey[k] = now0 + 120 + i * 90 + Math.random() * 400;
+    });
     revealAnim = {
       startMs,
       endMs,
       keys,
-      visible: new Set(keys),
-      nextFlipMs: 0,
+      lit: new Set(keys),
+      nextFlipByKey,
       raf: null,
     };
 
     const applyVisibility = () => {
-      inviteDotEls.forEach(({ key, el }) => {
-        const lit = revealAnim.visible.has(key);
+      inviteDotEls.forEach(({ key: k, el }) => {
+        const lit = revealAnim.lit.has(k);
         el.dataset.visible = lit ? '1' : '0';
         el.classList.toggle('ptw-invite-dot--lit', lit);
         el.classList.toggle('ptw-invite-dot--dim', !lit);
@@ -269,37 +290,33 @@ const PassTheWorldMap = (() => {
     const tick = () => {
       if (!revealAnim || !map) return;
       const now = nowMs();
-      const span = Math.max(1, revealAnim.endMs - revealAnim.startMs);
-      const t = Math.max(0, Math.min(1, (now - revealAnim.startMs) / span));
 
-      if (now < revealAnim.endMs && now >= revealAnim.nextFlipMs) {
-        revealAnim.nextFlipMs = now + 160 + Math.random() * 280;
-        const maxVisible = Math.max(1, Math.ceil(n * (1 - t * 0.75)));
-        const flipCount = n <= 2 ? 1 : (Math.random() < 0.45 ? 1 : 2);
-
-        for (let i = 0; i < flipCount; i += 1) {
-          const pick = keys[Math.floor(Math.random() * n)];
-          if (revealAnim.visible.has(pick) && revealAnim.visible.size > 1) {
-            revealAnim.visible.delete(pick);
-          } else if (revealAnim.visible.size < maxVisible) {
-            revealAnim.visible.add(pick);
-          }
+      if (now < revealAnim.endMs) {
+        let changed = false;
+        revealAnim.keys.forEach((k) => {
+          if (now < revealAnim.nextFlipByKey[k]) return;
+          // Blink every ~0.55–1.15s with independent random timing per light.
+          revealAnim.nextFlipByKey[k] = now + 550 + Math.random() * 600;
+          if (revealAnim.lit.has(k)) revealAnim.lit.delete(k);
+          else revealAnim.lit.add(k);
+          changed = true;
+        });
+        // Never leave every light off at once during reveal.
+        if (revealAnim.lit.size === 0 && revealAnim.keys.length) {
+          const pick = revealAnim.keys[Math.floor(Math.random() * revealAnim.keys.length)];
+          revealAnim.lit.add(pick);
+          changed = true;
         }
-
-        while (revealAnim.visible.size > maxVisible) {
-          const arr = [...revealAnim.visible];
-          revealAnim.visible.delete(arr[Math.floor(Math.random() * arr.length)]);
-        }
-        if (revealAnim.visible.size === 0) {
-          revealAnim.visible.add(keys[Math.floor(Math.random() * n)]);
-        }
-        applyVisibility();
+        if (changed) applyVisibility();
       }
 
       syncInviteDots(animFrame);
-      if (now < revealAnim.endMs + 500) {
+      if (now < revealAnim.endMs + 400) {
         revealAnim.raf = requestAnimationFrame(tick);
       } else {
+        // End of reveal: show all invite lights briefly, then travel starts.
+        revealAnim.lit = new Set(revealAnim.keys);
+        applyVisibility();
         stopRevealAnimation();
       }
     };
@@ -943,7 +960,6 @@ const PassTheWorldMap = (() => {
       syncPlaneOverlay();
     } else if (journey.status === 'INVITATION_OPEN') {
       clearTravel();
-      inviteOpenKey = '';
       const current = readLatLng(journey.current) || FALLBACK_CENTER;
       setPlane(current, 0);
       const openKey = (journey.invitedCities || []).map(cityKey).sort().join(';');

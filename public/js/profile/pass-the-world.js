@@ -397,10 +397,19 @@ const PassTheWorld = (() => {
     const active = isVisitButtonActive(journey);
     const showVisit = shouldShowVisitButton(journey);
     const showRing = status === 'INVITATION_OPEN' && showVisit;
+    const hasInvited = viewer.hasInvited === true;
 
     let lead = '';
     let note = '';
-    if (status === 'INVITATION_OPEN' && active) {
+    if (hasInvited && (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL')) {
+      lead = 'YOU HAVE COMPLETED YOUR INVITATION';
+      note = journey.invitationCount > 1
+        ? `${Number(journey.invitationCount).toLocaleString()} invitations so far — waiting for the World to choose.`
+        : 'Waiting for the World to choose.';
+    } else if (hasInvited && status === 'REVEAL_PENDING') {
+      lead = 'YOU HAVE COMPLETED YOUR INVITATION';
+      note = 'The World is choosing where to go next.';
+    } else if (status === 'INVITATION_OPEN' && active) {
       lead = 'WHERE SHOULD THE WORLD GO NEXT?';
       note = 'Invite it to your city.';
     } else if (status === 'REVEAL_PENDING') {
@@ -418,7 +427,7 @@ const PassTheWorld = (() => {
     const revealCountdownHtml = status === 'REVEAL_PENDING'
       ? '<p class="ptw-countdown" data-ptw-reveal-countdown aria-live="polite"></p>'
       : '';
-    const inviteCountHtml = status === 'INVITATION_OPEN' && journey.invitationCount > 0 && active
+    const inviteCountHtml = status === 'INVITATION_OPEN' && journey.invitationCount > 0 && (active || hasInvited)
       ? `<p class="ptw-invite-count" aria-live="polite">${Number(journey.invitationCount).toLocaleString()} invitations</p>`
       : '';
 
