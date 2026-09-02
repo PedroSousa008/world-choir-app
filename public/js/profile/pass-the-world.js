@@ -27,6 +27,9 @@ const PassTheWorld = (() => {
   let mounted = false;
   let arrivalRefreshScheduled = false;
   let revealRefreshTimer = null;
+  let itineraryPage = 0;
+  let itineraryPanelHome = null;
+  let itineraryScrollLockHandler = null;
 
   function esc(s) {
     return String(s ?? '')
@@ -488,35 +491,85 @@ const PassTheWorld = (() => {
       </span>`;
   }
 
-  function renderItinerary(itinerary) {
-    if (!itinerary?.length) return '<p class="ptw-empty">The journey has not begun.</p>';
-    return itinerary.map((entry) => {
-      const date = formatItineraryDateParts(entry.arrivedAt || entry.createdAt);
-      const city = toCaps(entry.city);
-      const country = toCaps(entry.country);
-      const calledHtml = entry.calledByVoiceNumber
-        ? `
-          <p class="ptw-day-called__label">Called by</p>
-          <p class="ptw-day-called__voice">${esc(formatVoice(entry.calledByVoiceNumber))}</p>`
-        : `
-          <p class="ptw-day-called__label">The journey</p>
-          <p class="ptw-day-called__voice">began here</p>`;
-      return `
-        <article class="ptw-day">
-          <span class="ptw-day-badge" aria-label="Day ${esc(entry.sequence)}">${esc(entry.sequence)}</span>
-          <div class="ptw-day-date" aria-label="${esc(formatDayDate(entry.arrivedAt || entry.createdAt))}">
-            <span class="ptw-day-date__month">${esc(date.month)}</span>
-            <span class="ptw-day-date__day">${esc(date.day)}</span>
-            <span class="ptw-day-date__year">${esc(date.year)}</span>
-          </div>
-          <div class="ptw-day-place">
-            ${city ? `<p class="ptw-day-city">${esc(city)}</p>` : ''}
-            ${country ? `<p class="ptw-day-country">${esc(country)}</p>` : ''}
-          </div>
-          ${renderItineraryFlag(entry)}
-          <div class="ptw-day-called">${calledHtml}</div>
-        </article>`;
+  function itineraryPageSize() {
+    if (typeof window === 'undefined' || !window.matchMedia) return 8;
+    return window.matchMedia('(min-width: 900px)').matches ? 12 : 8;
+  }
+
+  /** Newest destinations first (highest day / latest arrival). */
+  function sortedItineraryNewestFirst(itinerary) {
+    return [...(itinerary || [])].sort((a, b) => {
+      const sa = Number(a?.sequence) || 0;
+      const sb = Number(b?.sequence) || 0;
+      if (sb !== sa) return sb - sa;
+      return String(b?.arrivedAt || b?.createdAt || '')
+        .localeCompare(String(a?.arrivedAt || a?.createdAt || ''));
+    });
+  }
+
+  function renderItineraryDay(entry) {
+    const date = formatItineraryDateParts(entry.arrivedAt || entry.createdAt);
+    const city = toCaps(entry.city);
+    const country = toCaps(entry.country);
+    const calledHtml = entry.calledByVoiceNumber
+      ? `
+        <p class="ptw-day-called__label">Called by</p>
+        <p class="ptw-day-called__voice">${esc(formatVoice(entry.calledByVoiceNumber))}</p>`
+      : `
+        <p class="ptw-day-called__label">The journey</p>
+        <p class="ptw-day-called__voice">began here</p>`;
+    return `
+      <article class="ptw-day">
+        <span class="ptw-day-badge" aria-label="Day ${esc(entry.sequence)}">${esc(entry.sequence)}</span>
+        <div class="ptw-day-date" aria-label="${esc(formatDayDate(entry.arrivedAt || entry.createdAt))}">
+          <span class="ptw-day-date__month">${esc(date.month)}</span>
+          <span class="ptw-day-date__day">${esc(date.day)}</span>
+          <span class="ptw-day-date__year">${esc(date.year)}</span>
+        </div>
+        <div class="ptw-day-place">
+          ${city ? `<p class="ptw-day-city">${esc(city)}</p>` : ''}
+          ${country ? `<p class="ptw-day-country">${esc(country)}</p>` : ''}
+        </div>
+        ${renderItineraryFlag(entry)}
+        <div class="ptw-day-called">${calledHtml}</div>
+      </article>`;
+  }
+
+  function renderItineraryPager(page, totalPages) {
+    if (totalPages <= 1) return '';
+    const pages = Array.from({ length: totalPages }, (_, i) => {
+      const n = i + 1;
+      const active = i === page ? ' is-active' : '';
+      return `<button type="button" class="ptw-itin-page${active}" data-ptw-itin-page="${i}" aria-label="Page ${n}"${i === page ? ' aria-current="page"' : ''}>${n}</button>`;
     }).join('');
+    return `
+      <nav class="ptw-itinerary-pager" aria-label="Itinerary pages">
+        <button type="button" class="ptw-itin-nav" data-ptw-itin-prev aria-label="Previous page"${page <= 0 ? ' disabled' : ''}>‹</button>
+        <div class="ptw-itin-pages">${pages}</div>
+        <button type="button" class="ptw-itin-nav" data-ptw-itin-next aria-label="Next page"${page >= totalPages - 1 ? ' disabled' : ''}>›</button>
+      </nav>`;
+  }
+
+  function renderItinerary(itinerary, page = 0) {
+    const sorted = sortedItineraryNewestFirst(itinerary);
+    if (!sorted.length) {
+      return {
+        listHtml: '<p class="ptw-empty">The journey has not begun.</p>',
+        pagerHtml: '',
+      };
+    }
+    const size = itineraryPageSize();
+    const totalPages = Math.max(1, Math.ceil(sorted.length / size));
+    const safePage = Math.min(Math.max(0, page), totalPages - 1);
+    itineraryPage = safePage;
+    const slice = sorted.slice(safePage * size, safePage * size + size);
+    return {
+      listHtml: `
+        <div class="ptw-itinerary" data-ptw-itin-list>
+          ${slice.map(renderItineraryDay).join('')}
+        </div>`,
+      pagerHtml: renderItineraryPager(safePage, totalPages),
+    };
   }
 
   function renderStats(stats) {
@@ -772,38 +825,113 @@ const PassTheWorld = (() => {
     }
   }
 
+  function getItineraryPanel() {
+    return document.querySelector('[data-ptw-panel]')
+      || root?.querySelector('[data-ptw-panel]')
+      || null;
+  }
+
+  function lockBackgroundScroll(lock) {
+    document.documentElement.classList.toggle('ptw-itinerary-open', !!lock);
+    document.body.classList.toggle('ptw-itinerary-open', !!lock);
+    if (lock) {
+      if (!itineraryScrollLockHandler) {
+        itineraryScrollLockHandler = (event) => {
+          const panel = getItineraryPanel();
+          if (!panel || panel.hidden) return;
+          const scrollEl = panel.querySelector('[data-ptw-itin-scroll]');
+          if (scrollEl && (scrollEl === event.target || scrollEl.contains(event.target))) {
+            // Allow scrolling only when the list actually overflows.
+            if (scrollEl.scrollHeight > scrollEl.clientHeight + 1) return;
+          }
+          event.preventDefault();
+        };
+        document.addEventListener('touchmove', itineraryScrollLockHandler, { passive: false });
+      }
+    } else if (itineraryScrollLockHandler) {
+      document.removeEventListener('touchmove', itineraryScrollLockHandler);
+      itineraryScrollLockHandler = null;
+    }
+  }
+
   function setItineraryOpen(open) {
     const card = document.querySelector('.passport-card--ptw');
-    if (!card) return;
-    card.classList.toggle('is-itinerary-open', !!open);
+    if (card) card.classList.toggle('is-itinerary-open', !!open);
+    lockBackgroundScroll(!!open);
+  }
+
+  function bindItineraryPager(content) {
+    if (!content) return;
+    const go = (page) => {
+      itineraryPage = page;
+      paintItineraryPanel();
+    };
+    content.querySelector('[data-ptw-itin-prev]')?.addEventListener('click', () => {
+      go(Math.max(0, itineraryPage - 1));
+    });
+    content.querySelector('[data-ptw-itin-next]')?.addEventListener('click', () => {
+      go(itineraryPage + 1);
+    });
+    content.querySelectorAll('[data-ptw-itin-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const page = Number(btn.getAttribute('data-ptw-itin-page'));
+        if (Number.isFinite(page)) go(page);
+      });
+    });
+  }
+
+  function paintItineraryPanel() {
+    const panel = getItineraryPanel();
+    const content = panel?.querySelector('[data-ptw-panel-content]');
+    if (!panel || !content || !lastPayload || panel.hidden) return;
+    const { listHtml, pagerHtml } = renderItinerary(lastPayload.itinerary, itineraryPage);
+    content.innerHTML = `
+      <h2 class="ptw-panel-title">THE JOURNEY</h2>
+      <div class="ptw-itinerary-scroll" data-ptw-itin-scroll>
+        ${listHtml}
+      </div>
+      ${pagerHtml}`;
+    bindItineraryPager(content);
+    const scrollEl = content.querySelector('[data-ptw-itin-scroll]');
+    if (scrollEl) scrollEl.scrollTop = 0;
   }
 
   function openPanel(mode) {
-    const panel = root?.querySelector('[data-ptw-panel]');
-    const content = root?.querySelector('[data-ptw-panel-content]');
+    const panel = root?.querySelector('[data-ptw-panel]') || getItineraryPanel();
+    const content = panel?.querySelector('[data-ptw-panel-content]');
     if (!panel || !content || !lastPayload) return;
     if (mode === 'itinerary') {
-      content.innerHTML = `
-        <h2 class="ptw-panel-title">THE JOURNEY</h2>
-        <div class="ptw-itinerary">${renderItinerary(lastPayload.itinerary)}</div>`;
+      itineraryPage = 0;
+      // Host on body so the card's overflow cannot clip / steal scroll.
+      if (panel.parentElement !== document.body) {
+        itineraryPanelHome = panel.parentElement;
+        document.body.appendChild(panel);
+      }
+      panel.hidden = false;
+      panel.setAttribute('aria-hidden', 'false');
+      setItineraryOpen(true);
+      paintItineraryPanel();
     }
-    panel.hidden = false;
-    panel.setAttribute('aria-hidden', 'false');
-    setItineraryOpen(true);
   }
 
   function closePanel() {
-    const panel = root?.querySelector('[data-ptw-panel]');
+    const panel = getItineraryPanel();
     if (!panel) return;
     panel.hidden = true;
     panel.setAttribute('aria-hidden', 'true');
     setItineraryOpen(false);
+    if (itineraryPanelHome && panel.parentElement === document.body) {
+      itineraryPanelHome.appendChild(panel);
+    }
+    itineraryPanelHome = null;
+    itineraryPage = 0;
   }
 
   async function refresh() {
     const data = await fetchState();
     lastPayload = data;
     paintBody(data);
+    paintItineraryPanel();
     if (typeof PassTheWorldMap !== 'undefined') {
       PassTheWorldMap.renderJourney(data);
     }
@@ -905,6 +1033,11 @@ const PassTheWorld = (() => {
 
     root.querySelector('[data-ptw-itinerary]')?.addEventListener('click', () => openPanel('itinerary'));
     root.querySelector('[data-ptw-close]')?.addEventListener('click', closePanel);
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      window.matchMedia('(min-width: 900px)').addEventListener('change', () => {
+        if (!getItineraryPanel()?.hidden) paintItineraryPanel();
+      });
+    }
     bindDev();
 
     try {
@@ -939,7 +1072,7 @@ const PassTheWorld = (() => {
 
   function destroy() {
     stopPolling();
-    setItineraryOpen(false);
+    closePanel();
     if (typeof PassTheWorldMap !== 'undefined') PassTheWorldMap.destroy();
     if (root) {
       root.innerHTML = '';
@@ -949,6 +1082,8 @@ const PassTheWorld = (() => {
     submitting = false;
     mounted = false;
     root = null;
+    itineraryPage = 0;
+    itineraryPanelHome = null;
   }
 
   function isMounted() {
