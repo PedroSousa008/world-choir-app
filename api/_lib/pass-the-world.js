@@ -318,15 +318,74 @@ function nextInvitationOpenAt(from = new Date()) {
   return candidate;
 }
 
-function latestInvitationOpenAt(now = new Date()) {
-  const todayOpen = new Date(Date.UTC(
+/** Today's ritual open at 16:00:00.000 UTC (never yesterday). */
+function todayInvitationOpenAt(now = new Date()) {
+  return new Date(Date.UTC(
     now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
     INVITATION_HOUR_UTC, 0, 0, 0
   ));
+}
+
+/**
+ * Latest ritual that has already opened: today's 16:00 if now >= that, else yesterday's.
+ * Used for round IDs after the window — never for opening WAITING before today's 16:00.
+ */
+function latestInvitationOpenAt(now = new Date()) {
+  const todayOpen = todayInvitationOpenAt(now);
   if (now.getTime() >= todayOpen.getTime()) return todayOpen;
   const yesterday = new Date(todayOpen);
   yesterday.setUTCDate(yesterday.getUTCDate() - 1);
   return yesterday;
+}
+
+function citiesMatch(a, b) {
+  return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+}
+
+function locationFromStop(stop) {
+  if (!stop) return null;
+  return {
+    city: stop.city,
+    country: stop.country,
+    countryCode: stop.countryCode || resolveCountryCode(stop.country),
+    latitude: stop.latitude,
+    longitude: stop.longitude,
+  };
+}
+
+/**
+ * Where the World truly is right now.
+ * Travelling: still at origin (previous stop) until arrivalAt.
+ * Otherwise: last completed itinerary stop (never invent Braga after real history).
+ */
+function resolveWorldPresentLocation(state, itinerary, now = new Date()) {
+  const entries = itinerary || [];
+  const clock = now instanceof Date ? now : new Date(now);
+
+  if (state.status === STATUS.TRAVELLING) {
+    if (state.arrivalAt && clock.getTime() >= new Date(state.arrivalAt).getTime()) {
+      return locationFromStop(state.destination)
+        || locationFromStop(entries.find((e) => e.id === state.currentItineraryEntryId))
+        || locationFromStop(entries[entries.length - 1]);
+    }
+    const idx = entries.findIndex((e) => e.id === state.currentItineraryEntryId);
+    if (idx > 0) return locationFromStop(entries[idx - 1]);
+    if (state.origin?.city) return locationFromStop(state.origin);
+  }
+
+  const last = entries[entries.length - 1];
+  if (last?.city) {
+    const arrived = !last.arrivedAt || clock.getTime() >= new Date(last.arrivedAt).getTime();
+    if (arrived) return locationFromStop(last);
+  }
+
+  return {
+    city: state.currentCity,
+    country: state.currentCountry,
+    countryCode: state.currentCountryCode || resolveCountryCode(state.currentCountry),
+    latitude: state.currentLatitude,
+    longitude: state.currentLongitude,
+  };
 }
 
 /**
@@ -451,6 +510,11 @@ async function repairItineraryIfNeeded(state, itinerary) {
     const last = cleaned[cleaned.length - 1];
     nextState = await writeState({
       ...state,
+      currentCity: last.city,
+      currentCountry: last.country,
+      currentCountryCode: last.countryCode || resolveCountryCode(last.country),
+      currentLatitude: last.latitude,
+      currentLongitude: last.longitude,
       currentItineraryEntryId: last.id,
       arrivalAt: last.arrivedAt || state.arrivalAt,
       departureAt: last.departedAt || state.departureAt,
@@ -458,6 +522,81 @@ async function repairItineraryIfNeeded(state, itinerary) {
     });
   }
   return { state: nextState, itinerary: cleaned };
+}
+
+/**
+ * Keep state.current* and in-flight origin aligned with itinerary truth.
+ * Fixes stuck origins (e.g. Braga after a completed Braga→Madrid leg).
+ */
+async function healWorldLocation(state, itinerary, now = new Date()) {
+  const entries = itinerary || [];
+  if (!entries.length) return { state, itinerary };
+
+  const clock = now instanceof Date ? now : new Date(now);
+
+  if (state.status === STATUS.TRAVELLING) {
+    // Arrival at destination is handled by advanceStateMachine; here only fix wrong origin.
+    if (state.arrivalAt && clock.getTime() >= new Date(state.arrivalAt).getTime()) {
+      return { state, itinerary };
+    }
+
+    const idx = entries.findIndex((e) => e.id === state.currentItineraryEntryId);
+    const trip = idx >= 0 ? entries[idx] : null;
+    const prev = idx > 0 ? entries[idx - 1] : null;
+    if (!trip || !prev?.city) return { state, itinerary };
+
+    const originWrong = !citiesMatch(state.origin?.city, prev.city)
+      || !citiesMatch(state.currentCity, prev.city)
+      || !citiesMatch(trip.originCity, prev.city);
+    if (!originWrong) return { state, itinerary };
+
+    const origin = locationFromStop(prev);
+    const fixedTrip = {
+      ...trip,
+      originCity: origin.city,
+      originCountry: origin.country,
+      originLatitude: origin.latitude,
+      originLongitude: origin.longitude,
+      distanceKm: Math.round(haversineKm(
+        origin.latitude, origin.longitude, trip.latitude, trip.longitude
+      )),
+    };
+    const nextItinerary = entries.map((e) => (e.id === fixedTrip.id ? fixedTrip : e));
+    await writeItinerary(nextItinerary);
+    const nextState = await writeState({
+      ...state,
+      currentCity: origin.city,
+      currentCountry: origin.country,
+      currentCountryCode: origin.countryCode,
+      currentLatitude: origin.latitude,
+      currentLongitude: origin.longitude,
+      origin,
+      version: (Number(state.version) || 1) + 1,
+    });
+    return { state: nextState, itinerary: nextItinerary };
+  }
+
+  const present = resolveWorldPresentLocation(state, entries, clock);
+  if (!present?.city) return { state, itinerary };
+
+  const last = entries[entries.length - 1];
+  const mismatched = !citiesMatch(state.currentCity, present.city)
+    || !countriesMatch(state.currentCountry, present.country)
+    || (last?.id && state.currentItineraryEntryId !== last.id);
+
+  if (!mismatched) return { state, itinerary };
+
+  const nextState = await writeState({
+    ...state,
+    currentCity: present.city,
+    currentCountry: present.country,
+    currentCountryCode: present.countryCode,
+    currentLatitude: present.latitude,
+    currentLongitude: present.longitude,
+    currentItineraryEntryId: last?.id || state.currentItineraryEntryId,
+    version: (Number(state.version) || 1) + 1,
+  });
+  return { state: nextState, itinerary };
 }
 
 /** Remove same-country legs and reset state when an invalid in-country trip is in progress. */
@@ -703,12 +842,13 @@ async function applyWinner(state, itinerary, winner, invitations) {
     return { state: nextState, itinerary };
   }
 
+  const present = resolveWorldPresentLocation(state, itinerary, new Date(selectedAt));
   const origin = {
-    city: state.currentCity,
-    country: state.currentCountry,
-    countryCode: state.currentCountryCode,
-    latitude: state.currentLatitude,
-    longitude: state.currentLongitude,
+    city: present?.city || state.currentCity,
+    country: present?.country || state.currentCountry,
+    countryCode: present?.countryCode || state.currentCountryCode,
+    latitude: present?.latitude ?? state.currentLatitude,
+    longitude: present?.longitude ?? state.currentLongitude,
   };
   const distanceKm = Math.round(haversineKm(
     origin.latitude, origin.longitude, winner.latitude, winner.longitude
@@ -740,6 +880,12 @@ async function applyWinner(state, itinerary, winner, invitations) {
   const nextState = await writeState({
     ...state,
     status: STATUS.TRAVELLING,
+    // While travelling, current* stays at the origin until arrival.
+    currentCity: origin.city,
+    currentCountry: origin.country,
+    currentCountryCode: origin.countryCode,
+    currentLatitude: origin.latitude,
+    currentLongitude: origin.longitude,
     origin,
     destination: {
       city: entry.city,
@@ -870,6 +1016,7 @@ async function advanceStateMachine(nowInput) {
   let { state, itinerary } = await ensureSeeded();
   ({ state, itinerary } = await repairItineraryIfNeeded(state, itinerary));
   ({ state, itinerary } = await repairInvalidJourney(state, itinerary));
+  ({ state, itinerary } = await healWorldLocation(state, itinerary, now));
 
   // Correct any in-flight arrival that is not the canonical 15:59 UTC landing.
   if (
@@ -896,7 +1043,8 @@ async function advanceStateMachine(nowInput) {
   if (state.status === STATUS.TRAVELLING
     && state.arrivalAt
     && now.getTime() >= new Date(state.arrivalAt).getTime()) {
-    const dest = state.destination;
+    const trip = itinerary.find((e) => e.id === state.currentItineraryEntryId);
+    const dest = locationFromStop(state.destination) || locationFromStop(trip);
     state = await writeState({
       ...state,
       status: STATUS.ARRIVED,
@@ -952,17 +1100,35 @@ async function advanceStateMachine(nowInput) {
     return { state, itinerary, now };
   }
 
-  const openAt = latestInvitationOpenAt(now);
-  const closeAt = new Date(openAt.getTime() + INVITATION_WINDOW_MS);
-  const roundId = `round-${openAt.toISOString()}`;
+  // Ritual clock is always TODAY's 16:00 UTC — never open WAITING from yesterday before 16:00.
+  const todayOpen = todayInvitationOpenAt(now);
+  const todayClose = new Date(todayOpen.getTime() + INVITATION_WINDOW_MS);
+  const todayRoundId = `round-${todayOpen.toISOString()}`;
 
-  // Active invitation ritual window — always open the round while the clock is in-window,
-  // even if a prior request missed the transition (state can still be ARRIVED/INITIAL).
-  if (now.getTime() >= openAt.getTime() && now.getTime() < closeAt.getTime()) {
-    const invitations = await readRoundInvites(roundId);
-    const winner = await readWinner(roundId);
+  // Before today's 16:00 UTC: World stays ARRIVED. Button must not appear.
+  if (now.getTime() < todayOpen.getTime()) {
+    if (state.status === STATUS.WAITING_FOR_FIRST_CALL
+      || state.status === STATUS.INVITATION_OPEN) {
+      state = await writeState({
+        ...state,
+        status: STATUS.ARRIVED,
+        activeRoundId: null,
+        invitationOpenAt: null,
+        invitationCloseAt: null,
+        invitationCount: 0,
+        invitedCities: [],
+        version: (Number(state.version) || 1) + 1,
+      });
+    }
+    return { state, itinerary, now };
+  }
+
+  // Active invitation ritual window — exactly [16:00:00.000, 16:00:00.000 + window)
+  if (now.getTime() >= todayOpen.getTime() && now.getTime() < todayClose.getTime()) {
+    const invitations = await readRoundInvites(todayRoundId);
+    const winner = await readWinner(todayRoundId);
     const roundAlreadyOpen = state.status === STATUS.INVITATION_OPEN
-      && state.activeRoundId === roundId;
+      && state.activeRoundId === todayRoundId;
     const staleWinnerOnly = Boolean(winner?.invitationId && !invitations.length);
 
     if (!roundAlreadyOpen && (!winner?.invitationId || staleWinnerOnly)) {
@@ -979,20 +1145,19 @@ async function advanceStateMachine(nowInput) {
   }
 
   if ((state.status === STATUS.ARRIVED || state.status === STATUS.INITIAL)
-    && now.getTime() >= closeAt.getTime()
-    && state.activeRoundId === roundId) {
+    && now.getTime() >= todayClose.getTime()
+    && state.activeRoundId === todayRoundId) {
     return { ...(await settleInvitationRound(state, itinerary, now)), now };
   }
 
-  // Missed/empty window with no round opened yet → waiting for first call forever
-  // until someone invites (World never moves by itself).
+  // After today's empty window with no round opened yet → waiting for first call.
   if (
     (state.status === STATUS.ARRIVED || state.status === STATUS.INITIAL)
-    && now.getTime() >= closeAt.getTime()
+    && now.getTime() >= todayClose.getTime()
   ) {
-    const allInvitations = await readRoundInvites(roundId);
+    const allInvitations = await readRoundInvites(todayRoundId);
     const invitations = filterInvitesForWorld(allInvitations, state);
-    const winner = await readWinner(roundId);
+    const winner = await readWinner(todayRoundId);
     const hasRealWinner = Boolean(
       winner?.invitationId
       && invitations.length
@@ -1003,19 +1168,19 @@ async function advanceStateMachine(nowInput) {
       return { ...(await settleInvitationRound({
         ...state,
         status: STATUS.INVITATION_OPEN,
-        activeRoundId: roundId,
-        invitationOpenAt: state.invitationOpenAt || openAt.toISOString(),
-        invitationCloseAt: state.invitationCloseAt || closeAt.toISOString(),
+        activeRoundId: todayRoundId,
+        invitationOpenAt: state.invitationOpenAt || todayOpen.toISOString(),
+        invitationCloseAt: state.invitationCloseAt || todayClose.toISOString(),
       }, itinerary, now)), now };
     }
 
-    if (state.status !== STATUS.WAITING_FOR_FIRST_CALL || state.activeRoundId !== roundId) {
+    if (state.status !== STATUS.WAITING_FOR_FIRST_CALL || state.activeRoundId !== todayRoundId) {
       state = await writeState({
         ...state,
         status: STATUS.WAITING_FOR_FIRST_CALL,
-        activeRoundId: roundId,
-        invitationOpenAt: openAt.toISOString(),
-        invitationCloseAt: closeAt.toISOString(),
+        activeRoundId: todayRoundId,
+        invitationOpenAt: todayOpen.toISOString(),
+        invitationCloseAt: todayClose.toISOString(),
         invitationCount: invitations.length,
         invitedCities: buildInvitedCities(allInvitations, state),
         version: (Number(state.version) || 1) + 1,

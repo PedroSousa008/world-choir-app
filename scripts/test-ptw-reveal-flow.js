@@ -72,6 +72,12 @@ require.cache[storePath] = {
       if (p.includes('/invitations/')) {
         return data;
       }
+      if (p.includes('/participants/')) {
+        return data;
+      }
+      if (p.includes('/meta.json')) {
+        return data;
+      }
       throw new Error(`unmocked write ${p}`);
     },
     findUserByDevice: async () => null,
@@ -115,6 +121,8 @@ async function seedArrived() {
     invitationCount: 0,
     invitedCities: [],
   };
+  mem.roundInvites.clear();
+  mem.roundWinner.clear();
 }
 
 async function writeInvite(roundId, invite) {
@@ -138,19 +146,139 @@ async function writeInvite(roundId, invite) {
 }
 
 async function main() {
+  // Before 16:00 UTC the Visit button must never appear (no WAITING from yesterday).
   await seedArrived();
+  let r = await ptw.advanceStateMachine(new Date('2026-09-01T15:59:00.000Z'));
+  assert(r.state.status === 'ARRIVED', '15:59 UTC stays ARRIVED — button closed');
+  assert(!r.state.activeRoundId, 'no round attached before 16:00');
 
-  const tOpen = new Date('2026-09-01T16:00:30.000Z');
-  let r = await ptw.advanceStateMachine(tOpen);
-  assert(r.state.status === 'INVITATION_OPEN', '16:00:30 opens invitation window');
+  await seedArrived();
+  mem.state.status = 'WAITING_FOR_FIRST_CALL';
+  mem.state.activeRoundId = 'round-2026-08-31T16:00:00.000Z';
+  r = await ptw.advanceStateMachine(new Date('2026-09-01T15:59:30.000Z'));
+  assert(r.state.status === 'ARRIVED', 'pre-16:00 clears stale WAITING from yesterday');
+
+  await seedArrived();
+  r = await ptw.advanceStateMachine(new Date('2026-09-01T16:00:00.000Z'));
+  assert(r.state.status === 'INVITATION_OPEN', '16:00:00.000 exactly opens invitation window');
   const roundId = r.state.activeRoundId;
-  assert(roundId, 'active round id set');
+  assert(roundId === 'round-2026-09-01T16:00:00.000Z', 'active round id is today 16:00');
 
-  // Missed live window: first request after 16:01 on a fresh day should heal to WAITING.
+  r = await ptw.advanceStateMachine(new Date('2026-09-01T16:00:30.000Z'));
+  assert(r.state.status === 'INVITATION_OPEN', '16:00:30 still inside 120s window');
+
+  // Missed live window: after 16:02 (120s) heal to WAITING.
   await seedArrived();
   r = await ptw.advanceStateMachine(new Date('2026-09-01T16:05:00.000Z'));
   assert(r.state.status === 'WAITING_FOR_FIRST_CALL', 'missed window heals to WAITING at 16:05');
   assert(r.state.activeRoundId === 'round-2026-09-01T16:00:00.000Z', 'today round id attached');
+
+  // Heal stuck Braga after completed Braga→Madrid leg.
+  mem.roundInvites.clear();
+  mem.roundWinner.clear();
+  mem.itinerary = {
+    entries: [
+      {
+        id: 'seed-braga',
+        sequence: 1,
+        city: 'Braga',
+        country: 'Portugal',
+        countryCode: 'PT',
+        latitude: 41.5518,
+        longitude: -8.4229,
+        arrivedAt: '2026-08-30T15:59:00.000Z',
+        isSeed: true,
+      },
+      {
+        id: 'leg-madrid',
+        sequence: 2,
+        city: 'Madrid',
+        country: 'Spain',
+        countryCode: 'ES',
+        latitude: 40.4168,
+        longitude: -3.7038,
+        originCity: 'Braga',
+        originCountry: 'Portugal',
+        departedAt: '2026-08-31T16:02:10.000Z',
+        arrivedAt: '2026-09-01T15:59:00.000Z',
+        isSeed: false,
+      },
+    ],
+  };
+  mem.state = {
+    version: 1,
+    status: 'ARRIVED',
+    currentCity: 'Braga',
+    currentCountry: 'Portugal',
+    currentCountryCode: 'PT',
+    currentLatitude: 41.5518,
+    currentLongitude: -8.4229,
+    currentItineraryEntryId: 'seed-braga',
+    activeRoundId: null,
+    invitationCount: 0,
+    invitedCities: [],
+  };
+  r = await ptw.advanceStateMachine(new Date('2026-09-01T15:59:30.000Z'));
+  assert(r.state.currentCity === 'Madrid', 'heals stuck Braga → Madrid after completed travel');
+  assert(r.state.currentCountryCode === 'ES', 'country synced to Spain');
+
+  // Heal wrong in-flight origin (Braga→Monaco should be Madrid→Monaco).
+  mem.itinerary = {
+    entries: [
+      ...mem.itinerary.entries,
+      {
+        id: 'leg-monaco',
+        sequence: 3,
+        city: 'Monaco',
+        country: 'Monaco',
+        countryCode: 'MC',
+        latitude: 43.7384,
+        longitude: 7.4246,
+        originCity: 'Braga',
+        originCountry: 'Portugal',
+        originLatitude: 41.5518,
+        originLongitude: -8.4229,
+        departedAt: '2026-09-01T16:05:20.000Z',
+        arrivedAt: '2026-09-02T15:59:00.000Z',
+        isSeed: false,
+      },
+    ],
+  };
+  mem.state = {
+    version: 2,
+    status: 'TRAVELLING',
+    currentCity: 'Braga',
+    currentCountry: 'Portugal',
+    currentCountryCode: 'PT',
+    currentLatitude: 41.5518,
+    currentLongitude: -8.4229,
+    currentItineraryEntryId: 'leg-monaco',
+    origin: {
+      city: 'Braga',
+      country: 'Portugal',
+      countryCode: 'PT',
+      latitude: 41.5518,
+      longitude: -8.4229,
+    },
+    destination: {
+      city: 'Monaco',
+      country: 'Monaco',
+      countryCode: 'MC',
+      latitude: 43.7384,
+      longitude: 7.4246,
+    },
+    departureAt: '2026-09-01T16:05:20.000Z',
+    arrivalAt: '2026-09-02T15:59:00.000Z',
+    activeRoundId: null,
+    invitationCount: 0,
+    invitedCities: [],
+  };
+  r = await ptw.advanceStateMachine(new Date('2026-09-01T17:00:00.000Z'));
+  assert(r.state.status === 'TRAVELLING', 'still travelling to Monaco');
+  assert(r.state.origin?.city === 'Madrid', 'in-flight origin healed to Madrid');
+  assert(r.state.currentCity === 'Madrid', 'plane current location is Madrid while flying');
+  const monacoLeg = r.itinerary.find((e) => e.id === 'leg-monaco');
+  assert(monacoLeg?.originCity === 'Madrid', 'itinerary originCity corrected to Madrid');
 
   // Same-country invites must never win or move the plane.
   await seedArrived();
@@ -158,7 +286,7 @@ async function main() {
   mem.state.activeRoundId = sameCountryRound;
   mem.state.status = 'INVITATION_OPEN';
   mem.state.invitationOpenAt = '2026-09-02T16:00:00.000Z';
-  mem.state.invitationCloseAt = '2026-09-02T16:01:00.000Z';
+  mem.state.invitationCloseAt = '2026-09-02T16:02:00.000Z';
   await writeInvite(sameCountryRound, {
     id: 'inv-pt',
     roundId: sameCountryRound,
@@ -171,12 +299,11 @@ async function main() {
     longitude: -8.61,
     submittedAt: '2026-09-02T16:00:10.000Z',
   });
-  r = await ptw.advanceStateMachine(new Date('2026-09-02T16:01:05.000Z'));
+  r = await ptw.advanceStateMachine(new Date('2026-09-02T16:02:05.000Z'));
   assert(r.state.status === 'WAITING_FOR_FIRST_CALL', 'same-country-only round stays waiting');
   assert(!r.itinerary.some((e) => e.originCountry === 'Portugal' && e.country === 'Portugal' && !e.isSeed), 'no same-country leg added');
 
   await seedArrived();
-  // 100 London + 1 Tokyo users
   for (let i = 0; i < 100; i += 1) {
     await writeInvite(roundId, {
       id: `inv-l-${i}`,
@@ -204,34 +331,34 @@ async function main() {
     submittedAt: '2026-09-01T16:00:20.000Z',
   });
 
-  r = await ptw.advanceStateMachine(tOpen);
-  assert(r.state.invitationCount === 0, 'invitationCount synced on next read via getPassTheWorld path');
-  // sync via getPassTheWorld
+  r = await ptw.advanceStateMachine(new Date('2026-09-01T16:00:30.000Z'));
+  assert(r.state.status === 'INVITATION_OPEN', 'window open mid-ritual');
   const mid = await ptw.getPassTheWorld({ now: '2026-09-01T16:00:45.000Z' });
   assert(mid.journey.status === 'INVITATION_OPEN', 'still open at 16:00:45');
   assert(mid.journey.invitedCities.length === 2, 'map gets 2 city dots (London + Tokyo)');
   assert(mid.journey.invitationCount === 101, '101 users in pool');
 
-  const tClose = new Date('2026-09-01T16:01:00.000Z');
+  // 120s window closes at 16:02:00
+  const tClose = new Date('2026-09-01T16:02:00.000Z');
   r = await ptw.advanceStateMachine(tClose);
-  assert(r.state.status === 'REVEAL_PENDING', '16:01:00 enters REVEAL_PENDING');
-  assert(r.state.revealStartAt === '2026-09-01T16:01:00.000Z', 'reveal starts at window close');
-  assert(r.state.revealEndAt === '2026-09-01T16:01:10.000Z', 'reveal ends 10s later');
+  assert(r.state.status === 'REVEAL_PENDING', '16:02:00 enters REVEAL_PENDING');
+  assert(r.state.revealStartAt === '2026-09-01T16:02:00.000Z', 'reveal starts at window close');
+  assert(r.state.revealEndAt === '2026-09-01T16:02:10.000Z', 'reveal ends 10s later');
   assert(r.state.invitedCities.length === 2, 'invite cities visible during reveal');
   assert(mem.roundWinner.size === 1, 'winner chosen in background');
 
-  const tRevealMid = new Date('2026-09-01T16:01:05.000Z');
+  const tRevealMid = new Date('2026-09-01T16:02:05.000Z');
   r = await ptw.advanceStateMachine(tRevealMid);
-  assert(r.state.status === 'REVEAL_PENDING', 'still revealing at 16:01:05');
-  const pubMid = await ptw.getPassTheWorld({ now: '2026-09-01T16:01:05.000Z' });
+  assert(r.state.status === 'REVEAL_PENDING', 'still revealing at 16:02:05');
+  const pubMid = await ptw.getPassTheWorld({ now: '2026-09-01T16:02:05.000Z' });
   assert(!pubMid.journey.destination, 'destination hidden during reveal');
-  assert(pubMid.journey.revealEndAt === '2026-09-01T16:01:10.000Z', 'client gets revealEndAt');
+  assert(pubMid.journey.revealEndAt === '2026-09-01T16:02:10.000Z', 'client gets revealEndAt');
 
-  const tRevealEnd = new Date('2026-09-01T16:01:10.000Z');
+  const tRevealEnd = new Date('2026-09-01T16:02:10.000Z');
   r = await ptw.advanceStateMachine(tRevealEnd);
-  assert(r.state.status === 'TRAVELLING', '16:01:10 starts travel');
+  assert(r.state.status === 'TRAVELLING', '16:02:10 starts travel');
   assert(r.state.destination?.city, 'destination set after reveal');
-  assert(r.state.departureAt === '2026-09-01T16:01:10.000Z', 'departure at reveal end');
+  assert(r.state.departureAt === '2026-09-01T16:02:10.000Z', 'departure at reveal end');
   assert(r.state.invitedCities.length === 0, 'invite dots cleared after travel starts');
   assert(r.state.lastReveal?.city, 'lastReveal populated');
   assert(r.itinerary.length === 2, 'itinerary updated');
@@ -253,7 +380,7 @@ async function main() {
   mem.state.status = 'WAITING_FOR_FIRST_CALL';
   mem.state.activeRoundId = staleRoundId;
   mem.state.invitationOpenAt = '2026-09-03T16:00:00.000Z';
-  mem.state.invitationCloseAt = '2026-09-03T16:01:00.000Z';
+  mem.state.invitationCloseAt = '2026-09-03T16:02:00.000Z';
   mem.roundWinner.set(`wc-data/pass-the-world/rounds/${staleRoundId}/winner.json`, {
     invitationId: 'stale-pt',
     id: 'stale-pt',
@@ -289,6 +416,8 @@ async function main() {
   assert(inviteRes.journey.status === 'TRAVELLING', 'Spanish first call starts travel despite stale PT winner');
   assert(inviteRes.journey.destination?.city === 'Madrid', 'destination is Madrid');
   assert(!inviteRes.alreadyMoving, 'does not report false already moving');
+
+  console.log('\nAll Pass the World tests passed.');
 }
 
 main().catch((err) => {
