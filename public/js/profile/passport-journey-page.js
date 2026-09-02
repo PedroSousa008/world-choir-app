@@ -54,9 +54,23 @@ const PassportJourneyPage = (() => {
         <div>
           <button type="button" class="passport-header__back" id="journey-back" aria-label="Back to Passport">← Passport</button>
           <h1 class="passport-header__title">Your Journey</h1>
-          <p class="passport-header__subtitle">Loading your milestones…</p>
         </div>
       </header>
+      <div class="wc-skel-page" aria-busy="true" aria-live="polite">
+        <span class="sr-only">Loading your milestones…</span>
+        <div class="wc-skel-card" aria-hidden="true">
+          <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+          <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+        </div>
+        <div class="wc-skel-card" aria-hidden="true">
+          <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+          <span class="wc-skel wc-skel--line"></span>
+        </div>
+        <div class="wc-skel-card" aria-hidden="true">
+          <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+          <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+        </div>
+      </div>
     `;
     document.getElementById('journey-back')?.addEventListener('click', () => {
       window.location.href = 'passport.html';

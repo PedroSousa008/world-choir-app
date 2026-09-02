@@ -348,13 +348,13 @@ const WorldChoirHome = (() => {
       maybeLaunchHomeExtras();
       return;
     }
-    // Keep skeleton extremely brief — reveal as soon as pledge resolves, else ≤320ms.
+    // Keep skeleton extremely brief — reveal as soon as pledge resolves, else ≤200ms.
     const fallback = setTimeout(() => {
       if (!homeReady) {
         homeReady = true;
         render();
       }
-    }, 320);
+    }, 200);
     WorldChoirPledgeState.init()
       .then(async () => {
         clearTimeout(fallback);

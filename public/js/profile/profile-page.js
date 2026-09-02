@@ -158,7 +158,7 @@ const ProfilePage = (() => {
     window.addEventListener('wc-voices-live-update', updateVoicesCounter);
     WorldChoirDB.startLiveSync({ intervalMs: 2000 });
 
-    const fallback = setTimeout(() => revealProfile(), 350);
+    const fallback = setTimeout(() => revealProfile(), 220);
 
     WorldChoirPledgeState.init()
       .then(async () => {

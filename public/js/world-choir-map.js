@@ -516,7 +516,7 @@ const WorldChoirMap = (() => {
       setTimeout(() => skel.remove(), 220);
     };
     // Keep map boot skeleton extremely short.
-    setTimeout(clearBootSkel, 280);
+    setTimeout(clearBootSkel, 200);
 
     const hasVoiceJoinedSession = !!sessionStorage.getItem('wc_voice_joined');
 

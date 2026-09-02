@@ -379,7 +379,7 @@ const DailyActsPage = (() => {
 
   function renderMain() {
     if (!journeyData) {
-      return '<p class="dap-loading">Loading…</p>';
+      return renderLoadingSkeleton();
     }
     return `
       ${renderHeader()}
