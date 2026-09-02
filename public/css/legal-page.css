@@ -1,0 +1,114 @@
+/* World Choir — legal / policy pages */
+
+.legal-page {
+  padding-top: 24px;
+}
+
+.legal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 24px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.legal-back:hover {
+  color: var(--text-secondary);
+}
+
+.legal-header {
+  margin-bottom: 28px;
+}
+
+.legal-title {
+  font-size: clamp(1.6rem, 5vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.legal-updated {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.legal-content {
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.legal-content h2 {
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 28px 0 10px;
+  letter-spacing: -0.01em;
+}
+
+.legal-content h3 {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 18px 0 8px;
+}
+
+.legal-content p,
+.legal-content ul {
+  margin-bottom: 12px;
+}
+
+.legal-content ul {
+  padding-left: 1.2rem;
+}
+
+.legal-content li {
+  margin-bottom: 6px;
+}
+
+.legal-content a {
+  color: var(--accent-aurora);
+  text-decoration: none;
+}
+
+.legal-content a:hover {
+  text-decoration: underline;
+}
+
+.legal-content strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.profile-legal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 32px;
+  padding: 4px 0 6px;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 0.48;
+}
+
+.profile-legal-footer a {
+  color: inherit;
+  text-decoration: none;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.profile-legal-footer a:hover {
+  opacity: 1;
+  color: var(--text-secondary);
+}
+
+.profile-legal-footer span {
+  opacity: 0.65;
+}
