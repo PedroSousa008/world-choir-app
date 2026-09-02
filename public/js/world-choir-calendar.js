@@ -33,7 +33,7 @@ const WorldChoirCalendar = (() => {
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       'BEGIN:VEVENT',
-      'UID:world-choir-2027@world-choir-app.vercel.app',
+      'UID:world-choir-2027-20270921@world-choir-app.vercel.app',
       `DTSTAMP:${formatIcsDate(new Date())}`,
       `DTSTART:${formatIcsDate(start)}`,
       `DTEND:${formatIcsDate(end)}`,

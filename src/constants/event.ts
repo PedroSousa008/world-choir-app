@@ -1,12 +1,11 @@
 // Global singing event configuration
 export const EVENT_CONFIG = {
-  EVENT_DATE: new Date('2027-09-21T16:00:00.000Z'),
+  /** Official: 21 September 2027, 16:00 UTC (International Day of Peace). */
+  EVENT_DATE: new Date(Date.UTC(2027, 8, 21, 16, 0, 0)),
   SONG_DURATION_MS: 183 * 1000,
   FINAL_HOUR_MS: 60 * 60 * 1000,
   EVENT_TITLE: 'World Choir 2027',
   EVENT_DESCRIPTION: [
-    'Once a year, the world sings the same song at the exact same time.',
-    '',
     'World Choir 2027',
     'Song: Imagine — John Lennon',
   ].join('\n'),

@@ -2,10 +2,16 @@ import { Platform, Alert } from 'react-native';
 import * as Calendar from 'expo-calendar';
 import { EVENT_CONFIG } from '../constants/event';
 
+function getEventStartDate(): Date {
+  // Always build from UTC parts (21 Sep 2027 · 16:00 UTC).
+  return new Date(Date.UTC(2027, 8, 21, 16, 0, 0));
+}
+
 function getEventEndDate(): Date {
+  const start = getEventStartDate();
   const songMs = EVENT_CONFIG.SONG_DURATION_MS;
   const duration = songMs > 0 ? songMs : EVENT_CONFIG.CALENDAR_DURATION_MS;
-  return new Date(EVENT_CONFIG.EVENT_DATE.getTime() + duration);
+  return new Date(start.getTime() + duration);
 }
 
 export const requestCalendarPermissions = async (): Promise<boolean> => {
@@ -34,12 +40,13 @@ export const addEventToCalendar = async (): Promise<'success' | 'denied' | 'canc
       return 'denied';
     }
 
+    const startDate = getEventStartDate();
     const endDate = getEventEndDate();
 
     if (typeof Calendar.createEventInCalendarAsync === 'function') {
       const result = await Calendar.createEventInCalendarAsync({
         title: EVENT_CONFIG.EVENT_TITLE,
-        startDate: EVENT_CONFIG.EVENT_DATE,
+        startDate,
         endDate,
         timeZone: 'UTC',
         location: EVENT_CONFIG.EVENT_LOCATION,
@@ -64,7 +71,7 @@ export const addEventToCalendar = async (): Promise<'success' | 'denied' | 'canc
     await Calendar.createEventAsync(defaultCalendar.id, {
       title: EVENT_CONFIG.EVENT_TITLE,
       notes: EVENT_CONFIG.EVENT_DESCRIPTION,
-      startDate: EVENT_CONFIG.EVENT_DATE,
+      startDate,
       endDate,
       timeZone: 'UTC',
       location: EVENT_CONFIG.EVENT_LOCATION,

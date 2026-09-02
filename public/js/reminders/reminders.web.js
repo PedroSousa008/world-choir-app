@@ -9,8 +9,6 @@ const WorldChoirRemindersWeb = (() => {
       'World Choir 2027',
       'September 21, 2027 · 16:00 UTC',
       'Song: Imagine — John Lennon',
-      '',
-      'Once a year, the world sings the same song at the exact same time.',
     ].join('\n');
   }
 

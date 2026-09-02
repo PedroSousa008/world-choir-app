@@ -56,7 +56,7 @@ const WorldChoirConfig = (() => {
     title: 'World Choir 2027',
     songName: 'Imagine',
     artistName: 'John Lennon',
-    eventDateUTC: '2027-09-21T16:00:00.000Z',
+    eventDateUTC: '2027-09-21T16:00:00.000Z', // 21 Sep 2027 · 16:00 UTC
     songDurationSeconds: 183,
     hashtag: '#WorldChoir2027',
     theme: 'Hope & Unity',
@@ -558,7 +558,16 @@ const WorldChoirConfig = (() => {
   const AppState = EventState;
 
   function getEventStart() {
-    return new Date(ACTIVE_EVENT.eventDateUTC);
+    const iso = String(ACTIVE_EVENT.eventDateUTC || '');
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(iso);
+    if (m) {
+      return new Date(Date.UTC(
+        Number(m[1]), Number(m[2]) - 1, Number(m[3]),
+        Number(m[4]), Number(m[5]), Number(m[6])
+      ));
+    }
+    // Official World Choir 2027 fallback: 21 Sep 2027 · 16:00 UTC
+    return new Date(Date.UTC(2027, 8, 21, 16, 0, 0));
   }
 
   function getEventEnd() {
@@ -589,8 +598,6 @@ const WorldChoirConfig = (() => {
 
   function getReminderDescription() {
     return [
-      'Once a year, the world sings the same song at the exact same time.',
-      '',
       'World Choir 2027',
       'Song: Imagine — John Lennon',
     ].join('\n');
