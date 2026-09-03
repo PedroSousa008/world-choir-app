@@ -812,12 +812,13 @@ const GlobalLiveEvent = (() => {
     }
 
     if (state === 'LIVE_SONG' && audioEl && !forceRejoin) {
-      if (!canPlayLiveSongAudio()) {
-        stopLiveSongElement();
-        return;
+      if (!isLiveSongUiActive()) showLiveSongShell();
+      if (audioEl.paused) {
+        showLiveSongUnlock();
+        await audioEl.play().catch(() => showLiveSongUnlock());
+      } else {
+        syncSongToGlobal(nowMs);
       }
-      syncSongToGlobal(nowMs);
-      if (audioEl.paused) await audioEl.play().catch(() => {});
       return;
     }
 
@@ -833,11 +834,13 @@ const GlobalLiveEvent = (() => {
   }
 
   function syncSongToGlobal(nowMs) {
-    if (!canPlayLiveSongAudio()) {
-      stopLiveSongElement();
+    if (!audioEl) return;
+    if (!isLiveSongUiActive()) showLiveSongShell();
+    if (audioEl.paused) {
+      showLiveSongUnlock();
+      audioEl.play().catch(() => showLiveSongUnlock());
       return;
     }
-    if (!audioEl) return;
     const expected = getTargetSongPositionSec(nowMs);
     const actual = audioEl.currentTime;
     const diff = expected - actual;
@@ -860,8 +863,13 @@ const GlobalLiveEvent = (() => {
   function onSongEnded() {
     cleanupAudio();
     finalizeLiveEventPlayback();
+    clearLiveGate();
+    document.getElementById('home-page')?.removeAttribute('hidden');
+    document.getElementById('nav-root')?.removeAttribute('hidden');
     if (typeof LiveEventMode !== 'undefined' && LiveEventMode.showPostSongFlow) {
       LiveEventMode.showPostSongFlow();
+    } else if (typeof WorldChoirHome !== 'undefined') {
+      WorldChoirHome.render();
     }
   }
 
@@ -1121,28 +1129,38 @@ const GlobalLiveEvent = (() => {
       return;
     }
 
+    // During test overrides, allow the promise flow to appear again each run.
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('wc_live_flow_complete_')) localStorage.removeItem(key);
+    });
+
+    const nowMs = Date.now();
+    const preStart = WorldChoirLiveConfig.getPreEventStartMs();
     const params = new URLSearchParams(window.location.search);
-    if (params.has('wcEventTestReset')) {
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith('wc_live_flow_complete_')) localStorage.removeItem(key);
-      });
-      try {
-        await fetch('/api/live-event', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({
-            action: 'reset-test-state',
-            eventId: WorldChoirLiveConfig.EVENT.eventId,
-          }),
-        });
-      } catch {
-        /* best effort */
-      }
-      actualLiveSongStartUtc = null;
-      videoEndedLocally = false;
-      transitioning = false;
+    const forceReset = params.has('wcEventTestReset');
+
+    // Only wipe server song-start before the pre-event window (or when forced).
+    // Never reset mid-live — that desyncs everyone already in the song.
+    if (!forceReset && nowMs >= preStart) {
+      return;
     }
+
+    try {
+      await fetch('/api/live-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          action: 'reset-test-state',
+          eventId: WorldChoirLiveConfig.EVENT.eventId,
+        }),
+      });
+    } catch {
+      /* best effort */
+    }
+    actualLiveSongStartUtc = null;
+    videoEndedLocally = false;
+    transitioning = false;
   }
 
   function applyImmediateLiveGate() {
