@@ -625,8 +625,8 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  /* 430px-wide layout: stats card top sits at 428px (8.35468px into header); scales with width */
-  margin-top: calc(-8.354679803px * (100% / 430px));
+  /* 430px-wide layout: stats card top at 380px; overlap scales with content width (mobile + desktop) */
+  margin-top: calc(-56.354679803px * (100% / 430px));
   padding: 0 20px 8px;
   max-width: 100%;
 }
