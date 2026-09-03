@@ -9,7 +9,6 @@ const WorldChoirMemory = (() => {
 
   const TRANSITION_MS = REDUCED_MOTION ? 0 : 280;
 
-  let fabOpen = false;
   let composerOpen = false;
   let composerPreviewUrl = null;
   let composerFile = null;
@@ -442,10 +441,6 @@ const WorldChoirMemory = (() => {
         id: 'mem-world-choir-passport',
       });
     }
-  }
-
-  function setFabOpen() {
-    /* menu removed — + opens device picker directly */
   }
 
   function cooldownMessage() {
