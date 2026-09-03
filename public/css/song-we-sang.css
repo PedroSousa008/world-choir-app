@@ -3,16 +3,18 @@
 html.sws-page,
 html.sws-page body {
   background: var(--bg-void, #000);
+  overflow-x: hidden;
 }
 
 .sws-page-body {
   position: relative;
   min-height: 100dvh;
   color: var(--text-primary, #f4f4f6);
+  overflow-x: hidden;
 }
 
 .sws-ambient {
-  opacity: 1;
+  display: none;
   pointer-events: none;
 }
 
@@ -217,4 +219,107 @@ html.sws-page body {
 .df-fp-nav__share:focus-visible {
   color: var(--accent-aurora);
   outline: none;
+}
+
+/* ─── Letter Page (Song We Sang) screenshot-like layout ─── */
+
+.sws-letter-header {
+  position: relative;
+  z-index: 2;
+  margin: 14px 0 14px;
+  padding: 18px 16px 14px;
+  background: #000;
+  text-align: center;
+}
+
+.sws-letter-header__title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.sws-letter-header__subtitle {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.sws-letter-paper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 0 16px 140px; /* leaves space for the fixed bottom card */
+}
+
+.sws-letter-paper__img {
+  width: min(92vw, 540px);
+  max-height: calc(100dvh - 210px);
+  object-fit: contain;
+  display: block;
+  border-radius: 6px;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.65);
+}
+
+.sws-letter-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  z-index: 3;
+  padding: 0 18px;
+  pointer-events: none; /* purely presentational */
+}
+
+.sws-letter-bottom__card {
+  pointer-events: auto;
+  width: min(620px, 100%);
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 14px 16px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sws-letter-bottom__heart {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(78, 197, 232, 0.35);
+  display: grid;
+  place-items: center;
+  color: var(--accent-aurora);
+}
+
+.sws-letter-bottom__heart svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sws-letter-bottom__kicker {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.sws-letter-bottom__text {
+  margin-top: 6px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
 }
