@@ -623,16 +623,16 @@
   flex-direction: column;
   gap: 14px;
   margin-top: 0;
-  padding: 120px 20px 8px;
+  padding: 14px 20px 8px;
   max-width: 100%;
 }
 
-/* Floats over the planet at a fixed 400px from the top of .home-after */
+/* Stats sit on the planet image (inside the hero stage) on mobile and desktop */
 .home-after-stats-float {
-  position: absolute;
+  position: absolute !important;
   left: 20px;
   right: 20px;
-  top: 400px;
+  top: 76%;
   z-index: 6;
   margin: 0;
   box-sizing: border-box;

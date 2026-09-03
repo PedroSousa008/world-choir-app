@@ -365,26 +365,25 @@ const WorldChoirHome = (() => {
               <h1 class="home-after-hero__title" id="home-after-thank-you">${esc(heroCopy.thankYou)}</h1>
               <p class="home-after-hero__message" id="home-after-thank-you-message">${esc(heroCopy.message)}</p>
             </div>
+            <section class="home-after-card home-after-card--stats home-after-stats-float" aria-label="World Choir event statistics" style="position:absolute;left:20px;right:20px;top:76%;z-index:6;margin:0">
+              <div class="home-after-stats-row">
+                <div class="home-after-voices-stat">
+                  <div class="home-after-voices-stat__num-wrap">
+                    <span class="home-after-voices-stat__num" id="home-stat-voices">${formatStat(merged.voices)}</span>
+                  </div>
+                  <span class="home-after-stat__label">People sang</span>
+                </div>
+                <div class="home-after-stats-row__divider" aria-hidden="true"></div>
+                <div class="home-after-voices-stat">
+                  <div class="home-after-voices-stat__num-wrap">
+                    <span class="home-after-voices-stat__num" id="home-stat-acts">${formatStat(merged.dailyActsCompleted)}</span>
+                  </div>
+                  <span class="home-after-stat__label">Daily Acts Completed</span>
+                </div>
+              </div>
+            </section>
           </div>
         </header>
-
-        <section class="home-after-card home-after-card--stats home-after-stats-float" aria-label="World Choir event statistics">
-          <div class="home-after-stats-row">
-            <div class="home-after-voices-stat">
-              <div class="home-after-voices-stat__num-wrap">
-                <span class="home-after-voices-stat__num" id="home-stat-voices">${formatStat(merged.voices)}</span>
-              </div>
-              <span class="home-after-stat__label">People sang</span>
-            </div>
-            <div class="home-after-stats-row__divider" aria-hidden="true"></div>
-            <div class="home-after-voices-stat">
-              <div class="home-after-voices-stat__num-wrap">
-                <span class="home-after-voices-stat__num" id="home-stat-acts">${formatStat(merged.dailyActsCompleted)}</span>
-              </div>
-              <span class="home-after-stat__label">Daily Acts Completed</span>
-            </div>
-          </div>
-        </section>
 
         <div class="home-after-body">
           <section class="home-after-card home-after-card--song" aria-label="The song we sang">
@@ -465,21 +464,31 @@ const WorldChoirHome = (() => {
   }
 
   const POST_EVENT_STATS_TOP_PX = 400;
+  const POST_EVENT_STATS_REF_WIDTH = 520;
 
   function layoutPostEventStatsFloat() {
-    const root = document.querySelector('.home-after');
     const floatEl = document.querySelector('.home-after-stats-float');
+    const stage = document.querySelector('.home-after-hero__stage');
     const hero = document.querySelector('.home-after-hero');
     const body = document.querySelector('.home-after-body');
-    if (!root || !floatEl || !body) return;
+    if (!floatEl || !body) return;
 
-    floatEl.style.top = `${POST_EVENT_STATS_TOP_PX}px`;
+    const heroH = (stage || hero)?.offsetHeight || 0;
+    const refHeroH = POST_EVENT_STATS_REF_WIDTH * (1030 / 1015);
+    const topPx = heroH > 0
+      ? Math.round(heroH * (POST_EVENT_STATS_TOP_PX / refHeroH))
+      : POST_EVENT_STATS_TOP_PX;
 
-    const heroH = hero?.offsetHeight || 0;
+    floatEl.style.setProperty('position', 'absolute', 'important');
+    floatEl.style.setProperty('left', '20px', 'important');
+    floatEl.style.setProperty('right', '20px', 'important');
+    floatEl.style.setProperty('top', `${topPx}px`, 'important');
+    floatEl.style.setProperty('z-index', '6', 'important');
+    floatEl.style.setProperty('margin', '0', 'important');
+
     const cardH = floatEl.offsetHeight || 120;
-    const cardBottom = POST_EVENT_STATS_TOP_PX + cardH;
-    const padTop = Math.max(16, cardBottom - heroH + 14);
-    body.style.paddingTop = `${padTop}px`;
+    const overflow = Math.max(0, topPx + cardH - heroH);
+    body.style.paddingTop = `${overflow + 14}px`;
   }
 
   function mountPostEventHome() {
@@ -496,6 +505,7 @@ const WorldChoirHome = (() => {
     root.innerHTML = renderPostEventHome(fallback);
     bindPostEventActions();
     layoutPostEventStatsFloat();
+    requestAnimationFrame(layoutPostEventStatsFloat);
 
     const confettiEl = document.getElementById('home-after-confetti');
     const planetImg = document.querySelector('.home-after-hero__planet');
@@ -504,8 +514,9 @@ const WorldChoirHome = (() => {
       if (planetImg?.complete) startConfetti();
       else planetImg?.addEventListener('load', startConfetti, { once: true });
     }
-    planetImg?.addEventListener('load', layoutPostEventStatsFloat, { once: true });
+    planetImg?.addEventListener('load', layoutPostEventStatsFloat);
     window.addEventListener('resize', layoutPostEventStatsFloat);
+    window.visualViewport?.addEventListener('resize', layoutPostEventStatsFloat);
 
     fetchPostEventStats().then((stats) => {
       if (homeView === 'post-event' || homeView === 'post-event-complete') {
