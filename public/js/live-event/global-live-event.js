@@ -72,6 +72,70 @@ const GlobalLiveEvent = (() => {
     active = false;
   }
 
+  function isPostEventPlaybackBlocked() {
+    if (typeof LiveEventMode !== 'undefined' && LiveEventMode.isPostEvent()) return true;
+    const nowMs = WorldChoirServerTime.nowMs?.() ?? Date.now();
+    return computeState(nowMs) === 'LIVE_FINISHED';
+  }
+
+  function isPracticeModeActive() {
+    return document.getElementById('practice-mode')?.classList.contains('active') === true;
+  }
+
+  function isLiveSongUiActive() {
+    return document.getElementById('live-event-mode')?.classList.contains('active') === true;
+  }
+
+  function canPlayLiveSongAudio() {
+    if (!shouldRunLivePlayback()) return false;
+    if (isPostEventPlaybackBlocked()) return false;
+    if (isPracticeModeActive()) return false;
+    if (state !== 'LIVE_SONG' && state !== 'TRANSITIONING_TO_LIVE') return false;
+    const nowMs = WorldChoirServerTime.nowMs?.() ?? Date.now();
+    if (computeState(nowMs) !== 'LIVE_SONG') return false;
+    return isLiveSongUiActive();
+  }
+
+  function canPrimeLiveAudio() {
+    if (!shouldRunLivePlayback()) return false;
+    if (isPostEventPlaybackBlocked()) return false;
+    if (isPracticeModeActive()) return false;
+    const nowMs = WorldChoirServerTime.nowMs?.() ?? Date.now();
+    const next = computeState(nowMs);
+    return next === 'PRE_EVENT' || next === 'LIVE_SONG';
+  }
+
+  function stopLiveSongElement() {
+    const el = document.getElementById('wc-live-song-audio');
+    if (el) {
+      el.pause();
+      el.muted = true;
+      try {
+        el.currentTime = 0;
+      } catch {
+        /* ignore */
+      }
+    }
+    if (audioEl) {
+      audioEl.pause();
+      try {
+        audioEl.currentTime = 0;
+      } catch {
+        /* ignore */
+      }
+    }
+    LyricsDisplay.stopSync();
+  }
+
+  function finalizeLiveEventPlayback() {
+    stopLiveSongElement();
+    cleanupMedia();
+    hideTakeover();
+    hideLiveSongShell();
+    active = false;
+    state = 'LIVE_FINISHED';
+  }
+
   function ensureShell() {
     if (document.getElementById('wc-global-live')) return;
 
@@ -145,6 +209,7 @@ const GlobalLiveEvent = (() => {
   }
 
   async function primeLiveSongAudio() {
+    if (!canPrimeLiveAudio()) return false;
     const el = getLiveSongAudio();
     try {
       if (el.readyState < 1) await waitForAudioReady(el);
@@ -180,7 +245,7 @@ const GlobalLiveEvent = (() => {
       } catch {
         /* ignore */
       }
-      if (state === 'LIVE_SONG' && audioEl?.paused && shouldRunLivePlayback()) {
+      if (canPlayLiveSongAudio() && audioEl?.paused) {
         audioEl.play().then(() => {
           LyricsDisplay.startSync(audioEl);
         }).catch(() => {});
@@ -545,6 +610,10 @@ const GlobalLiveEvent = (() => {
 
   async function onVideoEnded() {
     if (videoEndedLocally || transitioning) return;
+    if (!shouldRunLivePlayback() || isPostEventPlaybackBlocked()) {
+      stopLiveSongElement();
+      return;
+    }
     videoEndedLocally = true;
     transitioning = true;
     state = 'TRANSITIONING_TO_LIVE';
@@ -662,8 +731,8 @@ const GlobalLiveEvent = (() => {
   }
 
   async function startLiveAudio(target) {
-    if (!shouldRunLivePlayback()) {
-      pauseLiveMedia();
+    if (!canPlayLiveSongAudio()) {
+      stopLiveSongElement();
       return;
     }
     if (!audioEl) {
@@ -727,8 +796,9 @@ const GlobalLiveEvent = (() => {
   }
 
   async function enterLiveSong({ fromVideoEnd = false, forceRejoin = false } = {}) {
-    if (!shouldRunLivePlayback()) {
+    if (!shouldRunLivePlayback() || isPostEventPlaybackBlocked()) {
       dismissLiveUiIfOffHome();
+      stopLiveSongElement();
       return;
     }
     const nowMs = WorldChoirServerTime.nowMs();
@@ -742,6 +812,10 @@ const GlobalLiveEvent = (() => {
     }
 
     if (state === 'LIVE_SONG' && audioEl && !forceRejoin) {
+      if (!canPlayLiveSongAudio()) {
+        stopLiveSongElement();
+        return;
+      }
       syncSongToGlobal(nowMs);
       if (audioEl.paused) await audioEl.play().catch(() => {});
       return;
@@ -759,6 +833,10 @@ const GlobalLiveEvent = (() => {
   }
 
   function syncSongToGlobal(nowMs) {
+    if (!canPlayLiveSongAudio()) {
+      stopLiveSongElement();
+      return;
+    }
     if (!audioEl) return;
     const expected = getTargetSongPositionSec(nowMs);
     const actual = audioEl.currentTime;
@@ -781,10 +859,7 @@ const GlobalLiveEvent = (() => {
 
   function onSongEnded() {
     cleanupAudio();
-    state = 'LIVE_FINISHED';
-    hideTakeover();
-    hideLiveSongShell();
-    active = false;
+    finalizeLiveEventPlayback();
     if (typeof LiveEventMode !== 'undefined' && LiveEventMode.showPostSongFlow) {
       LiveEventMode.showPostSongFlow();
     }
@@ -809,7 +884,9 @@ const GlobalLiveEvent = (() => {
     const { videoUrl } = WorldChoirLiveConfig.EVENT.preEvent;
     const { audioUrl } = WorldChoirLiveConfig.EVENT.liveSong;
 
-    getLiveSongAudio();
+    if (shouldRunLivePlayback() && !isPostEventPlaybackBlocked()) {
+      getLiveSongAudio();
+    }
 
     const linkV = document.createElement('link');
     linkV.rel = 'preload';
@@ -817,17 +894,28 @@ const GlobalLiveEvent = (() => {
     linkV.href = videoUrl;
     document.head.appendChild(linkV);
 
-    const linkA = document.createElement('link');
-    linkA.rel = 'preload';
-    linkA.as = 'audio';
-    linkA.href = audioUrl;
-    document.head.appendChild(linkA);
+    if (shouldRunLivePlayback() && !isPostEventPlaybackBlocked()) {
+      const linkA = document.createElement('link');
+      linkA.rel = 'preload';
+      linkA.as = 'audio';
+      linkA.href = audioUrl;
+      document.head.appendChild(linkA);
+    }
   }
 
   async function tick() {
     await WorldChoirServerTime.sync();
     const nowMs = WorldChoirServerTime.nowMs();
     const next = computeState(nowMs);
+
+    if (isPostEventPlaybackBlocked()) {
+      if (state !== 'LIVE_FINISHED') {
+        onSongEnded();
+      } else {
+        stopLiveSongElement();
+      }
+      return;
+    }
 
     if (next === 'NORMAL') {
       if (active) {
@@ -838,8 +926,18 @@ const GlobalLiveEvent = (() => {
       return;
     }
 
+    if (next === 'LIVE_FINISHED') {
+      if (state !== 'LIVE_FINISHED') {
+        onSongEnded();
+      } else {
+        stopLiveSongElement();
+      }
+      return;
+    }
+
     if (!shouldRunLivePlayback()) {
       dismissLiveUiIfOffHome();
+      stopLiveSongElement();
       state = next;
       return;
     }
@@ -874,19 +972,27 @@ const GlobalLiveEvent = (() => {
     }
 
     if (state === 'LIVE_SONG') {
+      if (!canPlayLiveSongAudio()) {
+        stopLiveSongElement();
+        return;
+      }
       syncSongToGlobal(nowMs);
       return;
     }
 
     if (next === 'LIVE_FINISHED' && state !== 'LIVE_FINISHED') {
-      state = 'LIVE_FINISHED';
       onSongEnded();
     }
   }
 
   async function pollAuthoritative() {
+    if (isPostEventPlaybackBlocked()) {
+      stopLiveSongElement();
+      return;
+    }
     if (!shouldRunLivePlayback()) {
       dismissLiveUiIfOffHome();
+      stopLiveSongElement();
       return;
     }
     if (state !== 'PRE_EVENT' && state !== 'LIVE_SONG') return;
@@ -905,20 +1011,31 @@ const GlobalLiveEvent = (() => {
       pauseLiveMedia();
       return;
     }
+    if (isPostEventPlaybackBlocked()) {
+      stopLiveSongElement();
+      return;
+    }
     if (!shouldRunLivePlayback()) {
       dismissLiveUiIfOffHome();
+      stopLiveSongElement();
       return;
     }
     WorldChoirServerTime.sync(true).then(async () => {
       await fetchAuthoritativeState();
       if (state === 'LIVE_SONG') {
+        if (!canPlayLiveSongAudio()) {
+          stopLiveSongElement();
+          return;
+        }
         const nowMs = WorldChoirServerTime.nowMs();
         const needsRejoin = !audioEl || audioEl.ended || audioEl.readyState < 1;
         if (needsRejoin) {
           await enterLiveSong({ forceRejoin: true });
         } else {
           syncSongToGlobal(nowMs);
-          await audioEl.play().catch(() => {});
+          if (canPlayLiveSongAudio()) {
+            await audioEl.play().catch(() => {});
+          }
         }
         return;
       }
@@ -932,6 +1049,7 @@ const GlobalLiveEvent = (() => {
 
   function onPageHide() {
     pauseLiveMedia();
+    stopLiveSongElement();
   }
 
   function startLoops() {
@@ -1011,7 +1129,7 @@ const GlobalLiveEvent = (() => {
   }
 
   function applyImmediateLiveGate() {
-    if (!shouldRunLivePlayback()) return false;
+    if (!shouldRunLivePlayback() || isPostEventPlaybackBlocked()) return false;
     ensureShell();
     const nowMs = Date.now();
     const next = computeState(nowMs);
@@ -1066,6 +1184,11 @@ const GlobalLiveEvent = (() => {
     await WorldChoirServerTime.sync(true);
     await fetchAuthoritativeState();
     await reconcileStaleAuthoritativeState();
+
+    if (isPostEventPlaybackBlocked()) {
+      stopLiveSongElement();
+      state = 'LIVE_FINISHED';
+    }
 
     const nowMs = WorldChoirServerTime.nowMs();
     const preStart = WorldChoirLiveConfig.getPreEventStartMs();

@@ -234,7 +234,19 @@ const WorldChoirNav = (() => {
     return true;
   }
 
-  return { renderWorldChoirNav, mount, startWatcher, guardMemoryRoute, getVisiblePages, prefetchTabs };
+  return {
+    renderWorldChoirNav,
+    mount,
+    startWatcher,
+    guardMemoryRoute,
+    getVisiblePages,
+    prefetchTabs,
+    getNavIconSvg: (key) => NAV_ICON_SVGS[key] || '',
+    getNavGlyph: (pageId) => {
+      const page = ALL_PAGES.find((p) => p.id === pageId);
+      return page?.icon || '';
+    },
+  };
 })();
 
 /** @deprecated Use WorldChoirNav.mount — kept for compatibility */

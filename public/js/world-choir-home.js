@@ -255,7 +255,7 @@ const WorldChoirHome = (() => {
   }
 
   const POST_EVENT_IMAGES = {
-    hero: 'images/after-event.png',
+    hero: 'images/after-event.png?v=20260903p',
     song: 'images/imagine-after.png',
     memory: 'images/memory-after.png',
   };
@@ -317,17 +317,21 @@ const WorldChoirHome = (() => {
   }
 
   function statIcon(type) {
+    const navSvg = (key) => {
+      const svg = typeof WorldChoirNav !== 'undefined' ? WorldChoirNav.getNavIconSvg(key) : '';
+      return svg ? `<span class="home-after-stat__icon" aria-hidden="true">${svg}</span>` : '';
+    };
+    const navGlyph = (pageId) => {
+      const glyph = typeof WorldChoirNav !== 'undefined' ? WorldChoirNav.getNavGlyph(pageId) : '';
+      return glyph ? `<span class="home-after-stat__icon home-after-stat__icon--glyph" aria-hidden="true">${glyph}</span>` : '';
+    };
     const icons = {
-      voices:
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="9" cy="7" r="3"/><circle cx="15" cy="7" r="3"/><path d="M4 20c0-2.2 2.7-4 6-4s6 1.8 6 4"/><path d="M14 20c0-1.5 1.2-2.8 2.8-3.5"/></svg>',
-      cities:
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 21h18"/><path d="M6 21V9l4-3 4 3v12"/><path d="M14 21V12l4-2.5V21"/><path d="M10 13h2v8h-2z"/></svg>',
-      acts:
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 21s-6-3.5-6-9a4 4 0 017-2.2A4 4 0 0120 12c0 5.5-6 9-8 9z"/><path d="M12 11v6M9.5 13.5L12 11l2.5 2.5"/></svg>',
+      voices: navSvg('profile'),
+      cities: navSvg('map'),
+      acts: navGlyph('donate'),
       songNote:
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="7" cy="18" r="3"/><circle cx="19" cy="16" r="3"/></svg>',
-      promise:
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>',
+        '<span class="home-after-stat__icon" aria-hidden="true"><svg class="nav-icon__svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M9 18V5l12-2v13" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.75"/><circle cx="19" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.75"/></svg></span>',
+      promise: navGlyph('memory'),
     };
     return icons[type] || '';
   }
@@ -362,19 +366,19 @@ const WorldChoirHome = (() => {
             <p class="home-after-card__eyebrow">The world sang</p>
             <div class="home-after-stats">
               <div class="home-after-stat">
-                <span class="home-after-stat__icon">${statIcon('voices')}</span>
+                ${statIcon('voices')}
                 <span class="home-after-stat__value" id="home-stat-voices">${formatStat(merged.voices)}</span>
                 <span class="home-after-stat__label">People sang</span>
               </div>
               <div class="home-after-stat home-after-stat--divider" aria-hidden="true"></div>
               <div class="home-after-stat">
-                <span class="home-after-stat__icon">${statIcon('cities')}</span>
+                ${statIcon('cities')}
                 <span class="home-after-stat__value" id="home-stat-cities">${formatStat(merged.cities)}</span>
                 <span class="home-after-stat__label">Cities</span>
               </div>
               <div class="home-after-stat home-after-stat--divider" aria-hidden="true"></div>
               <div class="home-after-stat">
-                <span class="home-after-stat__icon">${statIcon('acts')}</span>
+                ${statIcon('acts')}
                 <span class="home-after-stat__value" id="home-stat-acts">${formatStat(merged.dailyActsCompleted)}</span>
                 <span class="home-after-stat__label">Daily Acts of Peace</span>
               </div>
