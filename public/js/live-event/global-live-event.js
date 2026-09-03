@@ -955,13 +955,22 @@ const GlobalLiveEvent = (() => {
         await enterLiveSong();
         return;
       }
-      syncVideoToGlobal(nowMs);
-      if (
-        !videoEndedLocally
-        && hasPreEventVideoTimelineElapsed(nowMs)
-        && !videoFailed
-      ) {
-        await onVideoEnded();
+      // Even if the video failed/404'd, we must still join the live song on time.
+      if (next === 'LIVE_SONG' || hasPreEventVideoTimelineElapsed(nowMs)) {
+        if (!videoEndedLocally && !transitioning) {
+          await onVideoEnded();
+        } else if (next === 'LIVE_SONG' && state !== 'LIVE_SONG') {
+          await enterLiveSong();
+        }
+        return;
+      }
+      if (!videoFailed) {
+        syncVideoToGlobal(nowMs);
+      } else {
+        // Keep a clear fallback + unlock so the screen is never empty black.
+        document.getElementById('wc-global-live-pre-fallback')?.removeAttribute('hidden');
+        document.getElementById('wc-global-live-video-wrap')?.setAttribute('hidden', '');
+        document.getElementById('wc-global-live-unlock')?.removeAttribute('hidden');
       }
       return;
     }
@@ -972,11 +981,19 @@ const GlobalLiveEvent = (() => {
     }
 
     if (state === 'LIVE_SONG') {
-      if (!canPlayLiveSongAudio()) {
-        stopLiveSongElement();
-        return;
+      // Never tear down audio during the live song just because a transient
+      // gate check failed — remount UI and keep trying to play.
+      if (!isLiveSongUiActive()) {
+        showLiveSongShell();
       }
-      syncSongToGlobal(nowMs);
+      if (!audioEl || audioEl.paused || audioEl.ended) {
+        showLiveSongUnlock();
+        startLiveAudio(getTargetSongPositionSec(nowMs)).catch(() => {
+          showLiveSongUnlock();
+        });
+      } else {
+        syncSongToGlobal(nowMs);
+      }
       return;
     }
 
