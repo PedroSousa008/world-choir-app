@@ -215,7 +215,9 @@ const WorldChoirHome = (() => {
 
   let postEventStats = null;
   let postEventStatsPromise = null;
-  let confettiStarted = false;
+  let confettiRaf = 0;
+  let confettiPaint = null;
+  let confettiBound = false;
   const POST_EVENT_STATS_CACHE_KEY = 'wc_post_event_stats_v1';
 
   function readCachedPostEventStats() {
@@ -291,33 +293,89 @@ const WorldChoirHome = (() => {
   }
 
   function initPostEventConfetti(container) {
-    if (!container || confettiStarted || !isPostEventConfettiActive()) return;
+    if (!container || !isPostEventConfettiActive()) return;
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     if (reduced) return;
 
-    const fallDistance = Math.max(container.offsetHeight, 120);
-    container.style.setProperty('--fall-distance', `${fallDistance}px`);
-    confettiStarted = true;
+    cancelAnimationFrame(confettiRaf);
 
-    const colors = [
-      'rgba(255, 255, 255, 0.42)',
-      'rgba(201, 169, 98, 0.34)',
-      'rgba(78, 197, 232, 0.28)',
-      'rgba(138, 180, 255, 0.24)',
-    ];
-    const pieces = 18;
+    const eventEndMs = WorldChoirConfig.getEventEnd().getTime();
+    const mulberry = (seed) => {
+      let t = seed >>> 0;
+      return () => {
+        t += 0x6D2B79F5;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+    };
+
+    const colors = ['#ffffff', '#f4fbff', '#5ed4f0', '#8ad4ff', '#e0c36a', '#fff4cc'];
+    const count = 42;
+    const rand = mulberry(Math.floor(eventEndMs / 1000) ^ 20260904);
+    const specs = [];
     let html = '';
-    for (let i = 0; i < pieces; i++) {
-      const left = Math.random() * 100;
-      const delay = Math.random() * 6;
-      const duration = 9 + Math.random() * 5;
-      const width = 2 + Math.random() * 2;
-      const height = 10 + Math.random() * 8;
+    for (let i = 0; i < count; i++) {
+      const left = rand() * 100;
+      const duration = 6.5 + rand() * 4.5;
+      const width = 5 + rand() * 5;
+      const height = 10 + rand() * 12;
       const color = colors[i % colors.length];
-      const rotate = Math.random() * 360;
-      html += `<span class="home-after-hero__confetti__piece" style="left:${left}%;animation-delay:${delay}s;animation-duration:${duration}s;width:${width}px;height:${height}px;background:${color};--rot:${rotate}deg"></span>`;
+      const rotate = rand() * 360;
+      const phase = rand() * duration;
+      specs.push({ duration, phase, rotate });
+      html += `<span class="home-after-hero__confetti__piece" style="left:${left}%;width:${width}px;height:${height}px;background:${color}"></span>`;
     }
     container.innerHTML = html;
+    const els = container.children;
+
+    const paint = () => {
+      if (!container.isConnected || !isPostEventConfettiActive()) {
+        container.innerHTML = '';
+        confettiPaint = null;
+        return;
+      }
+      if (document.hidden) return;
+      const fall = Math.max(container.offsetHeight, 160);
+      const elapsedSec = Math.max(0, (Date.now() - eventEndMs) / 1000);
+      for (let i = 0; i < specs.length; i++) {
+        const s = specs[i];
+        const u = ((elapsedSec + s.phase) % s.duration) / s.duration;
+        const y = u * fall - 18;
+        const rot = s.rotate + u * 120;
+        const opacity = u < 0.06 ? 0.35 + (u / 0.06) * 0.6
+          : u > 0.92 ? 0.95 - ((u - 0.92) / 0.08) * 0.75
+          : 0.95;
+        els[i].style.transform = `translate3d(0, ${y}px, 0) rotate(${rot}deg)`;
+        els[i].style.opacity = String(opacity);
+      }
+      confettiRaf = requestAnimationFrame(paint);
+    };
+
+    const resume = () => {
+      if (document.hidden || confettiPaint !== paint) return;
+      cancelAnimationFrame(confettiRaf);
+      confettiRaf = requestAnimationFrame(paint);
+    };
+
+    confettiPaint = paint;
+    if (!confettiBound) {
+      confettiBound = true;
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && confettiPaint) {
+          cancelAnimationFrame(confettiRaf);
+          confettiRaf = requestAnimationFrame(confettiPaint);
+        }
+      });
+      window.addEventListener('pageshow', () => {
+        if (confettiPaint) {
+          cancelAnimationFrame(confettiRaf);
+          confettiRaf = requestAnimationFrame(confettiPaint);
+        }
+      });
+    }
+
+    resume();
   }
 
   const POST_EVENT_IMAGES = {

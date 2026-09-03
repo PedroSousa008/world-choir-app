@@ -530,26 +530,11 @@
 
 .home-after-hero__confetti__piece {
   position: absolute;
-  top: -16px;
+  top: 0;
   border-radius: 1px;
-  opacity: 0.4;
-  animation-name: homeAfterConfettiFall;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-  transform: rotate(var(--rot, 0deg));
-}
-
-@keyframes homeAfterConfettiFall {
-  0% {
-    transform: translateY(0) rotate(var(--rot, 0deg));
-    opacity: 0;
-  }
-  10% { opacity: 0.42; }
-  85% { opacity: 0.28; }
-  100% {
-    transform: translateY(var(--fall-distance, 320px)) rotate(calc(var(--rot, 0deg) + 90deg));
-    opacity: 0;
-  }
+  opacity: 0;
+  will-change: transform, opacity;
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.7);
 }
 
 .home-after-hero__planet {
