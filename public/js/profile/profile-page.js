@@ -6,7 +6,6 @@ const ProfilePage = (() => {
     identity: 'profile-identity-root',
     participation: 'profile-participation-root',
     practice: 'profile-practice-root',
-    promise: 'profile-promise-root',
     history: 'profile-history-root',
     invite: 'profile-invite-root',
     dailyActs: 'profile-daily-acts-root',
@@ -105,7 +104,6 @@ const ProfilePage = (() => {
       },
     });
 
-    PromiseCard.mount(document.getElementById(SECTIONS.promise));
     WorldChoirHistory.mount(document.getElementById(SECTIONS.history));
     InviteButton.mount(document.getElementById(SECTIONS.invite));
     DailyActsButton.mount(document.getElementById(SECTIONS.dailyActs));
