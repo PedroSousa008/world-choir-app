@@ -329,6 +329,26 @@ const WorldChoirHome = (() => {
     return icons[type] || '';
   }
 
+  function getPostEventHeroCopy() {
+    const thankYou = typeof WorldChoirThankYou !== 'undefined'
+      ? WorldChoirThankYou.getThankYou()
+      : 'Thank You';
+    const message = typeof WorldChoirThankYou !== 'undefined'
+      ? WorldChoirThankYou.getThankYouMessage()
+      : 'You were part of a moment that will go down in history. Together, we sang for peace, unity and a better world.';
+    return { thankYou, message };
+  }
+
+  function updatePostEventHeroCopy() {
+    if (homeView !== 'post-event' && homeView !== 'post-event-complete') return;
+    const title = document.getElementById('home-after-thank-you');
+    const message = document.getElementById('home-after-thank-you-message');
+    if (!title || typeof WorldChoirThankYou === 'undefined') return;
+    const copy = getPostEventHeroCopy();
+    title.textContent = copy.thankYou;
+    if (message) message.textContent = copy.message;
+  }
+
   function renderPostEventHome(stats = {}) {
     const merged = { ...getPostEventStatsFallback(), ...stats };
     const promise = WorldChoirDB.getPromiseForCurrentUser();
@@ -336,6 +356,7 @@ const WorldChoirHome = (() => {
     const e = WorldChoirConfig.ACTIVE_EVENT;
     const song = WorldChoirPracticeConfig?.PRACTICE_SONG || { title: e.songName, artist: e.artistName };
     const showConfetti = isPostEventConfettiActive();
+    const heroCopy = getPostEventHeroCopy();
 
     return `
       <div class="home-after">
@@ -345,9 +366,8 @@ const WorldChoirHome = (() => {
             ${showConfetti ? '<div class="home-after-hero__confetti" id="home-after-confetti" aria-hidden="true"></div>' : ''}
             <div class="home-after-hero__content">
               <img class="home-after-hero__logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir" width="1024" height="1024" decoding="async">
-              <h1 class="home-after-hero__title">We did it.</h1>
-              <p class="home-after-hero__subtitle">The world sang together.</p>
-              <p class="home-after-hero__message">Thank you for being part of this moment of unity, hope, and connection. Together, our voices created something the world will never forget.</p>
+              <h1 class="home-after-hero__title" id="home-after-thank-you">${esc(heroCopy.thankYou)}</h1>
+              <p class="home-after-hero__message" id="home-after-thank-you-message">${esc(heroCopy.message)}</p>
             </div>
           </div>
         </header>
@@ -672,6 +692,8 @@ const WorldChoirHome = (() => {
     });
 
     window.addEventListener('wc-pledges-synced', updateVoicesCounter);
+    window.addEventListener('wc-pledges-synced', updatePostEventHeroCopy);
+    window.addEventListener('wc-pledge-updated', updatePostEventHeroCopy);
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
     window.addEventListener('wc-pledge-added', updateVoicesCounter);
     window.addEventListener('wc-voices-live-update', updateVoicesCounter);

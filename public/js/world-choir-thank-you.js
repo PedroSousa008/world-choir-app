@@ -129,6 +129,165 @@ const WorldChoirThankYou = (() => {
     en: 'Thank You',
   };
 
+  const MESSAGE_BY_LANG = {
+    en: 'You were part of a moment that will go down in history. Together, we sang for peace, unity and a better world.',
+    pt: 'Foste parte de um momento que ficará na história. Juntos, cantámos pela paz, união e um mundo melhor.',
+    es: 'Fuiste parte de un momento que pasará a la historia. Juntos, cantamos por la paz, la unidad y un mundo mejor.',
+    fr: 'Vous avez fait partie d\'un moment qui restera dans l\'histoire. Ensemble, nous avons chanté pour la paix, l\'unité et un monde meilleur.',
+    de: 'Du warst Teil eines Moments, der in die Geschichte eingehen wird. Gemeinsam haben wir für Frieden, Einheit und eine bessere Welt gesungen.',
+    it: 'Sei stato parte di un momento che resterà nella storia. Insieme abbiamo cantato per la pace, l\'unità e un mondo migliore.',
+    nl: 'Je was deel van een moment dat de geschiedenis in gaat. Samen zongen we voor vrede, eenheid en een betere wereld.',
+    pl: 'Byłeś częścią chwili, która przejdzie do historii. Razem śpiewaliśmy o pokoju, jedności i lepszym świecie.',
+    ru: 'Вы стали частью момента, который войдёт в историю. Вместе мы пели за мир, единство и лучший мир.',
+    ja: 'あなたは歴史に残る瞬間の一部でした。私たちは共に、平和と団結、そしてより良い世界のために歌いました。',
+    ko: '당신은 역사에 남을 순간의 일부였습니다. 우리는 함께 평화, 단결, 더 나은 세상을 위해 노래했습니다.',
+    zh: '你是将载入史册的时刻的一部分。我们一起为和平、团结和更美好的世界而歌唱。',
+    ar: 'لقد كنت جزءاً من لحظة ستبقى في التاريخ. معاً غنينا من أجل السلام والوحدة وعالم أفضل.',
+    hi: 'आप उस पल का हिस्सा थे जो इतिहास में दर्ज होगा। हमने साथ मिलकर शांति, एकता और बेहतर दुनिया के लिए गाया।',
+    tr: 'Tarihe geçecek bir anın parçası oldun. Birlikte barış, birlik ve daha iyi bir dünya için şarkı söyledik.',
+    sv: 'Du var en del av ett ögonblick som kommer att gå till historien. Tillsammans sjöng vi för fred, enhet och en bättre värld.',
+    da: 'Du var en del af et øjeblik, der vil gå over i historien. Sammen sang vi for fred, enhed og en bedre verden.',
+    fi: 'Olit osa hetkeä, joka jää historiaan. Yhdessä lauloimme rauhan, yhtenäisyyden ja paremman maailman puolesta.',
+    el: 'Ήσουν μέρος μιας στιγμής που θα μείνει στην ιστορία. Μαζί τραγουδήσαμε για την ειρήνη, την ενότητα και έναν καλύτερο κόσμο.',
+    he: 'היית חלק מרגע שייכנס להיסטוריה. יחד שרנו לשלום, אחדות ועולם טוב יותר.',
+    th: 'คุณเป็นส่วนหนึ่งของช่วงเวลาที่จะถูกบันทึกในประวัติศาสตร์ เราร้องเพลงเพื่อสันติภาพ ความสามัคคี และโลกที่ดีขึ้นด้วยกัน',
+    vi: 'Bạn đã là một phần của khoảnh khắc sẽ đi vào lịch sử. Cùng nhau, chúng ta đã hát vì hòa bình, đoàn kết và một thế giới tốt đẹp hơn.',
+    id: 'Kamu adalah bagian dari momen yang akan tercatat dalam sejarah. Bersama, kita bernyanyi untuk perdamaian, persatuan, dan dunia yang lebih baik.',
+    ro: 'Ai fost parte dintr-un moment care va rămâne în istorie. Împreună am cântat pentru pace, unitate și o lume mai bună.',
+    uk: 'Ви були частиною моменту, який увійде в історію. Разом ми співали за мир, єдність і кращий світ.',
+    cs: 'Byl jsi součástí okamžiku, který se zapíše do historie. Společně jsme zpívali za mír, jednotu a lepší svět.',
+    sk: 'Bol si súčasťou okamihu, ktorý sa zapíše do histórie. Spolu sme spievali za mier, jednotu a lepší svet.',
+    hu: 'Része voltál egy pillanatnak, amely bekerül a történelembe. Együtt énekeltünk a békéért, az egységért és egy jobb világért.',
+    bg: 'Бяхте част от момент, който ще остане в историята. Заедно пяхме за мир, единство и по-добър свят.',
+    hr: 'Bio si dio trenutka koji će ući u povijest. Zajedno smo pjevali za mir, jedinstvo i bolji svijet.',
+    sl: 'Bil si del trenutka, ki bo ostal v zgodovini. Skupaj smo peli za mir, enotnost in boljši svet.',
+    sr: 'Били сте део тренутка који ће ући у историју. Заједно смо певали за мир, јединство и бољи свет.',
+    bn: 'আপনি এমন একটি মুহূর্তের অংশ ছিলেন যা ইতিহাসে থেকে যাবে। আমরা একসাথে শান্তি, ঐক্য এবং একটি ভালো বিশ্বের জন্য গেয়েছি।',
+    fa: 'شما بخشی از لحظه‌ای بودید که در تاریخ ماندگار خواهد شد. با هم برای صلح، وحدت و دنیایی بهتر آواز خواندیم.',
+    ur: 'آپ ایک لمحے کا حصہ تھے جو تاریخ میں رہے گا۔ ہم نے مل کر امن، اتحاد اور بہتر دنیا کے لیے گایا۔',
+    ga: 'Bhí tú mar chuid de nóiméad a mhairfidh sa stair. Chan muid le chéile ar son síochána, aontachta agus domhan níos fearr.',
+    no: 'Du var en del av et øyeblikk som vil gå inn i historien. Sammen sang vi for fred, enhet og en bedre verden.',
+    lt: 'Buvote istorijoje išlikusio momento dalis. Kartu dainavome taikos, vienybės ir geresnio pasaulio vardu.',
+    lv: 'Tu biji brīža daļa, kas paliks vēsturē. Kopā dziedājām par mieru, vienotību un labāku pasauli.',
+    et: 'Sa olid osa hetkest, mis jääb ajalukku. Koos laulsime rahu, ühtsuse ja parema maailma eest.',
+    ka: 'შენ იყავი ისტორიაში ჩაწერილი მომენტის ნაწილი. ერთად ვიმღერეთ მშვიდობის, ერთობისა და უკეთესი სამყაროსთვის.',
+    kk: 'Сіз тарихта қалатын сәттің бір бөлігі болдыңыз. Біз бірге бейбітшілік, бірлік және жақсы әлем үшін ән салдық.',
+    az: 'Siz tarixə yazılacaq anın bir parçası idiniz. Birlikdə sülh, birlik və daha yaxşı dünya üçün oxuduq.',
+    be: 'Вы былі часткай моманту, які застанецца ў гісторыі. Разам мы спявалі за мір, адзінства і лепшы свет.',
+    km: 'អ្នកជាផ្នែកមួយនៃពេលវេលាដែលនឹងត្រូវបានកត់ត្រាក្នុងប្រវត្តិសាស្ត្រ។ យើងបានច្រៀងរួមគ្នាដើម្បីសន្តិភាព សាមគ្គី និងពិភពលោកកាន់តែប្រសើរ។',
+    ms: 'Anda adalah sebahagian daripada detik yang akan kekal dalam sejarah. Bersama, kita menyanyi untuk keamanan, perpaduan dan dunia yang lebih baik.',
+    fil: 'Ikaw ay bahagi ng isang sandaling mananatili sa kasaysayan. Sama-sama tayong kumanta para sa kapayapaan, pagkakaisa, at mas mabuting mundo.',
+    ht: 'Ou te fè pati yon moman ki pral rete nan istwa. Ansanm, nou chante pou lapè, inite ak yon mond pi bon.',
+    sw: 'Ulikuwa sehemu ya wakati utakaosalia katika historia. Pamoja, tuliimba kwa amani, umoja na ulimwengu bora zaidi.',
+    hy: 'Դուք պատմության մեջ մնալու պահի մասնակից էիք։ Միասին երգեցինք խաղաղության, միասնության և ավելի լավ աշխարհի համար։',
+    am: 'በታሪክ ውስጥ የሚቀረውን ቅጽበት አካል ነበሩ። ለሰላም፣ ለአንድነት እና ለተሻለ ዓለም አብረን ዘፈንን።',
+    is: 'Þú varst hluti af augnablik sem mun lifa af í sögunni. Við sungum saman fyrir friði, samheldni og betri heimi.',
+    sq: 'Ju ishit pjesë e një momenti që do të mbetet në histori. Së bashku kënduam për paqe, unitet dhe një botë më të mirë.',
+  };
+
+  const MESSAGE_BY_COUNTRY = {
+    Brazil: 'Você fez parte de um momento que ficará na história. Juntos, cantamos pela paz, união e um mundo melhor.',
+    Portugal: 'Foste parte de um momento que ficará na história. Juntos, cantámos pela paz, união e um mundo melhor.',
+  };
+
+  const COUNTRY_TO_LANG = {
+    Afghanistan: 'fa',
+    Albania: 'sq',
+    Algeria: 'ar',
+    Argentina: 'es',
+    Armenia: 'hy',
+    Australia: 'en',
+    Austria: 'de',
+    Azerbaijan: 'az',
+    Bahrain: 'ar',
+    Bangladesh: 'bn',
+    Belarus: 'be',
+    Belgium: 'fr',
+    Brazil: 'pt',
+    Bulgaria: 'bg',
+    Cambodia: 'km',
+    Canada: 'en',
+    Chile: 'es',
+    China: 'zh',
+    Colombia: 'es',
+    Croatia: 'hr',
+    Cuba: 'es',
+    Cyprus: 'el',
+    Czechia: 'cs',
+    'Côte d\'Ivoire': 'fr',
+    Denmark: 'da',
+    'Dominican Republic': 'es',
+    Ecuador: 'es',
+    Egypt: 'ar',
+    Estonia: 'et',
+    Ethiopia: 'am',
+    Finland: 'fi',
+    France: 'fr',
+    Georgia: 'ka',
+    Germany: 'de',
+    Ghana: 'en',
+    Greece: 'el',
+    Guatemala: 'es',
+    Haiti: 'ht',
+    Honduras: 'es',
+    Hungary: 'hu',
+    Iceland: 'is',
+    India: 'hi',
+    Indonesia: 'id',
+    Iran: 'fa',
+    Iraq: 'ar',
+    Ireland: 'ga',
+    Israel: 'he',
+    Italy: 'it',
+    Japan: 'ja',
+    Jordan: 'ar',
+    Kazakhstan: 'kk',
+    Kenya: 'sw',
+    'South Korea': 'ko',
+    Kuwait: 'ar',
+    Latvia: 'lv',
+    Lebanon: 'ar',
+    Lithuania: 'lt',
+    Luxembourg: 'fr',
+    Malaysia: 'ms',
+    Mexico: 'es',
+    Morocco: 'ar',
+    Netherlands: 'nl',
+    'New Zealand': 'en',
+    Nigeria: 'en',
+    Norway: 'no',
+    Pakistan: 'ur',
+    Palestine: 'ar',
+    Panama: 'es',
+    Paraguay: 'es',
+    Peru: 'es',
+    Philippines: 'fil',
+    Poland: 'pl',
+    Portugal: 'pt',
+    Romania: 'ro',
+    Russia: 'ru',
+    'Saudi Arabia': 'ar',
+    Serbia: 'sr',
+    Singapore: 'en',
+    Slovakia: 'sk',
+    Slovenia: 'sl',
+    'South Africa': 'en',
+    Spain: 'es',
+    Sweden: 'sv',
+    Switzerland: 'fr',
+    Taiwan: 'zh',
+    Thailand: 'th',
+    Tunisia: 'ar',
+    Turkey: 'tr',
+    Ukraine: 'uk',
+    'United Arab Emirates': 'ar',
+    'United Kingdom': 'en',
+    'United States': 'en',
+    Uruguay: 'es',
+    Venezuela: 'es',
+    Vietnam: 'vi',
+  };
+
   function getUserCountry() {
     const pledge = typeof WorldChoirDB !== 'undefined'
       ? WorldChoirDB.getPledgeForCurrentUser?.()
@@ -140,12 +299,25 @@ const WorldChoirThankYou = (() => {
     return user?.country || null;
   }
 
+  function getLangKey(country) {
+    const c = country || getUserCountry();
+    if (c && COUNTRY_TO_LANG[c]) return COUNTRY_TO_LANG[c];
+    return (navigator.language || 'en').split('-')[0].toLowerCase();
+  }
+
   function getThankYou(country) {
     const c = country || getUserCountry();
     if (c && BY_COUNTRY[c]) return BY_COUNTRY[c];
-    const lang = (navigator.language || 'en').split('-')[0].toLowerCase();
+    const lang = getLangKey(c);
     return BY_LANG[lang] || BY_LANG.en;
   }
 
-  return { getThankYou, getUserCountry };
+  function getThankYouMessage(country) {
+    const c = country || getUserCountry();
+    if (c && MESSAGE_BY_COUNTRY[c]) return MESSAGE_BY_COUNTRY[c];
+    const lang = getLangKey(c);
+    return MESSAGE_BY_LANG[lang] || MESSAGE_BY_LANG.en;
+  }
+
+  return { getThankYou, getThankYouMessage, getUserCountry, getLangKey };
 })();
