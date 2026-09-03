@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
-  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904q">
+  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904r">
 </head>
 <body class="sws-page-body">
 
@@ -33,9 +33,10 @@
       </p>
     </div>
 
-    <button class="sws-nav__share" type="button" id="sws-letter-share" aria-label="Share">
+    <button class="sws-nav__replay" type="button" id="sws-letter-replay" aria-label="Replay letter">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
   </nav>
@@ -82,7 +83,7 @@
   <script src="js/world-choir-db.js?v=20260904g"></script>
   <script src="js/song-we-sang/letter-content.js?v=20260904q"></script>
   <script src="js/song-we-sang/typing-engine.js?v=20260904p"></script>
-  <script src="js/song-we-sang/letter-page.js?v=20260904p"></script>
+  <script src="js/song-we-sang/letter-page.js?v=20260904r"></script>
 
   <script>
     (function () {
@@ -95,25 +96,7 @@
         });
       }
 
-      // Share button
-      const shareBtn = document.getElementById('sws-letter-share');
-      if (shareBtn) {
-        shareBtn.addEventListener('click', async () => {
-          const shareData = {
-            title: 'A Letter to John Lennon',
-            text: 'The world sang together. Read the letter.',
-            url: window.location.href,
-          };
-          try {
-            if (navigator.share) { await navigator.share(shareData); return; }
-          } catch (e) { if (e && e.name === 'AbortError') return; }
-          try {
-            await navigator.clipboard.writeText(window.location.href);
-            shareBtn.classList.add('is-copied');
-            setTimeout(() => shareBtn.classList.remove('is-copied'), 1600);
-          } catch { /* ignore */ }
-        });
-      }
+      // Replay is wired in letter-page.js.
     })();
   </script>
 </body>

@@ -69,6 +69,50 @@
     }
   }
 
+  function startTyping(visualRoot) {
+    cleanup();
+    visualRoot.classList.remove('sws-letter--complete');
+    visualRoot.textContent = '';
+    followScroll = true;
+
+    typingController = SongWeSangTypingEngine.start({
+      container: visualRoot,
+      content,
+      intervalMs: TYPE_INTERVAL,
+      showCaret: true,
+      onChar() {
+        softFollowCaret();
+      },
+      onComplete() {
+        typingController = null;
+        visualRoot.classList.add('sws-letter--complete');
+        if (typeof WorldChoirDB.markSongWeSangLetterCompleted === 'function') {
+          WorldChoirDB.markSongWeSangLetterCompleted();
+        }
+      },
+    });
+  }
+
+  function bindReplay(visualRoot) {
+    const replayBtn = document.getElementById('sws-letter-replay');
+    if (!replayBtn) return;
+
+    replayBtn.addEventListener('click', () => {
+      replayBtn.classList.remove('is-playing');
+      void replayBtn.offsetWidth;
+      replayBtn.classList.add('is-playing');
+      setTimeout(() => replayBtn.classList.remove('is-playing'), 650);
+
+      if (prefersReducedMotion()) {
+        cleanup();
+        showFullLetter(visualRoot);
+        return;
+      }
+
+      startTyping(visualRoot);
+    });
+  }
+
   async function init() {
     const visualRoot = document.getElementById('sws-letter-visual');
     const srRoot = document.getElementById('sws-letter-sr');
@@ -81,6 +125,7 @@
 
     fillSrLetter(srRoot);
     bindScrollGuard();
+    bindReplay(visualRoot);
     window.addEventListener('pagehide', cleanup);
     window.addEventListener('beforeunload', cleanup);
 
@@ -103,21 +148,7 @@
 
     // First genuine open — mark started immediately so interruptions don't restart.
     WorldChoirDB.markSongWeSangLetterStarted();
-
-    typingController = SongWeSangTypingEngine.start({
-      container: visualRoot,
-      content,
-      intervalMs: TYPE_INTERVAL,
-      showCaret: true,
-      onChar() {
-        softFollowCaret();
-      },
-      onComplete() {
-        typingController = null;
-        visualRoot.classList.add('sws-letter--complete');
-        WorldChoirDB.markSongWeSangLetterCompleted();
-      },
-    });
+    startTyping(visualRoot);
   }
 
   if (document.readyState === 'loading') {

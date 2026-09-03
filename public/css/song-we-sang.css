@@ -46,7 +46,7 @@ html.sws-page body {
 }
 
 .sws-nav__back,
-.sws-nav__share {
+.sws-nav__replay {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -64,15 +64,20 @@ html.sws-page body {
 
 .sws-nav__back:hover,
 .sws-nav__back:focus-visible,
-.sws-nav__share:hover,
-.sws-nav__share:focus-visible {
+.sws-nav__replay:hover,
+.sws-nav__replay:focus-visible {
   color: var(--text-primary, #f4f4f6);
   background: rgba(255, 255, 255, 0.06);
   outline: none;
 }
 
-.sws-nav__share.is-copied {
-  color: var(--accent-aurora, #4ec5e8);
+.sws-nav__replay.is-playing svg {
+  animation: swsReplaySpin 0.6s ease;
+}
+
+@keyframes swsReplaySpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 .sws-nav__title-wrap {
@@ -160,7 +165,7 @@ html.sws-page body {
    These % values scale perfectly as the image scales. */
 .sws-letter {
   position: absolute;
-  top: 35px;
+  top: 45px;
   left: 13%;
   right: 13%;
   bottom: 8%;
@@ -224,7 +229,7 @@ html.sws-page body {
 
 /* 5. "With love and gratitude," — Caveat 20px */
 .sws-letter__closing {
-  margin: 1.4em 0 0.2em;
+  margin: 1.4em 0 0.85em;
   padding: 0;
   font-family: 'Caveat', cursive;
   font-size: 10px;
@@ -235,7 +240,7 @@ html.sws-page body {
 
 /* 6. "The World We Live In" — Brittany Signature 30px */
 .sws-letter__signature {
-  margin: 0.1em 0 0;
+  margin: 0.55em 0 0;
   padding: 0;
   font-family: 'Brittany Signature', cursive;
   font-size: 15px;
@@ -362,5 +367,9 @@ html.sws-page body {
   .sws-letter__caret {
     animation: none;
     opacity: 0.35;
+  }
+
+  .sws-nav__replay.is-playing svg {
+    animation: none;
   }
 }
