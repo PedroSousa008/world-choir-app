@@ -569,6 +569,12 @@ const WorldChoirHome = (() => {
   }
 
   function bindPostEventActions() {
+    const songCard = document.querySelector('a.home-after-card--song');
+    songCard?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.href = 'song-we-sang.html';
+    });
+
     document.getElementById('home-open-memory')?.addEventListener('click', () => {
       window.location.href = 'memory.html';
     });
@@ -682,11 +688,26 @@ const WorldChoirHome = (() => {
     homeView = viewId;
   }
 
+  function clearStaleLiveUi() {
+    document.documentElement.classList.remove('wc-live-gate');
+    document.body.classList.remove('wc-global-live-active');
+    document.body.style.overflow = '';
+    document.getElementById('wc-global-live')?.classList.remove('is-active', 'wc-global-live--boot');
+    document.getElementById('wc-global-live')?.setAttribute('aria-hidden', 'true');
+    const liveMode = document.getElementById('live-event-mode');
+    if (liveMode) {
+      liveMode.classList.remove('active');
+      liveMode.setAttribute('aria-hidden', 'true');
+    }
+    document.getElementById('home-page')?.removeAttribute('hidden');
+    document.getElementById('nav-root')?.removeAttribute('hidden');
+  }
+
   function render() {
     const root = document.getElementById('home-content');
     if (!root) return;
     if (isPostEvent()) {
-      document.documentElement.classList.remove('wc-live-gate');
+      clearStaleLiveUi();
     }
     if (document.documentElement.classList.contains('wc-live-gate')) return;
     if (typeof GlobalLiveEvent !== 'undefined' && GlobalLiveEvent.isActive()) return;

@@ -508,7 +508,7 @@
 .home-after-hero {
   position: relative;
   width: 100%;
-  overflow: visible;
+  overflow: hidden;
   background: linear-gradient(180deg, #050810 0%, #000 100%);
   pointer-events: none;
 }
@@ -602,13 +602,21 @@
 
 .home-after-body {
   position: relative;
-  z-index: 4;
+  z-index: 8;
   display: flex;
   flex-direction: column;
   gap: 14px;
   margin-top: 0;
   padding: 14px 20px 8px;
   max-width: 100%;
+  pointer-events: auto;
+}
+
+.home-after-body .home-after-card--song,
+.home-after-body .home-after-memory {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 /* Stats sit on the planet image (inside the hero stage) on mobile and desktop */
@@ -1037,12 +1045,7 @@ a.home-after-card--song:active {
   color: var(--text-muted);
 }
 
-.home-after-promise-saved {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.55;
-  color: var(--text-primary);
-}
+.home-after-memory {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-md);

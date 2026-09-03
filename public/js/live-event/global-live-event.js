@@ -1366,6 +1366,14 @@ const GlobalLiveEvent = (() => {
     if (isPostEventPlaybackBlocked()) {
       stopLiveSongElement();
       state = 'LIVE_FINISHED';
+      teardownLiveOverlays();
+      if (typeof LiveEventMode !== 'undefined') {
+        LiveEventMode.finishFlow?.();
+      }
+      if (typeof WorldChoirHome !== 'undefined') {
+        WorldChoirHome.render();
+      }
+      return;
     }
 
     const nowMs = WorldChoirServerTime.nowMs();
