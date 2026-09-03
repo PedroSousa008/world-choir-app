@@ -160,7 +160,7 @@ html.sws-page body {
    These % values scale perfectly as the image scales. */
 .sws-letter {
   position: absolute;
-  top: 19%;
+  top: 10px;
   left: 13%;
   right: 13%;
   bottom: 8%;
@@ -176,7 +176,7 @@ html.sws-page body {
   margin: 0 0 0.55em;
   padding: 0;
   font-family: 'Brittany Signature', cursive;
-  font-size: 32px;
+  font-size: 20px;
   font-weight: normal;
   font-style: normal;
   line-height: 1.2;
@@ -188,7 +188,7 @@ html.sws-page body {
   margin: 0 0 0.75em;
   padding: 0;
   font-family: 'Special Elite', 'Courier New', monospace;
-  font-size: 15px;
+  font-size: 8px;
   font-weight: 400;
   line-height: 1.65;
   color: #2a1f0e;
@@ -199,7 +199,7 @@ html.sws-page body {
   margin: 0 0 0.2em;
   padding: 0;
   font-family: 'Special Elite', 'Courier New', monospace;
-  font-size: 15px;
+  font-size: 8px;
   font-weight: 400;
   line-height: 1.5;
   color: #2a1f0e;
@@ -210,7 +210,7 @@ html.sws-page body {
   margin: 0.6em 0;
   padding: 0;
   font-family: 'Special Elite', 'Courier New', monospace;
-  font-size: 15px;
+  font-size: 8px;
   font-weight: 400;   /* Special Elite has no bold; italic adds weight */
   line-height: 1.65;
   color: #1a110a;
@@ -227,7 +227,7 @@ html.sws-page body {
   margin: 1.4em 0 0.2em;
   padding: 0;
   font-family: 'Caveat', cursive;
-  font-size: 20px;
+  font-size: 13px;
   font-weight: 400;
   line-height: 1.3;
   color: #2a1f0e;
@@ -238,7 +238,7 @@ html.sws-page body {
   margin: 0.1em 0 0;
   padding: 0;
   font-family: 'Brittany Signature', cursive;
-  font-size: 30px;
+  font-size: 20px;
   font-weight: normal;
   font-style: normal;
   line-height: 1.25;
@@ -339,22 +339,22 @@ html.sws-page body {
 
   /* On wider screens the image is bigger, so keep font sizes proportional.
      At 480px image width these are the natural sizes; scale them gently. */
-  .sws-letter__greeting  { font-size: 34px; }
-  .sws-letter__signature { font-size: 32px; }
-  .sws-letter__closing   { font-size: 22px; }
+  .sws-letter__greeting  { font-size: 20px; }
+  .sws-letter__signature { font-size: 20px; }
+  .sws-letter__closing   { font-size: 13px; }
   .sws-letter__p,
   .sws-letter__line,
-  .sws-letter__emphasis  { font-size: 15px; }
+  .sws-letter__emphasis  { font-size: 8px; }
 }
 
 /* On very small phones, scale down slightly to avoid overflow */
 @media (max-width: 360px) {
-  .sws-letter__greeting  { font-size: 26px; }
-  .sws-letter__signature { font-size: 24px; }
-  .sws-letter__closing   { font-size: 17px; }
+  .sws-letter__greeting  { font-size: 18px; }
+  .sws-letter__signature { font-size: 18px; }
+  .sws-letter__closing   { font-size: 12px; }
   .sws-letter__p,
   .sws-letter__line,
-  .sws-letter__emphasis  { font-size: 13px; }
+  .sws-letter__emphasis  { font-size: 7px; }
 }
 
 /* ── Reduced motion ── */
