@@ -857,6 +857,32 @@ a.home-after-card--song:active {
   color: var(--text-secondary);
 }
 
+.home-after-song__quote-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.home-after-song__quote-wrap .home-after-song__quote {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-after-song__tap-indicator {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 0.55;
+  line-height: 1.1;
+  padding-bottom: 2px;
+  white-space: nowrap;
+}
+
 .home-after-song__quote.sws-quote-shimmer {
   /* Base appearance stays identical; the shimmering gradient is clipped to text. */
   color: var(--text-secondary);

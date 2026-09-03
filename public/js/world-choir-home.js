@@ -537,9 +537,11 @@ const WorldChoirHome = (() => {
                   <span class="home-after-song__dot" aria-hidden="true">·</span>
                   <span class="home-after-song__artist">${esc(song.artist)}</span>
                 </p>
-                <p class="home-after-song__quote${shouldShimmerSongQuote ? ' sws-quote-shimmer' : ''}">${esc(songQuote)}</p>
+                <div class="home-after-song__quote-wrap">
+                  <p class="home-after-song__quote${shouldShimmerSongQuote ? ' sws-quote-shimmer' : ''}">${esc(songQuote)}</p>
+                  <span class="home-after-song__tap-indicator" aria-hidden="true">TAP IT</span>
+                </div>
               </div>
-              <span class="home-after-song__note" aria-hidden="true">${statIcon('songNote')}</span>
             </div>
           </a>
 
