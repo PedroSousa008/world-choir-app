@@ -200,7 +200,6 @@ const WorldChoirNav = (() => {
 
   function mount(activePage) {
     if (typeof WorldChoirA11y !== 'undefined') {
-      WorldChoirA11y.ensureSkipLink?.();
       WorldChoirA11y.bindOverlays?.();
     }
     const root = document.getElementById('nav-root');

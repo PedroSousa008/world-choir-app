@@ -24,17 +24,7 @@ const WorldChoirA11y = (() => {
   }
 
   function ensureSkipLink() {
-    if (document.getElementById('wc-skip-link')) return;
-    const main = document.querySelector('main[id]') || document.querySelector('main');
-    if (!main) return;
-    if (!main.id) main.id = 'main-content';
-
-    const link = document.createElement('a');
-    link.id = 'wc-skip-link';
-    link.className = 'skip-link';
-    link.href = `#${main.id}`;
-    link.textContent = 'Skip to content';
-    document.body.insertBefore(link, document.body.firstChild);
+    document.getElementById('wc-skip-link')?.remove();
   }
 
   function syncOverlayState(overlay, open) {

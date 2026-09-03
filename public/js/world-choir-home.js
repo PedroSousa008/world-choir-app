@@ -233,17 +233,23 @@ const WorldChoirHome = (() => {
     container.style.setProperty('--fall-distance', `${fallDistance}px`);
     confettiStarted = true;
 
-    const colors = ['#4ec5e8', '#3d7cff', '#6b5ce7', '#c9a962', '#e8f4ff', '#8ab4ff'];
-    const pieces = 48;
+    const colors = [
+      'rgba(255, 255, 255, 0.42)',
+      'rgba(201, 169, 98, 0.34)',
+      'rgba(78, 197, 232, 0.28)',
+      'rgba(138, 180, 255, 0.24)',
+    ];
+    const pieces = 18;
     let html = '';
     for (let i = 0; i < pieces; i++) {
       const left = Math.random() * 100;
-      const delay = Math.random() * 4;
-      const duration = 4 + Math.random() * 5;
-      const size = 4 + Math.random() * 6;
+      const delay = Math.random() * 6;
+      const duration = 9 + Math.random() * 5;
+      const width = 2 + Math.random() * 2;
+      const height = 10 + Math.random() * 8;
       const color = colors[i % colors.length];
       const rotate = Math.random() * 360;
-      html += `<span class="home-after-hero__confetti__piece" style="left:${left}%;animation-delay:${delay}s;animation-duration:${duration}s;width:${size}px;height:${size * (0.4 + Math.random())}px;background:${color};--rot:${rotate}deg"></span>`;
+      html += `<span class="home-after-hero__confetti__piece" style="left:${left}%;animation-delay:${delay}s;animation-duration:${duration}s;width:${width}px;height:${height}px;background:${color};--rot:${rotate}deg"></span>`;
     }
     container.innerHTML = html;
   }
@@ -338,16 +344,16 @@ const WorldChoirHome = (() => {
     return `
       <div class="home-after">
         <header class="home-after-hero">
-          <div class="home-after-hero__sky">
-            ${showConfetti ? '<div class="home-after-hero__confetti" id="home-after-confetti" aria-hidden="true"></div>' : ''}
+          <div class="home-after-hero__stage">
             <img class="home-after-hero__planet" src="${POST_EVENT_IMAGES.hero}" alt="" decoding="async" width="800" height="400">
-          </div>
-          <div class="home-after-hero__content">
-            <p class="home-after-hero__voices" id="home-after-voices" aria-live="polite">${esc(voicesLabel)}</p>
-            <img class="home-after-hero__logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir" width="1024" height="1024" decoding="async">
-            <h1 class="home-after-hero__title">We did it.</h1>
-            <p class="home-after-hero__subtitle">The world sang together.</p>
-            <p class="home-after-hero__message">Thank you for being part of this moment of unity, hope, and connection. Together, our voices created something the world will never forget.</p>
+            ${showConfetti ? '<div class="home-after-hero__confetti" id="home-after-confetti" aria-hidden="true"></div>' : ''}
+            <div class="home-after-hero__content">
+              <p class="home-after-hero__voices" id="home-after-voices" aria-live="polite">${esc(voicesLabel)}</p>
+              <img class="home-after-hero__logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir" width="1024" height="1024" decoding="async">
+              <h1 class="home-after-hero__title">We did it.</h1>
+              <p class="home-after-hero__subtitle">The world sang together.</p>
+              <p class="home-after-hero__message">Thank you for being part of this moment of unity, hope, and connection. Together, our voices created something the world will never forget.</p>
+            </div>
           </div>
         </header>
 

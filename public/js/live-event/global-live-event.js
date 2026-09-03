@@ -45,6 +45,33 @@ const GlobalLiveEvent = (() => {
     return document.getElementById('wc-global-live');
   }
 
+  function isLiveExperiencePage() {
+    const page = window.location.pathname.split('/').pop() || '';
+    return page === '' || page === 'index.html';
+  }
+
+  function shouldRunLivePlayback() {
+    return isLiveExperiencePage();
+  }
+
+  function pauseLiveMedia() {
+    if (audioEl && !audioEl.paused) {
+      audioEl.pause();
+    }
+    LyricsDisplay.stopSync();
+    if (videoEl && !videoEl.paused) {
+      videoEl.pause();
+    }
+  }
+
+  function dismissLiveUiIfOffHome() {
+    if (shouldRunLivePlayback()) return;
+    pauseLiveMedia();
+    hideTakeover();
+    hideLiveSongShell();
+    active = false;
+  }
+
   function ensureShell() {
     if (document.getElementById('wc-global-live')) return;
 
@@ -153,7 +180,7 @@ const GlobalLiveEvent = (() => {
       } catch {
         /* ignore */
       }
-      if (state === 'LIVE_SONG' && audioEl?.paused) {
+      if (state === 'LIVE_SONG' && audioEl?.paused && shouldRunLivePlayback()) {
         audioEl.play().then(() => {
           LyricsDisplay.startSync(audioEl);
         }).catch(() => {});
@@ -578,6 +605,10 @@ const GlobalLiveEvent = (() => {
   }
 
   async function enterPreEvent() {
+    if (!shouldRunLivePlayback()) {
+      dismissLiveUiIfOffHome();
+      return;
+    }
     if (state === 'PRE_EVENT' && active) return;
     state = 'PRE_EVENT';
     showPreEventUI();
@@ -631,6 +662,10 @@ const GlobalLiveEvent = (() => {
   }
 
   async function startLiveAudio(target) {
+    if (!shouldRunLivePlayback()) {
+      pauseLiveMedia();
+      return;
+    }
     if (!audioEl) {
       audioEl = getLiveSongAudio();
       audioEl.addEventListener('ended', onSongEnded);
@@ -692,6 +727,10 @@ const GlobalLiveEvent = (() => {
   }
 
   async function enterLiveSong({ fromVideoEnd = false, forceRejoin = false } = {}) {
+    if (!shouldRunLivePlayback()) {
+      dismissLiveUiIfOffHome();
+      return;
+    }
     const nowMs = WorldChoirServerTime.nowMs();
     const target = getTargetSongPositionSec(nowMs);
     const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
@@ -799,6 +838,12 @@ const GlobalLiveEvent = (() => {
       return;
     }
 
+    if (!shouldRunLivePlayback()) {
+      dismissLiveUiIfOffHome();
+      state = next;
+      return;
+    }
+
     updateCountdownUI(nowMs);
 
     if (next === 'PRE_EVENT' && state !== 'PRE_EVENT' && state !== 'TRANSITIONING_TO_LIVE') {
@@ -840,6 +885,10 @@ const GlobalLiveEvent = (() => {
   }
 
   async function pollAuthoritative() {
+    if (!shouldRunLivePlayback()) {
+      dismissLiveUiIfOffHome();
+      return;
+    }
     if (state !== 'PRE_EVENT' && state !== 'LIVE_SONG') return;
     await fetchAuthoritativeState();
     const songStartUtc = getAuthoritativeSongStartUtc();
@@ -852,7 +901,14 @@ const GlobalLiveEvent = (() => {
   }
 
   function onVisibility() {
-    if (document.hidden) return;
+    if (document.hidden) {
+      pauseLiveMedia();
+      return;
+    }
+    if (!shouldRunLivePlayback()) {
+      dismissLiveUiIfOffHome();
+      return;
+    }
     WorldChoirServerTime.sync(true).then(async () => {
       await fetchAuthoritativeState();
       if (state === 'LIVE_SONG') {
@@ -874,12 +930,17 @@ const GlobalLiveEvent = (() => {
     }).catch(() => {});
   }
 
+  function onPageHide() {
+    pauseLiveMedia();
+  }
+
   function startLoops() {
     if (tickTimer) return;
     tickTimer = setInterval(() => { tick().catch(() => {}); }, SYNC.TICK_MS);
     pollTimer = setInterval(() => { pollAuthoritative().catch(() => {}); }, SYNC.POLL_MS);
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pageshow', onVisibility);
+    window.addEventListener('pagehide', onPageHide);
     WorldChoirServerTime.startAutoResync();
   }
 
@@ -890,6 +951,7 @@ const GlobalLiveEvent = (() => {
     pollTimer = null;
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('pageshow', onVisibility);
+    window.removeEventListener('pagehide', onPageHide);
     WorldChoirServerTime.stopAutoResync();
   }
 
@@ -949,6 +1011,7 @@ const GlobalLiveEvent = (() => {
   }
 
   function applyImmediateLiveGate() {
+    if (!shouldRunLivePlayback()) return false;
     ensureShell();
     const nowMs = Date.now();
     const next = computeState(nowMs);

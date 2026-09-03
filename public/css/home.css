@@ -507,14 +507,11 @@
 .home-after-hero {
   position: relative;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
   overflow: hidden;
   background: linear-gradient(180deg, #050810 0%, #000 100%);
 }
 
-.home-after-hero__sky {
+.home-after-hero__stage {
   position: relative;
   width: 100%;
   overflow: hidden;
@@ -531,11 +528,11 @@
 
 .home-after-hero__confetti__piece {
   position: absolute;
-  top: -12px;
+  top: -16px;
   border-radius: 1px;
-  opacity: 0.85;
+  opacity: 0.4;
   animation-name: homeAfterConfettiFall;
-  animation-timing-function: linear;
+  animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
   transform: rotate(var(--rot, 0deg));
 }
@@ -545,9 +542,10 @@
     transform: translateY(0) rotate(var(--rot, 0deg));
     opacity: 0;
   }
-  6% { opacity: 0.9; }
+  10% { opacity: 0.42; }
+  85% { opacity: 0.28; }
   100% {
-    transform: translateY(var(--fall-distance, 320px)) rotate(calc(var(--rot, 0deg) + 180deg));
+    transform: translateY(var(--fall-distance, 320px)) rotate(calc(var(--rot, 0deg) + 90deg));
     opacity: 0;
   }
 }
@@ -570,15 +568,28 @@
 }
 
 .home-after-hero__content {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
   width: 100%;
-  padding: 20px 20px 28px;
+  padding: clamp(20px, 6vw, 28px) 20px clamp(24px, 7vw, 36px);
   text-align: center;
+  line-height: normal;
+  background: linear-gradient(
+    180deg,
+    rgba(5, 8, 16, 0.2) 0%,
+    rgba(5, 8, 16, 0.05) 28%,
+    rgba(0, 0, 0, 0.45) 72%,
+    rgba(0, 0, 0, 0.68) 100%
+  );
 }
 
 .home-after-hero__voices {
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -588,9 +599,9 @@
 
 .home-after-hero__logo {
   display: block;
-  width: min(120px, 32vw);
+  width: min(112px, 30vw);
   height: auto;
-  margin: 0 auto 20px;
+  margin: 0 auto 14px;
 }
 
 .home-after-hero__title {
@@ -610,11 +621,11 @@
 }
 
 .home-after-hero__message {
-  margin: 0 auto;
+  margin: 0 auto 0;
   max-width: 22rem;
   font-size: 0.88rem;
   line-height: 1.65;
-  color: var(--text-secondary);
+  color: rgba(244, 244, 246, 0.82);
 }
 
 .home-after-body {

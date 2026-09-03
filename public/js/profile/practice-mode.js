@@ -247,6 +247,7 @@ const PracticeMode = (() => {
   }
 
   function open(options = {}) {
+    document.getElementById('wc-live-song-audio')?.pause();
     onExitCallback = options.onExit || null;
     startSession();
   }
@@ -254,6 +255,8 @@ const PracticeMode = (() => {
   function init() {
     container = getContainer();
     if (!container) return;
+
+    window.addEventListener('pagehide', cleanup);
 
     if (!container.querySelector('.practice-mode__ambient')) {
       const ambient = document.createElement('div');
