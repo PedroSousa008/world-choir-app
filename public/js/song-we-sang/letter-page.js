@@ -113,37 +113,6 @@
     });
   }
 
-  function bindPromiseSheet() {
-    const openBtn = document.getElementById('sws-promise-open');
-    const sheet = document.getElementById('sws-promise-sheet');
-    const textEl = document.getElementById('sws-promise-text');
-    if (!openBtn || !sheet) return;
-
-    const open = () => {
-      const promise = typeof WorldChoirDB !== 'undefined'
-        ? WorldChoirDB.getPromiseForCurrentUser()
-        : null;
-      if (textEl) {
-        textEl.textContent = promise?.promise_text
-          ? `"${promise.promise_text}"`
-          : 'Your promise will appear here once shared.';
-      }
-      sheet.removeAttribute('hidden');
-      sheet.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-    };
-
-    const close = () => {
-      sheet.setAttribute('hidden', '');
-      sheet.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-    };
-
-    openBtn.addEventListener('click', open);
-    document.getElementById('sws-promise-close')?.addEventListener('click', close);
-    document.getElementById('sws-promise-close-x')?.addEventListener('click', close);
-  }
-
   async function init() {
     const visualRoot = document.getElementById('sws-letter-visual');
     const srRoot = document.getElementById('sws-letter-sr');
@@ -157,7 +126,6 @@
     fillSrLetter(srRoot);
     bindScrollGuard();
     bindReplay(visualRoot);
-    bindPromiseSheet();
     window.addEventListener('pagehide', cleanup);
     window.addEventListener('beforeunload', cleanup);
 
