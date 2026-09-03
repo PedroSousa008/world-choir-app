@@ -900,9 +900,9 @@ a.home-after-card--song:active {
       90deg,
       var(--text-secondary) 0%,
       var(--text-secondary) 38%,
-      rgba(201, 169, 98, 0.62) 48%,
-      rgba(240, 230, 200, 0.92) 53%,
-      rgba(201, 169, 98, 0.62) 58%,
+      rgba(30, 90, 180, 0.72) 48%,
+      rgba(70, 150, 255, 0.95) 53%,
+      rgba(30, 90, 180, 0.72) 58%,
       var(--text-secondary) 100%
     );
     background-size: 240% 100%;
