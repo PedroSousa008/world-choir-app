@@ -44,10 +44,10 @@ const WorldChoirEventSchedule = (() => {
   }
 
   /**
-   * Fixed absolute test start (not “Lisbon today + clock”), so “in N minutes” works
-   * past local midnight. Official date remains 2027-09-21 when override is off.
+   * 4 Sep 2026 00:55 Europe/Lisbon (WEST, UTC+1) = 2026-09-03T23:55:00.000Z
+   * Fixed absolute instant so Home countdown is minutes, not “1 day”.
    */
-  const TEST_EVENT_START_UTC = '2026-09-03T23:52:00.000Z';
+  const TEST_EVENT_START_UTC = '2026-09-03T23:55:00.000Z';
 
   function getTestEventStartUtc() {
     return TEST_EVENT_START_UTC;

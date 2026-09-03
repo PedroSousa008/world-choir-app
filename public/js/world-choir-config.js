@@ -774,17 +774,28 @@ const WorldChoirConfig = (() => {
   }
 
   function formatEventDate() {
+    const tz = (typeof WorldChoirEventSchedule !== 'undefined'
+      && WorldChoirEventSchedule.isTestOverrideActive())
+      ? (WorldChoirEventSchedule.TEST_TIMEZONE || 'Europe/Lisbon')
+      : 'UTC';
     return getEventStart().toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
-      timeZone: 'UTC',
+      timeZone: tz,
     });
   }
 
   function formatEventTime() {
     if (typeof WorldChoirEventSchedule !== 'undefined' && WorldChoirEventSchedule.isTestOverrideActive()) {
-      return `${getEventStart().toISOString().slice(11, 16)} UTC`;
+      const tz = WorldChoirEventSchedule.TEST_TIMEZONE || 'Europe/Lisbon';
+      const clock = getEventStart().toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: tz,
+      });
+      return `${clock} local`;
     }
     return '16:00 UTC';
   }
