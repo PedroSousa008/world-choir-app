@@ -1223,6 +1223,50 @@ a.home-after-voices-stat:active {
   margin: 0 auto 36px;
 }
 
+.home-skel--planet {
+  width: 100%;
+  aspect-ratio: 1015 / 1030;
+  border-radius: 0;
+}
+
+.home-skel--after-logo {
+  width: min(112px, 30vw);
+  aspect-ratio: 1;
+  margin: 0 auto 10px;
+  border-radius: 20px;
+}
+
+.home-skel--after-title {
+  width: min(10rem, 50%);
+  height: 2rem;
+  margin: 0 auto 10px;
+}
+
+.home-skel--after-msg {
+  width: min(22rem, 88%);
+  height: 2.6rem;
+  margin: 0 auto;
+}
+
+.home-skel--after-stats {
+  height: 60px;
+  border-radius: var(--radius-md);
+  margin-top: -8px;
+}
+
+.home-skel--after-memory {
+  height: 160px;
+  border-radius: var(--radius-md);
+}
+
+.home-after-stat-skel {
+  display: block;
+  width: 3.2rem;
+  height: 1.35rem;
+  margin: 0 auto;
+  border-radius: 6px;
+}
+
 .home-skel--cta {
   width: 100%;
   max-width: 320px;

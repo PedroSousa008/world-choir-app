@@ -1,28 +1,11 @@
 const { getWorldChoirStats, jsonStorageError } = require('./_lib/store');
-const { buildDailyPeaceOwnerIntel } = require('./_lib/daily-peace');
-
-let dailyActsCache = { value: null, at: 0 };
-
-async function getDailyActsCompletedTotal() {
-  const now = Date.now();
-  if (dailyActsCache.value != null && now - dailyActsCache.at < 60_000) {
-    return dailyActsCache.value;
-  }
-  try {
-    const intel = await buildDailyPeaceOwnerIntel();
-    dailyActsCache.value = intel?.totals?.totalCompletions ?? 0;
-    dailyActsCache.at = now;
-    return dailyActsCache.value;
-  } catch {
-    return dailyActsCache.value ?? 0;
-  }
-}
+const { getDailyActsCompletedTotal } = require('./_lib/daily-peace');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=30');
+  res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=120');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });

@@ -3,6 +3,7 @@ const { randomUUID } = require('crypto');
 const { readBlobJson, writeJson, findUserByDevice, assertBlobConfigured } = require('./store');
 
 const ROOT = 'wc-data/daily-peace';
+const AGGREGATES_PATH = `${ROOT}/aggregates.json`;
 const RECENT_ACT_LIMIT = 90;
 const HISTORY_LIST_LIMIT = 400;
 const FUTURE_PLACEHOLDER_DAYS = 7;
@@ -655,6 +656,7 @@ async function completeAssignment(deviceId, assignmentDateInput, todayInput, { s
   });
 
   await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
+  await bumpDailyActsCompletionsTotal().catch(() => {});
   await emitSponsorEvent(updated, user, 'daily_act_completed');
 
   const mapped = mapUserDailyAct(updated, act, { todayDate });
@@ -734,6 +736,9 @@ async function saveReflection(deviceId, assignmentDateInput, todayInput, reflect
   });
 
   await writeJson(userDailyActPath(user.id, assignmentDate), updated, { overwrite: true });
+  if (!alreadyCompleted) {
+    await bumpDailyActsCompletionsTotal().catch(() => {});
+  }
   return mapUserDailyAct(updated, act, { todayDate });
 }
 
@@ -1232,6 +1237,40 @@ async function buildDailyPeaceOwnerIntel() {
   };
 }
 
+async function readDailyActsAggregates() {
+  try {
+    return await readBlobJson(AGGREGATES_PATH);
+  } catch {
+    return null;
+  }
+}
+
+async function writeDailyActsCompletionsTotal(total) {
+  await writeJson(AGGREGATES_PATH, {
+    totalCompletions: Number(total) || 0,
+    updatedAt: new Date().toISOString(),
+  }, { overwrite: true });
+}
+
+async function bumpDailyActsCompletionsTotal() {
+  const stored = await readDailyActsAggregates();
+  const next = (Number(stored?.totalCompletions) || 0) + 1;
+  await writeDailyActsCompletionsTotal(next);
+  return next;
+}
+
+/** Fast public total — reads a stored counter instead of scanning every assignment. */
+async function getDailyActsCompletedTotal() {
+  const stored = await readDailyActsAggregates();
+  if (stored && typeof stored.totalCompletions === 'number') {
+    return stored.totalCompletions;
+  }
+  const intel = await buildDailyPeaceOwnerIntel();
+  const total = intel?.totals?.totalCompletions ?? 0;
+  await writeDailyActsCompletionsTotal(total).catch(() => {});
+  return total;
+}
+
 module.exports = {
   getUtcDateString,
   resolveDate,
@@ -1257,4 +1296,5 @@ module.exports = {
   categoryLabel,
   listUserAssignmentRows,
   THEMES,
+  getDailyActsCompletedTotal,
 };

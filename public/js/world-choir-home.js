@@ -216,6 +216,72 @@ const WorldChoirHome = (() => {
   let postEventStats = null;
   let postEventStatsPromise = null;
   let confettiStarted = false;
+  const POST_EVENT_STATS_CACHE_KEY = 'wc_post_event_stats_v1';
+
+  function readCachedPostEventStats() {
+    try {
+      const raw = sessionStorage.getItem(POST_EVENT_STATS_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+      return parsed.data || parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeCachedPostEventStats(data) {
+    try {
+      sessionStorage.setItem(POST_EVENT_STATS_CACHE_KEY, JSON.stringify({
+        at: Date.now(),
+        data,
+      }));
+    } catch {
+      /* ignore quota */
+    }
+  }
+
+  function getPostEventStatsFallback() {
+    const cached = readCachedPostEventStats();
+    const map = typeof WorldChoirDB !== 'undefined'
+      ? WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id)
+      : null;
+    return {
+      voices: cached?.voices ?? map?.voices ?? 0,
+      cities: cached?.cities ?? map?.cities ?? 0,
+      songs: 1,
+      dailyActsCompleted: cached?.dailyActsCompleted ?? null,
+    };
+  }
+
+  function fetchPostEventStats() {
+    if (postEventStatsPromise) return postEventStatsPromise;
+    const cached = readCachedPostEventStats();
+
+    postEventStatsPromise = fetch(`/api/stats?eventId=${encodeURIComponent(WorldChoirConfig.CURRENT_EVENT.id)}`, {
+      credentials: 'same-origin',
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        postEventStats = data || cached || {};
+        if (data) writeCachedPostEventStats(postEventStats);
+        return postEventStats;
+      })
+      .catch(() => {
+        postEventStats = cached || {};
+        return postEventStats;
+      });
+
+    if (cached) {
+      postEventStatsPromise.then((fresh) => {
+        if (fresh && (homeView === 'post-event' || homeView === 'post-event-complete')) {
+          updatePostEventStatsUI(fresh);
+        }
+      });
+      return Promise.resolve(cached);
+    }
+    return postEventStatsPromise;
+  }
 
   const POST_EVENT_CONFETTI_MS = 60 * 60 * 1000;
 
@@ -281,32 +347,41 @@ const WorldChoirHome = (() => {
     return Number(n).toLocaleString('en-US');
   }
 
-  function fetchPostEventStats() {
-    if (postEventStats) return Promise.resolve(postEventStats);
-    if (postEventStatsPromise) return postEventStatsPromise;
-    postEventStatsPromise = fetch(`/api/stats?eventId=${encodeURIComponent(WorldChoirConfig.CURRENT_EVENT.id)}`, {
-      cache: 'no-store',
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        postEventStats = data || {};
-        return postEventStats;
-      })
-      .catch(() => {
-        postEventStats = {};
-        return postEventStats;
-      });
-    return postEventStatsPromise;
+  function renderStatNumber(id, value) {
+    if (value == null) {
+      return `<span class="wc-skel home-after-stat-skel" id="${id}"></span>`;
+    }
+    return `<span class="home-after-voices-stat__num" id="${id}">${formatStat(value)}</span>`;
   }
 
-  function getPostEventStatsFallback() {
-    const map = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
-    return {
-      voices: map?.voices ?? 0,
-      cities: map?.cities ?? 0,
-      songs: 1,
-      dailyActsCompleted: null,
-    };
+  function renderPostEventSkeleton() {
+    return `
+      <div class="home-after home-after--skeleton" aria-busy="true">
+        <span class="sr-only">Loading World Choir…</span>
+        <header class="home-after-hero">
+          <div class="home-after-hero__stage">
+            <div class="home-skel home-skel--planet"></div>
+            <div class="home-after-hero__content">
+              <div class="home-skel home-skel--after-logo"></div>
+              <div class="home-skel home-skel--after-title"></div>
+              <div class="home-skel home-skel--after-msg"></div>
+            </div>
+          </div>
+        </header>
+        <div class="home-after-body">
+          <div class="home-skel home-skel--after-stats"></div>
+          <div class="wc-skel-card">
+            <div class="wc-skel wc-skel--line wc-skel--line-short"></div>
+            <div class="wc-skel wc-skel--line wc-skel--line-mid"></div>
+          </div>
+          <div class="wc-skel-card">
+            <div class="wc-skel wc-skel--line wc-skel--line-short"></div>
+            <div class="wc-skel wc-skel--line"></div>
+          </div>
+          <div class="home-skel home-skel--after-memory"></div>
+        </div>
+      </div>
+    `;
   }
 
   function statIcon(type) {
@@ -358,7 +433,7 @@ const WorldChoirHome = (() => {
       <div class="home-after">
         <header class="home-after-hero">
           <div class="home-after-hero__stage">
-            <img class="home-after-hero__planet" src="${POST_EVENT_IMAGES.hero}" alt="" decoding="async" width="800" height="400">
+            <img class="home-after-hero__planet" src="${POST_EVENT_IMAGES.hero}" alt="" decoding="async" fetchpriority="high" width="800" height="400">
             ${showConfetti ? '<div class="home-after-hero__confetti" id="home-after-confetti" aria-hidden="true"></div>' : ''}
             <div class="home-after-hero__content">
               <img class="home-after-hero__logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir" width="1024" height="1024" decoding="async">
@@ -369,14 +444,14 @@ const WorldChoirHome = (() => {
               <div class="home-after-stats-row">
                 <a class="home-after-voices-stat" href="map.html" id="home-stat-voices-link">
                   <div class="home-after-voices-stat__num-wrap">
-                    <span class="home-after-voices-stat__num" id="home-stat-voices">${formatStat(merged.voices)}</span>
+                    ${renderStatNumber('home-stat-voices', merged.voices)}
                   </div>
                   <span class="home-after-stat__label">People sang</span>
                 </a>
                 <div class="home-after-stats-row__divider" aria-hidden="true"></div>
                 <a class="home-after-voices-stat" href="daily-acts.html" id="home-stat-acts-link">
                   <div class="home-after-voices-stat__num-wrap">
-                    <span class="home-after-voices-stat__num" id="home-stat-acts">${formatStat(merged.dailyActsCompleted)}</span>
+                    ${renderStatNumber('home-stat-acts', merged.dailyActsCompleted)}
                   </div>
                   <span class="home-after-stat__label">Daily Acts Completed</span>
                 </a>
@@ -431,8 +506,16 @@ const WorldChoirHome = (() => {
   function updatePostEventStatsUI(stats) {
     const voices = document.getElementById('home-stat-voices');
     const acts = document.getElementById('home-stat-acts');
-    if (voices && stats.voices != null) voices.textContent = formatStat(stats.voices);
-    if (acts && stats.dailyActsCompleted != null) acts.textContent = formatStat(stats.dailyActsCompleted);
+    if (voices && stats.voices != null) {
+      voices.classList.remove('wc-skel', 'home-after-stat-skel');
+      voices.classList.add('home-after-voices-stat__num');
+      voices.textContent = formatStat(stats.voices);
+    }
+    if (acts && stats.dailyActsCompleted != null) {
+      acts.classList.remove('wc-skel', 'home-after-stat-skel');
+      acts.classList.add('home-after-voices-stat__num');
+      acts.textContent = formatStat(stats.dailyActsCompleted);
+    }
   }
 
   function bindPostEventActions() {
@@ -544,6 +627,33 @@ const WorldChoirHome = (() => {
 
   let homeView = 'unknown';
 
+  function paintPostEvent(viewId) {
+    fetchPostEventStats();
+    const root = document.getElementById('home-content');
+    if (!root) return;
+    if (homeView === viewId) return;
+
+    if (!readCachedPostEventStats() && homeView !== 'skeleton') {
+      document.getElementById('home-page')?.classList.remove('home-page--centered');
+      document.getElementById('home-page')?.classList.add('home-page--post-event');
+      document.getElementById('earth-canvas')?.setAttribute('hidden', '');
+      document.getElementById('ambient-bg')?.setAttribute('hidden', '');
+      root.innerHTML = renderPostEventSkeleton();
+      homeView = 'skeleton';
+      requestAnimationFrame(() => {
+        if (homeView !== 'skeleton') return;
+        homeReady = true;
+        mountPostEventHome();
+        homeView = viewId;
+      });
+      return;
+    }
+
+    homeReady = true;
+    mountPostEventHome();
+    homeView = viewId;
+  }
+
   function render() {
     const root = document.getElementById('home-content');
     if (!root) return;
@@ -552,11 +662,7 @@ const WorldChoirHome = (() => {
     if (typeof GlobalLiveEvent !== 'undefined' && GlobalLiveEvent.isActive()) return;
 
     if (isPostEvent() && LiveEventMode.hasCompletedFlow()) {
-      homeReady = true;
-      if (homeView !== 'post-event-complete') {
-        mountPostEventHome();
-        homeView = 'post-event-complete';
-      }
+      paintPostEvent('post-event-complete');
       return;
     }
 
@@ -592,11 +698,7 @@ const WorldChoirHome = (() => {
       return;
     }
 
-    homeReady = true;
-    if (homeView !== 'post-event') {
-      mountPostEventHome();
-      homeView = 'post-event';
-    }
+    paintPostEvent('post-event');
   }
 
   function updateCountdown() {
@@ -670,8 +772,9 @@ const WorldChoirHome = (() => {
 
   function init() {
     homeReady = false;
+    if (isPostEvent()) fetchPostEventStats();
     // Warm navigations (data already in memory) skip the skeleton entirely.
-    if (isHomeDataReady()) homeReady = true;
+    if (isHomeDataReady() || readCachedPostEventStats()) homeReady = true;
     startHome();
     if (homeReady) {
       maybeLaunchHomeExtras();
@@ -722,7 +825,13 @@ const WorldChoirHome = (() => {
       }
     });
 
-    window.addEventListener('wc-pledges-synced', updateVoicesCounter);
+    window.addEventListener('wc-pledges-synced', () => {
+      updateVoicesCounter();
+      if (homeView === 'post-event' || homeView === 'post-event-complete') {
+        const map = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
+        if (map?.voices != null) updatePostEventStatsUI({ voices: map.voices });
+      }
+    });
     window.addEventListener('wc-pledges-synced', updatePostEventHeroCopy);
     window.addEventListener('wc-pledge-updated', updatePostEventHeroCopy);
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
