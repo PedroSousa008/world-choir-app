@@ -632,9 +632,10 @@
   position: absolute !important;
   left: 20px;
   right: 20px;
-  top: 76%;
+  top: 85%;
   z-index: 6;
   margin: 0;
+  height: 60px;
   box-sizing: border-box;
   pointer-events: auto;
 }
@@ -662,20 +663,22 @@
 }
 
 .home-after-card--stats {
-  padding: 16px 16px 14px;
+  padding: 6px 12px 8px;
+  height: 60px;
 }
 
 .home-after-stats-row {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: stretch;
+  height: 100%;
   gap: 0;
 }
 
 .home-after-stats-row__divider {
   width: 1px;
   align-self: stretch;
-  margin: 4px 10px;
+  margin: 2px 10px;
   background: rgba(255, 255, 255, 0.1);
 }
 
@@ -683,23 +686,26 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  min-height: 88px;
+  justify-content: center;
+  gap: 2px;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
   text-align: center;
 }
 
 .home-after-voices-stat__num-wrap {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 52px;
+  min-height: 0;
 }
 
 .home-after-voices-stat__num {
   display: block;
-  font-size: clamp(2.25rem, 10vw, 3rem);
+  font-size: 1.35rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
@@ -708,7 +714,7 @@
 
 .home-after-voices-stat .home-after-stat__label {
   flex-shrink: 0;
-  margin-top: 8px;
+  margin-top: 0;
   max-width: 9.5rem;
 }
 

@@ -365,7 +365,7 @@ const WorldChoirHome = (() => {
               <h1 class="home-after-hero__title" id="home-after-thank-you">${esc(heroCopy.thankYou)}</h1>
               <p class="home-after-hero__message" id="home-after-thank-you-message">${esc(heroCopy.message)}</p>
             </div>
-            <section class="home-after-card home-after-card--stats home-after-stats-float" aria-label="World Choir event statistics" style="position:absolute;left:20px;right:20px;top:76%;z-index:6;margin:0">
+            <section class="home-after-card home-after-card--stats home-after-stats-float" aria-label="World Choir event statistics" style="position:absolute;left:20px;right:20px;top:85%;z-index:6;margin:0">
               <div class="home-after-stats-row">
                 <div class="home-after-voices-stat">
                   <div class="home-after-voices-stat__num-wrap">
@@ -463,8 +463,8 @@ const WorldChoirHome = (() => {
     document.getElementById('home-promise-close-x')?.addEventListener('click', closePromise);
   }
 
-  const POST_EVENT_STATS_TOP_PX = 400;
-  const POST_EVENT_STATS_REF_WIDTH = 520;
+  const POST_EVENT_STATS_TOP_PX = 370;
+  const POST_EVENT_STATS_REF_WIDTH = 430;
 
   function layoutPostEventStatsFloat() {
     const floatEl = document.querySelector('.home-after-stats-float');
@@ -486,7 +486,9 @@ const WorldChoirHome = (() => {
     floatEl.style.setProperty('z-index', '6', 'important');
     floatEl.style.setProperty('margin', '0', 'important');
 
-    const cardH = floatEl.offsetHeight || 120;
+    floatEl.style.setProperty('height', '60px', 'important');
+
+    const cardH = floatEl.offsetHeight || 60;
     const overflow = Math.max(0, topPx + cardH - heroH);
     body.style.paddingTop = `${overflow + 14}px`;
   }
