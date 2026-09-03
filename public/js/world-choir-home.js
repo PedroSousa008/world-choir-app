@@ -539,8 +539,8 @@ const WorldChoirHome = (() => {
             </div>
           </a>
 
-          <section class="home-after-memory" aria-label="The world's memory">
-            <img class="home-after-memory__bg" src="${POST_EVENT_IMAGES.memory}" alt="" decoding="async" width="800" height="360">
+          <section class="home-after-memory" aria-label="The world's memory" style="--home-memory-bg: url('${POST_EVENT_IMAGES.memory}')">
+            <img class="home-after-memory__bg" src="${POST_EVENT_IMAGES.memory}" alt="" decoding="async" aria-hidden="true">
             <div class="home-after-memory__overlay" aria-hidden="true"></div>
             <div class="home-after-memory__content">
               <button type="button" class="home-after-memory__btn" id="home-open-memory">Explore the Memory ›</button>
