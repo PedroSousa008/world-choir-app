@@ -251,12 +251,37 @@ html.sws-page body {
   color: #2a1f0e;
   transform: rotate(-2.5deg);
   transform-origin: left center;
+  overflow: visible;
 }
 
 .sws-letter__signature span {
   font-family: 'Brittany Signature', cursive;
   font-weight: normal;
   font-style: normal;
+}
+
+.sws-letter__flourish {
+  display: block;
+  width: 11.5em;
+  height: 1.85em;
+  margin-top: 0.02em;
+  overflow: visible;
+}
+
+.sws-letter__underline,
+.sws-letter__heart {
+  fill: none;
+  stroke: #2a1f0e;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sws-letter__underline {
+  stroke-width: 1.05;
+}
+
+.sws-letter__heart {
+  stroke-width: 1.05;
 }
 
 /* ── Typing caret ── */
@@ -374,5 +399,10 @@ html.sws-page body {
 
   .sws-nav__replay.is-playing svg {
     animation: none;
+  }
+
+  .sws-letter__underline,
+  .sws-letter__heart {
+    transition: none !important;
   }
 }
