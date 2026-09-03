@@ -1,4 +1,9 @@
-const { ensureUser, setUserOnboardingCompleted, jsonStorageError } = require('./_lib/store');
+const {
+  ensureUser,
+  setUserOnboardingCompleted,
+  setSongWeSangLetterFlags,
+  jsonStorageError,
+} = require('./_lib/store');
 
 function publicUser(user) {
   if (!user) return null;
@@ -7,6 +12,8 @@ function publicUser(user) {
     anonymous_device_id: user.anonymous_device_id,
     created_at: user.created_at,
     hasCompletedWorldChoirOnboarding: user.hasCompletedWorldChoirOnboarding === true,
+    songWeSangLetterStarted: user.songWeSangLetterStarted === true,
+    songWeSangLetterCompleted: user.songWeSangLetterCompleted === true,
   };
 }
 
@@ -27,6 +34,16 @@ module.exports = async function handler(req, res) {
 
     if (action === 'complete-onboarding') {
       const user = await setUserOnboardingCompleted(deviceId, true);
+      return res.status(200).json({ user: publicUser(user) });
+    }
+
+    if (action === 'mark-song-we-sang-letter-started') {
+      const user = await setSongWeSangLetterFlags(deviceId, { started: true });
+      return res.status(200).json({ user: publicUser(user) });
+    }
+
+    if (action === 'mark-song-we-sang-letter-completed') {
+      const user = await setSongWeSangLetterFlags(deviceId, { completed: true });
       return res.status(200).json({ user: publicUser(user) });
     }
 

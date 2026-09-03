@@ -330,11 +330,46 @@ const WorldChoirDB = (() => {
       longitude: myPledgeCache?.longitude ?? null,
       created_at: remoteUser.created_at,
       hasCompletedWorldChoirOnboarding: remoteUser.hasCompletedWorldChoirOnboarding === true,
+      songWeSangLetterStarted: remoteUser.songWeSangLetterStarted === true,
+      songWeSangLetterCompleted: remoteUser.songWeSangLetterCompleted === true,
     };
   }
 
   function onboardingCompleteKey(userId) {
     return `wc_onboarding_complete_${userId || 'unknown'}`;
+  }
+
+  function songWeSangLetterKey(kind) {
+    const id = remoteUser?.id || getDeviceId() || 'unknown';
+    return `wc_song_we_sang_letter_${kind}_${id}`;
+  }
+
+  function readLocalSongWeSangFlag(kind) {
+    try {
+      return localStorage.getItem(songWeSangLetterKey(kind)) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function writeLocalSongWeSangFlag(kind) {
+    try {
+      localStorage.setItem(songWeSangLetterKey(kind), '1');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function hasStartedSongWeSangLetter() {
+    if (remoteUser?.songWeSangLetterStarted === true || remoteUser?.songWeSangLetterCompleted === true) {
+      return true;
+    }
+    return readLocalSongWeSangFlag('started') || readLocalSongWeSangFlag('completed');
+  }
+
+  function hasCompletedSongWeSangLetter() {
+    if (remoteUser?.songWeSangLetterCompleted === true) return true;
+    return readLocalSongWeSangFlag('completed');
   }
 
   function needsWorldChoirOnboarding() {
@@ -367,6 +402,51 @@ const WorldChoirDB = (() => {
       } catch {
         /* ignore */
       }
+    }
+    return remoteUser;
+  }
+
+  async function markSongWeSangLetterStarted() {
+    writeLocalSongWeSangFlag('started');
+    if (remoteUser) remoteUser.songWeSangLetterStarted = true;
+    try {
+      const data = await apiFetch('/api/user', {
+        method: 'POST',
+        body: JSON.stringify({
+          deviceId: getDeviceId(),
+          action: 'mark-song-we-sang-letter-started',
+        }),
+      });
+      remoteUser = data.user || remoteUser;
+      if (remoteUser) remoteUser.songWeSangLetterStarted = true;
+    } catch (err) {
+      console.warn('markSongWeSangLetterStarted failed:', err);
+    }
+    return remoteUser;
+  }
+
+  async function markSongWeSangLetterCompleted() {
+    writeLocalSongWeSangFlag('started');
+    writeLocalSongWeSangFlag('completed');
+    if (remoteUser) {
+      remoteUser.songWeSangLetterStarted = true;
+      remoteUser.songWeSangLetterCompleted = true;
+    }
+    try {
+      const data = await apiFetch('/api/user', {
+        method: 'POST',
+        body: JSON.stringify({
+          deviceId: getDeviceId(),
+          action: 'mark-song-we-sang-letter-completed',
+        }),
+      });
+      remoteUser = data.user || remoteUser;
+      if (remoteUser) {
+        remoteUser.songWeSangLetterStarted = true;
+        remoteUser.songWeSangLetterCompleted = true;
+      }
+    } catch (err) {
+      console.warn('markSongWeSangLetterCompleted failed:', err);
     }
     return remoteUser;
   }
@@ -691,6 +771,10 @@ const WorldChoirDB = (() => {
     getCurrentUser,
     needsWorldChoirOnboarding,
     completeWorldChoirOnboarding,
+    hasStartedSongWeSangLetter,
+    hasCompletedSongWeSangLetter,
+    markSongWeSangLetterStarted,
+    markSongWeSangLetterCompleted,
     createPledgeWithGeocode,
     updateParticipationLocation,
     geocodeCityCountry,

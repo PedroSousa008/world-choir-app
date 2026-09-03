@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" class="sws-page">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0908">
+  <meta name="description" content="A letter from the world — The Song We Sang.">
+  <title>World Choir — The Song We Sang</title>
+  <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
+  <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20270706">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
+  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904j">
+</head>
+<body class="sws-page-body">
+  <div class="ambient-bg sws-ambient" aria-hidden="true"></div>
+
+  <main class="page sws-page fade-in">
+    <a class="sws-back" href="index.html">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Back
+    </a>
+
+    <header class="sws-header">
+      <p class="sws-page-title" id="sws-page-title">The Song We Sang</p>
+    </header>
+
+    <!-- Complete letter for assistive tech; visual layer is aria-hidden during/after reveal -->
+    <div class="sws-sr-only" id="sws-letter-sr"></div>
+
+    <article
+      class="sws-letter sws-letter-visual"
+      id="sws-letter-visual"
+      aria-hidden="true"
+    ></article>
+  </main>
+
+  <script src="js/world-choir-event-schedule.js?v=20260903j"></script>
+  <script src="js/world-choir-config.js?v=20260903j"></script>
+  <script src="js/world-choir-db.js?v=20260904j"></script>
+  <script src="js/song-we-sang/letter-content.js?v=20260904j"></script>
+  <script src="js/song-we-sang/typing-engine.js?v=20260904j"></script>
+  <script src="js/song-we-sang/letter-page.js?v=20260904j"></script>
+</body>
+</html>

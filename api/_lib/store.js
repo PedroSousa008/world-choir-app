@@ -400,6 +400,26 @@ async function setUserOnboardingCompleted(deviceId, completed = true) {
   return next;
 }
 
+async function setSongWeSangLetterFlags(deviceId, { started, completed } = {}) {
+  assertBlobConfigured();
+  const trimmed = String(deviceId).trim();
+  if (!trimmed) throw new Error('deviceId required');
+
+  const probePath = `${ROOT}/users-by-device/${encodeURIComponent(trimmed)}.json`;
+  const existing = await ensureUser(trimmed);
+  const next = {
+    ...existing,
+    updated_at: new Date().toISOString(),
+  };
+  if (started === true) next.songWeSangLetterStarted = true;
+  if (completed === true) {
+    next.songWeSangLetterStarted = true;
+    next.songWeSangLetterCompleted = true;
+  }
+  await writeJson(probePath, next, { overwrite: true });
+  return next;
+}
+
 async function findUserByDevice(deviceId) {
   assertBlobConfigured();
   const trimmed = String(deviceId).trim();
@@ -965,6 +985,7 @@ module.exports = {
   mapPledgeRow,
   ensureUser,
   setUserOnboardingCompleted,
+  setSongWeSangLetterFlags,
   joinWorldChoir,
   updatePledgeLocation,
   listPledges,

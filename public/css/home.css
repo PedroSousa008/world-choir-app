@@ -782,6 +782,26 @@ a.home-after-voices-stat:active {
   gap: 14px;
 }
 
+a.home-after-card--song {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.25s ease, background-color 0.25s ease;
+}
+
+a.home-after-card--song:hover,
+a.home-after-card--song:focus-visible {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(16, 18, 28, 0.92);
+  outline: none;
+}
+
+a.home-after-card--song:active {
+  opacity: 0.9;
+}
+
 .home-after-song__art {
   width: 72px;
   height: 72px;

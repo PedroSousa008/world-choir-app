@@ -525,7 +525,7 @@ const WorldChoirHome = (() => {
         </header>
 
         <div class="home-after-body">
-          <section class="home-after-card home-after-card--song" aria-label="The song we sang">
+          <a class="home-after-card home-after-card--song" href="song-we-sang.html" aria-label="The song we sang — open the letter">
             <div class="home-after-song">
               <img class="home-after-song__art" src="${POST_EVENT_IMAGES.song}" alt="" decoding="async" width="120" height="120">
               <div class="home-after-song__meta">
@@ -538,7 +538,7 @@ const WorldChoirHome = (() => {
               </div>
               <span class="home-after-song__note" aria-hidden="true">${statIcon('songNote')}</span>
             </div>
-          </section>
+          </a>
 
           <section class="home-after-card home-after-card--promise" aria-label="Your promise to the world">
             <div class="home-after-promise">
@@ -589,7 +589,7 @@ const WorldChoirHome = (() => {
       window.location.href = 'memory.html';
     });
 
-    ['map.html', 'daily-acts.html'].forEach((href) => {
+    ['map.html', 'daily-acts.html', 'song-we-sang.html'].forEach((href) => {
       const link = document.createElement('link');
       link.rel = 'prefetch';
       link.href = href;
