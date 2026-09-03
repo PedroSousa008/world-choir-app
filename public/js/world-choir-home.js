@@ -464,6 +464,24 @@ const WorldChoirHome = (() => {
     document.getElementById('home-promise-close-x')?.addEventListener('click', closePromise);
   }
 
+  const POST_EVENT_STATS_TOP_PX = 400;
+
+  function layoutPostEventStatsFloat() {
+    const root = document.querySelector('.home-after');
+    const floatEl = document.querySelector('.home-after-stats-float');
+    const hero = document.querySelector('.home-after-hero');
+    const body = document.querySelector('.home-after-body');
+    if (!root || !floatEl || !body) return;
+
+    floatEl.style.top = `${POST_EVENT_STATS_TOP_PX}px`;
+
+    const heroH = hero?.offsetHeight || 0;
+    const cardH = floatEl.offsetHeight || 120;
+    const cardBottom = POST_EVENT_STATS_TOP_PX + cardH;
+    const padTop = Math.max(16, cardBottom - heroH + 14);
+    body.style.paddingTop = `${padTop}px`;
+  }
+
   function mountPostEventHome() {
     const root = document.getElementById('home-content');
     const page = document.getElementById('home-page');
@@ -477,6 +495,7 @@ const WorldChoirHome = (() => {
     const fallback = getPostEventStatsFallback();
     root.innerHTML = renderPostEventHome(fallback);
     bindPostEventActions();
+    layoutPostEventStatsFloat();
 
     const confettiEl = document.getElementById('home-after-confetti');
     const planetImg = document.querySelector('.home-after-hero__planet');
@@ -485,10 +504,13 @@ const WorldChoirHome = (() => {
       if (planetImg?.complete) startConfetti();
       else planetImg?.addEventListener('load', startConfetti, { once: true });
     }
+    planetImg?.addEventListener('load', layoutPostEventStatsFloat, { once: true });
+    window.addEventListener('resize', layoutPostEventStatsFloat);
 
     fetchPostEventStats().then((stats) => {
       if (homeView === 'post-event' || homeView === 'post-event-complete') {
         updatePostEventStatsUI(stats);
+        layoutPostEventStatsFloat();
       }
     });
   }

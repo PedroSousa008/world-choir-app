@@ -503,8 +503,6 @@
   width: 100%;
   max-width: 100%;
   overflow: visible;
-  container-type: inline-size;
-  container-name: home-after;
 }
 
 .home-after-hero {
@@ -624,18 +622,17 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  /* Clears the floating stats card past the planet (scales with content width) */
   margin-top: 0;
-  padding: calc(125.645320197px * 100cqw / 430px) 20px 8px;
+  padding: 120px 20px 8px;
   max-width: 100%;
 }
 
-/* Floats over the planet — absolute, not blocked by header document flow */
+/* Floats over the planet at a fixed 400px from the top of .home-after */
 .home-after-stats-float {
   position: absolute;
   left: 20px;
   right: 20px;
-  top: calc(442px * 100cqw / 430px);
+  top: 400px;
   z-index: 6;
   margin: 0;
   box-sizing: border-box;
