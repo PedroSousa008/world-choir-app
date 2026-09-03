@@ -43,10 +43,10 @@ const WorldChoirEventSchedule = (() => {
     return { y, m, d };
   }
 
-  /** Today (Europe/Lisbon calendar date) at 00:10 UTC. */
+  /** Today (Europe/Lisbon calendar date) at 18:05 UTC (= 19:05 Lisbon in summer). */
   function getTestEventStartUtc(now = new Date()) {
     const { y, m, d } = getLisbonLocalDateParts(now);
-    return new Date(Date.UTC(y, m - 1, d, 0, 10, 0)).toISOString();
+    return new Date(Date.UTC(y, m - 1, d, 18, 5, 0)).toISOString();
   }
 
   function getTestPreEventStartUtc(now = new Date()) {
