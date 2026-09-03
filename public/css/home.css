@@ -1048,43 +1048,50 @@ a.home-after-card--song:active {
 .home-after-memory {
   position: relative;
   overflow: hidden;
+  isolation: isolate;
   border-radius: var(--radius-md);
   min-height: 200px;
-  aspect-ratio: 1672 / 941;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #020408;
-  background-image: var(--home-memory-bg);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background: #020408;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.home-after-memory__bg {
+/* Stretch edge-to-edge — full width AND full height of the box (no letterboxing). */
+.home-after-memory__media {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
   width: 100%;
   height: 100%;
-  min-width: 100%;
-  min-height: 100%;
-  max-width: none;
-  object-fit: cover;
-  object-position: center;
+  background-color: #020408;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 100% 100%;
   pointer-events: none;
 }
 
 .home-after-memory__overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.72) 100%);
+  pointer-events: none;
 }
 
 .home-after-memory__content {
   position: relative;
-  z-index: 1;
-  padding: 28px 20px;
+  z-index: 2;
+  width: 100%;
+  padding: 36px 20px;
   text-align: center;
   display: flex;
   flex-direction: column;
