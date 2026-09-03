@@ -316,15 +316,13 @@
 
 .mem-stat__value {
   display: block;
-  font-size: clamp(0.78rem, 2.8vw, 0.95rem);
+  font-size: clamp(0.72rem, 2.6vw, 0.92rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   color: var(--df-warm);
   line-height: 1.2;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .mem-stat__label {
@@ -338,16 +336,13 @@
   line-height: 1.25;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 520px) {
   .mem-event-card__stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     row-gap: 14px;
   }
 
-  .mem-stat:nth-child(2)::after {
-    display: none;
-  }
-
+  .mem-stat:nth-child(2)::after,
   .mem-stat:nth-child(even)::after {
     display: none;
   }

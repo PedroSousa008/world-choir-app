@@ -129,36 +129,17 @@ const WorldChoirMemoryData = (() => {
     const active = (typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.ACTIVE_EVENT)
       ? WorldChoirConfig.ACTIVE_EVENT
       : {};
-    const stats = (typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.getMovementStats)
-      ? WorldChoirConfig.getMovementStats()
-      : {};
 
-    const songTitle = active.songName || 'Voices of the World';
-    const eventName = active.title || 'World Choir 2027';
-    let dateLabel = '21 Sep 2027';
-    try {
-      if (typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.formatEventDate) {
-        dateLabel = WorldChoirConfig.formatEventDate();
-      }
-    } catch {
-      /* keep placeholder */
-    }
-
-    const voices = stats.hasData && stats.voices != null
-      ? Number(stats.voices)
-      : 8432117;
-    const countries = stats.hasData && stats.countries != null
-      ? Number(stats.countries)
-      : 197;
-
+    // Commemorative archive figures from the approved Memory mockup.
+    // Replace with authoritative post-event API totals when available.
     return {
       id: active.id || 'world-choir-2027',
-      eventName,
-      songTitle,
+      eventName: active.title || 'World Choir 2027',
+      songTitle: active.songName || 'Voices of the World',
       songArtwork: 'images/imagine-after.png',
-      date: dateLabel,
-      participantCount: voices,
-      countryCount: countries,
+      date: '21 Sep 2027',
+      participantCount: 8432117,
+      countryCount: 197,
       promisesCount: 7920643,
       worldCount: 1,
     };
