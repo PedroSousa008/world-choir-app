@@ -141,7 +141,9 @@ const WorldChoirHome = (() => {
   function renderPledgeButton() {
     const pledgeState = WorldChoirPledgeState.getState();
 
-    if (pledgeState === 'loading') {
+    // Only show the skeleton while the full Home shell is still loading.
+    // Once Home is visible, never leave a permanent empty CTA.
+    if (pledgeState === 'loading' && !homeReady) {
       return '<div class="btn-hero-skeleton" aria-hidden="true"></div>';
     }
 
@@ -799,27 +801,33 @@ const WorldChoirHome = (() => {
   function init() {
     homeReady = false;
     if (isPostEvent()) fetchPostEventStats();
-    // Warm navigations (data already in memory) skip the skeleton entirely.
-    if (isHomeDataReady() || readCachedPostEventStats()) homeReady = true;
+
+    // Warm navigations can skip the full-page skeleton — but only when the
+    // cached data matches the current home mode. Post-event stats cache must
+    // not mark pre-event Home as ready (that left the pledge CTA stuck).
+    const warmFromPledge = isHomeDataReady();
+    const warmFromPostEventCache = isPostEvent() && !!readCachedPostEventStats();
+    if (warmFromPledge || warmFromPostEventCache) homeReady = true;
+
     startHome();
-    if (homeReady) {
-      maybeLaunchHomeExtras();
-      return;
-    }
-    // Keep skeleton extremely brief — reveal as soon as pledge resolves, else ≤200ms.
+
+    // Always resolve pledge state so the "I'll Sing" button never stays skeleton.
     const fallback = setTimeout(() => {
       if (!homeReady) {
         homeReady = true;
         render();
       }
     }, 200);
+
     WorldChoirPledgeState.init()
-      .then(async () => {
+      .then(() => {
         clearTimeout(fallback);
-        revealHome();
+        WorldChoirPledgeState.refresh();
+        if (!homeReady) revealHome();
+        else render();
         maybeLaunchHomeExtras();
       })
-      .catch(async (err) => {
+      .catch((err) => {
         clearTimeout(fallback);
         console.error('Failed to connect to World Choir database:', err);
         homeReady = true;
