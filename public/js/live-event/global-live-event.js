@@ -218,6 +218,13 @@ const GlobalLiveEvent = (() => {
       el.muted = true;
       el.volume = 0;
       await el.play();
+      // Keep a silent playing underlay when possible — unmuting an already-playing
+      // element at song start succeeds more often than a cold play().
+      if (state === 'PRE_EVENT' || state === 'TRANSITIONING_TO_LIVE') {
+        el.muted = true;
+        el.volume = 0;
+        return true;
+      }
       el.pause();
       el.currentTime = 0;
       el.muted = wasMuted;
@@ -230,28 +237,41 @@ const GlobalLiveEvent = (() => {
 
   function bindUnlockHandlers() {
     const unlock = async () => {
-      if (audioUnlocked) return;
       audioUnlocked = true;
       document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
       document.getElementById('wc-live-song-unlock')?.setAttribute('hidden', '');
+
       const preVideo = document.getElementById('wc-global-live-video');
       if (preVideo && state === 'PRE_EVENT') {
-        preVideo.muted = false;
+        try {
+          preVideo.muted = false;
+          if (preVideo.paused) await preVideo.play();
+        } catch {
+          preVideo.muted = true;
+        }
       }
+
       await primeLiveSongAudio();
+
       try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        if (ctx.state === 'suspended') await ctx.resume();
+        if (!window.__wcAudioCtx) {
+          window.__wcAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (window.__wcAudioCtx.state === 'suspended') {
+          await window.__wcAudioCtx.resume();
+        }
       } catch {
         /* ignore */
       }
-      if (canPlayLiveSongAudio() && audioEl?.paused) {
-        audioEl.play().then(() => {
-          LyricsDisplay.startSync(audioEl);
-        }).catch(() => {});
+
+      if (state === 'LIVE_SONG') {
+        const target = getTargetSongPositionSec(WorldChoirServerTime.nowMs());
+        await startLiveAudio(target);
       }
     };
-    ['pointerdown', 'keydown', 'touchstart'].forEach((evt) => {
+
+    // Any prior interaction on the page unlocks autoplay for later.
+    ['pointerdown', 'keydown', 'touchstart', 'click'].forEach((evt) => {
       document.addEventListener(evt, unlock, { capture: true, passive: true });
     });
   }
@@ -715,6 +735,8 @@ const GlobalLiveEvent = (() => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
+    // Start a silent audio underlay so the live song can unmute without a cold play().
+    primeLiveSongAudio().catch(() => {});
     updateCountdownUI(nowMs);
   }
 
@@ -731,42 +753,58 @@ const GlobalLiveEvent = (() => {
   }
 
   async function startLiveAudio(target) {
-    if (!canPlayLiveSongAudio()) {
+    if (!shouldRunLivePlayback() || isPostEventPlaybackBlocked()) {
       stopLiveSongElement();
       return;
     }
+    if (!isLiveSongUiActive()) showLiveSongShell();
+
     if (!audioEl) {
       audioEl = getLiveSongAudio();
       audioEl.addEventListener('ended', onSongEnded);
       audioEl.addEventListener('error', onSongError);
-      await waitForAudioReady(audioEl);
+      try {
+        await waitForAudioReady(audioEl);
+      } catch {
+        showLiveSongUnlock();
+        return;
+      }
     }
 
     const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
     const seekTo = Math.min(target, audioEl.duration || target, duration - 0.05);
     if (Math.abs(audioEl.currentTime - seekTo) > 0.2) {
-      audioEl.currentTime = seekTo;
+      try {
+        audioEl.currentTime = seekTo;
+      } catch {
+        /* ignore */
+      }
     }
 
     audioEl.muted = false;
     audioEl.volume = 1;
 
-    for (let attempt = 0; attempt < 5; attempt++) {
+    // Prefer automatic start. Only show the tap overlay if the browser blocks it.
+    for (let attempt = 0; attempt < 8; attempt++) {
       try {
         await audioEl.play();
+        audioUnlocked = true;
         LyricsDisplay.startSync(audioEl);
         LyricsDisplay.update(audioEl.currentTime, audioEl);
         document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
         document.getElementById('wc-live-song-unlock')?.setAttribute('hidden', '');
         return;
       } catch (err) {
-        if (attempt < 4) {
-          await new Promise((resolve) => setTimeout(resolve, 80));
+        // If a silent underlay was already running, unmuting sometimes needs one more try.
+        audioEl.muted = false;
+        audioEl.volume = 1;
+        if (attempt < 7) {
+          await new Promise((resolve) => setTimeout(resolve, 60));
         }
       }
     }
 
-    console.warn('Live song autoplay blocked');
+    console.warn('Live song autoplay blocked — showing unlock fallback');
     showLiveSongUnlock();
   }
 
