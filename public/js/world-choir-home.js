@@ -373,26 +373,12 @@ const WorldChoirHome = (() => {
         </header>
 
         <div class="home-after-body">
-          <section class="home-after-card home-after-card--stats" aria-label="World Choir event statistics">
-            <p class="home-after-card__eyebrow">The world sang</p>
-            <div class="home-after-stats">
-              <div class="home-after-stat">
-                ${statIcon('voices')}
-                <span class="home-after-stat__value" id="home-stat-voices">${formatStat(merged.voices)}</span>
-                <span class="home-after-stat__label">People sang</span>
+          <section class="home-after-card home-after-card--stats home-after-card--voices-only" aria-label="People who sang">
+            <div class="home-after-voices-stat">
+              <div class="home-after-voices-stat__num-wrap">
+                <span class="home-after-voices-stat__num" id="home-stat-voices">${formatStat(merged.voices)}</span>
               </div>
-              <div class="home-after-stat home-after-stat--divider" aria-hidden="true"></div>
-              <div class="home-after-stat">
-                ${statIcon('cities')}
-                <span class="home-after-stat__value" id="home-stat-cities">${formatStat(merged.cities)}</span>
-                <span class="home-after-stat__label">Cities</span>
-              </div>
-              <div class="home-after-stat home-after-stat--divider" aria-hidden="true"></div>
-              <div class="home-after-stat">
-                ${statIcon('acts')}
-                <span class="home-after-stat__value" id="home-stat-acts">${formatStat(merged.dailyActsCompleted)}</span>
-                <span class="home-after-stat__label">Daily Acts of Peace</span>
-              </div>
+              <span class="home-after-stat__label">People sang</span>
             </div>
           </section>
 
@@ -440,11 +426,7 @@ const WorldChoirHome = (() => {
 
   function updatePostEventStatsUI(stats) {
     const voices = document.getElementById('home-stat-voices');
-    const cities = document.getElementById('home-stat-cities');
-    const acts = document.getElementById('home-stat-acts');
     if (voices && stats.voices != null) voices.textContent = formatStat(stats.voices);
-    if (cities && stats.cities != null) cities.textContent = formatStat(stats.cities);
-    if (acts && stats.dailyActsCompleted != null) acts.textContent = formatStat(stats.dailyActsCompleted);
   }
 
   function bindPostEventActions() {
