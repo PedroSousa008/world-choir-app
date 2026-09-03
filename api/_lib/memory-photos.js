@@ -312,28 +312,52 @@ async function getUserProgress(eventId, userId) {
   }
 }
 
-async function saveUserProgress({ eventId, userId, lastConsumedPhotoId, lastConsumedCreatedAt }) {
+async function saveUserProgress({
+  eventId,
+  userId,
+  lastViewedPhotoId,
+  lastViewedCreatedAt,
+  lastConsumedPhotoId,
+  lastConsumedCreatedAt,
+}) {
   assertBlobConfigured();
-  const existing = await getUserProgress(eventId, userId);
-  const next = {
-    lastConsumedPhotoId: String(lastConsumedPhotoId || ''),
-    lastConsumedCreatedAt: String(lastConsumedCreatedAt || ''),
-  };
+  const existing = await getUserProgress(eventId, userId) || {};
 
+  const viewedId = String(lastViewedPhotoId || existing.lastViewedPhotoId || '');
+  const viewedAt = String(lastViewedCreatedAt || existing.lastViewedCreatedAt || '');
+
+  // High-water mark only moves forward (never treat older photos as "new").
+  let consumedId = String(existing.lastConsumedPhotoId || '');
+  let consumedAt = String(existing.lastConsumedCreatedAt || '');
+  const incomingConsumed = lastConsumedCreatedAt
+    ? {
+      id: String(lastConsumedPhotoId || ''),
+      createdAt: String(lastConsumedCreatedAt || ''),
+    }
+    : null;
   if (
-    existing?.lastConsumedCreatedAt
-    && compareCursor(
-      { createdAt: next.lastConsumedCreatedAt, id: next.lastConsumedPhotoId },
-      { createdAt: existing.lastConsumedCreatedAt, id: existing.lastConsumedPhotoId }
-    ) <= 0
+    incomingConsumed?.createdAt
+    && (!consumedAt || compareCursor(incomingConsumed, { id: consumedId, createdAt: consumedAt }) > 0)
   ) {
-    return existing;
+    consumedId = incomingConsumed.id;
+    consumedAt = incomingConsumed.createdAt;
+  }
+  // Viewing farther forward also raises the high-water mark.
+  if (
+    viewedAt
+    && (!consumedAt || compareCursor({ id: viewedId, createdAt: viewedAt }, { id: consumedId, createdAt: consumedAt }) > 0)
+  ) {
+    consumedId = viewedId;
+    consumedAt = viewedAt;
   }
 
   const row = {
     userId,
     eventId,
-    ...next,
+    lastViewedPhotoId: viewedId,
+    lastViewedCreatedAt: viewedAt,
+    lastConsumedPhotoId: consumedId,
+    lastConsumedCreatedAt: consumedAt,
     updatedAt: new Date().toISOString(),
   };
   await writeJson(progressPath(eventId, userId), row, { overwrite: true });

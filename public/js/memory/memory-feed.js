@@ -9,7 +9,7 @@ const WorldChoirMemoryFeed = (() => {
   const PHOTO_TTL_MS = 24 * 60 * 60 * 1000;
   const LIVE_POLL_FAST_MS = 2500;
   const LIVE_POLL_NORMAL_MS = 5000;
-  const PROGRESS_DEBOUNCE_MS = 600;
+  const PROGRESS_DEBOUNCE_MS = 200;
 
   const state = {
     history: [],
@@ -211,7 +211,47 @@ const WorldChoirMemoryFeed = (() => {
     return changed;
   }
 
+  function localProgressKey() {
+    return `wc_memory_view_v1_${eventId()}_${deviceId() || 'anon'}`;
+  }
+
+  function readLocalProgress() {
+    try {
+      const raw = localStorage.getItem(localProgressKey());
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.lastViewedCreatedAt) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeLocalProgress(payload) {
+    try {
+      localStorage.setItem(localProgressKey(), JSON.stringify({
+        ...payload,
+        updatedAt: new Date().toISOString(),
+      }));
+    } catch {
+      /* ignore quota */
+    }
+  }
+
   function scheduleProgressPersist() {
+    const photo = state.current;
+    if (photo) {
+      const cursor = cursorOf(photo);
+      if (!state.forwardHighWater || compareCursor(cursor, state.forwardHighWater) > 0) {
+        state.forwardHighWater = cursor;
+      }
+      writeLocalProgress({
+        lastViewedPhotoId: photo.id,
+        lastViewedCreatedAt: photo.createdAt,
+        lastConsumedPhotoId: state.forwardHighWater?.id || photo.id,
+        lastConsumedCreatedAt: state.forwardHighWater?.createdAt || photo.createdAt,
+      });
+    }
     clearTimeout(progressTimer);
     progressTimer = setTimeout(() => {
       persistProgress().catch(() => { /* ignore */ });
@@ -225,8 +265,6 @@ const WorldChoirMemoryFeed = (() => {
     const cursor = cursorOf(photo);
     if (!state.forwardHighWater || compareCursor(cursor, state.forwardHighWater) > 0) {
       state.forwardHighWater = cursor;
-    } else {
-      return;
     }
     try {
       await fetch('/api/memory-photos', {
@@ -237,16 +275,23 @@ const WorldChoirMemoryFeed = (() => {
           action: 'progress',
           deviceId: id,
           eventId: eventId(),
-          lastConsumedPhotoId: photo.id,
-          lastConsumedCreatedAt: photo.createdAt,
+          lastViewedPhotoId: photo.id,
+          lastViewedCreatedAt: photo.createdAt,
+          lastConsumedPhotoId: state.forwardHighWater?.id || photo.id,
+          lastConsumedCreatedAt: state.forwardHighWater?.createdAt || photo.createdAt,
         }),
       });
     } catch {
-      /* offline */
+      /* offline — local progress still holds place */
     }
   }
 
-  async function fetchPage({ afterCreatedAt = null, afterId = null, live = false } = {}) {
+  async function fetchPage({
+    afterCreatedAt = null,
+    afterId = null,
+    live = false,
+    resumeHint = null,
+  } = {}) {
     const params = new URLSearchParams({
       eventId: eventId(),
       limit: String(PAGE_SIZE),
@@ -257,6 +302,12 @@ const WorldChoirMemoryFeed = (() => {
     if (afterCreatedAt) {
       params.set('afterCreatedAt', afterCreatedAt);
       if (afterId) params.set('afterId', afterId);
+    }
+    if (!live && !afterCreatedAt && resumeHint?.lastViewedCreatedAt) {
+      params.set('resumeCreatedAt', resumeHint.lastViewedCreatedAt);
+      if (resumeHint.lastViewedPhotoId) {
+        params.set('resumeId', resumeHint.lastViewedPhotoId);
+      }
     }
     const res = await fetch(`/api/memory-photos?${params}`, {
       credentials: 'same-origin',
@@ -311,34 +362,63 @@ const WorldChoirMemoryFeed = (() => {
     state.isInitialLoading = true;
     notify();
     try {
-      const data = await fetchPage({});
+      const local = readLocalProgress();
+      const data = await fetchPage({ resumeHint: local });
       applyStatus(data);
 
-      if (data.progress?.lastConsumedCreatedAt) {
-        state.forwardHighWater = {
-          createdAt: data.progress.lastConsumedCreatedAt,
-          id: data.progress.lastConsumedPhotoId || '',
-        };
+      const progress = data.progress || local || null;
+      if (progress?.lastConsumedCreatedAt || progress?.lastViewedCreatedAt) {
+        const hwAt = progress.lastConsumedCreatedAt || progress.lastViewedCreatedAt;
+        const hwId = progress.lastConsumedPhotoId || progress.lastViewedPhotoId || '';
+        state.forwardHighWater = { createdAt: hwAt, id: hwId };
+      }
+      if (
+        local?.lastViewedCreatedAt
+        && (
+          !progress?.lastViewedCreatedAt
+          || compareCursor(
+            { createdAt: local.lastViewedCreatedAt, id: local.lastViewedPhotoId || '' },
+            {
+              createdAt: progress.lastViewedCreatedAt || progress.lastConsumedCreatedAt || '',
+              id: progress.lastViewedPhotoId || progress.lastConsumedPhotoId || '',
+            }
+          ) > 0
+        )
+      ) {
+        // Local is ahead of server (e.g. refresh before POST finished) — keep local high-water.
+        if (local.lastConsumedCreatedAt) {
+          state.forwardHighWater = {
+            createdAt: local.lastConsumedCreatedAt,
+            id: local.lastConsumedPhotoId || '',
+          };
+        }
       }
 
       const upcoming = (Array.isArray(data.items) ? data.items : []).filter(isAlive);
       upcoming.forEach((p) => rememberPhoto(p));
 
-      const resume = data.resumePhoto && isAlive(data.resumePhoto) ? data.resumePhoto : null;
+      let resume = data.resumePhoto && isAlive(data.resumePhoto) ? data.resumePhoto : null;
+      // If API resume missing/expired but local still points at an upcoming item, use that.
+      if (!resume && local?.lastViewedPhotoId) {
+        resume = upcoming.find((p) => p.id === local.lastViewedPhotoId) || null;
+      }
+
       if (resume) {
         rememberPhoto(resume);
         state.current = resume;
         state.future = upcoming.filter((p) => p.id !== resume.id);
         state.history = [];
+        scheduleProgressPersist();
       } else if (upcoming.length) {
+        // Viewed photo expired/removed → land on the next alive photo after it (never rewind).
         state.current = upcoming[0];
         state.future = upcoming.slice(1);
         state.history = [];
         if (!state.forwardHighWater
           || compareCursor(cursorOf(state.current), state.forwardHighWater) > 0) {
           state.forwardHighWater = cursorOf(state.current);
-          scheduleProgressPersist();
         }
+        scheduleProgressPersist();
       } else {
         state.current = null;
         state.future = [];
@@ -456,10 +536,7 @@ const WorldChoirMemoryFeed = (() => {
     if (leaving) state.history.push(leaving);
     state.current = next;
     trimHistory();
-    if (!state.forwardHighWater || compareCursor(cursorOf(next), state.forwardHighWater) > 0) {
-      state.forwardHighWater = cursorOf(next);
-      scheduleProgressPersist();
-    }
+    scheduleProgressPersist();
     updateWaitingFlag();
     notify();
     ensureFutureBuffer();
@@ -475,6 +552,8 @@ const WorldChoirMemoryFeed = (() => {
     const prev = state.history.pop();
     if (leaving) state.future.unshift(leaving);
     state.current = prev;
+    // Persist last viewed; high-water mark does not move backward.
+    scheduleProgressPersist();
     updateWaitingFlag();
     notify();
     prefetchImages();

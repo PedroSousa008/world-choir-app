@@ -6,6 +6,7 @@ const {
   getUserProgress,
   saveUserProgress,
   getPostStatus,
+  compareCursor,
 } = require('./_lib/memory-photos');
 
 module.exports = async function handler(req, res) {
@@ -55,12 +56,36 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      // Initial load (no explicit cursor, not a live poll): resume after high-water mark.
-      if (!live && !afterCreatedAt && progress?.lastConsumedCreatedAt) {
-        resumePhoto = await getMemoryPhoto(eventId, progress.lastConsumedPhotoId);
-        // Expired resume photo → start at first still-alive unseen item after cursor.
-        feedAfterCreatedAt = progress.lastConsumedCreatedAt;
-        feedAfterId = progress.lastConsumedPhotoId || '';
+      // Initial load: restore the exact photo the user was viewing (never rewind).
+      // Client may send a local resume hint if the last server write hadn't finished.
+      if (!live && !afterCreatedAt) {
+        const hintAt = req.query?.resumeCreatedAt ? String(req.query.resumeCreatedAt) : '';
+        const hintId = req.query?.resumeId ? String(req.query.resumeId) : '';
+        const serverAt = progress?.lastViewedCreatedAt || progress?.lastConsumedCreatedAt || '';
+        const serverId = progress?.lastViewedPhotoId || progress?.lastConsumedPhotoId || '';
+
+        let viewAt = serverAt;
+        let viewId = serverId;
+        if (hintAt) {
+          if (
+            !viewAt
+            || compareCursor(
+              { createdAt: hintAt, id: hintId },
+              { createdAt: viewAt, id: viewId }
+            ) > 0
+          ) {
+            viewAt = hintAt;
+            viewId = hintId;
+          }
+        }
+
+        if (viewAt) {
+          if (viewId) {
+            resumePhoto = await getMemoryPhoto(eventId, viewId);
+          }
+          feedAfterCreatedAt = viewAt;
+          feedAfterId = viewId || '';
+        }
       }
 
       const feed = await listMemoryPhotos({
@@ -112,6 +137,8 @@ module.exports = async function handler(req, res) {
         const saved = await saveUserProgress({
           eventId,
           userId: user.id,
+          lastViewedPhotoId: body.lastViewedPhotoId || body.lastConsumedPhotoId,
+          lastViewedCreatedAt: body.lastViewedCreatedAt || body.lastConsumedCreatedAt,
           lastConsumedPhotoId: body.lastConsumedPhotoId,
           lastConsumedCreatedAt: body.lastConsumedCreatedAt,
         });

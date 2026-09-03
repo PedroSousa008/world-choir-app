@@ -383,37 +383,14 @@ const WorldChoirMemory = (() => {
   function renderFab() {
     return `
       <div class="mem-fab" id="mem-fab">
-        <div class="mem-fab__menu" id="mem-fab-menu" hidden>
-          <div class="mem-fab__row">
-            <span class="mem-fab__label">Camera</span>
-            <button type="button" class="mem-fab__action" id="mem-fab-camera" aria-label="Take a photo">
-              ${iconSvg('camera')}
-            </button>
-          </div>
-          <div class="mem-fab__row">
-            <span class="mem-fab__label">Choose from device</span>
-            <button type="button" class="mem-fab__action" id="mem-fab-device" aria-label="Choose a photo from device">
-              ${iconSvg('image')}
-            </button>
-          </div>
-          <div class="mem-fab__row">
-            <span class="mem-fab__label">Share a memory</span>
-            <button type="button" class="mem-fab__action" id="mem-fab-share" aria-label="Share a memory">
-              ${iconSvg('share')}
-            </button>
-          </div>
-        </div>
         <button
           type="button"
           class="mem-fab__toggle"
           id="mem-fab-toggle"
-          aria-label="Add memory"
-          aria-expanded="false"
-          aria-controls="mem-fab-menu"
+          aria-label="Choose a photo from device"
         >
           ${iconSvg('plus')}
         </button>
-        <input type="file" id="mem-input-camera" accept="image/*" capture="environment" hidden>
         <input type="file" id="mem-input-device" accept="image/*" hidden>
       </div>
     `;
@@ -467,15 +444,8 @@ const WorldChoirMemory = (() => {
     }
   }
 
-  function setFabOpen(open) {
-    fabOpen = open;
-    const menu = document.getElementById('mem-fab-menu');
-    const toggle = document.getElementById('mem-fab-toggle');
-    const root = document.getElementById('mem-fab');
-    if (!menu || !toggle || !root) return;
-    menu.hidden = !open;
-    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    root.classList.toggle('is-open', open);
+  function setFabOpen() {
+    /* menu removed — + opens device picker directly */
   }
 
   function cooldownMessage() {
@@ -484,13 +454,11 @@ const WorldChoirMemory = (() => {
 
   function applyPostingAvailability(snap) {
     const blocked = Boolean(snap?.postedToday) || snap?.canPost === false || snap?.onCooldown;
-    ['mem-fab-camera', 'mem-fab-device'].forEach((id) => {
-      const btn = document.getElementById(id);
-      if (!btn) return;
-      btn.disabled = blocked;
-      btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
-      btn.classList.toggle('is-disabled', blocked);
-    });
+    const btn = document.getElementById('mem-fab-toggle');
+    if (!btn) return;
+    btn.disabled = blocked;
+    btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+    btn.classList.toggle('is-disabled', blocked);
   }
 
   function setComposerScrollLock(lock) {
@@ -680,37 +648,12 @@ const WorldChoirMemory = (() => {
     document.getElementById('mem-carousel-next')?.addEventListener('click', () => navigate('next'));
 
     document.getElementById('mem-fab-toggle')?.addEventListener('click', () => {
-      setFabOpen(!fabOpen);
-    });
-
-    document.getElementById('mem-fab-camera')?.addEventListener('click', () => {
       const snap = WorldChoirMemoryFeed.getSnapshot();
-      if (snap.postedToday) {
+      if (snap.postedToday || snap.onCooldown || snap.canPost === false) {
         showToast(cooldownMessage());
-        setFabOpen(false);
         return;
       }
-      setFabOpen(false);
-      document.getElementById('mem-input-camera')?.click();
-    });
-    document.getElementById('mem-fab-device')?.addEventListener('click', () => {
-      const snap = WorldChoirMemoryFeed.getSnapshot();
-      if (snap.postedToday) {
-        showToast(cooldownMessage());
-        setFabOpen(false);
-        return;
-      }
-      setFabOpen(false);
       document.getElementById('mem-input-device')?.click();
-    });
-    document.getElementById('mem-fab-share')?.addEventListener('click', () => {
-      setFabOpen(false);
-      const snap = WorldChoirMemoryFeed.getSnapshot();
-      if (snap.postedToday) {
-        showToast(cooldownMessage());
-        return;
-      }
-      openComposer(null, null, null);
     });
 
     const onFile = async (ev) => {
@@ -729,7 +672,6 @@ const WorldChoirMemory = (() => {
       }
       ev.target.value = '';
     };
-    document.getElementById('mem-input-camera')?.addEventListener('change', onFile);
     document.getElementById('mem-input-device')?.addEventListener('change', onFile);
 
     document.getElementById('mem-composer-cancel')?.addEventListener('click', closeComposer);
@@ -771,7 +713,7 @@ const WorldChoirMemory = (() => {
         }
         if (err?.code === 'DAILY_MEMORY_LIMIT_REACHED') {
           showToast(cooldownMessage());
-          applyPostingAvailability({ postedToday: true, canPost: false });
+          applyPostingAvailability({ postedToday: true, canPost: false, onCooldown: true });
           closeComposer();
           return;
         }
@@ -783,16 +725,8 @@ const WorldChoirMemory = (() => {
       document.getElementById('mem-more-label')?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
     });
 
-    document.addEventListener('click', (ev) => {
-      if (!fabOpen) return;
-      const fab = document.getElementById('mem-fab');
-      if (fab && !fab.contains(ev.target)) setFabOpen(false);
-    });
     document.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Escape') {
-        if (composerOpen) closeComposer();
-        else if (fabOpen) setFabOpen(false);
-      }
+      if (ev.key === 'Escape' && composerOpen) closeComposer();
     });
   }
 
