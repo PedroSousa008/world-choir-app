@@ -284,7 +284,10 @@ const GlobalLiveEvent = (() => {
   }
 
   function bindUnlockHandlers() {
+    let unlockBusy = false;
     const unlock = async () => {
+      if (unlockBusy) return;
+      unlockBusy = true;
       audioUnlocked = true;
       hideAllUnlockUi();
 
@@ -299,28 +302,30 @@ const GlobalLiveEvent = (() => {
         /* ignore */
       }
 
-      if (state === 'LIVE_SONG') {
-        // Never prime/reset during the song — only resume at the global position.
-        if (audioEl) {
-          audioEl.muted = false;
-          audioEl.volume = 1;
+      try {
+        if (state === 'LIVE_SONG') {
+          // Gesture may only unmute/resume. NEVER seek — iOS seek+play restarts at 0.
+          await resumeAudibleLiveSong();
+          return;
         }
-        const target = getTargetSongPositionSec(WorldChoirServerTime.nowMs());
-        await startLiveAudio(target);
-        return;
-      }
 
-      const preVideo = document.getElementById('wc-global-live-video');
-      if (preVideo && state === 'PRE_EVENT') {
-        try {
-          preVideo.muted = false;
-          if (preVideo.paused) await preVideo.play();
-        } catch {
-          preVideo.muted = true;
+        const preVideo = document.getElementById('wc-global-live-video');
+        if (preVideo && state === 'PRE_EVENT') {
+          try {
+            preVideo.muted = false;
+            if (preVideo.paused) await preVideo.play();
+          } catch {
+            preVideo.muted = true;
+            if (preVideo.paused) await preVideo.play().catch(() => {});
+          }
         }
-      }
 
-      await primeLiveSongAudio();
+        if (state === 'PRE_EVENT') {
+          await primeLiveSongAudio();
+        }
+      } finally {
+        unlockBusy = false;
+      }
     };
 
     ['pointerdown', 'keydown', 'touchstart', 'click'].forEach((evt) => {
@@ -536,6 +541,8 @@ const GlobalLiveEvent = (() => {
   function showPreEventUI() {
     document.getElementById('wc-global-live-pre')?.removeAttribute('hidden');
     document.getElementById('wc-global-live-song')?.setAttribute('hidden', '');
+    document.getElementById('wc-global-live-video-wrap')?.removeAttribute('hidden');
+    document.getElementById('wc-global-live-pre-fallback')?.removeAttribute('hidden');
     showTakeover();
   }
 
@@ -732,31 +739,13 @@ const GlobalLiveEvent = (() => {
       audioEl.addEventListener('error', onSongError);
     }
 
-    const seekTo = Math.min(target, audioEl.duration || target, duration - 0.05);
-    if (audioEl.readyState >= 1) {
-      audioEl.currentTime = seekTo;
-    }
-    audioEl.muted = false;
-    audioEl.volume = 1;
-
-    // Start play synchronously in the video-ended chain before any await (iOS handoff).
-    const playPromise = audioEl.play();
-
     reportVideoEnded().then(() => {
       if (!actualLiveSongStartUtc) {
         actualLiveSongStartUtc = new Date(WorldChoirServerTime.nowMs()).toISOString();
       }
     }).catch(() => {});
 
-    try {
-      await playPromise;
-      LyricsDisplay.startSync(audioEl);
-      LyricsDisplay.update(audioEl.currentTime, audioEl);
-      hideAllUnlockUi();
-    } catch {
-      await startLiveAudio(target);
-    }
-
+    await startLiveAudio(target);
     transitioning = false;
   }
 
@@ -765,7 +754,9 @@ const GlobalLiveEvent = (() => {
       dismissLiveUiIfOffHome();
       return;
     }
-    if (state === 'PRE_EVENT' && active) return;
+    const videoPlaying = videoEl && !videoEl.paused && videoEl.readyState >= 2 && !videoFailed;
+    if (state === 'PRE_EVENT' && active && videoPlaying) return;
+
     state = 'PRE_EVENT';
     showPreEventUI();
     getLiveSongAudio();
@@ -773,14 +764,13 @@ const GlobalLiveEvent = (() => {
 
     const nowMs = WorldChoirServerTime.nowMs();
     const target = getTargetVideoPositionSec(nowMs);
-    const windowSec = getPreEventWindowSec();
 
     if (shouldSkipPreEventVideo(nowMs)) {
       await onVideoEnded();
       return;
     }
 
-    if (!videoEl._wcBound) {
+    if (videoEl && !videoEl._wcBound) {
       videoEl._wcBound = true;
       videoEl.addEventListener('ended', () => {
         if (shouldLoopPreEventVideo() && !hasPreEventVideoTimelineElapsed(WorldChoirServerTime.nowMs())) {
@@ -790,19 +780,25 @@ const GlobalLiveEvent = (() => {
         }
         onVideoEnded();
       });
+      videoEl.addEventListener('playing', () => {
+        document.getElementById('wc-global-live-pre-fallback')?.setAttribute('hidden', '');
+      });
     }
 
     await seekVideoTo(target, { autoplay: true });
-    for (let attempt = 0; attempt < 5 && videoEl && videoEl.paused && !videoFailed; attempt++) {
+    for (let attempt = 0; attempt < 8 && videoEl && videoEl.paused && !videoFailed; attempt++) {
       try {
-        videoEl.muted = !audioUnlocked;
+        videoEl.muted = true;
         await videoEl.play();
+        if (audioUnlocked) videoEl.muted = false;
         break;
       } catch {
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 120));
       }
     }
-    // Start a silent audio underlay so the live song can unmute without a cold play().
+    if (!videoEl || videoEl.paused || videoFailed) {
+      document.getElementById('wc-global-live-pre-fallback')?.removeAttribute('hidden');
+    }
     primeLiveSongAudio().catch(() => {});
     updateCountdownUI(nowMs);
   }
@@ -817,6 +813,54 @@ const GlobalLiveEvent = (() => {
       el.addEventListener('loadedmetadata', resolve, { once: true });
       el.addEventListener('error', () => reject(new Error('audio load failed')), { once: true });
     });
+  }
+
+  async function seekAudioAndWait(el, seekTo) {
+    const drift = Math.abs((el.currentTime || 0) - seekTo);
+    if (drift < 0.5) return;
+    await new Promise((resolve) => {
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        el.removeEventListener('seeked', done);
+        resolve();
+      };
+      el.addEventListener('seeked', done, { once: true });
+      try {
+        el.currentTime = seekTo;
+        lastAudioSeekAt = Date.now();
+      } catch {
+        done();
+        return;
+      }
+      setTimeout(done, 500);
+    });
+  }
+
+  async function resumeAudibleLiveSong() {
+    const el = audioEl || getLiveSongAudio();
+    audioEl = el;
+    if (!el) return;
+    el.muted = false;
+    el.volume = 1;
+    if (el.paused || el.ended) {
+      try {
+        await el.play();
+      } catch {
+        try {
+          el.muted = true;
+          await el.play();
+          el.muted = false;
+        } catch {
+          /* tick will retry without resetting position */
+        }
+      }
+    }
+    if (typeof LyricsDisplay !== 'undefined') {
+      LyricsDisplay.startSync(el);
+      LyricsDisplay.update(el.currentTime, el);
+    }
   }
 
   async function startLiveAudio(target) {
@@ -836,7 +880,6 @@ const GlobalLiveEvent = (() => {
       try {
         await waitForAudioReady(audioEl);
       } catch {
-        // Keep lyrics up and retry on later ticks — never block with an overlay.
         return;
       }
     }
@@ -844,25 +887,32 @@ const GlobalLiveEvent = (() => {
     const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
     const seekTo = Math.min(Math.max(0, target), audioEl.duration || target, duration - 0.05);
     const drift = Math.abs((audioEl.currentTime || 0) - seekTo);
-    // On cold start / rejoin, land on the global position. Avoid tiny seeks while playing.
-    if (audioEl.paused || audioEl.ended || drift > 0.75) {
-      try {
-        audioEl.currentTime = seekTo;
-        lastAudioSeekAt = Date.now();
-      } catch { /* ignore */ }
+
+    // If already playing, do not touch currentTime — that restarts on iOS.
+    if (!audioEl.paused && !audioEl.ended) {
+      if (audioEl.muted) {
+        try { audioEl.muted = false; audioUnlocked = true; } catch { /* ignore */ }
+      }
+      if (typeof LyricsDisplay !== 'undefined') {
+        LyricsDisplay.startSync(audioEl);
+        LyricsDisplay.update(audioEl.currentTime, audioEl);
+      }
+      return;
     }
 
-    // Always keep playback running for lyric sync. Prefer unmuted; fall back to muted.
+    if (audioEl.paused && !audioEl.ended && drift > 1.25) {
+      await seekAudioAndWait(audioEl, seekTo);
+    }
+
     audioEl.volume = 1;
     for (let attempt = 0; attempt < 6; attempt++) {
       try {
-        audioEl.muted = attempt > 2 ? true : false;
+        audioEl.muted = attempt > 2;
         await audioEl.play();
         if (!audioEl.muted) audioUnlocked = true;
         LyricsDisplay.startSync(audioEl);
         LyricsDisplay.update(audioEl.currentTime, audioEl);
         hideAllUnlockUi();
-        // If we had to start muted, keep trying to unmute without blocking UI.
         if (audioEl.muted) {
           try {
             audioEl.muted = false;
@@ -965,12 +1015,33 @@ const GlobalLiveEvent = (() => {
     LyricsDisplay.update(audioEl.currentTime, audioEl);
   }
 
+  function teardownLiveOverlays() {
+    clearLiveGate();
+    hideAllUnlockUi();
+    const mode = document.getElementById('live-event-mode');
+    if (mode) {
+      mode.classList.remove('active');
+      mode.setAttribute('aria-hidden', 'true');
+    }
+    const shell = getShell();
+    shell?.classList.remove('is-active');
+    shell?.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('wc-global-live-active');
+    document.body.style.overflow = '';
+    document.getElementById('home-page')?.removeAttribute('hidden');
+    document.getElementById('nav-root')?.removeAttribute('hidden');
+    document.getElementById('earth-canvas')?.removeAttribute('hidden');
+    document.querySelectorAll('canvas[hidden]').forEach((canvas) => {
+      if (canvas.id === 'wc-global-live-video') return;
+      canvas.removeAttribute('hidden');
+    });
+    active = false;
+  }
+
   function onSongEnded() {
     cleanupAudio();
     finalizeLiveEventPlayback();
-    clearLiveGate();
-    document.getElementById('home-page')?.removeAttribute('hidden');
-    document.getElementById('nav-root')?.removeAttribute('hidden');
+    teardownLiveOverlays();
     if (!isHomePage()) {
       window.location.replace('index.html');
       return;
@@ -1257,12 +1328,11 @@ const GlobalLiveEvent = (() => {
     document.body.style.overflow = 'hidden';
 
     if (next === 'PRE_EVENT') {
-      state = 'PRE_EVENT';
       document.getElementById('wc-global-live-pre')?.removeAttribute('hidden');
+      document.getElementById('wc-global-live-pre-fallback')?.removeAttribute('hidden');
       const shell = getShell();
       shell?.classList.add('is-active');
       shell?.setAttribute('aria-hidden', 'false');
-      active = true;
       return true;
     }
 
@@ -1312,6 +1382,7 @@ const GlobalLiveEvent = (() => {
   }
 
   function isActive() {
+    if (state === 'LIVE_FINISHED' || state === 'NORMAL') return false;
     return active
       || document.getElementById('wc-global-live')?.classList.contains('is-active')
       || document.getElementById('live-event-mode')?.classList.contains('active');

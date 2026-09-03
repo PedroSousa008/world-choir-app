@@ -539,10 +539,6 @@ const WorldChoirHome = (() => {
             </div>
           </a>
 
-          <section class="home-after-card home-after-card--promise" id="home-after-promise-card" aria-label="Your promise to the world">
-            ${renderPostEventPromiseCard()}
-          </section>
-
           <section class="home-after-memory" aria-label="The world's memory">
             <img class="home-after-memory__bg" src="${POST_EVENT_IMAGES.memory}" alt="" decoding="async" width="800" height="360">
             <div class="home-after-memory__overlay" aria-hidden="true"></div>
@@ -572,50 +568,7 @@ const WorldChoirHome = (() => {
     }
   }
 
-  function renderPostEventPromiseCard() {
-    const existing = typeof WorldChoirDB !== 'undefined'
-      ? WorldChoirDB.getPromiseForCurrentUser?.()
-      : null;
-    if (existing?.promise_text) {
-      return `
-        <p class="home-after-card__eyebrow">Your Promise to the World</p>
-        <p class="home-after-promise-saved">${esc(existing.promise_text)}</p>
-      `;
-    }
-    return `
-      <p class="home-after-card__eyebrow">Your Promise to the World</p>
-      <h2 class="home-after-promise-title">What do you promise the world?</h2>
-      <p class="home-after-promise-copy">You sang with millions. Leave one honest intention for the world ahead.</p>
-      <label class="sr-only" for="home-after-promise-text">Your promise</label>
-      <textarea class="form-textarea" id="home-after-promise-text" placeholder="I promise to…" maxlength="500"></textarea>
-      <div class="actions-row" style="margin-top:16px">
-        <button class="btn btn-primary" id="home-after-promise-submit" type="button">Share My Promise</button>
-      </div>
-    `;
-  }
   function bindPostEventActions() {
-    const submit = document.getElementById('home-after-promise-submit');
-    const textarea = document.getElementById('home-after-promise-text');
-    submit?.addEventListener('click', () => {
-      const text = textarea?.value.trim();
-      if (!text) {
-        alert('Please write your promise before continuing.');
-        textarea?.focus();
-        return;
-      }
-      submit.disabled = true;
-      submit.textContent = 'Saving…';
-      WorldChoirDB.createPromise({ promiseText: text });
-      if (typeof LiveEventMode !== 'undefined') LiveEventMode.finishFlow();
-      const card = document.getElementById('home-after-promise-card');
-      if (card) {
-        card.innerHTML = `
-          <p class="home-after-card__eyebrow">Your Promise to the World</p>
-          <p class="home-after-promise-saved">${esc(text)}</p>
-        `;
-      }
-    });
-
     document.getElementById('home-open-memory')?.addEventListener('click', () => {
       window.location.href = 'memory.html';
     });
@@ -732,8 +685,10 @@ const WorldChoirHome = (() => {
   function render() {
     const root = document.getElementById('home-content');
     if (!root) return;
+    if (isPostEvent()) {
+      document.documentElement.classList.remove('wc-live-gate');
+    }
     if (document.documentElement.classList.contains('wc-live-gate')) return;
-    if (LiveEventMode.isActive()) return;
     if (typeof GlobalLiveEvent !== 'undefined' && GlobalLiveEvent.isActive()) return;
 
     if (isPostEvent() && LiveEventMode.hasCompletedFlow()) {

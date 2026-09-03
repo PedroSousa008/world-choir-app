@@ -29,9 +29,13 @@ html.wc-live-gate main,
 html.wc-live-gate .page,
 html.wc-live-gate .donate-page,
 html.wc-live-gate .profile-page,
+html.wc-live-gate .passport-page,
+html.wc-live-gate #passport-root,
 html.wc-live-gate .map-shell,
 html.wc-live-gate .map-page__stars,
-html.wc-live-gate .particles {
+html.wc-live-gate .particles,
+html.wc-live-gate .sws-nav,
+html.wc-live-gate .sws-letter {
   visibility: hidden !important;
   pointer-events: none !important;
 }
@@ -46,10 +50,20 @@ html.wc-live-gate .wc-global-live--boot {
   background: #000;
 }
 
-#live-event-mode.active {
+#live-event-mode:not(.active),
+.practice-mode:not(.active) {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+#live-event-mode.active,
+.practice-mode.active {
+  position: fixed;
+  inset: 0;
   z-index: 13000 !important;
   background: #000 !important;
   display: flex !important;
+  pointer-events: auto;
 }
 
 .wc-global-live {
