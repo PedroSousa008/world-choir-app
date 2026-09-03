@@ -260,13 +260,6 @@ const WorldChoirHome = (() => {
     memory: 'images/memory-after.png',
   };
 
-  function getPostEventVoicesLabel(voices) {
-    const count = voices ?? 0;
-    if (!WorldChoirDB.isPledgesLoaded()) return 'LOADING VOICES';
-    const formatted = formatStat(count);
-    return count === 1 ? '1 VOICE' : `${formatted} VOICES`;
-  }
-
   function getSongQuote() {
     const lines = WorldChoirPracticeConfig?.PRACTICE_LYRICS || [];
     const dreamer = lines.find((l) => l.text.includes("I'm a dreamer"));
@@ -342,7 +335,6 @@ const WorldChoirHome = (() => {
     const hasPromise = !!promise?.promise_text;
     const e = WorldChoirConfig.ACTIVE_EVENT;
     const song = WorldChoirPracticeConfig?.PRACTICE_SONG || { title: e.songName, artist: e.artistName };
-    const voicesLabel = getPostEventVoicesLabel(merged.voices);
     const showConfetti = isPostEventConfettiActive();
 
     return `
@@ -352,7 +344,6 @@ const WorldChoirHome = (() => {
             <img class="home-after-hero__planet" src="${POST_EVENT_IMAGES.hero}" alt="" decoding="async" width="800" height="400">
             ${showConfetti ? '<div class="home-after-hero__confetti" id="home-after-confetti" aria-hidden="true"></div>' : ''}
             <div class="home-after-hero__content">
-              <p class="home-after-hero__voices" id="home-after-voices" aria-live="polite">${esc(voicesLabel)}</p>
               <img class="home-after-hero__logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir" width="1024" height="1024" decoding="async">
               <h1 class="home-after-hero__title">We did it.</h1>
               <p class="home-after-hero__subtitle">The world sang together.</p>
@@ -431,13 +422,9 @@ const WorldChoirHome = (() => {
     const voices = document.getElementById('home-stat-voices');
     const cities = document.getElementById('home-stat-cities');
     const acts = document.getElementById('home-stat-acts');
-    const voicesLabel = document.getElementById('home-after-voices');
     if (voices && stats.voices != null) voices.textContent = formatStat(stats.voices);
     if (cities && stats.cities != null) cities.textContent = formatStat(stats.cities);
     if (acts && stats.dailyActsCompleted != null) acts.textContent = formatStat(stats.dailyActsCompleted);
-    if (voicesLabel && stats.voices != null) {
-      voicesLabel.textContent = getPostEventVoicesLabel(stats.voices);
-    }
   }
 
   function bindPostEventActions() {

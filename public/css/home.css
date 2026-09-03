@@ -588,15 +588,6 @@
   );
 }
 
-.home-after-hero__voices {
-  margin: 0 0 12px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent-aurora);
-}
-
 .home-after-hero__logo {
   display: block;
   width: min(112px, 30vw);
