@@ -592,7 +592,7 @@
   display: block;
   width: min(112px, 30vw);
   height: auto;
-  margin: 0 auto 14px;
+  margin: 0 auto 4px;
 }
 
 .home-after-hero__title {
@@ -619,8 +619,8 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  /* 430px-wide layout: stats card top at 335px; overlap scales with content width (mobile + desktop) */
-  margin-top: calc(-101.354679803px * (100% / 430px));
+  /* 430px-wide layout: stats card top at 442px (over header, z-index 4) */
+  margin-top: calc(5.645320197px * (100% / 430px));
   padding: 0 20px 8px;
   max-width: 100%;
 }

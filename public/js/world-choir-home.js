@@ -329,24 +329,20 @@ const WorldChoirHome = (() => {
     return icons[type] || '';
   }
 
+  const POST_EVENT_HERO_MESSAGE = 'You were part of a moment that will go down in history. Together, we sang for peace, unity and a better world.';
+
   function getPostEventHeroCopy() {
     const thankYou = typeof WorldChoirThankYou !== 'undefined'
       ? WorldChoirThankYou.getThankYou()
       : 'Thank You';
-    const message = typeof WorldChoirThankYou !== 'undefined'
-      ? WorldChoirThankYou.getThankYouMessage()
-      : 'You were part of a moment that will go down in history. Together, we sang for peace, unity and a better world.';
-    return { thankYou, message };
+    return { thankYou, message: POST_EVENT_HERO_MESSAGE };
   }
 
   function updatePostEventHeroCopy() {
     if (homeView !== 'post-event' && homeView !== 'post-event-complete') return;
     const title = document.getElementById('home-after-thank-you');
-    const message = document.getElementById('home-after-thank-you-message');
     if (!title || typeof WorldChoirThankYou === 'undefined') return;
-    const copy = getPostEventHeroCopy();
-    title.textContent = copy.thankYou;
-    if (message) message.textContent = copy.message;
+    title.textContent = WorldChoirThankYou.getThankYou();
   }
 
   function renderPostEventHome(stats = {}) {
