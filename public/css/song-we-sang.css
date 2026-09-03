@@ -1,6 +1,17 @@
-/* ── Song We Sang / Letter Page ── */
+/* ═══════════════════════════════════════════
+   Song We Sang / Letter Page
+   ═══════════════════════════════════════════ */
 
-/* Prevent any horizontal scroll; lock to viewport */
+/* ── Brittany Signature (self-hosted) ── */
+@font-face {
+  font-family: 'Brittany Signature';
+  src: url('../fonts/BrittanySignature.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Page shell ── */
 html.sws-page,
 html.sws-page body {
   overflow-x: hidden;
@@ -109,7 +120,7 @@ html.sws-page body {
   white-space: nowrap;
 }
 
-/* ── Paper image ── */
+/* ── Main content area ── */
 .sws-main {
   flex: 1 0 auto;
   display: flex;
@@ -120,7 +131,9 @@ html.sws-page body {
   overflow-x: hidden;
 }
 
+/* ── Paper wrap: image + text overlay together ── */
 .sws-paper-wrap {
+  position: relative;   /* text overlay is absolute inside this */
   width: 100%;
   max-width: 480px;
   border-radius: 8px;
@@ -128,6 +141,8 @@ html.sws-page body {
   box-shadow:
     0 8px 40px rgba(0, 0, 0, 0.7),
     0 2px 8px rgba(0, 0, 0, 0.5);
+  /* establish a formatting context so % sizing works for children */
+  display: block;
 }
 
 .sws-paper-img {
@@ -135,6 +150,139 @@ html.sws-page body {
   width: 100%;
   height: auto;
   border-radius: 8px;
+  /* image is the sizing reference — text overlays on top */
+}
+
+/* ── Letter text overlay (absolutely positioned over the image) ──
+   Image is 1024×1536 (aspect ratio 2:3).
+   Writing area starts at approx 19% from top, left/right margins ~13%.
+   Closing/signature sit around 82–90% from top.
+   These % values scale perfectly as the image scales. */
+.sws-letter {
+  position: absolute;
+  top: 19%;
+  left: 13%;
+  right: 13%;
+  bottom: 8%;
+  overflow: hidden;        /* never spill outside the paper */
+  color: #2a1f0e;          /* dark ink colour that reads on the parchment */
+  /* No background — text sits directly on the image */
+}
+
+/* ── Per-segment typography ── */
+
+/* 1. "Dear John," — Brittany Signature 32px */
+.sws-letter__greeting {
+  margin: 0 0 0.55em;
+  padding: 0;
+  font-family: 'Brittany Signature', cursive;
+  font-size: 32px;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1.2;
+  color: #2a1f0e;
+}
+
+/* 2. Main body paragraphs — Special Elite 15px */
+.sws-letter__p {
+  margin: 0 0 0.75em;
+  padding: 0;
+  font-family: 'Special Elite', 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: #2a1f0e;
+}
+
+/* 3. Short standalone lines (Different countries. etc.) — same as body */
+.sws-letter__line {
+  margin: 0 0 0.2em;
+  padding: 0;
+  font-family: 'Special Elite', 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #2a1f0e;
+}
+
+/* 4. Emphasis / bold phrases */
+.sws-letter__emphasis {
+  margin: 0.6em 0;
+  padding: 0;
+  font-family: 'Special Elite', 'Courier New', monospace;
+  font-size: 15px;
+  font-weight: 400;   /* Special Elite has no bold; italic adds weight */
+  line-height: 1.65;
+  color: #1a110a;
+}
+
+.sws-letter__emphasis em {
+  font-style: italic;
+  font-weight: 400;
+  color: #1a110a;
+}
+
+/* 5. "With love and gratitude," — Caveat 20px */
+.sws-letter__closing {
+  margin: 1.4em 0 0.2em;
+  padding: 0;
+  font-family: 'Caveat', cursive;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.3;
+  color: #2a1f0e;
+}
+
+/* 6. "The World We Live In" — Brittany Signature 30px */
+.sws-letter__signature {
+  margin: 0.1em 0 0;
+  padding: 0;
+  font-family: 'Brittany Signature', cursive;
+  font-size: 30px;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1.25;
+  color: #2a1f0e;
+}
+
+.sws-letter__signature span {
+  font-family: 'Brittany Signature', cursive;
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* ── Typing caret ── */
+.sws-letter__caret {
+  display: inline-block;
+  width: 1px;
+  height: 0.85em;
+  margin-left: 1px;
+  vertical-align: -0.05em;
+  background: rgba(42, 31, 14, 0.5);
+  animation: swsCaretPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes swsCaretPulse {
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 0.6;  }
+}
+
+/* Hide caret once letter is complete */
+.sws-letter--complete .sws-letter__caret {
+  display: none;
+}
+
+/* ── Screen-reader only ── */
+.sws-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ── Footer bar ── */
@@ -188,11 +336,31 @@ html.sws-page body {
   .sws-main {
     padding: 24px 20px 16px;
   }
+
+  /* On wider screens the image is bigger, so keep font sizes proportional.
+     At 480px image width these are the natural sizes; scale them gently. */
+  .sws-letter__greeting  { font-size: 34px; }
+  .sws-letter__signature { font-size: 32px; }
+  .sws-letter__closing   { font-size: 22px; }
+  .sws-letter__p,
+  .sws-letter__line,
+  .sws-letter__emphasis  { font-size: 15px; }
 }
 
+/* On very small phones, scale down slightly to avoid overflow */
+@media (max-width: 360px) {
+  .sws-letter__greeting  { font-size: 26px; }
+  .sws-letter__signature { font-size: 24px; }
+  .sws-letter__closing   { font-size: 17px; }
+  .sws-letter__p,
+  .sws-letter__line,
+  .sws-letter__emphasis  { font-size: 13px; }
+}
+
+/* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
+  .sws-letter__caret {
+    animation: none;
+    opacity: 0.35;
   }
 }

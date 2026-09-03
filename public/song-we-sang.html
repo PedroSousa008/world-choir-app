@@ -10,13 +10,13 @@
   <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20270706">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
-  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904o">
+  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904p">
 </head>
 <body class="sws-page-body">
 
-  <!-- Top nav: back ← | title | share -->
+  <!-- ── Top nav ── -->
   <nav class="sws-nav" aria-label="Letter page navigation">
     <button class="sws-nav__back" type="button" id="sws-letter-back" aria-label="Go back">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -40,20 +40,31 @@
     </button>
   </nav>
 
-  <!-- Paper image — the main content of the page -->
+  <!-- ── Letter area ── -->
   <main class="sws-main" aria-label="A letter to John Lennon">
+    <!-- Paper image + text overlay, sized together -->
     <div class="sws-paper-wrap">
       <img
         class="sws-paper-img"
         src="images/background-imagine.png"
-        alt="A handwritten letter on aged paper addressed to John Lennon"
+        alt="A handwritten letter on aged parchment paper addressed to John Lennon"
         decoding="async"
         fetchpriority="high"
       >
+
+      <!-- Screen-reader copy of full letter (always present, visually hidden) -->
+      <div id="sws-letter-sr" class="sws-sr-only" aria-label="Letter to John Lennon" role="article"></div>
+
+      <!-- Visual letter text, rendered on top of image -->
+      <div
+        id="sws-letter-visual"
+        class="sws-letter"
+        aria-hidden="true"
+      ></div>
     </div>
   </main>
 
-  <!-- Bottom bar: "Your promise lives on" -->
+  <!-- ── Footer bar ── -->
   <footer class="sws-footer" aria-label="Your promise">
     <span class="sws-footer__icon" aria-hidden="true">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -65,6 +76,13 @@
       <p class="sws-footer__text">Thank you for your voice. Thank you for your promise.</p>
     </div>
   </footer>
+
+  <!-- Scripts -->
+  <script src="js/world-choir-config.js?v=20260904e"></script>
+  <script src="js/world-choir-db.js?v=20260904g"></script>
+  <script src="js/song-we-sang/letter-content.js?v=20260904p"></script>
+  <script src="js/song-we-sang/typing-engine.js?v=20260904p"></script>
+  <script src="js/song-we-sang/letter-page.js?v=20260904p"></script>
 
   <script>
     (function () {

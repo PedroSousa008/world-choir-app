@@ -3,7 +3,7 @@
  */
 (() => {
   const content = SongWeSangLetterContent.LETTER_CONTENT;
-  const TYPE_INTERVAL = SongWeSangLetterContent.TYPE_INTERVAL;
+  const TYPE_INTERVAL = SongWeSangLetterContent.LETTER_CHARACTER_INTERVAL_MS || SongWeSangLetterContent.TYPE_INTERVAL;
 
   let typingController = null;
   let followScroll = true;
