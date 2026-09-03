@@ -1,0 +1,828 @@
+/* World Choir — post-event Memory tab
+   Same visual DNA as Donate: black, muted labels, cyan accents, thin borders. */
+
+:root,
+.memory-page {
+  --df-warm: #f2efe8;
+  --df-warm-soft: rgba(242, 239, 232, 0.72);
+  --df-muted: #8a8d97;
+  --df-line: rgba(255, 255, 255, 0.08);
+  --df-line-strong: rgba(78, 197, 232, 0.28);
+  --df-accent: var(--accent-aurora, #4ec5e8);
+  --mem-card-bg: #070708;
+}
+
+.memory-page {
+  position: relative;
+  z-index: 1;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 14px 20px calc(var(--nav-height) + 88px);
+  font-family: var(--font-sans);
+  color: var(--df-warm);
+  overflow-x: clip;
+}
+
+.memory-page * {
+  box-sizing: border-box;
+}
+
+.mem-topbar {
+  margin-bottom: 18px;
+}
+
+.mem-intro {
+  margin: 0 0 22px;
+  text-align: left;
+}
+
+.mem-intro__title {
+  margin: 0 0 10px;
+}
+
+.mem-intro__kicker {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--df-muted);
+}
+
+.mem-section {
+  margin: 28px 0 0;
+}
+
+.mem-section-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mem-section-row .df-section-label,
+.mem-section-row__label {
+  margin: 0;
+}
+
+.mem-link {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--df-accent);
+}
+
+.mem-link:hover,
+.mem-link:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+.mem-card {
+  display: block;
+  background: var(--mem-card-bg);
+  border: 1px solid var(--df-line);
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.mem-empty {
+  margin: 0;
+  padding: 20px 8px;
+  text-align: center;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--df-muted);
+}
+
+.mem-empty--soft {
+  padding: 8px 0 28px;
+  text-align: left;
+}
+
+/* ─── Carousel ─── */
+
+.mem-carousel {
+  margin: 0 0 8px;
+}
+
+.mem-carousel__viewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  outline: none;
+  touch-action: pan-x;
+  padding: 8px 0 4px;
+}
+
+.mem-carousel__viewport:focus-visible {
+  box-shadow: 0 0 0 2px rgba(78, 197, 232, 0.35);
+  border-radius: 12px;
+}
+
+.mem-carousel__viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.mem-carousel__track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  min-height: 220px;
+  padding: 0 max(20px, calc(50% - 140px));
+}
+
+.mem-carousel__slide {
+  flex: 0 0 auto;
+  scroll-snap-align: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 220ms ease, opacity 220ms ease;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  height: 210px;
+}
+
+.mem-carousel__slide.is-active {
+  height: 240px;
+  box-shadow: 0 0 0 1px rgba(78, 197, 232, 0.22);
+}
+
+.mem-carousel__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mem-carousel__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 14px;
+  min-height: 12px;
+}
+
+.mem-carousel__dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  cursor: pointer;
+  transition: width 180ms ease, background 180ms ease;
+}
+
+.mem-carousel__dot.is-active {
+  width: 18px;
+  background: var(--df-accent);
+}
+
+.mem-carousel--empty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--df-line);
+  border-radius: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mem-carousel__slide {
+    transition: none;
+  }
+}
+
+/* ─── Event card ─── */
+
+.mem-event-card {
+  padding: 16px;
+}
+
+.mem-event-card__top {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.mem-event-card__art {
+  width: 84px;
+  height: 112px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: #111;
+  border: 1px solid var(--df-line);
+}
+
+.mem-event-card__meta {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.mem-event-card__title {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--df-warm);
+}
+
+.mem-event-card__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--df-muted);
+}
+
+.mem-event-card__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mem-event-card__icon {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  color: var(--df-muted);
+}
+
+.mem-event-card__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.mem-event-card__sep {
+  opacity: 0.45;
+}
+
+.mem-event-card__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  border-top: 1px solid var(--df-line);
+  padding-top: 14px;
+}
+
+.mem-stat {
+  position: relative;
+  text-align: center;
+  padding: 0 4px;
+  min-width: 0;
+}
+
+.mem-stat:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 12%;
+  right: -4px;
+  width: 1px;
+  height: 76%;
+  background: var(--df-line);
+}
+
+.mem-stat__icon {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  color: var(--df-accent);
+  margin-bottom: 6px;
+}
+
+.mem-stat__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mem-stat__value {
+  display: block;
+  font-size: clamp(0.78rem, 2.8vw, 0.95rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--df-warm);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mem-stat__label {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.52rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--df-muted);
+  line-height: 1.25;
+}
+
+@media (max-width: 420px) {
+  .mem-event-card__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 14px;
+  }
+
+  .mem-stat:nth-child(2)::after {
+    display: none;
+  }
+
+  .mem-stat:nth-child(even)::after {
+    display: none;
+  }
+}
+
+/* ─── Passport + stamps ─── */
+
+.mem-split {
+  display: grid;
+  grid-template-columns: minmax(0, 0.4fr) minmax(0, 0.6fr);
+  gap: 12px;
+  margin-top: 28px;
+  align-items: start;
+}
+
+.mem-passport-link {
+  padding: 12px;
+  overflow: hidden;
+}
+
+.mem-passport-frame {
+  display: flex;
+  justify-content: center;
+}
+
+.mem-passport-frame .passport-card {
+  width: min(100%, 168px);
+  max-width: 168px;
+}
+
+.mem-stamps-card {
+  padding: 14px 10px 12px;
+}
+
+.mem-stamps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 6px;
+}
+
+.mem-stamp {
+  text-align: center;
+  min-width: 0;
+}
+
+.mem-stamp__seal {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 6px;
+  display: grid;
+  place-items: center;
+  color: var(--df-accent);
+}
+
+.mem-stamp__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  opacity: 0.85;
+  box-shadow: inset 0 0 0 4px rgba(0, 0, 0, 0.35);
+}
+
+.mem-stamp__ring::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1px dashed currentColor;
+  opacity: 0.55;
+}
+
+.mem-stamp__label {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  font-size: 0.42rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: currentColor;
+  opacity: 0.95;
+}
+
+.mem-stamp__icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  margin-top: 10px;
+}
+
+.mem-stamp__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mem-stamp__lock {
+  position: absolute;
+  right: 6px;
+  bottom: 8px;
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+}
+
+.mem-stamp__lock svg {
+  width: 12px;
+  height: 12px;
+}
+
+.mem-stamp__detail {
+  margin: 0;
+  font-size: 0.5rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--df-muted);
+}
+
+.mem-stamp--cyan { color: #4ec5e8; }
+.mem-stamp--magenta { color: #c77dff; }
+.mem-stamp--pink { color: #ff6b9d; }
+.mem-stamp--green { color: #6dcf8a; }
+.mem-stamp--blue { color: #5b8cff; }
+.mem-stamp--amber { color: #e0b15a; }
+
+.mem-stamp.is-locked {
+  color: #6a6e78;
+  opacity: 0.72;
+}
+
+@media (max-width: 360px) {
+  .mem-split {
+    grid-template-columns: 1fr;
+  }
+
+  .mem-passport-frame .passport-card {
+    max-width: 200px;
+  }
+}
+
+/* ─── Pass the World route ─── */
+
+.mem-route-card {
+  padding: 18px 8px 14px;
+  overflow: hidden;
+}
+
+.mem-route {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 0 8px 4px;
+}
+
+.mem-route::-webkit-scrollbar {
+  display: none;
+}
+
+.mem-route__stop {
+  position: relative;
+  flex: 0 0 auto;
+  width: 104px;
+  text-align: center;
+  padding-top: 4px;
+}
+
+.mem-route__line {
+  position: absolute;
+  top: 11px;
+  right: calc(50% + 8px);
+  width: calc(100% - 16px);
+  border-top: 1px dashed rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.mem-route__node {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.mem-route__stop--completed .mem-route__node,
+.mem-route__stop--current .mem-route__node {
+  background: var(--df-accent);
+  border-color: var(--df-accent);
+  box-shadow: 0 0 0 3px rgba(78, 197, 232, 0.16);
+}
+
+.mem-route__city {
+  margin: 0 0 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(242, 239, 232, 0.78);
+  line-height: 1.25;
+}
+
+.mem-route__country {
+  margin: 0 0 6px;
+  font-size: 0.58rem;
+  color: var(--df-muted);
+  line-height: 1.25;
+}
+
+.mem-route__date {
+  margin: 0;
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--df-muted);
+}
+
+.mem-route__stop--current .mem-route__city,
+.mem-route__stop--current .mem-route__date,
+.mem-route__stop--completed .mem-route__city {
+  color: var(--df-accent);
+}
+
+.mem-route__stop--completed .mem-route__line {
+  border-top-color: rgba(78, 197, 232, 0.45);
+}
+
+/* ─── Floating actions ─── */
+
+.mem-fab {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(var(--nav-height) + 12px + env(safe-area-inset-bottom, 0px));
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.mem-fab__toggle,
+.mem-fab__action {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--df-accent);
+  background: #050505;
+  border: 1.5px solid var(--df-accent);
+  box-shadow: 0 0 18px rgba(78, 197, 232, 0.18);
+  transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
+}
+
+.mem-fab__toggle svg,
+.mem-fab__action svg {
+  width: 22px;
+  height: 22px;
+}
+
+.mem-fab__toggle:hover,
+.mem-fab__action:hover,
+.mem-fab__toggle:focus-visible,
+.mem-fab__action:focus-visible {
+  background: rgba(78, 197, 232, 0.08);
+  outline: none;
+}
+
+.mem-fab.is-open .mem-fab__toggle {
+  transform: rotate(45deg);
+}
+
+.mem-fab__menu {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.mem-fab__menu[hidden] {
+  display: none !important;
+}
+
+.mem-fab__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: memFabIn 180ms ease both;
+}
+
+.mem-fab__row:nth-child(1) { animation-delay: 40ms; }
+.mem-fab__row:nth-child(2) { animation-delay: 80ms; }
+.mem-fab__row:nth-child(3) { animation-delay: 120ms; }
+
+.mem-fab__label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--df-warm-soft);
+  background: rgba(5, 5, 5, 0.88);
+  border: 1px solid var(--df-line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.mem-fab__action {
+  width: 48px;
+  height: 48px;
+}
+
+@keyframes memFabIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mem-fab__row {
+    animation: none;
+  }
+
+  .mem-fab.is-open .mem-fab__toggle {
+    transform: none;
+  }
+}
+
+/* ─── Composer ─── */
+
+.mem-composer {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.mem-composer[hidden] {
+  display: none !important;
+}
+
+.mem-composer__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.62);
+  cursor: pointer;
+}
+
+.mem-composer__sheet {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 480px);
+  max-height: min(88vh, 640px);
+  overflow: auto;
+  background: #080808;
+  border: 1px solid var(--df-line);
+  border-radius: 18px 18px 0 0;
+  padding: 20px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+.mem-composer__title {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--df-warm);
+}
+
+.mem-composer__preview {
+  min-height: 160px;
+  border-radius: 12px;
+  border: 1px solid var(--df-line);
+  overflow: hidden;
+  background: #050505;
+  margin-bottom: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.mem-composer__preview img {
+  display: block;
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+}
+
+.mem-composer__field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.mem-composer__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--df-muted);
+}
+
+.mem-composer__field textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 84px;
+  border-radius: 10px;
+  border: 1px solid var(--df-line);
+  background: #050505;
+  color: var(--df-warm);
+  font: inherit;
+  padding: 12px;
+}
+
+.mem-composer__field textarea:focus-visible {
+  outline: none;
+  border-color: rgba(78, 197, 232, 0.45);
+}
+
+.mem-composer__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.mem-composer__btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mem-composer__btn--ghost {
+  background: transparent;
+  color: var(--df-muted);
+  border: 1px solid var(--df-line);
+}
+
+.mem-composer__btn--primary {
+  background: var(--df-accent);
+  color: #041016;
+}
+
+.mem-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-height) + 84px);
+  transform: translateX(-50%) translateY(12px);
+  z-index: 160;
+  max-width: min(90vw, 360px);
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(8, 8, 8, 0.94);
+  border: 1px solid var(--df-line);
+  color: var(--df-warm-soft);
+  font-size: 0.78rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.mem-toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

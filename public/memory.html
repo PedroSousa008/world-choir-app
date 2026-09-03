@@ -4,15 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <title>World Choir — Memory Wall</title>
+  <meta name="description" content="The World Sang — memories, passport, and the Pass the World journey from World Choir.">
+  <title>World Choir — The World Sang</title>
   <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
   <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20270706">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260903p">
-    <link rel="stylesheet" href="css/profile.css?v=20270706b">
+  <link rel="stylesheet" href="css/donate.css?v=20260819d">
+  <link rel="stylesheet" href="css/passport.css?v=20260903o">
+  <link rel="stylesheet" href="css/profile.css?v=20270706b">
   <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
+  <link rel="stylesheet" href="css/memory-page.css?v=20260904ay">
   <link rel="stylesheet" href="css/live-event.css?v=20260904as">
   <script src="js/world-choir-event-schedule.js?v=20260904as"></script>
   <script src="js/live-event/live-event-config.js?v=20260904as"></script>
@@ -20,14 +24,8 @@
 </head>
 <body>
   <div class="ambient-bg"></div>
-  <div class="particles" id="particles"></div>
 
-  <main class="page">
-    <div class="section-header">
-      <h2>The World Sang</h2>
-      <p>A living memory of millions of voices, one song, one moment.</p>
-    </div>
-
+  <main class="page memory-page" id="memory-page">
     <div id="memory-content" aria-live="polite">
       <div class="wc-skel-page" aria-busy="true">
         <span class="sr-only">Loading Memory…</span>
@@ -36,15 +34,10 @@
           <span class="wc-skel wc-skel--line"></span>
           <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
         </div>
-        <div class="stats-grid" style="margin-top:0" aria-hidden="true">
-          <div class="stat-card"><div class="wc-skel" style="height:1.6rem;width:3.2rem;margin:0 auto 8px"></div><div class="wc-skel wc-skel--line" style="width:3rem;margin:0 auto"></div></div>
-          <div class="stat-card"><div class="wc-skel" style="height:1.6rem;width:3.2rem;margin:0 auto 8px"></div><div class="wc-skel wc-skel--line" style="width:4rem;margin:0 auto"></div></div>
-          <div class="stat-card"><div class="wc-skel" style="height:1.6rem;width:4rem;margin:0 auto 8px"></div><div class="wc-skel wc-skel--line" style="width:2.5rem;margin:0 auto"></div></div>
-        </div>
-        <div class="wc-skel-card" aria-hidden="true" style="margin-top:24px">
+        <div class="wc-skel-card" aria-hidden="true" style="margin-top:18px;min-height:180px"></div>
+        <div class="wc-skel-card" aria-hidden="true" style="margin-top:18px">
           <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
           <span class="wc-skel wc-skel--line"></span>
-          <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
         </div>
       </div>
     </div>
@@ -52,91 +45,23 @@
 
   <div id="nav-root"></div>
 
-    <script src="js/world-choir-config.js?v=20260813p"></script>
+  <script src="js/world-choir-config.js?v=20260904ay"></script>
+  <script src="js/world-choir-countries.js?v=20260831a"></script>
   <script src="js/world-choir-db.js"></script>
+  <script src="js/world-choir-participation.js"></script>
   <script src="js/world-choir-a11y.js?v=20260903p"></script>
   <script src="js/world-choir-nav.js?v=20260903p"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260819a"></script>
+  <script src="js/profile/passport-stamps.js?v=20260902a"></script>
+  <script src="js/profile/world-choir-passport.js?v=20260902q"></script>
   <script src="js/world-choir-practice-config.js"></script>
   <script src="js/profile/lyrics-display.js?v=20260904as"></script>
-    <script src="js/live-event/server-time-sync.js?v=20260904an"></script>
+  <script src="js/live-event/server-time-sync.js?v=20260904an"></script>
   <script src="js/live-event/global-live-event.js?v=20260904as"></script>
   <script src="js/world-choir-live-event.js?v=20260904an"></script>
   <script src="js/world-choir-global-live-bootstrap.js?v=20260904an"></script>
-  <script>
-    function render() {
-      const el = document.getElementById('memory-content');
-      const completedEvents = WorldChoirDB.getCompletedEvents();
-      const promises = WorldChoirDB.getAllPromises();
-      const stats = WorldChoirConfig.getMovementStats();
-
-      const eventsHtml = completedEvents.map((event) => `
-        <div class="glass-card memory-event-card" style="margin-bottom:16px">
-          <p class="history-year">${event.title}</p>
-          <div class="glass-card-row"><span class="stat-label">Song</span><span class="stat-value">${event.song_name}</span></div>
-          <div class="glass-card-row"><span class="stat-label">Date</span><span class="stat-value">${new Date(event.event_date_utc).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</span></div>
-          <div class="glass-card-row"><span class="stat-label">Hashtag</span><span class="stat-value">${event.official_hashtag || ''}</span></div>
-        </div>
-      `).join('');
-
-      const promisesHtml = promises.length > 0
-        ? promises.map((p) => `
-            <div class="memory-item">
-              <p class="memory-promise">"${escapeHtml(p.promise_text)}"</p>
-              <p class="memory-meta">${escapeHtml(p.voiceName || p.display_name || 'Anonymous')} · ${escapeHtml(p.city || 'Unknown')}, ${escapeHtml(p.country || '')}</p>
-            </div>
-          `).join('')
-        : `<p class="state-copy text-center" style="margin:0 auto">Real promises from participants will appear here as the world shares them.</p>`;
-
-      el.innerHTML = `
-        ${eventsHtml}
-
-        <div class="stats-grid" style="margin-top:0">
-          <div class="stat-card"><div class="number">${stats.hasData ? formatNumber(stats.voices) : '—'}</div><div class="label">Voices</div></div>
-          <div class="stat-card"><div class="number">${stats.hasData ? stats.countries : '—'}</div><div class="label">Countries</div></div>
-          <div class="stat-card"><div class="number">"${WorldChoirConfig.ACTIVE_EVENT.songName}"</div><div class="label">Song</div></div>
-        </div>
-
-        <div class="glass-card" style="margin:24px 0">
-          <p class="stat-label" style="margin-bottom:12px">Event Statistics — ${WorldChoirConfig.ACTIVE_EVENT.title}</p>
-          <div class="glass-card-row"><span class="stat-label">Date</span><span class="stat-value">${WorldChoirConfig.formatEventDate()}</span></div>
-          <div class="glass-card-row"><span class="stat-label">Hashtag</span><span class="stat-value">${WorldChoirConfig.ACTIVE_EVENT.hashtag}</span></div>
-          <div class="glass-card-row"><span class="stat-label">Promises shared</span><span class="stat-value">${promises.length}</span></div>
-        </div>
-
-        <h3 style="font-size:0.8rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;text-align:center">Promises to the World</h3>
-
-        <div class="memory-grid">
-          ${promisesHtml}
-        </div>
-
-        <div class="actions-row" style="margin-top:32px">
-          <a href="map.html" class="btn btn-secondary">Replay the Global Map</a>
-        </div>
-      `;
-    }
-
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str || '';
-      return div.innerHTML;
-    }
-
-    initParticles(document.getElementById('particles'));
-
-    // Skeleton is already painted in HTML; swap as soon as data is ready.
-    const boot = WorldChoirDB.ready().then(() => {
-      if (!WorldChoirNav.guardMemoryRoute()) return;
-      WorldChoirNav.startWatcher('memory');
-      render();
-    });
-    // Fail-safe so Memory never sits on skeleton if ready hangs.
-    setTimeout(() => {
-      const el = document.getElementById('memory-content');
-      if (el && el.querySelector('[aria-busy="true"]')) {
-        boot.catch(() => {});
-      }
-    }, 280);
-  </script>
+  <script src="js/memory/memory-data.js?v=20260904ay"></script>
+  <script src="js/memory/memory-page.js?v=20260904ay"></script>
+  <script>WorldChoirMemory.init();</script>
 </body>
 </html>
