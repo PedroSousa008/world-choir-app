@@ -289,7 +289,7 @@ html.sws-page body {
 /* ── Stamp (bottom-right of paper) ── */
 .sws-stamp {
   position: absolute;
-  right: 7%;
+  right: calc(7% + 10px);
   bottom: 6.5%;
   z-index: 3;
   width: 45px;
