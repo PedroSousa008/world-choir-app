@@ -879,9 +879,9 @@ a.home-after-card--song:active {
       rgba(201, 169, 98, 0.62) 58%,
       var(--text-secondary) 100%
     );
-    background-size: 220% 100%;
+    background-size: 240% 100%;
     background-repeat: no-repeat;
-    background-position: -120% 0%;
+    background-position: 120% 0%;
 
     animation: swsQuoteShimmer 4.4s linear infinite;
     will-change: background-position;
@@ -890,13 +890,13 @@ a.home-after-card--song:active {
   @keyframes swsQuoteShimmer {
     /* 3.2s shimmer sweep + 1.2s rest (~72.7% + ~27.3%). */
     0% {
-      background-position: -120% 0%;
+      background-position: 120% 0%;
     }
     72.7% {
-      background-position: 120% 0%;
+      background-position: -20% 0%;
     }
     100% {
-      background-position: 120% 0%;
+      background-position: -20% 0%;
     }
   }
 }
