@@ -1,17 +1,22 @@
 /**
  * WorldChoirMemory — post-event Memory tab (“The World Sang”).
- * Visual DNA matches Donate; structure follows the approved Memory mockup.
+ * Visual DNA matches Donate. Top carousel is a live 3-slot Memory photo stream.
  */
 const WorldChoirMemory = (() => {
   const REDUCED_MOTION = typeof window !== 'undefined'
     && window.matchMedia
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  let carouselIndex = 0;
+  const TRANSITION_MS = REDUCED_MOTION ? 0 : 280;
+
   let fabOpen = false;
   let composerOpen = false;
   let composerPreviewUrl = null;
+  let composerFile = null;
+  let composerDataUrl = null;
   let bound = false;
+  let feedUnsub = null;
+  let posting = false;
 
   function esc(str) {
     const d = document.createElement('div');
@@ -57,6 +62,15 @@ const WorldChoirMemory = (() => {
     return icons[name] || icons.globe;
   }
 
+  function photoAlt(photo) {
+    if (!photo) return 'World Choir memory';
+    if (photo.caption) return photo.caption;
+    const place = [photo.city, photo.country].filter(Boolean).join(', ');
+    return place
+      ? `World Choir memory shared from ${place}`
+      : 'World Choir memory';
+  }
+
   function renderTopbar() {
     return `
       <div class="df-topbar mem-topbar">
@@ -85,61 +99,132 @@ const WorldChoirMemory = (() => {
     `;
   }
 
-  function renderCarousel(photos) {
-    if (!photos.length) {
-      return `
-        <section class="mem-carousel mem-carousel--empty" aria-label="Community memories">
-          <p class="mem-empty">The first memories from this gathering will appear here.</p>
-        </section>
-      `;
+  function renderSlotPhoto(photo, slot) {
+    if (!photo) {
+      return `<div class="mem-carousel__slot mem-carousel__slot--${slot} mem-carousel__slot--empty" aria-hidden="true"></div>`;
     }
-
-    const slides = photos.map((photo, i) => {
-      const alt = photo.caption
-        ? `${photo.caption}${photo.city ? ` — ${photo.city}` : ''}`
-        : `Memory from ${photo.userName || 'a World Choir voice'}`;
-      return `
-        <button
-          type="button"
-          class="mem-carousel__slide"
-          data-index="${i}"
-          aria-label="${esc(alt)}"
-          aria-current="${i === carouselIndex ? 'true' : 'false'}"
-        >
-          <img
-            class="mem-carousel__img"
-            src="${esc(photo.imageUrl)}"
-            alt="${esc(alt)}"
-            loading="${Math.abs(i - carouselIndex) <= 1 ? 'eager' : 'lazy'}"
-            decoding="async"
-            draggable="false"
-          >
-        </button>
-      `;
-    }).join('');
-
-    const dots = photos.map((_, i) => `
-      <button
-        type="button"
-        class="mem-carousel__dot${i === carouselIndex ? ' is-active' : ''}"
-        data-dot="${i}"
-        aria-label="Go to memory ${i + 1}"
-        aria-current="${i === carouselIndex ? 'true' : 'false'}"
-      ></button>
-    `).join('');
-
     return `
-      <section class="mem-carousel" aria-roledescription="carousel" aria-label="Community photo memories">
+      <div class="mem-carousel__slot mem-carousel__slot--${slot}${slot === 'center' ? ' is-active' : ''}" data-slot="${slot}">
+        <img
+          class="mem-carousel__img"
+          src="${esc(photo.thumbnailUrl || photo.imageUrl)}"
+          alt="${esc(photoAlt(photo))}"
+          decoding="async"
+          draggable="false"
+        >
+      </div>
+    `;
+  }
+
+  function renderWaitingCard(reconnect) {
+    const title = reconnect ? 'Trying to reconnect…' : 'Waiting for new photos…';
+    const sub = reconnect
+      ? 'We’ll keep your place in the stream.'
+      : 'Memories from around the world will appear here as they’re shared.';
+    return `
+      <div class="mem-carousel__slot mem-carousel__slot--right mem-carousel__slot--waiting" data-slot="right" aria-live="polite">
+        <div class="mem-carousel__waiting">
+          <p class="mem-carousel__waiting-title">${esc(title)}</p>
+          <p class="mem-carousel__waiting-sub">${esc(sub)}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCarouselShell() {
+    return `
+      <section class="mem-carousel" id="mem-carousel" aria-roledescription="carousel" aria-label="Community photo memories">
         <div class="mem-carousel__viewport" id="mem-carousel-viewport" tabindex="0">
-          <div class="mem-carousel__track" id="mem-carousel-track">
-            ${slides}
+          <div class="mem-carousel__stage" id="mem-carousel-stage">
+            <div class="mem-carousel__slot mem-carousel__slot--center mem-carousel__slot--loading is-active">
+              <div class="mem-carousel__waiting">
+                <p class="mem-carousel__waiting-title">Loading memories…</p>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="mem-carousel__dots" role="tablist" aria-label="Memory slides">
-          ${dots}
+        <div class="mem-carousel__meta" id="mem-carousel-meta" hidden></div>
+        <div class="mem-carousel__dots" role="presentation" aria-hidden="true">
+          <span class="mem-carousel__dot" data-pos="left"></span>
+          <span class="mem-carousel__dot is-active" data-pos="center"></span>
+          <span class="mem-carousel__dot" data-pos="right"></span>
+        </div>
+        <div class="sr-only">
+          <button type="button" id="mem-carousel-prev" aria-label="Previous memory"></button>
+          <button type="button" id="mem-carousel-next" aria-label="Next memory"></button>
         </div>
       </section>
     `;
+  }
+
+  function updateCarouselView(snap) {
+    const stage = document.getElementById('mem-carousel-stage');
+    const meta = document.getElementById('mem-carousel-meta');
+    const root = document.getElementById('mem-carousel');
+    if (!stage || !meta || !root) return;
+
+    if (snap.isInitialLoading) {
+      stage.innerHTML = `
+        <div class="mem-carousel__slot mem-carousel__slot--center mem-carousel__slot--loading is-active">
+          <div class="mem-carousel__waiting">
+            <p class="mem-carousel__waiting-title">Loading memories…</p>
+          </div>
+        </div>
+      `;
+      meta.hidden = true;
+      return;
+    }
+
+    if (snap.isEmpty) {
+      root.classList.add('mem-carousel--empty');
+      stage.innerHTML = `
+        <div class="mem-carousel__slot mem-carousel__slot--center mem-carousel__slot--empty-state is-active">
+          <div class="mem-carousel__waiting">
+            <p class="mem-carousel__waiting-title">Waiting for the first memory…</p>
+            <p class="mem-carousel__waiting-sub">Photos from the World Choir will appear here as they’re shared.</p>
+          </div>
+        </div>
+      `;
+      meta.hidden = true;
+      return;
+    }
+
+    root.classList.remove('mem-carousel--empty');
+
+    const left = snap.left
+      ? renderSlotPhoto(snap.left, 'left')
+      : `<div class="mem-carousel__slot mem-carousel__slot--left mem-carousel__slot--empty" aria-hidden="true"></div>`;
+    const center = renderSlotPhoto(snap.current, 'center');
+    let right;
+    if (snap.right) {
+      right = renderSlotPhoto(snap.right, 'right');
+    } else if (snap.current) {
+      right = renderWaitingCard(snap.isReconnecting);
+    } else {
+      right = `<div class="mem-carousel__slot mem-carousel__slot--right mem-carousel__slot--empty" aria-hidden="true"></div>`;
+    }
+
+    stage.innerHTML = `${left}${center}${right}`;
+
+    const caption = String(snap.current?.caption || '').trim();
+    const place = [snap.current?.city, snap.current?.country].filter(Boolean).join(', ');
+    if (caption || place) {
+      meta.hidden = false;
+      meta.innerHTML = `
+        ${caption ? `<p class="mem-carousel__caption">${esc(caption)}</p>` : ''}
+        ${place ? `<p class="mem-carousel__place">${esc(place)}</p>` : ''}
+      `;
+    } else {
+      meta.hidden = true;
+      meta.innerHTML = '';
+    }
+
+    // Exactly 3 positional indicators — center always active/cyan.
+    document.querySelectorAll('.mem-carousel__dot').forEach((dot) => {
+      const pos = dot.getAttribute('data-pos');
+      const on = pos === 'center';
+      dot.classList.toggle('is-active', on);
+    });
   }
 
   function renderEventCard(event) {
@@ -297,7 +382,7 @@ const WorldChoirMemory = (() => {
           </div>
           <div class="mem-fab__row">
             <span class="mem-fab__label">Choose from device</span>
-            <button type="button" class="mem-fab__action" id="mem-fab-device" aria-label="Choose photos from device">
+            <button type="button" class="mem-fab__action" id="mem-fab-device" aria-label="Choose a photo from device">
               ${iconSvg('image')}
             </button>
           </div>
@@ -319,12 +404,17 @@ const WorldChoirMemory = (() => {
           ${iconSvg('plus')}
         </button>
         <input type="file" id="mem-input-camera" accept="image/*" capture="environment" hidden>
-        <input type="file" id="mem-input-device" accept="image/*" multiple hidden>
+        <input type="file" id="mem-input-device" accept="image/*" hidden>
       </div>
     `;
   }
 
   function renderComposer() {
+    const loc = typeof WorldChoirMemoryFeed !== 'undefined'
+      ? WorldChoirMemoryFeed.getUserLocationSnapshot()
+      : { city: '', country: '' };
+    const place = [loc.city, loc.country].filter(Boolean).join(', ') || 'Your World Choir location';
+
     return `
       <div class="mem-composer" id="mem-composer" hidden>
         <button type="button" class="mem-composer__backdrop" id="mem-composer-backdrop" aria-label="Close"></button>
@@ -334,9 +424,10 @@ const WorldChoirMemory = (() => {
             <p class="mem-empty">Add a photo to continue.</p>
           </div>
           <label class="mem-composer__field">
-            <span class="mem-composer__label">Caption</span>
-            <textarea id="mem-composer-caption" rows="3" maxlength="280" placeholder="What did this moment mean to you?"></textarea>
+            <span class="mem-composer__label">Caption <span class="mem-composer__optional">(optional)</span></span>
+            <textarea id="mem-composer-caption" rows="3" maxlength="200" placeholder="Add a caption…"></textarea>
           </label>
+          <p class="mem-composer__place" id="mem-composer-place">${esc(place)}</p>
           <div class="mem-composer__actions">
             <button type="button" class="mem-composer__btn mem-composer__btn--ghost" id="mem-composer-cancel">Cancel</button>
             <button type="button" class="mem-composer__btn mem-composer__btn--primary" id="mem-composer-post">Post Memory</button>
@@ -366,57 +457,6 @@ const WorldChoirMemory = (() => {
     }
   }
 
-  function layoutCarousel() {
-    const track = document.getElementById('mem-carousel-track');
-    const viewport = document.getElementById('mem-carousel-viewport');
-    if (!track || !viewport) return;
-    const slides = [...track.querySelectorAll('.mem-carousel__slide')];
-    if (!slides.length) return;
-
-    const vw = viewport.clientWidth;
-    const centerW = Math.min(vw * 0.58, 280);
-    const sideW = centerW * 0.82;
-    const gap = 12;
-    const reduce = REDUCED_MOTION;
-
-    slides.forEach((slide, i) => {
-      const dist = i - carouselIndex;
-      const abs = Math.abs(dist);
-      const isCenter = dist === 0;
-      const width = isCenter ? centerW : sideW;
-      const scale = isCenter ? 1 : 0.82;
-      const opacity = isCenter ? 1 : abs === 1 ? 0.88 : 0.45;
-      slide.style.width = `${width}px`;
-      slide.style.opacity = String(opacity);
-      slide.style.transform = reduce ? 'none' : `scale(${scale})`;
-      slide.setAttribute('aria-current', isCenter ? 'true' : 'false');
-      slide.classList.toggle('is-active', isCenter);
-      slide.tabIndex = isCenter ? 0 : -1;
-    });
-
-    // Center the active slide in the viewport.
-    const active = slides[carouselIndex];
-    if (!active) return;
-    const targetLeft = active.offsetLeft - (vw - active.offsetWidth) / 2;
-    viewport.scrollTo({
-      left: Math.max(0, targetLeft),
-      behavior: reduce ? 'auto' : 'smooth',
-    });
-
-    document.querySelectorAll('.mem-carousel__dot').forEach((dot) => {
-      const i = Number(dot.getAttribute('data-dot'));
-      const on = i === carouselIndex;
-      dot.classList.toggle('is-active', on);
-      dot.setAttribute('aria-current', on ? 'true' : 'false');
-    });
-  }
-
-  function setCarouselIndex(next, photosLength) {
-    if (!photosLength) return;
-    carouselIndex = ((next % photosLength) + photosLength) % photosLength;
-    layoutCarousel();
-  }
-
   function setFabOpen(open) {
     fabOpen = open;
     const menu = document.getElementById('mem-fab-menu');
@@ -428,9 +468,30 @@ const WorldChoirMemory = (() => {
     root.classList.toggle('is-open', open);
   }
 
-  function openComposer(previewUrl) {
+  function applyPostingAvailability(snap) {
+    const blocked = Boolean(snap?.postedToday) || snap?.canPost === false;
+    ['mem-fab-camera', 'mem-fab-device'].forEach((id) => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.disabled = blocked;
+      btn.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+      btn.classList.toggle('is-disabled', blocked);
+    });
+  }
+
+  function openComposer(previewUrl, file, dataUrl) {
+    const snap = typeof WorldChoirMemoryFeed !== 'undefined'
+      ? WorldChoirMemoryFeed.getSnapshot()
+      : null;
+    if (snap?.postedToday) {
+      showToast('You’ve already shared today’s memory.');
+      return;
+    }
+
     composerOpen = true;
     composerPreviewUrl = previewUrl || null;
+    composerFile = file || null;
+    composerDataUrl = dataUrl || null;
     const root = document.getElementById('mem-composer');
     const preview = document.getElementById('mem-composer-preview');
     if (!root || !preview) return;
@@ -440,34 +501,56 @@ const WorldChoirMemory = (() => {
     } else {
       preview.innerHTML = `<p class="mem-empty">Add a photo to continue.</p>`;
     }
+    const loc = WorldChoirMemoryFeed.getUserLocationSnapshot();
+    const placeEl = document.getElementById('mem-composer-place');
+    if (placeEl) {
+      placeEl.textContent = [loc.city, loc.country].filter(Boolean).join(', ')
+        || 'Your World Choir location';
+    }
     document.getElementById('mem-composer-caption')?.focus();
   }
 
   function closeComposer() {
     composerOpen = false;
+    posting = false;
     const root = document.getElementById('mem-composer');
     if (root) root.hidden = true;
     if (composerPreviewUrl && composerPreviewUrl.startsWith('blob:')) {
       try { URL.revokeObjectURL(composerPreviewUrl); } catch { /* ignore */ }
     }
     composerPreviewUrl = null;
+    composerFile = null;
+    composerDataUrl = null;
+    const caption = document.getElementById('mem-composer-caption');
+    if (caption) caption.value = '';
+    const postBtn = document.getElementById('mem-composer-post');
+    if (postBtn) {
+      postBtn.disabled = false;
+      postBtn.textContent = 'Post Memory';
+    }
   }
 
-  function validateImageFiles(fileList) {
+  function validateImageFile(fileList) {
     const files = [...(fileList || [])];
-    const maxFiles = 6;
     const maxBytes = 12 * 1024 * 1024;
     if (!files.length) return { ok: false, error: 'No image selected.' };
-    if (files.length > maxFiles) return { ok: false, error: `Choose up to ${maxFiles} images.` };
-    for (const file of files) {
-      if (!file.type.startsWith('image/')) {
-        return { ok: false, error: 'Only image files are supported.' };
-      }
-      if (file.size > maxBytes) {
-        return { ok: false, error: 'Each image must be under 12 MB.' };
-      }
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      return { ok: false, error: 'Only image files are supported.' };
     }
-    return { ok: true, files };
+    if (file.size > maxBytes) {
+      return { ok: false, error: 'Image must be under 12 MB.' };
+    }
+    return { ok: true, file };
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Could not read that image.'));
+      reader.readAsDataURL(file);
+    });
   }
 
   function showToast(message) {
@@ -482,32 +565,39 @@ const WorldChoirMemory = (() => {
     el.textContent = message;
     el.classList.add('is-visible');
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(() => el.classList.remove('is-visible'), 2600);
+    showToast._t = setTimeout(() => el.classList.remove('is-visible'), 2800);
   }
 
-  function bindInteractions(photos) {
+  function navigate(direction) {
+    if (typeof WorldChoirMemoryFeed === 'undefined') return;
+    const snap = WorldChoirMemoryFeed.getSnapshot();
+    if (snap.transitionLocked) return;
+
+    let moved = false;
+    if (direction === 'next') {
+      if (!snap.canGoNext) return;
+      moved = WorldChoirMemoryFeed.goNext();
+    } else {
+      if (!snap.canGoPrev) return;
+      moved = WorldChoirMemoryFeed.goPrev();
+    }
+    if (!moved) return;
+
+    window.setTimeout(() => {
+      WorldChoirMemoryFeed.unlockTransition();
+    }, TRANSITION_MS);
+  }
+
+  function bindInteractions() {
     if (bound) return;
     bound = true;
-    const root = document.getElementById('memory-content');
-    if (!root) return;
-
-    root.addEventListener('click', (ev) => {
-      const slide = ev.target.closest('.mem-carousel__slide');
-      if (slide) {
-        setCarouselIndex(Number(slide.dataset.index), photos.length);
-        return;
-      }
-      const dot = ev.target.closest('.mem-carousel__dot');
-      if (dot) {
-        setCarouselIndex(Number(dot.getAttribute('data-dot')), photos.length);
-      }
-    });
 
     const viewport = document.getElementById('mem-carousel-viewport');
     if (viewport) {
       let startX = 0;
       let dragging = false;
       viewport.addEventListener('pointerdown', (ev) => {
+        if (ev.target.closest('button')) return;
         dragging = true;
         startX = ev.clientX;
         viewport.setPointerCapture?.(ev.pointerId);
@@ -516,72 +606,122 @@ const WorldChoirMemory = (() => {
         if (!dragging) return;
         dragging = false;
         const dx = ev.clientX - startX;
-        if (Math.abs(dx) > 40) {
-          setCarouselIndex(carouselIndex + (dx < 0 ? 1 : -1), photos.length);
-        } else {
-          layoutCarousel();
+        if (Math.abs(dx) > 48) {
+          navigate(dx < 0 ? 'next' : 'prev');
         }
       });
       viewport.addEventListener('keydown', (ev) => {
         if (ev.key === 'ArrowRight') {
           ev.preventDefault();
-          setCarouselIndex(carouselIndex + 1, photos.length);
+          navigate('next');
         } else if (ev.key === 'ArrowLeft') {
           ev.preventDefault();
-          setCarouselIndex(carouselIndex - 1, photos.length);
+          navigate('prev');
         }
       });
     }
+
+    document.getElementById('mem-carousel-prev')?.addEventListener('click', () => navigate('prev'));
+    document.getElementById('mem-carousel-next')?.addEventListener('click', () => navigate('next'));
 
     document.getElementById('mem-fab-toggle')?.addEventListener('click', () => {
       setFabOpen(!fabOpen);
     });
 
     document.getElementById('mem-fab-camera')?.addEventListener('click', () => {
+      const snap = WorldChoirMemoryFeed.getSnapshot();
+      if (snap.postedToday) {
+        showToast('You’ve already shared today’s memory. You can share another photo tomorrow.');
+        setFabOpen(false);
+        return;
+      }
       setFabOpen(false);
       document.getElementById('mem-input-camera')?.click();
     });
     document.getElementById('mem-fab-device')?.addEventListener('click', () => {
+      const snap = WorldChoirMemoryFeed.getSnapshot();
+      if (snap.postedToday) {
+        showToast('You’ve already shared today’s memory. You can share another photo tomorrow.');
+        setFabOpen(false);
+        return;
+      }
       setFabOpen(false);
       document.getElementById('mem-input-device')?.click();
     });
     document.getElementById('mem-fab-share')?.addEventListener('click', () => {
       setFabOpen(false);
-      openComposer(null);
+      const snap = WorldChoirMemoryFeed.getSnapshot();
+      if (snap.postedToday) {
+        showToast('You’ve already shared today’s memory. You can share another photo tomorrow.');
+        return;
+      }
+      openComposer(null, null, null);
     });
 
-    document.getElementById('mem-input-camera')?.addEventListener('change', (ev) => {
-      const result = validateImageFiles(ev.target.files);
+    const onFile = async (ev) => {
+      const result = validateImageFile(ev.target.files);
       if (!result.ok) {
         showToast(result.error);
         ev.target.value = '';
         return;
       }
-      const url = URL.createObjectURL(result.files[0]);
-      openComposer(url);
-      ev.target.value = '';
-    });
-    document.getElementById('mem-input-device')?.addEventListener('change', (ev) => {
-      const result = validateImageFiles(ev.target.files);
-      if (!result.ok) {
-        showToast(result.error);
-        ev.target.value = '';
-        return;
+      try {
+        const dataUrl = await fileToDataUrl(result.file);
+        const url = URL.createObjectURL(result.file);
+        openComposer(url, result.file, dataUrl);
+      } catch {
+        showToast('Could not read that image.');
       }
-      const url = URL.createObjectURL(result.files[0]);
-      openComposer(url);
       ev.target.value = '';
-    });
+    };
+    document.getElementById('mem-input-camera')?.addEventListener('change', onFile);
+    document.getElementById('mem-input-device')?.addEventListener('change', onFile);
 
     document.getElementById('mem-composer-cancel')?.addEventListener('click', closeComposer);
     document.getElementById('mem-composer-backdrop')?.addEventListener('click', closeComposer);
-    document.getElementById('mem-composer-post')?.addEventListener('click', () => {
-      if (!composerPreviewUrl) {
+    document.getElementById('mem-composer-post')?.addEventListener('click', async () => {
+      if (posting) return;
+      if (!composerDataUrl && !composerFile) {
         showToast('Add a photo to continue.');
         return;
       }
-      showToast('Memory saved locally — upload coming soon.');
-      closeComposer();
+      const loc = WorldChoirMemoryFeed.getUserLocationSnapshot();
+      if (!loc.city || !loc.country) {
+        showToast('Set your city and country before sharing.');
+        return;
+      }
+
+      posting = true;
+      const postBtn = document.getElementById('mem-composer-post');
+      if (postBtn) {
+        postBtn.disabled = true;
+        postBtn.textContent = 'Posting…';
+      }
+      try {
+        const dataUrl = composerDataUrl || await fileToDataUrl(composerFile);
+        const caption = document.getElementById('mem-composer-caption')?.value || '';
+        await WorldChoirMemoryFeed.createPhoto({
+          dataUrl,
+          caption,
+          fileName: composerFile?.name || '',
+        });
+        closeComposer();
+        showToast('Memory shared.');
+        applyPostingAvailability(WorldChoirMemoryFeed.getSnapshot());
+      } catch (err) {
+        posting = false;
+        if (postBtn) {
+          postBtn.disabled = false;
+          postBtn.textContent = 'Post Memory';
+        }
+        if (err?.code === 'DAILY_MEMORY_LIMIT_REACHED') {
+          showToast('You’ve already shared today’s memory. You can share another photo tomorrow.');
+          applyPostingAvailability({ postedToday: true, canPost: false });
+          closeComposer();
+          return;
+        }
+        showToast(err?.message || 'Could not share memory.');
+      }
     });
 
     document.getElementById('mem-search-open')?.addEventListener('click', () => {
@@ -599,8 +739,6 @@ const WorldChoirMemory = (() => {
         else if (fabOpen) setFabOpen(false);
       }
     });
-
-    window.addEventListener('resize', () => layoutCarousel());
   }
 
   async function render() {
@@ -611,17 +749,13 @@ const WorldChoirMemory = (() => {
       WorldChoirMemoryData.loadEventArchive(),
       WorldChoirMemoryData.loadPassTheWorldRoute(),
     ]);
-    const photos = WorldChoirMemoryData.getPhotos();
     const stamps = WorldChoirMemoryData.getStamps();
-    carouselIndex = Math.min(carouselIndex, Math.max(0, photos.length - 1));
-    if (photos.length >= 3) carouselIndex = Math.min(1, photos.length - 1);
-
     const passportHtml = await buildPassportHtml();
 
     el.innerHTML = `
       ${renderTopbar()}
       ${renderIntro()}
-      ${renderCarousel(photos)}
+      ${renderCarouselShell()}
       ${renderEventCard(event)}
       ${renderPassportAndStamps(passportHtml, stamps)}
       ${renderItinerary(route)}
@@ -631,11 +765,21 @@ const WorldChoirMemory = (() => {
     `;
 
     bound = false;
-    bindInteractions(photos);
-    requestAnimationFrame(() => {
-      layoutCarousel();
-      requestAnimationFrame(layoutCarousel);
-    });
+    bindInteractions();
+
+    if (feedUnsub) {
+      feedUnsub();
+      feedUnsub = null;
+    }
+    if (typeof WorldChoirMemoryFeed !== 'undefined') {
+      feedUnsub = WorldChoirMemoryFeed.subscribe((snap) => {
+        updateCarouselView(snap);
+        applyPostingAvailability(snap);
+      });
+      await WorldChoirMemoryFeed.init();
+      updateCarouselView(WorldChoirMemoryFeed.getSnapshot());
+      applyPostingAvailability(WorldChoirMemoryFeed.getSnapshot());
+    }
   }
 
   async function init() {

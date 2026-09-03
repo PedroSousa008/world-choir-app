@@ -1,66 +1,9 @@
 /**
  * WorldChoirMemoryData — post-event Memory tab models + real data loaders.
  * Never invent production counts — load from APIs / local DB only.
+ * Photo carousel data lives in WorldChoirMemoryFeed.
  */
 const WorldChoirMemoryData = (() => {
-  const DEMO_PHOTOS = [
-    {
-      id: 'mem-photo-1',
-      imageUrl: 'images/after-event.png',
-      userId: 'demo-1',
-      userName: 'Amara Okafor',
-      city: 'Lagos',
-      country: 'Nigeria',
-      createdAt: '2027-09-21T16:12:00.000Z',
-      caption: 'Singing with my street',
-      eventId: 'world-choir-2027',
-    },
-    {
-      id: 'mem-photo-2',
-      imageUrl: 'images/memory-after.png',
-      userId: 'demo-2',
-      userName: 'Sofia Mendes',
-      city: 'Lisbon',
-      country: 'Portugal',
-      createdAt: '2027-09-21T16:18:00.000Z',
-      caption: 'The lights of our city',
-      eventId: 'world-choir-2027',
-    },
-    {
-      id: 'mem-photo-3',
-      imageUrl: 'images/imagine-after.png',
-      userId: 'demo-3',
-      userName: 'Kenji Sato',
-      city: 'Tokyo',
-      country: 'Japan',
-      createdAt: '2027-09-21T16:22:00.000Z',
-      caption: 'One song across oceans',
-      eventId: 'world-choir-2027',
-    },
-    {
-      id: 'mem-photo-4',
-      imageUrl: 'images/background-imagine.png',
-      userId: 'demo-4',
-      userName: 'Maria Silva',
-      city: 'São Paulo',
-      country: 'Brazil',
-      createdAt: '2027-09-21T16:30:00.000Z',
-      caption: 'Together on the rooftop',
-      eventId: 'world-choir-2027',
-    },
-    {
-      id: 'mem-photo-5',
-      imageUrl: 'images/memory-after-card.png',
-      userId: 'demo-5',
-      userName: 'Noah Berg',
-      city: 'Stockholm',
-      country: 'Sweden',
-      createdAt: '2027-09-21T16:41:00.000Z',
-      caption: 'Our window to the world',
-      eventId: 'world-choir-2027',
-    },
-  ];
-
   const DEMO_STAMPS = [
     {
       id: 'pledged',
@@ -254,17 +197,12 @@ const WorldChoirMemoryData = (() => {
   function titleCasePlace(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
-    // Keep existing casing when already mixed; otherwise soft-normalize ALL CAPS.
     if (raw !== raw.toUpperCase()) return raw;
     return raw
       .toLowerCase()
       .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
-  /**
-   * Chronological Pass the World stops from the live itinerary API.
-   * City on top, country under, date under — same aesthetic as the Memory route UI.
-   */
   function mapPassTheWorldRoute(payload) {
     const journey = payload?.journey || {};
     const entries = [...(payload?.itinerary || [])]
@@ -293,7 +231,6 @@ const WorldChoirMemoryData = (() => {
       };
     });
 
-    // If the World is travelling to a destination not yet arrived, append it.
     const dest = journey.destination;
     if (journey.status === 'TRAVELLING' && dest?.city) {
       const already = stops.some((s) => (
@@ -333,13 +270,7 @@ const WorldChoirMemoryData = (() => {
     }
   }
 
-  function getPhotos() {
-    // Hook: replace with API/UGC when available.
-    return DEMO_PHOTOS.slice();
-  }
-
   function getStamps() {
-    // Hook: merge with PassportStamps / participation flags when available.
     return DEMO_STAMPS.map((s) => ({ ...s }));
   }
 
@@ -347,7 +278,8 @@ const WorldChoirMemoryData = (() => {
     getDefaultEvent,
     loadEventArchive,
     loadPassTheWorldRoute,
-    getPhotos,
     getStamps,
+    eventId,
+    deviceId,
   };
 })();
