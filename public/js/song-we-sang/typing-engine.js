@@ -79,6 +79,56 @@ const SongWeSangTypingEngine = (() => {
   const FLOURISH_UNDERLINE_MS = 720;
   const FLOURISH_PAUSE_AFTER_UNDERLINE_MS = 160;
   const FLOURISH_HEART_MS = 560;
+  const STAMP_PAUSE_AFTER_HEART_MS = 140;
+  const STAMP_ANIM_MS = 400;
+
+  function getStampEl() {
+    return document.getElementById('sws-stamp');
+  }
+
+  function resetStamp() {
+    const stamp = getStampEl();
+    if (!stamp) return;
+    stamp.classList.remove('is-stamping', 'is-stamped');
+  }
+
+  function revealStampInstant() {
+    const stamp = getStampEl();
+    if (!stamp) return;
+    stamp.classList.remove('is-stamping');
+    stamp.classList.add('is-stamped');
+  }
+
+  function animateStamp({ onComplete } = {}) {
+    const stamp = getStampEl();
+    if (!stamp) {
+      if (typeof onComplete === 'function') onComplete();
+      return { cancel() {} };
+    }
+
+    let cancelled = false;
+    let settleId = 0;
+
+    stamp.classList.remove('is-stamped', 'is-stamping');
+    // Force reflow so the press animation restarts cleanly on replay.
+    void stamp.offsetWidth;
+    stamp.classList.add('is-stamping');
+
+    settleId = window.setTimeout(() => {
+      if (cancelled) return;
+      stamp.classList.remove('is-stamping');
+      stamp.classList.add('is-stamped');
+      if (typeof onComplete === 'function') onComplete();
+    }, STAMP_ANIM_MS);
+
+    return {
+      cancel() {
+        cancelled = true;
+        if (settleId) window.clearTimeout(settleId);
+        settleId = 0;
+      },
+    };
+  }
 
   function createFlourishSvg() {
     const NS = 'http://www.w3.org/2000/svg';
@@ -145,6 +195,7 @@ const SongWeSangTypingEngine = (() => {
     if (parts.underline) parts.underline.style.strokeDashoffset = '0';
     if (parts.heart) parts.heart.style.strokeDashoffset = '0';
     parts.svg.classList.add('is-drawn');
+    revealStampInstant();
   }
 
   function animateFlourish(signatureEl, { onComplete } = {}) {
@@ -156,6 +207,7 @@ const SongWeSangTypingEngine = (() => {
 
     let cancelled = false;
     const timers = [];
+    let stampController = null;
 
     const later = (fn, ms) => {
       const id = window.setTimeout(() => {
@@ -177,7 +229,14 @@ const SongWeSangTypingEngine = (() => {
 
           later(() => {
             parts.svg.classList.add('is-drawn');
-            if (typeof onComplete === 'function') onComplete();
+            // Tiny pause after heart, then stamp presses onto the paper.
+            later(() => {
+              stampController = animateStamp({
+                onComplete() {
+                  if (!cancelled && typeof onComplete === 'function') onComplete();
+                },
+              });
+            }, STAMP_PAUSE_AFTER_HEART_MS);
           }, FLOURISH_HEART_MS + 20);
         }, FLOURISH_PAUSE_AFTER_UNDERLINE_MS);
       }, FLOURISH_UNDERLINE_MS);
@@ -187,6 +246,10 @@ const SongWeSangTypingEngine = (() => {
       cancel() {
         cancelled = true;
         timers.forEach((id) => window.clearTimeout(id));
+        if (stampController) {
+          stampController.cancel();
+          stampController = null;
+        }
       },
     };
   }
@@ -311,6 +374,7 @@ const SongWeSangTypingEngine = (() => {
 
     container.textContent = '';
     timerId = window.setTimeout(step, interval);
+    resetStamp();
 
     return {
       cancel() {

@@ -286,6 +286,53 @@ html.sws-page body {
   stroke-width: 0.55;
 }
 
+/* ── Stamp (bottom-right of paper) ── */
+.sws-stamp {
+  position: absolute;
+  right: 7%;
+  bottom: 6.5%;
+  z-index: 3;
+  width: clamp(68px, 24%, 112px);
+  height: auto;
+  aspect-ratio: auto;
+  opacity: 0;
+  transform: scale(1.2) rotate(-1.5deg);
+  transform-origin: center center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform, opacity;
+}
+
+.sws-stamp.is-stamping {
+  animation: swsStampPress 400ms cubic-bezier(0.16, 0.84, 0.24, 1) forwards;
+}
+
+.sws-stamp.is-stamped {
+  opacity: 1;
+  transform: scale(1) rotate(-1.5deg);
+  animation: none;
+}
+
+@keyframes swsStampPress {
+  0% {
+    opacity: 0;
+    transform: scale(1.2) rotate(-1.5deg);
+  }
+  28% {
+    opacity: 0.92;
+    transform: scale(1.04) rotate(-1.5deg);
+  }
+  58% {
+    opacity: 1;
+    transform: scale(0.96) rotate(-1.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-1.5deg);
+  }
+}
+
 /* ── Typing caret ── */
 .sws-letter__caret {
   display: inline-block;
@@ -406,5 +453,11 @@ html.sws-page body {
   .sws-letter__underline,
   .sws-letter__heart {
     transition: none !important;
+  }
+
+  .sws-stamp.is-stamping {
+    animation: none;
+    opacity: 1;
+    transform: scale(1) rotate(-1.5deg);
   }
 }
