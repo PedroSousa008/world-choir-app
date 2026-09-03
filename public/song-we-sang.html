@@ -2,8 +2,8 @@
 <html lang="en" class="sws-page">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#d8cfc0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#cfc4b0">
   <meta name="description" content="A letter from the world — The Song We Sang.">
   <title>World Choir — The Song We Sang</title>
   <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
@@ -12,10 +12,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
-  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904k">
+  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904m">
 </head>
 <body class="sws-page-body">
-  <div class="sws-bg" aria-hidden="true"></div>
+  <img
+    class="sws-bg"
+    src="images/background-imagine.png"
+    alt=""
+    decoding="async"
+    fetchpriority="high"
+    aria-hidden="true"
+  >
 
   <main class="page sws-page fade-in">
     <a class="sws-back" href="index.html">
@@ -29,14 +36,15 @@
       <p class="sws-page-title" id="sws-page-title">The Song We Sang</p>
     </header>
 
-    <!-- Complete letter for assistive tech; visual layer is aria-hidden during/after reveal -->
     <div class="sws-sr-only" id="sws-letter-sr"></div>
 
-    <article
-      class="sws-letter sws-letter-visual"
-      id="sws-letter-visual"
-      aria-hidden="true"
-    ></article>
+    <div class="sws-letter-shell" id="sws-letter-shell">
+      <article
+        class="sws-letter sws-letter-visual"
+        id="sws-letter-visual"
+        aria-hidden="true"
+      ></article>
+    </div>
   </main>
 
   <script src="js/world-choir-event-schedule.js?v=20260903j"></script>
@@ -44,6 +52,6 @@
   <script src="js/world-choir-db.js?v=20260904j"></script>
   <script src="js/song-we-sang/letter-content.js?v=20260904j"></script>
   <script src="js/song-we-sang/typing-engine.js?v=20260904j"></script>
-  <script src="js/song-we-sang/letter-page.js?v=20260904j"></script>
+  <script src="js/song-we-sang/letter-page.js?v=20260904m"></script>
 </body>
 </html>

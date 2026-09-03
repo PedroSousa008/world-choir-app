@@ -1,49 +1,17 @@
 /**
  * Song We Sang — letter page orchestration.
+ * Fixed viewport: no page scroll; letter is scaled to fit.
  */
 (() => {
   const content = SongWeSangLetterContent.LETTER_CONTENT;
   const TYPE_INTERVAL = SongWeSangLetterContent.TYPE_INTERVAL;
 
   let typingController = null;
-  let followScroll = true;
-  let scrollBound = false;
+  let fitScale = 1;
+  let resizeTimer = 0;
 
   function prefersReducedMotion() {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
-  }
-
-  function isNearBottom(thresholdPx = 96) {
-    const doc = document.documentElement;
-    const scrollBottom = window.scrollY + window.innerHeight;
-    return scrollBottom >= doc.scrollHeight - thresholdPx;
-  }
-
-  function softFollowCaret() {
-    if (!followScroll || !isNearBottom()) return;
-    const caret = document.querySelector('.sws-letter__caret');
-    const anchor = caret || document.getElementById('sws-letter-visual')?.lastElementChild;
-    if (!anchor) return;
-    const rect = anchor.getBoundingClientRect();
-    if (rect.bottom > window.innerHeight - 48) {
-      window.scrollBy({ top: Math.min(rect.bottom - window.innerHeight + 64, 48), behavior: 'auto' });
-    }
-  }
-
-  function bindScrollGuard() {
-    if (scrollBound) return;
-    scrollBound = true;
-    let lastY = window.scrollY;
-    window.addEventListener(
-      'scroll',
-      () => {
-        const y = window.scrollY;
-        if (y < lastY - 8) followScroll = false;
-        else if (isNearBottom(64)) followScroll = true;
-        lastY = y;
-      },
-      { passive: true }
-    );
   }
 
   function fillSrLetter(srRoot) {
@@ -57,9 +25,67 @@
     SongWeSangTypingEngine.renderFull(body, content);
   }
 
+  function measureFullLetterHeight(shell) {
+    const probe = document.createElement('div');
+    probe.className = 'sws-letter';
+    probe.setAttribute('aria-hidden', 'true');
+    const width = Math.max(shell.clientWidth, 200);
+    probe.style.cssText = [
+      'position:absolute',
+      'visibility:hidden',
+      'pointer-events:none',
+      'left:-9999px',
+      'top:0',
+      `width:${width}px`,
+      'transform:none',
+    ].join(';');
+    document.body.appendChild(probe);
+    SongWeSangTypingEngine.renderFull(probe, content);
+    const height = probe.scrollHeight;
+    probe.remove();
+    return Math.max(height, 1);
+  }
+
+  function applyLetterFit() {
+    const shell = document.getElementById('sws-letter-shell');
+    const visual = document.getElementById('sws-letter-visual');
+    if (!shell || !visual) return;
+
+    const available = shell.clientHeight;
+    if (available < 40) return;
+
+    const needed = measureFullLetterHeight(shell);
+    fitScale = Math.min(1, available / needed);
+    // Slight safety inset so nothing clips on odd font metrics
+    fitScale = Math.max(0.35, fitScale * 0.98);
+
+    visual.style.transformOrigin = 'top center';
+    visual.style.transform = `scale(${fitScale})`;
+  }
+
   function showFullLetter(visualRoot) {
     SongWeSangTypingEngine.renderFull(visualRoot, content);
     visualRoot.classList.add('sws-letter--complete');
+    applyLetterFit();
+  }
+
+  function lockScroll() {
+    const block = (event) => {
+      event.preventDefault();
+    };
+    document.addEventListener('touchmove', block, { passive: false });
+    document.addEventListener(
+      'wheel',
+      (event) => {
+        event.preventDefault();
+      },
+      { passive: false }
+    );
+    window.addEventListener('scroll', () => {
+      if (window.scrollX !== 0 || window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    });
   }
 
   function cleanup() {
@@ -80,9 +106,17 @@
     }
 
     fillSrLetter(srRoot);
-    bindScrollGuard();
+    lockScroll();
     window.addEventListener('pagehide', cleanup);
     window.addEventListener('beforeunload', cleanup);
+    window.addEventListener('resize', () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(applyLetterFit, 80);
+    });
+    window.visualViewport?.addEventListener('resize', () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(applyLetterFit, 80);
+    });
 
     try {
       await WorldChoirDB.ready();
@@ -92,6 +126,9 @@
 
     const alreadyStarted = WorldChoirDB.hasStartedSongWeSangLetter();
     const reduceMotion = prefersReducedMotion();
+
+    // Fit before paint of letter so first frame is scaled.
+    applyLetterFit();
 
     if (alreadyStarted || reduceMotion) {
       showFullLetter(visualRoot);
@@ -103,18 +140,17 @@
 
     // First genuine open — mark started immediately so interruptions don't restart.
     WorldChoirDB.markSongWeSangLetterStarted();
+    applyLetterFit();
 
     typingController = SongWeSangTypingEngine.start({
       container: visualRoot,
       content,
       intervalMs: TYPE_INTERVAL,
       showCaret: true,
-      onChar() {
-        softFollowCaret();
-      },
       onComplete() {
         typingController = null;
         visualRoot.classList.add('sws-letter--complete');
+        applyLetterFit();
         WorldChoirDB.markSongWeSangLetterCompleted();
       },
     });
