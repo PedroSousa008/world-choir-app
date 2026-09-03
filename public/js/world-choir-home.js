@@ -492,6 +492,9 @@ const WorldChoirHome = (() => {
     const song = WorldChoirPracticeConfig?.PRACTICE_SONG || { title: e.songName, artist: e.artistName };
     const showConfetti = isPostEventConfettiActive();
     const heroCopy = getPostEventHeroCopy();
+    const songQuote = getSongQuote();
+    const SHIMMER_QUOTE = '"You may say I\'m a dreamer, but I\'m not the only one."';
+    const shouldShimmerSongQuote = songQuote === SHIMMER_QUOTE;
 
     return `
       <div class="home-after">
@@ -534,7 +537,7 @@ const WorldChoirHome = (() => {
                   <span class="home-after-song__dot" aria-hidden="true">·</span>
                   <span class="home-after-song__artist">${esc(song.artist)}</span>
                 </p>
-                <p class="home-after-song__quote">${esc(getSongQuote())}</p>
+                <p class="home-after-song__quote${shouldShimmerSongQuote ? ' sws-quote-shimmer' : ''}">${esc(songQuote)}</p>
               </div>
               <span class="home-after-song__note" aria-hidden="true">${statIcon('songNote')}</span>
             </div>

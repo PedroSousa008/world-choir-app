@@ -857,6 +857,60 @@ a.home-after-card--song:active {
   color: var(--text-secondary);
 }
 
+.home-after-song__quote.sws-quote-shimmer {
+  /* Base appearance stays identical; the shimmering gradient is clipped to text. */
+  color: var(--text-secondary);
+}
+
+@supports (-webkit-background-clip: text) {
+  .home-after-song__quote.sws-quote-shimmer {
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+
+    /* Base -> highlight peak -> base. */
+    background-image: linear-gradient(
+      90deg,
+      var(--text-secondary) 0%,
+      var(--text-secondary) 38%,
+      rgba(201, 169, 98, 0.62) 48%,
+      rgba(240, 230, 200, 0.92) 53%,
+      rgba(201, 169, 98, 0.62) 58%,
+      var(--text-secondary) 100%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    background-position: -120% 0%;
+
+    animation: swsQuoteShimmer 4.4s linear infinite;
+    will-change: background-position;
+  }
+
+  @keyframes swsQuoteShimmer {
+    /* 3.2s shimmer sweep + 1.2s rest (~72.7% + ~27.3%). */
+    0% {
+      background-position: -120% 0%;
+    }
+    72.7% {
+      background-position: 120% 0%;
+    }
+    100% {
+      background-position: 120% 0%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-after-song__quote.sws-quote-shimmer {
+    animation: none !important;
+    background-image: none !important;
+    background-clip: initial !important;
+    -webkit-text-fill-color: var(--text-secondary) !important;
+    color: var(--text-secondary) !important;
+  }
+}
+
 .home-after-song__note {
   display: inline-flex;
   align-items: center;
