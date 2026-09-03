@@ -198,6 +198,14 @@ const WorldChoirMemory = (() => {
     let right;
     if (snap.right) {
       right = renderSlotPhoto(snap.right, 'right');
+    } else if (snap.isPrefetching) {
+      right = `
+        <div class="mem-carousel__slot mem-carousel__slot--right mem-carousel__slot--waiting" data-slot="right" aria-hidden="true">
+          <div class="mem-carousel__waiting">
+            <p class="mem-carousel__waiting-title">Loading…</p>
+          </div>
+        </div>
+      `;
     } else if (snap.current) {
       right = renderWaitingCard(snap.isReconnecting);
     } else {
