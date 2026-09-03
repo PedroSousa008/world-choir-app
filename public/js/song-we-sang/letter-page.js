@@ -10,6 +10,20 @@
   let fitScale = 1;
   let resizeTimer = 0;
 
+  function sizeBackgroundToViewport() {
+    const bg = document.getElementById('sws-bg');
+    if (!bg) return;
+    const vv = window.visualViewport;
+    const w = Math.ceil(vv?.width || window.innerWidth || document.documentElement.clientWidth);
+    const h = Math.ceil(vv?.height || window.innerHeight || document.documentElement.clientHeight);
+    // Extra bleed covers iOS URL-bar / safe-area jitter
+    const bleed = 4;
+    bg.style.top = `${Math.floor(vv?.offsetTop || 0) - bleed}px`;
+    bg.style.left = `${Math.floor(vv?.offsetLeft || 0) - bleed}px`;
+    bg.style.width = `${w + bleed * 2}px`;
+    bg.style.height = `${h + bleed * 2}px`;
+  }
+
   function prefersReducedMotion() {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
   }
@@ -107,16 +121,20 @@
 
     fillSrLetter(srRoot);
     lockScroll();
+    sizeBackgroundToViewport();
     window.addEventListener('pagehide', cleanup);
     window.addEventListener('beforeunload', cleanup);
     window.addEventListener('resize', () => {
+      sizeBackgroundToViewport();
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(applyLetterFit, 80);
     });
     window.visualViewport?.addEventListener('resize', () => {
+      sizeBackgroundToViewport();
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(applyLetterFit, 80);
     });
+    window.visualViewport?.addEventListener('scroll', sizeBackgroundToViewport);
 
     try {
       await WorldChoirDB.ready();
