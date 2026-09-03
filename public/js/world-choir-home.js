@@ -368,25 +368,25 @@ const WorldChoirHome = (() => {
           </div>
         </header>
 
-        <div class="home-after-body">
-          <section class="home-after-card home-after-card--stats" aria-label="World Choir event statistics">
-            <div class="home-after-stats-row">
-              <div class="home-after-voices-stat">
-                <div class="home-after-voices-stat__num-wrap">
-                  <span class="home-after-voices-stat__num" id="home-stat-voices">${formatStat(merged.voices)}</span>
-                </div>
-                <span class="home-after-stat__label">People sang</span>
+        <section class="home-after-card home-after-card--stats home-after-stats-float" aria-label="World Choir event statistics">
+          <div class="home-after-stats-row">
+            <div class="home-after-voices-stat">
+              <div class="home-after-voices-stat__num-wrap">
+                <span class="home-after-voices-stat__num" id="home-stat-voices">${formatStat(merged.voices)}</span>
               </div>
-              <div class="home-after-stats-row__divider" aria-hidden="true"></div>
-              <div class="home-after-voices-stat">
-                <div class="home-after-voices-stat__num-wrap">
-                  <span class="home-after-voices-stat__num" id="home-stat-acts">${formatStat(merged.dailyActsCompleted)}</span>
-                </div>
-                <span class="home-after-stat__label">Daily Acts Completed</span>
-              </div>
+              <span class="home-after-stat__label">People sang</span>
             </div>
-          </section>
+            <div class="home-after-stats-row__divider" aria-hidden="true"></div>
+            <div class="home-after-voices-stat">
+              <div class="home-after-voices-stat__num-wrap">
+                <span class="home-after-voices-stat__num" id="home-stat-acts">${formatStat(merged.dailyActsCompleted)}</span>
+              </div>
+              <span class="home-after-stat__label">Daily Acts Completed</span>
+            </div>
+          </div>
+        </section>
 
+        <div class="home-after-body">
           <section class="home-after-card home-after-card--song" aria-label="The song we sang">
             <p class="home-after-card__eyebrow">The song we sang</p>
             <div class="home-after-song">

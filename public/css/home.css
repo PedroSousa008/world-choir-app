@@ -495,26 +495,30 @@
   max-width: 520px;
   padding: 0 0 calc(var(--nav-height) + 12px);
   text-align: left;
-  overflow-x: clip;
+  overflow: visible;
 }
 
 .home-after {
+  position: relative;
   width: 100%;
   max-width: 100%;
-  overflow-x: clip;
+  overflow: visible;
+  container-type: inline-size;
+  container-name: home-after;
 }
 
 .home-after-hero {
   position: relative;
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
   background: linear-gradient(180deg, #050810 0%, #000 100%);
+  pointer-events: none;
 }
 
 .home-after-hero__stage {
   position: relative;
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
   line-height: 0;
 }
 
@@ -579,6 +583,7 @@
   padding: clamp(20px, 6vw, 28px) 20px clamp(24px, 7vw, 36px);
   text-align: center;
   line-height: normal;
+  pointer-events: none;
   background: linear-gradient(
     180deg,
     rgba(5, 8, 16, 0.2) 0%,
@@ -619,10 +624,22 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  /* 430px-wide layout: stats card top at 442px (over header, z-index 4) */
-  margin-top: calc(5.645320197px * (100% / 430px));
-  padding: 0 20px 8px;
+  /* Clears the floating stats card past the planet (scales with content width) */
+  margin-top: 0;
+  padding: calc(125.645320197px * 100cqw / 430px) 20px 8px;
   max-width: 100%;
+}
+
+/* Floats over the planet — absolute, not blocked by header document flow */
+.home-after-stats-float {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: calc(442px * 100cqw / 430px);
+  z-index: 6;
+  margin: 0;
+  box-sizing: border-box;
+  pointer-events: auto;
 }
 
 .home-after-card {
