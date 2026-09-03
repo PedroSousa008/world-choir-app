@@ -647,8 +647,22 @@
   margin-bottom: 8px;
 }
 
-.home-after-card--voices-only {
+.home-after-card--stats {
   padding: 16px 16px 14px;
+}
+
+.home-after-stats-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 0;
+}
+
+.home-after-stats-row__divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 10px;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .home-after-voices-stat {
@@ -681,6 +695,7 @@
 .home-after-voices-stat .home-after-stat__label {
   flex-shrink: 0;
   margin-top: 8px;
+  max-width: 9.5rem;
 }
 
 .home-after-stats {

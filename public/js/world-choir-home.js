@@ -373,12 +373,21 @@ const WorldChoirHome = (() => {
         </header>
 
         <div class="home-after-body">
-          <section class="home-after-card home-after-card--stats home-after-card--voices-only" aria-label="People who sang">
-            <div class="home-after-voices-stat">
-              <div class="home-after-voices-stat__num-wrap">
-                <span class="home-after-voices-stat__num" id="home-stat-voices">${formatStat(merged.voices)}</span>
+          <section class="home-after-card home-after-card--stats" aria-label="World Choir event statistics">
+            <div class="home-after-stats-row">
+              <div class="home-after-voices-stat">
+                <div class="home-after-voices-stat__num-wrap">
+                  <span class="home-after-voices-stat__num" id="home-stat-voices">${formatStat(merged.voices)}</span>
+                </div>
+                <span class="home-after-stat__label">People sang</span>
               </div>
-              <span class="home-after-stat__label">People sang</span>
+              <div class="home-after-stats-row__divider" aria-hidden="true"></div>
+              <div class="home-after-voices-stat">
+                <div class="home-after-voices-stat__num-wrap">
+                  <span class="home-after-voices-stat__num" id="home-stat-acts">${formatStat(merged.dailyActsCompleted)}</span>
+                </div>
+                <span class="home-after-stat__label">Daily Acts Completed</span>
+              </div>
             </div>
           </section>
 
@@ -426,7 +435,9 @@ const WorldChoirHome = (() => {
 
   function updatePostEventStatsUI(stats) {
     const voices = document.getElementById('home-stat-voices');
+    const acts = document.getElementById('home-stat-acts');
     if (voices && stats.voices != null) voices.textContent = formatStat(stats.voices);
+    if (acts && stats.dailyActsCompleted != null) acts.textContent = formatStat(stats.dailyActsCompleted);
   }
 
   function bindPostEventActions() {
