@@ -244,11 +244,13 @@ html.sws-page body {
   margin: 0.55em 0 0;
   padding: 0;
   font-family: 'Brittany Signature', cursive;
-  font-size: 15px;
+  font-size: 20px;
   font-weight: normal;
   font-style: normal;
   line-height: 1.25;
   color: #2a1f0e;
+  transform: rotate(-2.5deg);
+  transform-origin: left center;
 }
 
 .sws-letter__signature span {
@@ -346,7 +348,7 @@ html.sws-page body {
   /* On wider screens the image is bigger, so keep font sizes proportional.
      At 480px image width these are the natural sizes; scale them gently. */
   .sws-letter__greeting  { font-size: 15px; }
-  .sws-letter__signature { font-size: 15px; }
+  .sws-letter__signature { font-size: 20px; }
   .sws-letter__closing   { font-size: 10px; }
   .sws-letter__p,
   .sws-letter__line,
@@ -356,7 +358,7 @@ html.sws-page body {
 /* On very small phones, scale down slightly to avoid overflow */
 @media (max-width: 360px) {
   .sws-letter__greeting  { font-size: 15px; }
-  .sws-letter__signature { font-size: 15px; }
+  .sws-letter__signature { font-size: 20px; }
   .sws-letter__closing   { font-size: 10px; }
   .sws-letter__p,
   .sws-letter__line,
