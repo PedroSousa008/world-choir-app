@@ -20,13 +20,9 @@ html.sws-page body {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 40rem;
-  margin: 0 auto;
-  padding:
-    max(12px, env(safe-area-inset-top))
-    max(22px, env(safe-area-inset-right))
-    max(48px, env(safe-area-inset-bottom))
-    max(22px, env(safe-area-inset-left));
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
   background: transparent;
 }
@@ -156,8 +152,8 @@ html.sws-page body {
 
 @media (min-width: 720px) {
   .sws-page {
-    padding-top: max(28px, env(safe-area-inset-top));
-    padding-bottom: 72px;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   .sws-header {
@@ -181,4 +177,44 @@ html.sws-page body {
     opacity: 1 !important;
     transform: none !important;
   }
+}
+
+/* Reuse the exact Foundation back button style (Donate tab → Foundation profiles). */
+.df-fp-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 16px 10px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.92) 55%, rgba(0, 0, 0, 0));
+}
+
+.df-fp-nav__back,
+.df-fp-nav__share {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: color 0.22s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.df-fp-nav__back {
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 4px;
+}
+
+.df-fp-nav__back:hover,
+.df-fp-nav__back:focus-visible,
+.df-fp-nav__share:hover,
+.df-fp-nav__share:focus-visible {
+  color: var(--accent-aurora);
+  outline: none;
 }

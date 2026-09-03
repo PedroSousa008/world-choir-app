@@ -12,20 +12,27 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
-  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904m">
+  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904n">
 </head>
 <body class="sws-page-body">
   <div class="ambient-bg sws-ambient" aria-hidden="true"></div>
 
   <main class="page sws-page fade-in">
-    <a class="sws-back" href="index.html" aria-label="Back to Home">← Back</a>
+    <nav class="df-fp-nav" aria-label="Back to Home">
+      <button class="df-fp-nav__back" type="button" id="sws-letter-back" aria-label="Back to Home">← Back</button>
+    </nav>
   </main>
 
-  <script src="js/world-choir-event-schedule.js?v=20260903j"></script>
-  <script src="js/world-choir-config.js?v=20260903j"></script>
-  <script src="js/world-choir-db.js?v=20260904j"></script>
-  <script src="js/song-we-sang/letter-content.js?v=20260904j"></script>
-  <script src="js/song-we-sang/typing-engine.js?v=20260904j"></script>
-  <script src="js/song-we-sang/letter-page.js?v=20260904j"></script>
+  <script>
+    (function () {
+      const btn = document.getElementById('sws-letter-back');
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = 'index.html';
+      });
+    })();
+  </script>
 </body>
 </html>
+
