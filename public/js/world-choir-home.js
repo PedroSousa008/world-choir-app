@@ -529,8 +529,11 @@ const WorldChoirHome = (() => {
             <div class="home-after-song">
               <img class="home-after-song__art" src="${POST_EVENT_IMAGES.song}" alt="" decoding="async" width="120" height="120">
               <div class="home-after-song__meta">
-                <p class="home-after-song__title">${esc(song.title)}</p>
-                <p class="home-after-song__artist">${esc(song.artist)}</p>
+                <p class="home-after-song__byline">
+                  <span class="home-after-song__title">${esc(song.title)}</span>
+                  <span class="home-after-song__dot" aria-hidden="true">·</span>
+                  <span class="home-after-song__artist">${esc(song.artist)}</span>
+                </p>
                 <p class="home-after-song__quote">${esc(getSongQuote())}</p>
               </div>
               <span class="home-after-song__note" aria-hidden="true">${statIcon('songNote')}</span>

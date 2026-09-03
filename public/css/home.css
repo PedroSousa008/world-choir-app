@@ -798,17 +798,35 @@ a.home-after-voices-stat:active {
   min-width: 0;
 }
 
+.home-after-song__byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35em;
+  margin: 0 0 8px;
+  min-width: 0;
+}
+
 .home-after-song__title {
-  margin: 0 0 2px;
+  margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.home-after-song__dot {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.25;
 }
 
 .home-after-song__artist {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 0.82rem;
   color: var(--text-muted);
+  line-height: 1.25;
 }
 
 .home-after-song__quote {
