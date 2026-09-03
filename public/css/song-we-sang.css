@@ -292,9 +292,9 @@ html.sws-page body {
   right: 7%;
   bottom: 6.5%;
   z-index: 3;
-  width: clamp(68px, 24%, 112px);
-  height: auto;
-  aspect-ratio: auto;
+  width: 30px;
+  height: 28px;
+  object-fit: contain;
   opacity: 0;
   transform: scale(1.2) rotate(-1.5deg);
   transform-origin: center center;
