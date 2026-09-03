@@ -1,0 +1,30 @@
+---
+description: Memory tab must stay locked until the live event ends
+alwaysApply: true
+---
+
+# Memory Tab Unlock Rule (Absolute)
+
+The **Memory** tab must **never** appear before the World Choir live event is finished.
+
+## When Memory may unlock
+
+- Only after the active event song has ended (`EventState.COMPLETED` / post-event).
+- Users can then open Memory and the post-event experience.
+
+## When Memory must stay hidden
+
+- Before the event (countdown / waiting)
+- During final hour / warm-up
+- During the live event itself (pre-event video + song)
+
+## Implementation constraints
+
+- Do **not** set `MEMORY_PREVIEW_MODE = true` unless the user explicitly asks to design Memory while the event is still upcoming, and turn it back off afterward.
+- Do **not** bypass `WorldChoirConfig.isMemoryUnlocked()` or `WorldChoirNav.guardMemoryRoute()`.
+- Do **not** show Memory in nav, deep-link into `memory.html`, or treat Memory as available pre-event.
+- When changing test event times, keep Memory gated by real event completion — never unlock Memory early as a side effect.
+
+## Temporary test schedule note
+
+While `TEMP_EVENT_TEST_OVERRIDE_ENABLED` is true, event start is a same-day UTC test time (not official 2027-09-21). Memory still unlocks only **after that test event ends**. Official date returns to **21 September 2027** when the user asks to restore it.

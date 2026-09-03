@@ -49,7 +49,11 @@ const WorldChoirConfig = (() => {
   const TEST_FORCE_1_YEAR = false;
 
   /** TEMP PREVIEW — set to false before launch to hide Memory until event ends */
-  const MEMORY_PREVIEW_MODE = true;
+  /**
+   * NEVER leave this true in production/testing unless explicitly designing Memory UI.
+   * Memory tab must stay hidden until the live event song has finished.
+   */
+  const MEMORY_PREVIEW_MODE = false;
 
   const ACTIVE_EVENT = {
     id: 'world-choir-2027',
