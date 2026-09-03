@@ -534,7 +534,6 @@
   border-radius: 1px;
   opacity: 0;
   will-change: transform, opacity;
-  box-shadow: 0 0 2px rgba(255, 255, 255, 0.7);
 }
 
 .home-after-hero__planet {

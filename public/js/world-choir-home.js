@@ -310,16 +310,22 @@ const WorldChoirHome = (() => {
       };
     };
 
-    const colors = ['#ffffff', '#f4fbff', '#5ed4f0', '#8ad4ff', '#e0c36a', '#fff4cc'];
-    const count = 42;
+    const colors = [
+      'rgba(255, 255, 255, 0.72)',
+      'rgba(232, 244, 255, 0.62)',
+      'rgba(78, 197, 232, 0.55)',
+      'rgba(138, 180, 255, 0.5)',
+      'rgba(201, 169, 98, 0.58)',
+    ];
+    const count = 28;
     const rand = mulberry(Math.floor(eventEndMs / 1000) ^ 20260904);
     const specs = [];
     let html = '';
     for (let i = 0; i < count; i++) {
       const left = rand() * 100;
-      const duration = 6.5 + rand() * 4.5;
-      const width = 5 + rand() * 5;
-      const height = 10 + rand() * 12;
+      const duration = 7.5 + rand() * 5;
+      const width = 1.5 + rand() * 1.2;
+      const height = 11 + rand() * 8;
       const color = colors[i % colors.length];
       const rotate = rand() * 360;
       const phase = rand() * duration;
@@ -343,9 +349,9 @@ const WorldChoirHome = (() => {
         const u = ((elapsedSec + s.phase) % s.duration) / s.duration;
         const y = u * fall - 18;
         const rot = s.rotate + u * 120;
-        const opacity = u < 0.06 ? 0.35 + (u / 0.06) * 0.6
-          : u > 0.92 ? 0.95 - ((u - 0.92) / 0.08) * 0.75
-          : 0.95;
+        const opacity = u < 0.08 ? 0.12 + (u / 0.08) * 0.48
+          : u > 0.88 ? 0.6 - ((u - 0.88) / 0.12) * 0.48
+          : 0.6;
         els[i].style.transform = `translate3d(0, ${y}px, 0) rotate(${rot}deg)`;
         els[i].style.opacity = String(opacity);
       }
