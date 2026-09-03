@@ -43,10 +43,14 @@ const WorldChoirEventSchedule = (() => {
     return { y, m, d };
   }
 
-  /** Today (Europe/Lisbon calendar date) at 23:50 UTC. Pre-event video: 23:45 UTC. Warm-up: 23:40 UTC. */
-  function getTestEventStartUtc(now = new Date()) {
-    const { y, m, d } = getLisbonLocalDateParts(now);
-    return new Date(Date.UTC(y, m - 1, d, 23, 50, 0)).toISOString();
+  /**
+   * Fixed absolute test start (not “Lisbon today + clock”), so “in N minutes” works
+   * past local midnight. Official date remains 2027-09-21 when override is off.
+   */
+  const TEST_EVENT_START_UTC = '2026-09-03T23:52:00.000Z';
+
+  function getTestEventStartUtc() {
+    return TEST_EVENT_START_UTC;
   }
 
   function getTestPreEventStartUtc(now = new Date()) {
