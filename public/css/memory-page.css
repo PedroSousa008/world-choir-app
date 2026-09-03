@@ -749,6 +749,12 @@
 
 /* ─── Composer ─── */
 
+html.mem-composer-open,
+html.mem-composer-open body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
 .mem-composer {
   position: fixed;
   inset: 0;
@@ -756,6 +762,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 .mem-composer[hidden] {
@@ -768,6 +776,7 @@
   border: 0;
   background: rgba(0, 0, 0, 0.62);
   cursor: pointer;
+  touch-action: none;
 }
 
 .mem-composer__sheet {
@@ -775,7 +784,11 @@
   z-index: 1;
   width: min(100%, 480px);
   max-height: min(88vh, 640px);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   background: #080808;
   border: 1px solid var(--df-line);
   border-radius: 18px 18px 0 0;

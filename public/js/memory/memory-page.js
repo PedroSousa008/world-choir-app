@@ -17,6 +17,8 @@ const WorldChoirMemory = (() => {
   let bound = false;
   let feedUnsub = null;
   let posting = false;
+  let composerScrollLockHandler = null;
+  let composerScrollY = 0;
 
   function esc(str) {
     const d = document.createElement('div');
@@ -487,6 +489,45 @@ const WorldChoirMemory = (() => {
     });
   }
 
+  function setComposerScrollLock(lock) {
+    document.documentElement.classList.toggle('mem-composer-open', !!lock);
+    document.body.classList.toggle('mem-composer-open', !!lock);
+
+    if (lock) {
+      composerScrollY = window.scrollY || window.pageYOffset || 0;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${composerScrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+
+      if (!composerScrollLockHandler) {
+        composerScrollLockHandler = (event) => {
+          const sheet = document.querySelector('#mem-composer .mem-composer__sheet');
+          if (sheet && (sheet === event.target || sheet.contains(event.target))) {
+            // Allow scrolling inside the composer when it actually overflows.
+            if (sheet.scrollHeight > sheet.clientHeight + 1) return;
+          }
+          event.preventDefault();
+        };
+        document.addEventListener('touchmove', composerScrollLockHandler, { passive: false });
+      }
+      return;
+    }
+
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, composerScrollY || 0);
+
+    if (composerScrollLockHandler) {
+      document.removeEventListener('touchmove', composerScrollLockHandler);
+      composerScrollLockHandler = null;
+    }
+  }
+
   function openComposer(previewUrl, file, dataUrl) {
     const snap = typeof WorldChoirMemoryFeed !== 'undefined'
       ? WorldChoirMemoryFeed.getSnapshot()
@@ -504,6 +545,7 @@ const WorldChoirMemory = (() => {
     const preview = document.getElementById('mem-composer-preview');
     if (!root || !preview) return;
     root.hidden = false;
+    setComposerScrollLock(true);
     if (composerPreviewUrl) {
       preview.innerHTML = `<img src="${esc(composerPreviewUrl)}" alt="Selected memory photo" decoding="async">`;
     } else {
@@ -523,6 +565,7 @@ const WorldChoirMemory = (() => {
     posting = false;
     const root = document.getElementById('mem-composer');
     if (root) root.hidden = true;
+    setComposerScrollLock(false);
     if (composerPreviewUrl && composerPreviewUrl.startsWith('blob:')) {
       try { URL.revokeObjectURL(composerPreviewUrl); } catch { /* ignore */ }
     }
