@@ -4,66 +4,99 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <meta name="description" content="World Choir — A letter to John Lennon.">
-  <title>World Choir — A Letter to John Lennon</title>
+  <meta name="description" content="A letter to John Lennon — from the world.">
+  <title>World Choir — A Letter to John</title>
   <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
   <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20270706">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
-  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904p">
+  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904o">
 </head>
 <body class="sws-page-body">
-  <div class="ambient-bg sws-ambient" aria-hidden="true"></div>
 
-  <main class="page sws-page fade-in">
-    <nav class="df-fp-nav" aria-label="Back to Home">
-      <button class="df-fp-nav__back" type="button" id="sws-letter-back" aria-label="Back to Home">← Back</button>
-    </nav>
+  <!-- Top nav: back ← | title | share -->
+  <nav class="sws-nav" aria-label="Letter page navigation">
+    <button class="sws-nav__back" type="button" id="sws-letter-back" aria-label="Go back">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
 
-    <header class="sws-letter-header">
-      <div class="sws-letter-header__title">A LETTER TO JOHN</div>
-      <div class="sws-letter-header__subtitle">FROM THE WORLD!</div>
-    </header>
+    <div class="sws-nav__title-wrap" aria-label="A Letter to John Lennon, from the World">
+      <p class="sws-nav__title">A Letter to John Lennon</p>
+      <p class="sws-nav__subtitle">
+        <span class="sws-nav__line" aria-hidden="true"></span>
+        <span class="sws-nav__subtitle-text">From the World</span>
+        <span class="sws-nav__line" aria-hidden="true"></span>
+      </p>
+    </div>
 
-    <section class="sws-letter-paper" aria-label="Letter background image">
+    <button class="sws-nav__share" type="button" id="sws-letter-share" aria-label="Share">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </nav>
+
+  <!-- Paper image — the main content of the page -->
+  <main class="sws-main" aria-label="A letter to John Lennon">
+    <div class="sws-paper-wrap">
       <img
-        class="sws-letter-paper__img"
-        src="images/background-image.png"
-        alt=""
+        class="sws-paper-img"
+        src="images/background-imagine.png"
+        alt="A handwritten letter on aged paper addressed to John Lennon"
         decoding="async"
         fetchpriority="high"
       >
-    </section>
-
-    <footer class="sws-letter-bottom" aria-label="Promise summary">
-      <div class="sws-letter-bottom__card">
-        <div class="sws-letter-bottom__heart" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 21s-7.2-4.7-9.3-8.5C1.2 9.2 3 6.7 5.9 6.1c1.7-.4 3.3.2 4.4 1.5 1.1-1.3 2.7-1.9 4.4-1.5 2.9.6 4.7 3.1 3.2 6.4C19.2 16.3 12 21 12 21Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div>
-          <div class="sws-letter-bottom__kicker">YOUR PROMISE LIVES ON</div>
-          <div class="sws-letter-bottom__text">
-            Thank you for your voice. Thank you for your promise.
-          </div>
-        </div>
-      </div>
-    </footer>
+    </div>
   </main>
+
+  <!-- Bottom bar: "Your promise lives on" -->
+  <footer class="sws-footer" aria-label="Your promise">
+    <span class="sws-footer__icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </span>
+    <div class="sws-footer__body">
+      <p class="sws-footer__label">Your Promise Lives On</p>
+      <p class="sws-footer__text">Thank you for your voice. Thank you for your promise.</p>
+    </div>
+  </footer>
 
   <script>
     (function () {
-      const btn = document.getElementById('sws-letter-back');
-      if (!btn) return;
-      btn.addEventListener('click', () => {
-        if (window.history.length > 1) window.history.back();
-        else window.location.href = 'index.html';
-      });
+      // Back button
+      const back = document.getElementById('sws-letter-back');
+      if (back) {
+        back.addEventListener('click', () => {
+          if (window.history.length > 1) window.history.back();
+          else window.location.href = 'index.html';
+        });
+      }
+
+      // Share button
+      const shareBtn = document.getElementById('sws-letter-share');
+      if (shareBtn) {
+        shareBtn.addEventListener('click', async () => {
+          const shareData = {
+            title: 'A Letter to John Lennon',
+            text: 'The world sang together. Read the letter.',
+            url: window.location.href,
+          };
+          try {
+            if (navigator.share) { await navigator.share(shareData); return; }
+          } catch (e) { if (e && e.name === 'AbortError') return; }
+          try {
+            await navigator.clipboard.writeText(window.location.href);
+            shareBtn.classList.add('is-copied');
+            setTimeout(() => shareBtn.classList.remove('is-copied'), 1600);
+          } catch { /* ignore */ }
+        });
+      }
     })();
   </script>
 </body>
 </html>
-

@@ -1,325 +1,198 @@
-/* Song We Sang — intimate letter page */
+/* ── Song We Sang / Letter Page ── */
 
+/* Prevent any horizontal scroll; lock to viewport */
 html.sws-page,
 html.sws-page body {
-  background: var(--bg-void, #000);
   overflow-x: hidden;
+  overflow-y: auto;
+  max-width: 100vw;
+  background: #000;
 }
 
 .sws-page-body {
-  position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 100dvh;
+  min-height: 100vh;
+  background: #000;
   color: var(--text-primary, #f4f4f6);
   overflow-x: hidden;
 }
 
-.sws-ambient {
-  display: none;
-  pointer-events: none;
+/* ── Top nav ── */
+.sws-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  padding: max(10px, env(safe-area-inset-top)) 12px 10px;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-.sws-page {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  background: transparent;
-}
-
-.sws-back {
+.sws-nav__back,
+.sws-nav__share {
   display: inline-flex;
   align-items: center;
-  margin: 0 0 10px;
-  padding: 0;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   border: none;
-  background: none;
-  color: var(--accent-aurora, #4ec5e8);
-  font-family: var(--font-sans, Inter, system-ui, sans-serif);
-  font-size: 0.88rem;
-  font-weight: 500;
-  text-decoration: none;
+  background: transparent;
+  color: var(--text-muted, #8a8e9a);
   cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s ease, color 0.2s ease;
   -webkit-tap-highlight-color: transparent;
+  padding: 0;
 }
 
-.sws-back:hover,
-.sws-back:focus-visible {
-  opacity: 0.8;
+.sws-nav__back:hover,
+.sws-nav__back:focus-visible,
+.sws-nav__share:hover,
+.sws-nav__share:focus-visible {
+  color: var(--text-primary, #f4f4f6);
+  background: rgba(255, 255, 255, 0.06);
   outline: none;
 }
 
-.sws-header {
-  margin: 0 0 3.25rem;
+.sws-nav__share.is-copied {
+  color: var(--accent-aurora, #4ec5e8);
+}
+
+.sws-nav__title-wrap {
   text-align: center;
+  line-height: 1.2;
 }
 
-.sws-page-title {
+.sws-nav__title {
   margin: 0;
-  font-family: var(--font-sans, Inter, system-ui, sans-serif);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
+  font-family: var(--font-sans, Inter, sans-serif);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent-gold, #c9a962);
-}
-
-.sws-letter {
-  font-family: 'Source Serif 4', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
-  font-size: clamp(1.05rem, 2.6vw, 1.18rem);
-  font-weight: 400;
-  line-height: 1.75;
-  letter-spacing: 0.01em;
   color: var(--text-primary, #f4f4f6);
-  text-wrap: pretty;
-  background: transparent;
-}
-
-.sws-letter p {
-  margin: 0 0 1.15em;
-}
-
-.sws-letter__greeting {
-  margin-bottom: 1.6em;
-}
-
-.sws-letter__line {
-  margin-bottom: 0.2em;
-}
-
-.sws-letter__line + .sws-letter__emphasis,
-.sws-letter__line + .sws-letter__p {
-  margin-top: 1.15em;
-}
-
-.sws-letter__emphasis {
-  margin-bottom: 1.25em;
-}
-
-.sws-letter__emphasis strong {
-  font-weight: 600;
-  color: var(--text-primary, #f4f4f6);
-}
-
-.sws-letter__closing {
-  margin-top: 2.4em;
-  margin-bottom: 0.85em;
-}
-
-.sws-letter__signature {
-  margin-top: 0.35em;
-  margin-bottom: 0;
-  font-size: 1.08em;
-  letter-spacing: 0.02em;
-}
-
-.sws-letter__signature strong {
-  font-weight: 600;
-  font-style: italic;
-  color: var(--text-primary, #f4f4f6);
-}
-
-.sws-letter__caret {
-  display: inline-block;
-  width: 1px;
-  height: 0.95em;
-  margin-left: 1px;
-  vertical-align: -0.08em;
-  background: rgba(244, 244, 246, 0.55);
-  animation: swsCaretPulse 1.1s ease-in-out infinite;
-}
-
-@keyframes swsCaretPulse {
-  0%, 100% { opacity: 0.2; }
-  50% { opacity: 0.75; }
-}
-
-.sws-letter--complete .sws-letter__caret {
-  display: none;
-}
-
-.sws-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
-  border: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-@media (min-width: 720px) {
-  .sws-page {
-    padding-top: 0;
-    padding-bottom: 0;
+.sws-nav__subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 3px 0 0;
+}
+
+.sws-nav__line {
+  flex: 1;
+  max-width: 28px;
+  height: 1px;
+  background: var(--text-muted, #8a8e9a);
+  opacity: 0.55;
+  display: block;
+}
+
+.sws-nav__subtitle-text {
+  font-family: var(--font-sans, Inter, sans-serif);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted, #8a8e9a);
+  white-space: nowrap;
+}
+
+/* ── Paper image ── */
+.sws-main {
+  flex: 1 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px 12px 12px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.sws-paper-wrap {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.7),
+    0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.sws-paper-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+/* ── Footer bar ── */
+.sws-footer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px max(16px, env(safe-area-inset-bottom));
+  background: rgba(8, 10, 18, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.sws-footer__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-aurora, #4ec5e8);
+}
+
+.sws-footer__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sws-footer__label {
+  margin: 0 0 2px;
+  font-family: var(--font-sans, Inter, sans-serif);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-aurora, #4ec5e8);
+}
+
+.sws-footer__text {
+  margin: 0;
+  font-family: var(--font-sans, Inter, sans-serif);
+  font-size: 0.82rem;
+  color: var(--text-secondary, #a8abb8);
+  line-height: 1.45;
+}
+
+/* ── Responsive ── */
+@media (min-width: 520px) {
+  .sws-nav__title {
+    font-size: 0.82rem;
   }
 
-  .sws-header {
-    margin-bottom: 4.5rem;
-  }
-
-  .sws-letter {
-    font-size: 1.2rem;
-    line-height: 1.8;
+  .sws-main {
+    padding: 24px 20px 16px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sws-letter__caret {
-    animation: none;
-    opacity: 0.45;
-  }
-
-  .fade-in {
+  * {
     animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
+    transition: none !important;
   }
-}
-
-/* Reuse the exact Foundation back button style (Donate tab → Foundation profiles). */
-.df-fp-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 4px 16px 10px;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.92) 55%, rgba(0, 0, 0, 0));
-}
-
-.df-fp-nav__back,
-.df-fp-nav__share {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: var(--font-sans);
-  cursor: pointer;
-  transition: color 0.22s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.df-fp-nav__back {
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  padding: 10px 4px;
-}
-
-.df-fp-nav__back:hover,
-.df-fp-nav__back:focus-visible,
-.df-fp-nav__share:hover,
-.df-fp-nav__share:focus-visible {
-  color: var(--accent-aurora);
-  outline: none;
-}
-
-/* ─── Letter Page (Song We Sang) screenshot-like layout ─── */
-
-.sws-letter-header {
-  position: relative;
-  z-index: 2;
-  margin: 14px 0 14px;
-  padding: 18px 16px 14px;
-  background: #000;
-  text-align: center;
-}
-
-.sws-letter-header__title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-
-.sws-letter-header__subtitle {
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.sws-letter-paper {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 0 16px 140px; /* leaves space for the fixed bottom card */
-}
-
-.sws-letter-paper__img {
-  width: min(92vw, 540px);
-  max-height: calc(100dvh - 210px);
-  object-fit: contain;
-  display: block;
-  border-radius: 6px;
-  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.65);
-}
-
-.sws-letter-bottom {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 18px;
-  z-index: 3;
-  padding: 0 18px;
-  pointer-events: none; /* purely presentational */
-}
-
-.sws-letter-bottom__card {
-  pointer-events: auto;
-  width: min(620px, 100%);
-  margin: 0 auto;
-  background: rgba(0, 0, 0, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  padding: 14px 16px;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.sws-letter-bottom__heart {
-  flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 1px solid rgba(78, 197, 232, 0.35);
-  display: grid;
-  place-items: center;
-  color: var(--accent-aurora);
-}
-
-.sws-letter-bottom__heart svg {
-  width: 18px;
-  height: 18px;
-}
-
-.sws-letter-bottom__kicker {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-.sws-letter-bottom__text {
-  margin-top: 6px;
-  font-size: 0.84rem;
-  line-height: 1.45;
-  color: var(--text-secondary);
 }
