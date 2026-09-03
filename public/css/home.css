@@ -1052,6 +1052,7 @@ a.home-after-card--song:active {
   border-radius: var(--radius-md);
   min-height: 200px;
   width: 100%;
+  aspect-ratio: 1672 / 555;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1059,7 +1060,7 @@ a.home-after-card--song:active {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Stretch edge-to-edge — full width AND full height of the box (no letterboxing). */
+/* Always cover the full box — left/right and top/bottom — on every viewport. */
 .home-after-memory__media {
   position: absolute;
   top: 0;
@@ -1072,7 +1073,7 @@ a.home-after-card--song:active {
   background-color: #020408;
   background-repeat: no-repeat;
   background-position: center center;
-  background-size: 100% 100%;
+  background-size: cover;
   pointer-events: none;
 }
 

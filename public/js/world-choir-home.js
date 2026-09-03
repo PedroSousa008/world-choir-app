@@ -389,7 +389,7 @@ const WorldChoirHome = (() => {
   const POST_EVENT_IMAGES = {
     hero: 'images/after-event.png?v=20260903p',
     song: 'images/imagine-after.png',
-    memory: 'images/memory-after.png',
+    memory: 'images/memory-after-card.png',
   };
 
   function getSongQuote() {
