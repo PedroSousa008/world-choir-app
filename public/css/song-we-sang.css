@@ -262,9 +262,11 @@ html.sws-page body {
 
 .sws-letter__flourish {
   display: block;
-  width: 11.5em;
-  height: 1.85em;
-  margin-top: 0.02em;
+  width: 100%;
+  max-width: 100%;
+  height: 1.35em;
+  /* ~2px gap between signature baseline and underline */
+  margin-top: 2px;
   overflow: visible;
 }
 
@@ -277,11 +279,11 @@ html.sws-page body {
 }
 
 .sws-letter__underline {
-  stroke-width: 1.05;
+  stroke-width: 0.55;
 }
 
 .sws-letter__heart {
-  stroke-width: 1.05;
+  stroke-width: 0.55;
 }
 
 /* ── Typing caret ── */

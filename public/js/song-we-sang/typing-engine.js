@@ -84,7 +84,8 @@ const SongWeSangTypingEngine = (() => {
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
     svg.setAttribute('class', 'sws-letter__flourish');
-    svg.setAttribute('viewBox', '0 0 180 36');
+    // viewBox: line starts under "e" in The (~14%), ends just before "In" (~82%).
+    svg.setAttribute('viewBox', '0 0 160 26');
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
     svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
@@ -92,17 +93,19 @@ const SongWeSangTypingEngine = (() => {
     const underline = document.createElementNS(NS, 'path');
     underline.setAttribute('class', 'sws-letter__underline');
     underline.setAttribute('fill', 'none');
+    // Thin, nearly flat hand stroke with tiny natural wobble — left→right.
     underline.setAttribute(
       'd',
-      'M3 11 C 22 13.4, 41 8.8, 60 11.1 C 79 13.3, 97 8.6, 116 11.4 C 128 13, 140 10.2, 152 11.6'
+      'M22 3.2 C 38 3.8, 54 2.6, 70 3.4 C 86 4.1, 102 2.7, 118 3.5 C 124 3.8, 128 3.2, 131 3.4'
     );
 
     const heart = document.createElementNS(NS, 'path');
     heart.setAttribute('class', 'sws-letter__heart');
     heart.setAttribute('fill', 'none');
+    // Small quick outline heart near the right end of the underline, slightly below.
     heart.setAttribute(
       'd',
-      'M157 28 C 150.5 21.5, 150.2 16.2, 153.8 16.2 C 155.8 16.2, 157.2 17.8, 157.2 17.8 C 157.2 17.8, 158.6 16.2, 160.7 16.2 C 164.4 16.2, 164.6 21.6, 157 28'
+      'M136 18.5 C 132.4 14.6, 132.2 11.6, 134.3 11.6 C 135.5 11.6, 136.2 12.5, 136.2 12.5 C 136.2 12.5, 136.9 11.6, 138.1 11.6 C 140.3 11.6, 140.4 14.7, 136 18.5'
     );
 
     svg.appendChild(underline);
@@ -127,7 +130,8 @@ const SongWeSangTypingEngine = (() => {
     }
     const span = signatureEl.querySelector('span');
     const textW = span ? span.offsetWidth : 0;
-    if (textW > 0) svg.style.width = `${Math.round(textW + 22)}px`;
+    // Match signature text width exactly so path % align with letters.
+    if (textW > 0) svg.style.width = `${Math.round(textW)}px`;
     const underline = svg.querySelector('.sws-letter__underline');
     const heart = svg.querySelector('.sws-letter__heart');
     if (underline) prepareFlourishStroke(underline);
