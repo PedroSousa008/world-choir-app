@@ -222,6 +222,16 @@ const GlobalLiveEvent = (() => {
             <div class="wc-global-live__countdown-bar" id="wc-global-live-countdown-bar" aria-live="polite">
               <span class="wc-global-live__countdown-label">Singing in</span>
               <span class="wc-global-live__countdown-value" id="wc-global-live-countdown-value">—</span>
+              <button type="button" class="wc-live-sound-toggle" id="wc-pre-sound-toggle" aria-label="Sound off" aria-pressed="false" title="Sound">
+                <svg class="wc-live-sound-toggle__icon wc-live-sound-toggle__icon--off" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                  <path d="M11 5 6 9H3v6h3l5 4V5z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+                  <path d="m16 9 5 5M21 9l-5 5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                </svg>
+                <svg class="wc-live-sound-toggle__icon wc-live-sound-toggle__icon--on" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" hidden>
+                  <path d="M11 5 6 9H3v6h3l5 4V5z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+                  <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                </svg>
+              </button>
             </div>
             <button type="button" class="wc-global-live__unlock" id="wc-global-live-unlock" hidden>
               Tap to enable sound for the live event
@@ -283,54 +293,111 @@ const GlobalLiveEvent = (() => {
     }
   }
 
-  function bindUnlockHandlers() {
-    let unlockBusy = false;
-    const unlock = async () => {
-      if (unlockBusy) return;
-      unlockBusy = true;
-      audioUnlocked = true;
-      hideAllUnlockUi();
+  function soundToggleSvgState(on) {
+    document.querySelectorAll('.wc-live-sound-toggle').forEach((btn) => {
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.setAttribute('aria-label', on ? 'Sound on' : 'Sound off');
+      btn.classList.toggle('is-on', on);
+      btn.classList.toggle('is-off', !on);
+      const onIcon = btn.querySelector('.wc-live-sound-toggle__icon--on');
+      const offIcon = btn.querySelector('.wc-live-sound-toggle__icon--off');
+      if (onIcon) onIcon.hidden = !on;
+      if (offIcon) offIcon.hidden = on;
+    });
+  }
 
-      try {
-        if (!window.__wcAudioCtx) {
-          window.__wcAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (window.__wcAudioCtx.state === 'suspended') {
-          await window.__wcAudioCtx.resume();
-        }
-      } catch {
-        /* ignore */
+  function updateSoundToggleUi() {
+    const audible = !!(
+      audioUnlocked
+      && (
+        (state === 'LIVE_SONG' && audioEl && !audioEl.paused && !audioEl.muted)
+        || (state === 'PRE_EVENT' && videoEl && !videoEl.paused && !videoEl.muted)
+      )
+    );
+    soundToggleSvgState(audible);
+  }
+
+  function getGlobalLyricTimeSec() {
+    return getTargetSongPositionSec(WorldChoirServerTime.nowMs());
+  }
+
+  function startLyricClock(audio) {
+    if (typeof LyricsDisplay === 'undefined') return;
+    LyricsDisplay.startSync(audio, getGlobalLyricTimeSec);
+    LyricsDisplay.update(getGlobalLyricTimeSec(), audio);
+  }
+
+  async function toggleLiveSound(ev) {
+    ev?.preventDefault?.();
+    ev?.stopPropagation?.();
+
+    try {
+      if (!window.__wcAudioCtx) {
+        window.__wcAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
+      if (window.__wcAudioCtx.state === 'suspended') {
+        await window.__wcAudioCtx.resume();
+      }
+    } catch {
+      /* ignore */
+    }
 
-      try {
-        if (state === 'LIVE_SONG') {
-          // Gesture may only unmute/resume. NEVER seek — iOS seek+play restarts at 0.
-          await resumeAudibleLiveSong();
-          return;
-        }
+    const wantOn = !audioUnlocked
+      || (state === 'LIVE_SONG' && (!audioEl || audioEl.muted || audioEl.paused))
+      || (state === 'PRE_EVENT' && (!videoEl || videoEl.muted || videoEl.paused));
 
-        const preVideo = document.getElementById('wc-global-live-video');
-        if (preVideo && state === 'PRE_EVENT') {
+    if (!wantOn) {
+      audioUnlocked = false;
+      if (audioEl) audioEl.muted = true;
+      if (videoEl) videoEl.muted = true;
+      updateSoundToggleUi();
+      return;
+    }
+
+    audioUnlocked = true;
+
+    if (state === 'LIVE_SONG') {
+      await ensureAudibleAtGlobalPosition();
+      updateSoundToggleUi();
+      return;
+    }
+
+    if (state === 'PRE_EVENT') {
+      const preVideo = document.getElementById('wc-global-live-video') || videoEl;
+      if (preVideo) {
+        try {
+          preVideo.muted = false;
+          if (preVideo.paused) await preVideo.play();
+        } catch {
           try {
-            preVideo.muted = false;
-            if (preVideo.paused) await preVideo.play();
-          } catch {
             preVideo.muted = true;
-            if (preVideo.paused) await preVideo.play().catch(() => {});
+            await preVideo.play();
+            preVideo.muted = false;
+          } catch {
+            /* keep muted visual until next tap on the icon */
+            audioUnlocked = false;
           }
         }
-
-        if (state === 'PRE_EVENT') {
-          await primeLiveSongAudio();
-        }
-      } finally {
-        unlockBusy = false;
       }
-    };
+      await primeLiveSongAudio();
+      updateSoundToggleUi();
+    }
+  }
 
-    ['pointerdown', 'keydown', 'touchstart', 'click'].forEach((evt) => {
-      document.addEventListener(evt, unlock, { capture: true, passive: true });
-    });
+  function bindSoundToggleHandlers() {
+    if (document.documentElement.dataset.wcSoundToggleBound === '1') return;
+    document.documentElement.dataset.wcSoundToggleBound = '1';
+    document.addEventListener('click', (ev) => {
+      const btn = ev.target?.closest?.('.wc-live-sound-toggle');
+      if (!btn) return;
+      toggleLiveSound(ev).catch(() => {});
+    }, true);
+  }
+
+  // Kept name for call sites — sound is only toggled via the icon, never by tapping the screen.
+  function bindUnlockHandlers() {
+    bindSoundToggleHandlers();
+    updateSoundToggleUi();
   }
 
   function showTakeover() {
@@ -584,6 +651,7 @@ const GlobalLiveEvent = (() => {
     if (typeof LyricsDisplay !== 'undefined' && LyricsDisplay.mountLive) {
       LyricsDisplay.mountLive(content, atSec);
     }
+    updateSoundToggleUi();
     return true;
   }
 
@@ -816,51 +884,96 @@ const GlobalLiveEvent = (() => {
   }
 
   async function seekAudioAndWait(el, seekTo) {
-    const drift = Math.abs((el.currentTime || 0) - seekTo);
-    if (drift < 0.5) return;
-    await new Promise((resolve) => {
+    const target = Math.max(0, seekTo);
+    const drift = Math.abs((el.currentTime || 0) - target);
+    if (drift < 0.35) return true;
+
+    return new Promise((resolve) => {
       let settled = false;
-      const done = () => {
+      const done = (ok) => {
         if (settled) return;
         settled = true;
-        el.removeEventListener('seeked', done);
-        resolve();
+        el.removeEventListener('seeked', onSeeked);
+        resolve(ok);
       };
-      el.addEventListener('seeked', done, { once: true });
+      const onSeeked = () => {
+        lastAudioSeekAt = Date.now();
+        done(Math.abs((el.currentTime || 0) - target) < 1.0);
+      };
+      el.addEventListener('seeked', onSeeked, { once: true });
       try {
-        el.currentTime = seekTo;
+        el.currentTime = target;
         lastAudioSeekAt = Date.now();
       } catch {
-        done();
+        done(false);
         return;
       }
-      setTimeout(done, 500);
+      setTimeout(() => {
+        if (settled) return;
+        const ok = Math.abs((el.currentTime || 0) - target) < 1.25;
+        if (!ok) {
+          try { el.currentTime = target; } catch { /* ignore */ }
+        }
+        done(Math.abs((el.currentTime || 0) - target) < 1.5);
+      }, 450);
     });
   }
 
-  async function resumeAudibleLiveSong() {
+  async function ensureAudibleAtGlobalPosition() {
     const el = audioEl || getLiveSongAudio();
     audioEl = el;
-    if (!el) return;
-    el.muted = false;
+    if (!el) return false;
+
+    if (!el._wcBound) {
+      el._wcBound = true;
+      el.addEventListener('ended', onSongEnded);
+      el.addEventListener('error', onSongError);
+    }
+
+    try {
+      await waitForAudioReady(el);
+    } catch {
+      return false;
+    }
+
+    const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
+    const seekTo = Math.min(
+      Math.max(0, getGlobalLyricTimeSec()),
+      el.duration || getGlobalLyricTimeSec(),
+      duration - 0.05,
+    );
+
+    await seekAudioAndWait(el, seekTo);
+
     el.volume = 1;
-    if (el.paused || el.ended) {
+    el.muted = false;
+    audioUnlocked = true;
+
+    try {
+      await el.play();
+    } catch {
       try {
+        el.muted = true;
         await el.play();
+        await seekAudioAndWait(el, getGlobalLyricTimeSec());
+        el.muted = false;
       } catch {
-        try {
-          el.muted = true;
-          await el.play();
-          el.muted = false;
-        } catch {
-          /* tick will retry without resetting position */
-        }
+        return false;
       }
     }
-    if (typeof LyricsDisplay !== 'undefined') {
-      LyricsDisplay.startSync(el);
-      LyricsDisplay.update(el.currentTime, el);
+
+    const after = getGlobalLyricTimeSec();
+    if (Math.abs((el.currentTime || 0) - after) > 1.5) {
+      await seekAudioAndWait(el, after);
     }
+
+    startLyricClock(el);
+    updateSoundToggleUi();
+    return true;
+  }
+
+  async function resumeAudibleLiveSong() {
+    return ensureAudibleAtGlobalPosition();
   }
 
   async function startLiveAudio(target) {
@@ -880,50 +993,48 @@ const GlobalLiveEvent = (() => {
       try {
         await waitForAudioReady(audioEl);
       } catch {
+        startLyricClock(audioEl);
         return;
       }
     }
 
     const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
-    const seekTo = Math.min(Math.max(0, target), audioEl.duration || target, duration - 0.05);
-    const drift = Math.abs((audioEl.currentTime || 0) - seekTo);
+    const liveTarget = getGlobalLyricTimeSec();
+    const seekTo = Math.min(
+      Math.max(0, liveTarget || target),
+      audioEl.duration || target,
+      duration - 0.05,
+    );
 
-    // If already playing, do not touch currentTime — that restarts on iOS.
+    await seekAudioAndWait(audioEl, seekTo);
+
     if (!audioEl.paused && !audioEl.ended) {
-      if (audioEl.muted) {
-        try { audioEl.muted = false; audioUnlocked = true; } catch { /* ignore */ }
-      }
-      if (typeof LyricsDisplay !== 'undefined') {
-        LyricsDisplay.startSync(audioEl);
-        LyricsDisplay.update(audioEl.currentTime, audioEl);
-      }
+      audioEl.muted = !audioUnlocked;
+      startLyricClock(audioEl);
+      updateSoundToggleUi();
       return;
-    }
-
-    if (audioEl.paused && !audioEl.ended && drift > 1.25) {
-      await seekAudioAndWait(audioEl, seekTo);
     }
 
     audioEl.volume = 1;
     for (let attempt = 0; attempt < 6; attempt++) {
       try {
-        audioEl.muted = attempt > 2;
+        audioEl.muted = audioUnlocked ? attempt > 2 : true;
         await audioEl.play();
-        if (!audioEl.muted) audioUnlocked = true;
-        LyricsDisplay.startSync(audioEl);
-        LyricsDisplay.update(audioEl.currentTime, audioEl);
-        hideAllUnlockUi();
-        if (audioEl.muted) {
-          try {
-            audioEl.muted = false;
-            audioUnlocked = true;
-          } catch { /* ignore */ }
+        const again = getGlobalLyricTimeSec();
+        if (Math.abs((audioEl.currentTime || 0) - again) > 1.0) {
+          await seekAudioAndWait(audioEl, again);
         }
+        if (!audioEl.muted) audioUnlocked = true;
+        startLyricClock(audioEl);
+        hideAllUnlockUi();
+        updateSoundToggleUi();
         return;
       } catch {
-        if (attempt < 5) await new Promise((r) => setTimeout(r, 50));
+        if (attempt < 5) await new Promise((r) => setTimeout(r, 60));
       }
     }
+    startLyricClock(audioEl);
+    updateSoundToggleUi();
   }
 
   function showLiveSongUnlock() {
@@ -1005,14 +1116,12 @@ const GlobalLiveEvent = (() => {
       audioEl.playbackRate = 1;
     }
 
-    if (audioEl.muted) {
-      try {
-        audioEl.muted = false;
-        audioUnlocked = true;
-      } catch { /* ignore */ }
+    // Never auto-unmute here — sound only changes via the sound icon.
+    if (!audioUnlocked && !audioEl.muted) {
+      audioEl.muted = true;
     }
 
-    LyricsDisplay.update(audioEl.currentTime, audioEl);
+    LyricsDisplay.update(getTargetSongPositionSec(nowMs), audioEl);
   }
 
   function teardownLiveOverlays() {

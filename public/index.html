@@ -15,11 +15,11 @@
   <link rel="stylesheet" href="css/home.css?v=20260904ao">
   <link rel="preload" as="image" href="images/after-event.png?v=20260903p">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
-  <link rel="stylesheet" href="css/live-event.css?v=20260904an">
+  <link rel="stylesheet" href="css/live-event.css?v=20260904ap">
   <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
-  <script src="js/world-choir-event-schedule.js?v=20260904an"></script>
-  <script src="js/live-event/live-event-config.js?v=20260904an"></script>
-  <script src="js/live-event/live-event-boot.js?v=20260904an"></script>
+  <script src="js/world-choir-event-schedule.js?v=20260904ap"></script>
+  <script src="js/live-event/live-event-config.js?v=20260904ap"></script>
+  <script src="js/live-event/live-event-boot.js?v=20260904ap"></script>
   <script>
     (function wcLiveHeadGate() {
       function inLiveWindow() {
@@ -93,6 +93,16 @@
         <div class="wc-global-live__countdown-bar" id="wc-global-live-countdown-bar" aria-live="polite">
           <span class="wc-global-live__countdown-label">Singing in</span>
           <span class="wc-global-live__countdown-value" id="wc-global-live-countdown-value">—</span>
+          <button type="button" class="wc-live-sound-toggle" id="wc-pre-sound-toggle" aria-label="Sound off" aria-pressed="false" title="Sound">
+            <svg class="wc-live-sound-toggle__icon wc-live-sound-toggle__icon--off" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+              <path d="M11 5 6 9H3v6h3l5 4V5z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+              <path d="m16 9 5 5M21 9l-5 5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            </svg>
+            <svg class="wc-live-sound-toggle__icon wc-live-sound-toggle__icon--on" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" hidden>
+              <path d="M11 5 6 9H3v6h3l5 4V5z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+              <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            </svg>
+          </button>
         </div>
         <button type="button" class="wc-global-live__unlock" id="wc-global-live-unlock" hidden>
           Tap to enable sound for the live event
@@ -168,9 +178,9 @@
   <script src="js/world-choir-nav.js?v=20260904e"></script>
   <script src="js/world-choir-participation.js"></script>
   <script src="js/world-choir-practice-config.js"></script>
-  <script src="js/profile/lyrics-display.js?v=20260904an"></script>
+  <script src="js/profile/lyrics-display.js?v=20260904ap"></script>
   <script src="js/live-event/server-time-sync.js?v=20260904an"></script>
-  <script src="js/live-event/global-live-event.js?v=20260904ao"></script>
+  <script src="js/live-event/global-live-event.js?v=20260904ap"></script>
   <script src="js/world-choir-live-event.js?v=20260904an"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260819a"></script>
   <script src="js/world-choir-home.js?v=20260904ao"></script>

@@ -194,7 +194,55 @@ html.wc-live-gate .wc-global-live--boot {
   backdrop-filter: blur(12px);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+  pointer-events: auto;
+  z-index: 5;
+}
+
+.wc-global-live__countdown-label,
+.wc-global-live__countdown-value {
   pointer-events: none;
+}
+
+.wc-live-sound-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(160, 164, 176, 0.92);
+  cursor: pointer;
+  flex-shrink: 0;
+  pointer-events: auto;
+}
+
+.wc-live-sound-toggle:active {
+  opacity: 0.75;
+}
+
+.wc-live-sound-toggle__icon {
+  display: block;
+}
+
+.pm-header--live,
+.practice-playing--live .pm-header {
+  position: relative;
+}
+
+.practice-playing--live .wc-live-sound-toggle {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  width: 34px;
+  height: 34px;
+  color: rgba(150, 154, 166, 0.95);
+  z-index: 6;
 }
 
 .wc-global-live__countdown-value {

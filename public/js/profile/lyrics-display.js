@@ -199,6 +199,16 @@ const LyricsDisplay = (() => {
         <div class="pm-bg" aria-hidden="true"><div class="pm-bg__overlay"></div></div>
         <header class="pm-header" aria-label="World Choir">
           <img class="pm-logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir App" width="1024" height="1024" decoding="async">
+          <button type="button" class="wc-live-sound-toggle" id="wc-live-sound-toggle" aria-label="Sound off" aria-pressed="false" title="Sound">
+            <svg class="wc-live-sound-toggle__icon wc-live-sound-toggle__icon--off" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+              <path d="M11 5 6 9H3v6h3l5 4V5z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+              <path d="m16 9 5 5M21 9l-5 5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            </svg>
+            <svg class="wc-live-sound-toggle__icon wc-live-sound-toggle__icon--on" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" hidden>
+              <path d="M11 5 6 9H3v6h3l5 4V5z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+              <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+            </svg>
+          </button>
         </header>
         <section class="pm-lyrics" aria-label="Lyrics">
           <div class="pm-lyrics__radial" aria-hidden="true"></div>
@@ -302,11 +312,13 @@ const LyricsDisplay = (() => {
     updateVoiceCount();
   }
 
-  function startSync(audio) {
+  function startSync(audio, getTime) {
     stopSync();
-    if (audio) update(audio.currentTime, audio);
     function tick() {
-      if (audio) update(audio.currentTime, audio);
+      const t = typeof getTime === 'function'
+        ? getTime()
+        : (audio?.currentTime ?? 0);
+      update(t, audio);
       rafId = requestAnimationFrame(tick);
     }
     rafId = requestAnimationFrame(tick);

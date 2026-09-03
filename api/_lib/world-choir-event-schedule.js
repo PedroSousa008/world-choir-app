@@ -43,10 +43,10 @@ function getLisbonLocalDateParts(now = new Date()) {
   return { y, m, d };
 }
 
-/** Today (Europe/Lisbon calendar date) at 19:45 UTC (= 20:45 Lisbon in summer). Pre-event video: 19:40 UTC. */
+/** Today (Europe/Lisbon calendar date) at 20:25 UTC (= 21:25 Lisbon in summer). Pre-event video: 20:20 UTC. */
 function getTestEventStartUtc(now = new Date()) {
   const { y, m, d } = getLisbonLocalDateParts(now);
-  return new Date(Date.UTC(y, m - 1, d, 19, 45, 0)).toISOString();
+  return new Date(Date.UTC(y, m - 1, d, 20, 25, 0)).toISOString();
 }
 
 function getTestPreEventStartUtc(now = new Date()) {
