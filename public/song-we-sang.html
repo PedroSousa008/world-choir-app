@@ -2,19 +2,36 @@
 <html lang="en" class="sws-page">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#cfc4b0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- Sampled from public/images/background-imagine.png (center paper tone) -->
+  <meta name="theme-color" content="#e9cb9e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="A letter from the world — The Song We Sang.">
   <title>World Choir — The Song We Sang</title>
+  <!--
+    Critical first paint BEFORE theme CSS (theme sets html/body to #000).
+    Prevents white/black flash and Safari overscroll reveal.
+  -->
+  <style>
+    html.sws-page {
+      background-color: #e9cb9e !important;
+    }
+    html.sws-page body {
+      margin: 0;
+      background-color: #e9cb9e !important;
+    }
+  </style>
   <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
   <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20270706">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
-  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904n">
+  <link rel="stylesheet" href="css/song-we-sang.css?v=20260904p">
 </head>
 <body class="sws-page-body">
+  <!-- Full-viewport parchment layer (screen itself), under safe-area content -->
   <div class="sws-bg" id="sws-bg" aria-hidden="true"></div>
 
   <main class="page sws-page fade-in">
@@ -45,6 +62,6 @@
   <script src="js/world-choir-db.js?v=20260904j"></script>
   <script src="js/song-we-sang/letter-content.js?v=20260904j"></script>
   <script src="js/song-we-sang/typing-engine.js?v=20260904j"></script>
-  <script src="js/song-we-sang/letter-page.js?v=20260904n"></script>
+  <script src="js/song-we-sang/letter-page.js?v=20260904p"></script>
 </body>
 </html>

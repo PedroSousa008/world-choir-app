@@ -1,6 +1,7 @@
 /**
  * Song We Sang — letter page orchestration.
- * Fixed viewport: no page scroll; letter is scaled to fit.
+ * Background coverage is CSS-owned (html/body/.sws-bg). Do not size the
+ * parchment layer to visualViewport — that caused iOS top/bottom bands.
  */
 (() => {
   const content = SongWeSangLetterContent.LETTER_CONTENT;
@@ -9,20 +10,6 @@
   let typingController = null;
   let fitScale = 1;
   let resizeTimer = 0;
-
-  function sizeBackgroundToViewport() {
-    const bg = document.getElementById('sws-bg');
-    if (!bg) return;
-    const vv = window.visualViewport;
-    const w = Math.ceil(vv?.width || window.innerWidth || document.documentElement.clientWidth);
-    const h = Math.ceil(vv?.height || window.innerHeight || document.documentElement.clientHeight);
-    // Extra bleed covers iOS URL-bar / safe-area jitter
-    const bleed = 4;
-    bg.style.top = `${Math.floor(vv?.offsetTop || 0) - bleed}px`;
-    bg.style.left = `${Math.floor(vv?.offsetLeft || 0) - bleed}px`;
-    bg.style.width = `${w + bleed * 2}px`;
-    bg.style.height = `${h + bleed * 2}px`;
-  }
 
   function prefersReducedMotion() {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
@@ -70,7 +57,6 @@
 
     const needed = measureFullLetterHeight(shell);
     fitScale = Math.min(1, available / needed);
-    // Slight safety inset so nothing clips on odd font metrics
     fitScale = Math.max(0.35, fitScale * 0.98);
 
     visual.style.transformOrigin = 'top center';
@@ -81,25 +67,6 @@
     SongWeSangTypingEngine.renderFull(visualRoot, content);
     visualRoot.classList.add('sws-letter--complete');
     applyLetterFit();
-  }
-
-  function lockScroll() {
-    const block = (event) => {
-      event.preventDefault();
-    };
-    document.addEventListener('touchmove', block, { passive: false });
-    document.addEventListener(
-      'wheel',
-      (event) => {
-        event.preventDefault();
-      },
-      { passive: false }
-    );
-    window.addEventListener('scroll', () => {
-      if (window.scrollX !== 0 || window.scrollY !== 0) {
-        window.scrollTo(0, 0);
-      }
-    });
   }
 
   function cleanup() {
@@ -120,21 +87,16 @@
     }
 
     fillSrLetter(srRoot);
-    lockScroll();
-    sizeBackgroundToViewport();
     window.addEventListener('pagehide', cleanup);
     window.addEventListener('beforeunload', cleanup);
     window.addEventListener('resize', () => {
-      sizeBackgroundToViewport();
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(applyLetterFit, 80);
     });
     window.visualViewport?.addEventListener('resize', () => {
-      sizeBackgroundToViewport();
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(applyLetterFit, 80);
     });
-    window.visualViewport?.addEventListener('scroll', sizeBackgroundToViewport);
 
     try {
       await WorldChoirDB.ready();
@@ -145,7 +107,6 @@
     const alreadyStarted = WorldChoirDB.hasStartedSongWeSangLetter();
     const reduceMotion = prefersReducedMotion();
 
-    // Fit before paint of letter so first frame is scaled.
     applyLetterFit();
 
     if (alreadyStarted || reduceMotion) {
@@ -156,7 +117,6 @@
       return;
     }
 
-    // First genuine open — mark started immediately so interruptions don't restart.
     WorldChoirDB.markSongWeSangLetterStarted();
     applyLetterFit();
 
