@@ -64,15 +64,9 @@ const LiveEventMode = (() => {
   }
 
   function showPostSongFlow() {
-    if (hasCompletedFlow()) {
-      hideOverlay();
-      return;
-    }
-    showOverlay();
-    if (WorldChoirDB.hasPledged() && !WorldChoirDB.hasSubmittedPromise()) {
-      showPromiseForm();
-    } else {
-      showFinalMessage();
+    hideOverlay();
+    if (typeof WorldChoirHome !== 'undefined') {
+      WorldChoirHome.render();
     }
   }
 
@@ -141,20 +135,8 @@ const LiveEventMode = (() => {
   }
 
   function launch() {
-    if (hasCompletedFlow() || active) return;
     if (usesGlobalLive() && GlobalLiveEvent.isActive()) return;
-
-    if (isPostEvent()) {
-      if (WorldChoirDB.hasPledged() && !WorldChoirDB.hasSubmittedPromise()) {
-        showOverlay();
-        showPromiseForm();
-        return;
-      }
-      if (WorldChoirDB.hasSubmittedPromise()) {
-        showOverlay();
-        showFinalMessage();
-      }
-    }
+    hideOverlay();
   }
 
   function init() {

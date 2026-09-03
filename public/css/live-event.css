@@ -4,8 +4,52 @@ body.wc-global-live-active {
   overflow: hidden;
 }
 
-body.wc-global-live-active #nav-root {
+body.wc-global-live-active #nav-root,
+html.wc-live-gate #nav-root,
+body.wc-global-live-active #earth-canvas,
+body.wc-global-live-active #map-shell,
+body.wc-global-live-active .map-page__stars,
+body.wc-global-live-active .df-donate-earth,
+body.wc-global-live-active .leaflet-container,
+body.wc-global-live-active .gathering-marker,
+body.wc-global-live-active .ambient-bg,
+html.wc-live-gate #earth-canvas,
+html.wc-live-gate #home-page,
+html.wc-live-gate .ambient-bg {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html.wc-live-gate body {
+  background: #000;
+}
+
+html.wc-live-gate main,
+html.wc-live-gate .page,
+html.wc-live-gate .donate-page,
+html.wc-live-gate .profile-page,
+html.wc-live-gate .map-shell,
+html.wc-live-gate .map-page__stars,
+html.wc-live-gate .particles {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html.wc-live-gate .wc-global-live,
+html.wc-live-gate .wc-global-live--boot {
+  display: flex !important;
+  flex-direction: column;
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: #000;
+}
+
+#live-event-mode.active {
+  z-index: 13000 !important;
+  background: #000 !important;
+  display: flex !important;
 }
 
 .wc-global-live {
@@ -212,17 +256,9 @@ body.wc-global-live-active #nav-root {
   min-height: 0;
 }
 
-.wc-live-song__live-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 0 0 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #e07070;
+.wc-live-song__live-badge,
+.practice-playing--live .live-dot {
+  display: none !important;
 }
 
 .pm-community--live {

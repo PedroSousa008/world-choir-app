@@ -4,7 +4,6 @@
 (function bootstrapGlobalLiveEvent() {
   function start() {
     if (typeof GlobalLiveEvent === 'undefined') return;
-    document.getElementById('wc-live-song-audio')?.pause();
     GlobalLiveEvent.init().catch((err) => {
       console.warn('Global live event init failed:', err);
     });

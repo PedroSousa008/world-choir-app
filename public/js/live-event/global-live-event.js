@@ -51,13 +51,21 @@ const GlobalLiveEvent = (() => {
     return document.getElementById('wc-global-live');
   }
 
-  function isLiveExperiencePage() {
-    const page = window.location.pathname.split('/').pop() || '';
+  function getPageName() {
+    return (window.location.pathname.split('/').pop() || '').toLowerCase();
+  }
+
+  function isHomePage() {
+    const page = getPageName();
     return page === '' || page === 'index.html';
   }
 
   function shouldRunLivePlayback() {
-    return isLiveExperiencePage();
+    const page = getPageName();
+    if (page.includes('owner') || page === 'admin-upload.html' || page === 'setup-ai.html') {
+      return false;
+    }
+    return true;
   }
 
   function pauseLiveMedia() {
@@ -68,6 +76,20 @@ const GlobalLiveEvent = (() => {
     if (videoEl && !videoEl.paused) {
       videoEl.pause();
     }
+  }
+
+  function hidePageUnderlays() {
+    document.getElementById('earth-canvas')?.setAttribute('hidden', '');
+    document.getElementById('ambient-bg')?.setAttribute('hidden', '');
+    document.getElementById('nav-root')?.setAttribute('hidden', '');
+    document.getElementById('home-page')?.setAttribute('hidden', '');
+    document.getElementById('map-shell')?.setAttribute('hidden', '');
+    document.querySelector('.df-donate-earth')?.setAttribute('hidden', '');
+    document.querySelectorAll('canvas').forEach((canvas) => {
+      if (canvas.id === 'wc-global-live-video') return;
+      if (canvas.closest?.('#wc-global-live, #live-event-mode')) return;
+      canvas.setAttribute('hidden', '');
+    });
   }
 
   function dismissLiveUiIfOffHome() {
@@ -154,7 +176,20 @@ const GlobalLiveEvent = (() => {
     }
   }
 
+  function ensureLiveSongMode() {
+    if (document.getElementById('live-event-mode') && document.getElementById('live-event-content')) {
+      return;
+    }
+    document.getElementById('live-event-mode')?.remove();
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="practice-mode" id="live-event-mode" aria-hidden="true">
+        <div id="live-event-content"></div>
+      </div>
+    `);
+  }
+
   function ensureShell() {
+    ensureLiveSongMode();
     if (document.getElementById('wc-global-live')) return;
 
     document.body.insertAdjacentHTML('beforeend', `
@@ -297,10 +332,10 @@ const GlobalLiveEvent = (() => {
     const shell = getShell();
     if (!shell) return;
     clearLiveGate();
+    hidePageUnderlays();
     shell.classList.add('is-active');
     shell.setAttribute('aria-hidden', 'false');
     document.body.classList.add('wc-global-live-active');
-    document.getElementById('nav-root')?.setAttribute('hidden', '');
     document.body.style.overflow = 'hidden';
     active = true;
   }
@@ -520,12 +555,14 @@ const GlobalLiveEvent = (() => {
   }
 
   function showLiveSongShell(atSec = 0) {
+    ensureLiveSongMode();
     const shell = getShell();
     const mode = document.getElementById('live-event-mode');
     const content = document.getElementById('live-event-content');
     if (!mode || !content) return false;
 
     clearLiveGate();
+    hidePageUnderlays();
     document.getElementById('wc-global-live-pre')?.setAttribute('hidden', '');
     shell?.classList.remove('is-active');
     shell?.setAttribute('aria-hidden', 'true');
@@ -535,11 +572,11 @@ const GlobalLiveEvent = (() => {
     mode.setAttribute('aria-hidden', 'false');
     document.body.classList.add('wc-global-live-active');
     document.body.style.overflow = 'hidden';
-    document.getElementById('nav-root')?.setAttribute('hidden', '');
-    document.getElementById('home-page')?.setAttribute('hidden', '');
     active = true;
 
-    LyricsDisplay.mountLive(content, atSec);
+    if (typeof LyricsDisplay !== 'undefined' && LyricsDisplay.mountLive) {
+      LyricsDisplay.mountLive(content, atSec);
+    }
     return true;
   }
 
@@ -934,9 +971,11 @@ const GlobalLiveEvent = (() => {
     clearLiveGate();
     document.getElementById('home-page')?.removeAttribute('hidden');
     document.getElementById('nav-root')?.removeAttribute('hidden');
-    if (typeof LiveEventMode !== 'undefined' && LiveEventMode.showPostSongFlow) {
-      LiveEventMode.showPostSongFlow();
-    } else if (typeof WorldChoirHome !== 'undefined') {
+    if (!isHomePage()) {
+      window.location.replace('index.html');
+      return;
+    }
+    if (typeof WorldChoirHome !== 'undefined') {
       WorldChoirHome.render();
     }
   }
@@ -1213,11 +1252,7 @@ const GlobalLiveEvent = (() => {
     const next = computeState(nowMs);
     if (next === 'NORMAL' || next === 'LIVE_FINISHED') return false;
 
-    clearLiveGate();
-    document.getElementById('home-page')?.setAttribute('hidden', '');
-    document.getElementById('earth-canvas')?.setAttribute('hidden', '');
-    document.getElementById('ambient-bg')?.setAttribute('hidden', '');
-    document.getElementById('nav-root')?.setAttribute('hidden', '');
+    hidePageUnderlays();
     document.body.classList.add('wc-global-live-active');
     document.body.style.overflow = 'hidden';
 
@@ -1248,13 +1283,7 @@ const GlobalLiveEvent = (() => {
     ensureShell();
     applyImmediateLiveGate();
     if (typeof LiveEventMode !== 'undefined') {
-      if (!document.getElementById('live-event-mode')) {
-        document.body.insertAdjacentHTML('beforeend', `
-          <div class="practice-mode" id="live-event-mode" aria-hidden="true">
-            <div id="live-event-content"></div>
-          </div>
-        `);
-      }
+      ensureLiveSongMode();
       LiveEventMode.init();
     }
     bindUnlockHandlers();

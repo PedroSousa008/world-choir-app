@@ -200,7 +200,6 @@ const LyricsDisplay = (() => {
         <header class="pm-header" aria-label="World Choir">
           <img class="pm-logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir App" width="1024" height="1024" decoding="async">
         </header>
-        <p class="wc-live-song__live-badge"><span class="live-dot"></span> LIVE</p>
         <section class="pm-lyrics" aria-label="Lyrics">
           <div class="pm-lyrics__radial" aria-hidden="true"></div>
           <p class="lyrics-display__prev" id="lyric-prev">&nbsp;</p>
