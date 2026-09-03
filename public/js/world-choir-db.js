@@ -281,6 +281,8 @@ const WorldChoirDB = (() => {
     const idx = events.findIndex((e) => e.id === eventId);
     if (idx === -1) return;
 
+    // Preview mode can force "completed" for UI work — when preview is off,
+    // always sync to the real global timeline so Memory cannot stay unlocked early.
     const status = WorldChoirConfig.isMemoryPreviewMode()
       ? 'completed'
       : WorldChoirConfig.getGlobalEventStatus();

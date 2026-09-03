@@ -676,12 +676,12 @@ const WorldChoirConfig = (() => {
     return EventState.COMPLETED;
   }
 
-  /** Memory tab unlocks globally once the active event song has finished. */
+  /**
+   * Memory tab unlocks globally once the active event song has finished.
+   * NEVER unlock from localStorage / preview leftovers before the live event ends.
+   */
   function isMemoryUnlocked(now = new Date()) {
     if (MEMORY_PREVIEW_MODE) return true;
-    if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.hasCompletedEvents()) {
-      return true;
-    }
     return getGlobalEventState(now) === EventState.COMPLETED;
   }
 
