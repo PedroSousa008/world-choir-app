@@ -169,7 +169,7 @@ html.sws-page body {
   left: 13%;
   right: 13%;
   bottom: 8%;
-  overflow: hidden;        /* never spill outside the paper */
+  overflow: visible;
   color: #2a1f0e;          /* dark ink colour that reads on the parchment */
   /* No background — text sits directly on the image */
 }
@@ -179,12 +179,13 @@ html.sws-page body {
 /* 1. "Dear John," — Brittany Signature 32px */
 .sws-letter__greeting {
   margin: 0 0 0.55em;
-  padding: 0;
+  padding: 0.28em 0 0.32em;
   font-family: 'Brittany Signature', cursive;
   font-size: 15px;
   font-weight: normal;
   font-style: normal;
-  line-height: 1.2;
+  line-height: 1.85;
+  overflow: visible;
   color: #2a1f0e;
 }
 
