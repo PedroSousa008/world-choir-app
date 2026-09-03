@@ -1,104 +1,46 @@
-/* Song We Sang — parchment is the screen background (full chain) */
+/* Song We Sang — intimate letter page */
 
-/*
- * --sws-parchment-base sampled from background-imagine.png center (#e9cb9e).
- * Theme CSS sets html/body to #000; these rules must win on this page only.
- */
-html.sws-page {
-  --sws-parchment-base: #e9cb9e;
-  min-height: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
-  background-color: var(--sws-parchment-base) !important;
-  /* Texture on html so Safari rubber-band / overscroll never reveals white or black */
-  background-image: url('../images/background-imagine.png') !important;
-  background-size: cover !important;
-  background-position: center center !important;
-  background-repeat: no-repeat !important;
-  overflow-x: clip;
+html.sws-page,
+html.sws-page body {
+  background: var(--bg-void, #000);
 }
 
-html.sws-page body.sws-page-body {
-  margin: 0 !important;
-  min-height: 100%;
-  min-height: 100vh;
+.sws-page-body {
+  position: relative;
   min-height: 100dvh;
-  min-height: -webkit-fill-available;
-  max-width: none;
-  color: #2a241c;
-  background-color: var(--sws-parchment-base) !important;
-  background-image: url('../images/background-imagine.png') !important;
-  background-size: cover !important;
-  background-position: center center !important;
-  background-repeat: no-repeat !important;
-  overflow-x: clip;
-}
-
-/*
- * Fixed full-bleed layer: the parchment IS the screen.
- * inset:0 covers the layout viewport including under status bar / home indicator
- * when viewport-fit=cover is set. Do NOT size this to visualViewport — that
- * left light bands above/below on iOS Safari.
- */
-.sws-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  width: auto;
-  height: auto;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  pointer-events: none;
-  background-color: var(--sws-parchment-base, #e9cb9e);
-  background-image: url('../images/background-imagine.png');
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
+  color: var(--text-primary, #f4f4f6);
 }
 
 .sws-ambient {
-  display: none !important;
+  opacity: 1;
+  pointer-events: none;
 }
 
-/*
- * Content sits ON the parchment. Safe-area padding insets content only —
- * background remains underneath (no colored bands).
- * Override theme .page nav padding / black assumptions.
- */
-main.page.sws-page {
+.sws-page {
   position: relative;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
   width: 100%;
-  max-width: 36rem;
-  min-height: 100vh;
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
+  max-width: 40rem;
   margin: 0 auto;
-  padding-top: max(12px, env(safe-area-inset-top, 0px));
-  padding-right: max(18px, env(safe-area-inset-right, 0px));
-  padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
-  padding-left: max(18px, env(safe-area-inset-left, 0px));
+  padding:
+    max(12px, env(safe-area-inset-top))
+    max(22px, env(safe-area-inset-right))
+    max(48px, env(safe-area-inset-bottom))
+    max(22px, env(safe-area-inset-left));
   box-sizing: border-box;
-  background: transparent !important;
-  overflow-x: clip;
+  background: transparent;
 }
 
 .sws-back {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin: 0 0 6px;
-  padding: 4px 2px;
+  gap: 6px;
+  margin: 4px 0 20px;
+  padding: 6px 2px;
   font-family: var(--font-sans, Inter, system-ui, sans-serif);
-  font-size: 0.7rem;
+  font-size: 0.82rem;
   font-weight: 500;
-  color: rgba(42, 36, 28, 0.55);
+  color: var(--text-secondary, #a8abb8);
   text-decoration: none;
   transition: color 0.35s ease;
   -webkit-tap-highlight-color: transparent;
@@ -106,104 +48,92 @@ main.page.sws-page {
 
 .sws-back:hover,
 .sws-back:focus-visible {
-  color: rgba(42, 36, 28, 0.9);
+  color: var(--text-primary, #f4f4f6);
   outline: none;
 }
 
 .sws-back svg {
   display: block;
   flex-shrink: 0;
-  width: 14px;
-  height: 14px;
 }
 
 .sws-header {
-  flex-shrink: 0;
-  margin: 0 0 10px;
+  margin: 0 0 3.25rem;
   text-align: center;
 }
 
 .sws-page-title {
   margin: 0;
   font-family: var(--font-sans, Inter, system-ui, sans-serif);
-  font-size: 0.55rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(42, 36, 28, 0.5);
-}
-
-.sws-letter-shell {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-  width: 100%;
+  color: var(--accent-gold, #c9a962);
 }
 
 .sws-letter {
   font-family: 'Source Serif 4', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
-  font-size: 0.58rem;
+  font-size: clamp(1.05rem, 2.6vw, 1.18rem);
   font-weight: 400;
-  line-height: 1.32;
-  letter-spacing: 0.005em;
-  color: #2a241c;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+  color: var(--text-primary, #f4f4f6);
   text-wrap: pretty;
   background: transparent;
-  transform-origin: top center;
-  will-change: transform;
 }
 
 .sws-letter p {
-  margin: 0 0 0.42em;
+  margin: 0 0 1.15em;
 }
 
 .sws-letter__greeting {
-  margin-bottom: 0.7em;
+  margin-bottom: 1.6em;
 }
 
 .sws-letter__line {
-  margin-bottom: 0.08em;
+  margin-bottom: 0.2em;
 }
 
 .sws-letter__line + .sws-letter__emphasis,
 .sws-letter__line + .sws-letter__p {
-  margin-top: 0.42em;
+  margin-top: 1.15em;
 }
 
 .sws-letter__emphasis {
-  margin-bottom: 0.48em;
+  margin-bottom: 1.25em;
 }
 
 .sws-letter__emphasis strong {
   font-weight: 600;
-  color: #1a1612;
+  color: var(--text-primary, #f4f4f6);
 }
 
 .sws-letter__closing {
-  margin-top: 0.85em;
-  margin-bottom: 0.35em;
+  margin-top: 2.4em;
+  margin-bottom: 0.85em;
 }
 
 .sws-letter__signature {
-  margin-top: 0.15em;
+  margin-top: 0.35em;
   margin-bottom: 0;
-  font-size: 1.05em;
+  font-size: 1.08em;
   letter-spacing: 0.02em;
 }
 
 .sws-letter__signature strong {
   font-weight: 600;
   font-style: italic;
-  color: #1a1612;
+  color: var(--text-primary, #f4f4f6);
 }
 
 .sws-letter__caret {
   display: inline-block;
   width: 1px;
-  height: 0.9em;
+  height: 0.95em;
   margin-left: 1px;
-  vertical-align: -0.06em;
-  background: rgba(42, 36, 28, 0.5);
+  vertical-align: -0.08em;
+  background: rgba(244, 244, 246, 0.55);
   animation: swsCaretPulse 1.1s ease-in-out infinite;
 }
 
@@ -229,21 +159,18 @@ main.page.sws-page {
 }
 
 @media (min-width: 720px) {
-  main.page.sws-page {
-    max-width: 28rem;
-    padding-left: max(28px, env(safe-area-inset-left, 0px));
-    padding-right: max(28px, env(safe-area-inset-right, 0px));
+  .sws-page {
+    padding-top: max(28px, env(safe-area-inset-top));
+    padding-bottom: 72px;
+  }
+
+  .sws-header {
+    margin-bottom: 4.5rem;
   }
 
   .sws-letter {
-    font-size: 0.68rem;
-    line-height: 1.36;
-  }
-}
-
-@media (min-height: 860px) {
-  .sws-letter {
-    font-size: 0.72rem;
+    font-size: 1.2rem;
+    line-height: 1.8;
   }
 }
 
@@ -257,14 +184,5 @@ main.page.sws-page {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
-  }
-}
-
-/* Standalone / PWA / installed WebView: same full-bleed parchment */
-@media (display-mode: standalone) {
-  html.sws-page,
-  html.sws-page body.sws-page-body {
-    min-height: 100vh;
-    min-height: 100dvh;
   }
 }
