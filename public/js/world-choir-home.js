@@ -526,7 +526,6 @@ const WorldChoirHome = (() => {
 
         <div class="home-after-body">
           <section class="home-after-card home-after-card--song" aria-label="The song we sang">
-            <p class="home-after-card__eyebrow">The song we sang</p>
             <div class="home-after-song">
               <img class="home-after-song__art" src="${POST_EVENT_IMAGES.song}" alt="" decoding="async" width="120" height="120">
               <div class="home-after-song__meta">
