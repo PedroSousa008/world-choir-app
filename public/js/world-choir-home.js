@@ -400,12 +400,6 @@ const WorldChoirHome = (() => {
     return '"You may say I\'m a dreamer, but I\'m not the only one."';
   }
 
-  function truncatePromise(text, max = 120) {
-    if (!text) return '';
-    const t = String(text).trim();
-    if (t.length <= max) return t;
-    return `${t.slice(0, max - 1).trim()}…`;
-  }
   function formatStat(n) {
     if (n == null || Number.isNaN(n)) return '—';
     return Number(n).toLocaleString('en-US');
@@ -486,8 +480,6 @@ const WorldChoirHome = (() => {
 
   function renderPostEventHome(stats = {}) {
     const merged = { ...getPostEventStatsFallback(), ...stats };
-    const promise = WorldChoirDB.getPromiseForCurrentUser();
-    const hasPromise = !!promise?.promise_text;
     const e = WorldChoirConfig.ACTIVE_EVENT;
     const song = WorldChoirPracticeConfig?.PRACTICE_SONG || { title: e.songName, artist: e.artistName };
     const showConfetti = isPostEventConfettiActive();
@@ -545,21 +537,6 @@ const WorldChoirHome = (() => {
             </div>
           </a>
 
-          <section class="home-after-card home-after-card--promise" aria-label="Your promise to the world">
-            <div class="home-after-promise">
-              <span class="home-after-promise__icon" aria-hidden="true">${statIcon('promise')}</span>
-              <div class="home-after-promise__body">
-                <p class="home-after-card__eyebrow home-after-card__eyebrow--left">Your promise to the world</p>
-                ${hasPromise ? `
-                  <p class="home-after-promise__text">"${esc(truncatePromise(promise.promise_text))}"</p>
-                ` : `
-                  <p class="home-after-promise__text home-after-promise__text--muted">Your promise will appear here once shared.</p>
-                `}
-              </div>
-              ${hasPromise ? `<button type="button" class="home-after-promise__btn" id="home-view-promise">View my promise ›</button>` : ''}
-            </div>
-          </section>
-
           <section class="home-after-memory" aria-label="The world's memory">
             <img class="home-after-memory__bg" src="${POST_EVENT_IMAGES.memory}" alt="" decoding="async" width="800" height="360">
             <div class="home-after-memory__overlay" aria-hidden="true"></div>
@@ -600,28 +577,6 @@ const WorldChoirHome = (() => {
       link.href = href;
       document.head.appendChild(link);
     });
-
-    const openPromise = () => {
-      const promise = WorldChoirDB.getPromiseForCurrentUser();
-      if (!promise?.promise_text) return;
-      const sheet = document.getElementById('home-promise-sheet');
-      const text = document.getElementById('home-promise-text');
-      if (text) text.textContent = `"${promise.promise_text}"`;
-      sheet?.removeAttribute('hidden');
-      sheet?.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-    };
-
-    const closePromise = () => {
-      const sheet = document.getElementById('home-promise-sheet');
-      sheet?.setAttribute('hidden', '');
-      sheet?.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-    };
-
-    document.getElementById('home-view-promise')?.addEventListener('click', openPromise);
-    document.getElementById('home-promise-close')?.addEventListener('click', closePromise);
-    document.getElementById('home-promise-close-x')?.addEventListener('click', closePromise);
   }
 
   const POST_EVENT_STATS_TOP_PX = 370;
