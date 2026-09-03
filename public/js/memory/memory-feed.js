@@ -77,13 +77,15 @@ const WorldChoirMemoryFeed = (() => {
   }
 
   function getSnapshot() {
+    const atEnd = Boolean(state.current) && !state.future.length && !state.hasMore && !state.isFetchingMore;
     return {
       history: state.history.slice(),
       current: state.current,
       future: state.future.slice(),
       left: state.history.length ? state.history[state.history.length - 1] : null,
       right: state.future[0] || null,
-      isWaitingForLive: !state.future.length && !!state.current && !state.hasMore,
+      isWaitingForLive: atEnd,
+      isPrefetching: Boolean(state.current) && !state.future.length && (state.hasMore || state.isFetchingMore),
       isEmpty: !state.current && !state.isInitialLoading,
       isInitialLoading: state.isInitialLoading,
       isFetchingMore: state.isFetchingMore,
@@ -226,7 +228,10 @@ const WorldChoirMemoryFeed = (() => {
   }
 
   function updateWaitingFlag() {
-    state.isWaitingForLive = Boolean(state.current) && !state.future.length && !state.hasMore;
+    state.isWaitingForLive = Boolean(state.current)
+      && !state.future.length
+      && !state.hasMore
+      && !state.isFetchingMore;
   }
 
   async function loadInitial() {
