@@ -336,6 +336,10 @@
   line-height: 1.25;
 }
 
+.mem-stat__label--stack {
+  letter-spacing: 0.06em;
+}
+
 @media (max-width: 520px) {
   .mem-event-card__stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));

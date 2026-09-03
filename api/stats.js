@@ -1,4 +1,4 @@
-const { getWorldChoirStats, jsonStorageError } = require('./_lib/store');
+const { getWorldChoirStats, listAllPromises, jsonStorageError } = require('./_lib/store');
 const { getDailyActsCompletedTotal } = require('./_lib/daily-peace');
 
 module.exports = async function handler(req, res) {
@@ -12,14 +12,19 @@ module.exports = async function handler(req, res) {
 
   try {
     const eventId = req.query.eventId || 'world-choir-2027';
-    const [stats, dailyActsCompleted] = await Promise.all([
+    const [stats, dailyActsCompleted, promises] = await Promise.all([
       getWorldChoirStats(eventId),
       getDailyActsCompletedTotal(),
+      listAllPromises().catch(() => []),
     ]);
+    const promisesMade = (promises || []).filter(
+      (p) => !p?.event_id || String(p.event_id) === String(eventId)
+    ).length;
     return res.status(200).json({
       ...stats,
       songs: 1,
       dailyActsCompleted,
+      promisesMade,
     });
   } catch (err) {
     console.error('api/stats error:', err);

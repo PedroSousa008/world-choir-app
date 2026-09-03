@@ -188,9 +188,9 @@ const WorldChoirMemory = (() => {
               <span class="mem-stat__label">Promises Made</span>
             </div>
             <div class="mem-stat" role="listitem">
-              <span class="mem-stat__icon" aria-hidden="true">${iconSvg('world')}</span>
-              <span class="mem-stat__value">${formatCount(event.worldCount)}</span>
-              <span class="mem-stat__label">World</span>
+              <span class="mem-stat__icon" aria-hidden="true">${iconSvg('sprout')}</span>
+              <span class="mem-stat__value">${event.dailyActsCompleted == null ? '—' : formatCount(event.dailyActsCompleted)}</span>
+              <span class="mem-stat__label mem-stat__label--stack">Daily Acts<br>Completed</span>
             </div>
           </div>
         </article>
@@ -607,10 +607,12 @@ const WorldChoirMemory = (() => {
     const el = document.getElementById('memory-content');
     if (!el) return;
 
-    const event = WorldChoirMemoryData.getDefaultEvent();
+    const [event, route] = await Promise.all([
+      WorldChoirMemoryData.loadEventArchive(),
+      WorldChoirMemoryData.loadPassTheWorldRoute(),
+    ]);
     const photos = WorldChoirMemoryData.getPhotos();
     const stamps = WorldChoirMemoryData.getStamps();
-    const route = WorldChoirMemoryData.getRoute();
     carouselIndex = Math.min(carouselIndex, Math.max(0, photos.length - 1));
     if (photos.length >= 3) carouselIndex = Math.min(1, photos.length - 1);
 
