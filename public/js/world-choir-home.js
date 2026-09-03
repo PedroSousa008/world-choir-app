@@ -283,7 +283,7 @@ const WorldChoirHome = (() => {
     return postEventStatsPromise;
   }
 
-  const POST_EVENT_CONFETTI_MS = 60 * 60 * 1000;
+  const POST_EVENT_CONFETTI_MS = 48 * 60 * 60 * 1000;
 
   function isPostEventConfettiActive(nowMs = Date.now()) {
     const eventEndMs = WorldChoirConfig.getEventEnd().getTime();
