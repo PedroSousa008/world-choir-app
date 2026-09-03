@@ -215,6 +215,38 @@ const WorldChoirHome = (() => {
 
   let postEventStats = null;
   let postEventStatsPromise = null;
+  let confettiStarted = false;
+
+  const POST_EVENT_CONFETTI_MS = 60 * 60 * 1000;
+
+  function isPostEventConfettiActive(nowMs = Date.now()) {
+    const eventEndMs = WorldChoirConfig.getEventEnd().getTime();
+    return nowMs >= eventEndMs && nowMs < eventEndMs + POST_EVENT_CONFETTI_MS;
+  }
+
+  function initPostEventConfetti(container) {
+    if (!container || confettiStarted || !isPostEventConfettiActive()) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (reduced) return;
+
+    const fallDistance = Math.max(container.offsetHeight, 120);
+    container.style.setProperty('--fall-distance', `${fallDistance}px`);
+    confettiStarted = true;
+
+    const colors = ['#4ec5e8', '#3d7cff', '#6b5ce7', '#c9a962', '#e8f4ff', '#8ab4ff'];
+    const pieces = 48;
+    let html = '';
+    for (let i = 0; i < pieces; i++) {
+      const left = Math.random() * 100;
+      const delay = Math.random() * 4;
+      const duration = 4 + Math.random() * 5;
+      const size = 4 + Math.random() * 6;
+      const color = colors[i % colors.length];
+      const rotate = Math.random() * 360;
+      html += `<span class="home-after-hero__confetti__piece" style="left:${left}%;animation-delay:${delay}s;animation-duration:${duration}s;width:${size}px;height:${size * (0.4 + Math.random())}px;background:${color};--rot:${rotate}deg"></span>`;
+    }
+    container.innerHTML = html;
+  }
 
   const POST_EVENT_IMAGES = {
     hero: 'images/after-event.png',
@@ -301,11 +333,15 @@ const WorldChoirHome = (() => {
     const e = WorldChoirConfig.ACTIVE_EVENT;
     const song = WorldChoirPracticeConfig?.PRACTICE_SONG || { title: e.songName, artist: e.artistName };
     const voicesLabel = getPostEventVoicesLabel(merged.voices);
+    const showConfetti = isPostEventConfettiActive();
 
     return `
       <div class="home-after">
         <header class="home-after-hero">
-          <img class="home-after-hero__planet" src="${POST_EVENT_IMAGES.hero}" alt="" decoding="async" width="800" height="400">
+          <div class="home-after-hero__sky">
+            ${showConfetti ? '<div class="home-after-hero__confetti" id="home-after-confetti" aria-hidden="true"></div>' : ''}
+            <img class="home-after-hero__planet" src="${POST_EVENT_IMAGES.hero}" alt="" decoding="async" width="800" height="400">
+          </div>
           <div class="home-after-hero__content">
             <p class="home-after-hero__voices" id="home-after-voices" aria-live="polite">${esc(voicesLabel)}</p>
             <img class="home-after-hero__logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir" width="1024" height="1024" decoding="async">
@@ -435,6 +471,14 @@ const WorldChoirHome = (() => {
     const fallback = getPostEventStatsFallback();
     root.innerHTML = renderPostEventHome(fallback);
     bindPostEventActions();
+
+    const confettiEl = document.getElementById('home-after-confetti');
+    const planetImg = document.querySelector('.home-after-hero__planet');
+    const startConfetti = () => initPostEventConfetti(confettiEl);
+    if (confettiEl) {
+      if (planetImg?.complete) startConfetti();
+      else planetImg?.addEventListener('load', startConfetti, { once: true });
+    }
 
     fetchPostEventStats().then((stats) => {
       if (homeView === 'post-event' || homeView === 'post-event-complete') {

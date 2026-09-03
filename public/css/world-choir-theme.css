@@ -36,6 +36,8 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: #000000;
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 body {
@@ -43,7 +45,8 @@ body {
   background: var(--bg-void);
   color: var(--text-primary);
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
+  max-width: 100%;
   line-height: 1.5;
 }
 
@@ -106,6 +109,8 @@ body {
   padding: 32px 24px calc(var(--nav-height) + 32px);
   max-width: 720px;
   margin: 0 auto;
+  width: 100%;
+  overflow-x: clip;
 }
 
 .page-wide {

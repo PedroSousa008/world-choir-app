@@ -7,6 +7,8 @@
   padding: 24px 20px calc(var(--nav-height) + 24px);
   max-width: 480px;
   margin: 0 auto;
+  width: 100%;
+  overflow-x: clip;
   text-align: center;
 }
 
@@ -493,34 +495,70 @@
   max-width: 520px;
   padding: 0 0 calc(var(--nav-height) + 12px);
   text-align: left;
+  overflow-x: clip;
 }
 
 .home-after {
   width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .home-after-hero {
   position: relative;
-  margin: 0 -20px 0;
-  min-height: 420px;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(20, 40, 90, 0.5), transparent 55%),
-    linear-gradient(180deg, #050810 0%, #000 100%);
+  background: linear-gradient(180deg, #050810 0%, #000 100%);
+}
+
+.home-after-hero__sky {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.home-after-hero__confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.home-after-hero__confetti__piece {
+  position: absolute;
+  top: -12px;
+  border-radius: 1px;
+  opacity: 0.85;
+  animation-name: homeAfterConfettiFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  transform: rotate(var(--rot, 0deg));
+}
+
+@keyframes homeAfterConfettiFall {
+  0% {
+    transform: translateY(0) rotate(var(--rot, 0deg));
+    opacity: 0;
+  }
+  6% { opacity: 0.9; }
+  100% {
+    transform: translateY(var(--fall-distance, 320px)) rotate(calc(var(--rot, 0deg) + 180deg));
+    opacity: 0;
+  }
 }
 
 .home-after-hero__planet {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  z-index: 1;
+  display: block;
   width: 100%;
-  max-width: 520px;
+  max-width: 100%;
   height: auto;
-  min-height: 200px;
   object-fit: cover;
   object-position: center top;
   pointer-events: none;
@@ -583,7 +621,8 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 18px 0 8px;
+  padding: 18px 20px 8px;
+  max-width: 100%;
 }
 
 .home-after-card {
@@ -613,6 +652,8 @@
   grid-template-columns: 1fr auto 1fr auto 1fr;
   align-items: start;
   gap: 0;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .home-after-stat {
@@ -722,6 +763,8 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .home-after-promise__icon {
@@ -758,6 +801,7 @@
 .home-after-promise__btn {
   flex-shrink: 0;
   align-self: center;
+  max-width: 100%;
   padding: 10px 12px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -768,7 +812,8 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
@@ -913,6 +958,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .home-after-hero__confetti__piece {
+    display: none;
+  }
+
   .home-after-memory__btn:active {
     transform: none;
   }
