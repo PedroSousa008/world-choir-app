@@ -411,14 +411,7 @@ const GlobalLiveEvent = (() => {
     document.getElementById('home-page')?.setAttribute('hidden', '');
     active = true;
 
-    LyricsDisplay.mount(content);
-    document.getElementById('practice-controls-inner')?.setAttribute('hidden', '');
-    const communityTitle = content.querySelector('.pm-community__title');
-    if (communityTitle) communityTitle.textContent = 'The world is singing';
-    const communityPrimary = content.querySelector('.pm-community__primary');
-    if (communityPrimary) communityPrimary.textContent = 'You are part of this moment.';
-    const communitySecondary = content.querySelector('.pm-community__secondary');
-    if (communitySecondary) communitySecondary.hidden = true;
+    LyricsDisplay.mountLive(content);
     return true;
   }
 
