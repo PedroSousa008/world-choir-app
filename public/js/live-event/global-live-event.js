@@ -33,6 +33,7 @@ const GlobalLiveEvent = (() => {
   let transitioning = false;
   let lastAudioSeekAt = 0;
   let lastVideoSeekAt = 0;
+  let audioLockPromise = null;
 
   let videoEl = null;
   let audioEl = null;
@@ -261,14 +262,34 @@ const GlobalLiveEvent = (() => {
       el.id = 'wc-live-song-audio';
       el.preload = 'auto';
       el.setAttribute('playsinline', '');
+      el.setAttribute('webkit-playsinline', '');
       document.body.appendChild(el);
     }
     const url = WorldChoirLiveConfig.EVENT.liveSong.audioUrl;
-    if (el.getAttribute('data-src') !== url) {
-      el.setAttribute('data-src', url);
-      el.src = url;
+    const base = String(url).split('#')[0];
+    const currentBase = String(el.getAttribute('data-src') || el.src || '').split('#')[0];
+    if (currentBase !== base && !currentBase.endsWith(base)) {
+      el.setAttribute('data-src', base);
+      el.src = base;
     }
     return el;
+  }
+
+  /**
+   * Force the audio element to open at a specific global second.
+   * Media fragments (#t=) are far more reliable than seek-after-play on iOS refresh.
+   */
+  function applyAudioMediaFragment(el, atSec) {
+    const url = WorldChoirLiveConfig.EVENT.liveSong.audioUrl;
+    const base = String(url).split('#')[0];
+    const start = Math.max(0, Math.floor(atSec * 100) / 100);
+    const nextSrc = start > 0.35 ? `${base}#t=${start}` : base;
+    el.setAttribute('data-src', base);
+    // Always reassign when rejoining mid-song so Safari opens at #t=.
+    if (el.getAttribute('src') !== nextSrc && el.src.indexOf(`#t=${start}`) === -1) {
+      el.src = nextSrc;
+      try { el.load(); } catch { /* ignore */ }
+    }
   }
 
   async function primeLiveSongAudio() {
@@ -939,75 +960,132 @@ const GlobalLiveEvent = (() => {
   }
 
   /**
-   * iOS-safe lock: play (usually muted) first, THEN seek while the pipeline is active.
-   * Seeking before the first play() often snaps back to 0 on mobile Safari.
+   * iOS-safe lock onto the global lyric clock.
+   * 1) Open media at #t=globalTime (reliable on refresh)
+   * 2) play muted
+   * 3) fine-seek while playing
+   * 4) unmute if allowed
    */
   async function lockAudioToGlobalPosition({ audible = false } = {}) {
-    const el = audioEl || getLiveSongAudio();
-    audioEl = el;
-    if (!el) return false;
-
-    if (!el._wcBound) {
-      el._wcBound = true;
-      el.addEventListener('ended', onSongEnded);
-      el.addEventListener('error', onSongError);
+    if (audioLockPromise) {
+      try { await audioLockPromise; } catch { /* ignore */ }
     }
 
-    try {
-      await waitForAudioReady(el);
-    } catch {
-      startLyricClock(el);
-      return false;
-    }
+    audioLockPromise = (async () => {
+      const el = audioEl || getLiveSongAudio();
+      audioEl = el;
+      if (!el) return false;
 
-    // Wait briefly for duration if needed — seeking without duration is unreliable.
-    if (!Number.isFinite(el.duration) || el.duration <= 0) {
-      await new Promise((resolve) => {
-        const done = () => resolve();
-        el.addEventListener('durationchange', done, { once: true });
-        setTimeout(done, 800);
-      });
-    }
-
-    el.volume = 1;
-    // Start muted so autoplay is allowed; unmute only after we are on the global time.
-    el.muted = true;
-
-    try {
-      if (el.paused || el.ended) {
-        await el.play();
+      if (!el._wcBound) {
+        el._wcBound = true;
+        el.addEventListener('ended', onSongEnded);
+        el.addEventListener('error', onSongError);
       }
-    } catch {
-      startLyricClock(el);
-      updateSoundToggleUi();
-      return false;
-    }
 
-    // Seek AFTER play is running — this is what stops the "restart from 0" bug.
-    for (let attempt = 0; attempt < 4; attempt++) {
-      const expected = clampSongTime(getGlobalLyricTimeSec(), el);
-      await seekAudioAndWait(el, expected);
-      await new Promise((r) => setTimeout(r, 80));
-      if (Math.abs((el.currentTime || 0) - clampSongTime(getGlobalLyricTimeSec(), el)) <= 1.25) {
-        break;
+      const expected0 = clampSongTime(getGlobalLyricTimeSec(), el);
+      const actual0 = el.currentTime || 0;
+      const needsFragment =
+        expected0 > 1.5
+        && (actual0 < 2.5 || Math.abs(actual0 - expected0) > 3.5 || el.paused || el.ended || el.readyState < 2);
+      // Mid-join / refresh: open the file at the correct second via media fragment.
+      if (needsFragment) {
+        applyAudioMediaFragment(el, expected0);
       }
-    }
 
-    const wantAudible = audible || audioUnlocked;
-    if (wantAudible) {
       try {
-        el.muted = false;
-        audioUnlocked = true;
+        await waitForAudioReady(el);
       } catch {
+        startLyricClock(el);
+        return false;
+      }
+
+      if (!Number.isFinite(el.duration) || el.duration <= 0) {
+        await new Promise((resolve) => {
+          const done = () => resolve();
+          el.addEventListener('durationchange', done, { once: true });
+          setTimeout(done, 900);
+        });
+      }
+
+      el.volume = 1;
+      el.playbackRate = 1;
+      el.muted = true;
+
+      try {
+        if (el.paused || el.ended) {
+          await el.play();
+        }
+      } catch {
+        startLyricClock(el);
+        updateSoundToggleUi();
+        return false;
+      }
+
+      // Fine-tune after play is running (and after #t= open).
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const expected = clampSongTime(getGlobalLyricTimeSec(), el);
+        const drift = Math.abs((el.currentTime || 0) - expected);
+        if (drift <= 1.0) break;
+
+        // If still near 0 while the world is mid-song, re-apply the fragment and play again.
+        if ((el.currentTime || 0) < 2 && expected > 5) {
+          applyAudioMediaFragment(el, expected);
+          try {
+            await waitForAudioReady(el);
+            el.muted = true;
+            await el.play();
+          } catch { /* ignore */ }
+        }
+
+        if (typeof el.fastSeek === 'function') {
+          try { el.fastSeek(expected); } catch { /* ignore */ }
+        }
+        await seekAudioAndWait(el, expected);
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      // Final verify — pause→seek→play fallback when still badly wrong.
+      {
+        const expected = clampSongTime(getGlobalLyricTimeSec(), el);
+        if (Math.abs((el.currentTime || 0) - expected) > 2) {
+          try {
+            el.pause();
+            el.currentTime = expected;
+            await new Promise((r) => setTimeout(r, 60));
+            el.muted = true;
+            await el.play();
+            await seekAudioAndWait(el, clampSongTime(getGlobalLyricTimeSec(), el));
+          } catch { /* ignore */ }
+        }
+      }
+
+      const wantAudible = audible || audioUnlocked;
+      if (wantAudible) {
+        try {
+          el.muted = false;
+          audioUnlocked = true;
+          // Unmute can reset position on some mobile browsers — re-check once.
+          const expected = clampSongTime(getGlobalLyricTimeSec(), el);
+          if (Math.abs((el.currentTime || 0) - expected) > 1.5) {
+            await seekAudioAndWait(el, expected);
+          }
+        } catch {
+          el.muted = true;
+        }
+      } else {
         el.muted = true;
       }
-    } else {
-      el.muted = true;
-    }
 
-    startLyricClock(el);
-    updateSoundToggleUi();
-    return true;
+      startLyricClock(el);
+      updateSoundToggleUi();
+      return true;
+    })();
+
+    try {
+      return await audioLockPromise;
+    } finally {
+      audioLockPromise = null;
+    }
   }
 
   async function ensureAudibleAtGlobalPosition() {
@@ -1086,7 +1164,6 @@ const GlobalLiveEvent = (() => {
   function syncSongToGlobal(nowMs) {
     if (!audioEl) return;
     if (!isLiveSongUiActive()) showLiveSongShell(getTargetSongPositionSec(nowMs));
-    if (audioEl.seeking) return;
 
     if (audioEl.paused || audioEl.ended) {
       startLiveAudio(getTargetSongPositionSec(nowMs)).catch(() => {});
@@ -1099,9 +1176,17 @@ const GlobalLiveEvent = (() => {
     const abs = Math.abs(diff);
 
     // Hard rejoin fix: if audio is stuck near the start while the world is mid-song,
-    // force the play→seek lock again instead of tiny rate tweaks.
+    // force the play→fragment→seek lock again instead of tiny rate tweaks.
     if (actual < 2.5 && expected > 5) {
-      lockAudioToGlobalPosition({ audible: audioUnlocked }).catch(() => {});
+      if (!audioLockPromise) {
+        lockAudioToGlobalPosition({ audible: audioUnlocked }).catch(() => {});
+      }
+      LyricsDisplay.update(expected, audioEl);
+      return;
+    }
+
+    // Don't fight an in-flight lock/seek with rate tweaks.
+    if (audioLockPromise || audioEl.seeking) {
       LyricsDisplay.update(expected, audioEl);
       return;
     }
@@ -1112,9 +1197,14 @@ const GlobalLiveEvent = (() => {
       if (allowSeek) {
         lastAudioSeekAt = now;
         audioEl.playbackRate = 1;
-        seekAudioAndWait(audioEl, expected).then(() => {
-          LyricsDisplay.update(getTargetSongPositionSec(WorldChoirServerTime.nowMs()), audioEl);
-        }).catch(() => {});
+        // Large gaps after refresh: full lock (media fragment) beats a soft seek.
+        if (abs > SYNC.HARD_SEEK_S) {
+          lockAudioToGlobalPosition({ audible: audioUnlocked }).catch(() => {});
+        } else {
+          seekAudioAndWait(audioEl, expected).then(() => {
+            LyricsDisplay.update(getTargetSongPositionSec(WorldChoirServerTime.nowMs()), audioEl);
+          }).catch(() => {});
+        }
       }
       LyricsDisplay.update(expected, audioEl);
       return;

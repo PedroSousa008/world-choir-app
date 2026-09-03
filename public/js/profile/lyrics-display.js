@@ -267,7 +267,7 @@ const LyricsDisplay = (() => {
     }
   }
 
-  function updateProgress(audio) {
+  function updateProgress(audio, displayTime) {
     const fillEl = document.getElementById('pm-progress-fill');
     const thumbEl = document.getElementById('pm-progress-thumb');
     const barEl = document.getElementById('pm-progress-bar');
@@ -275,8 +275,10 @@ const LyricsDisplay = (() => {
     const totalEl = document.getElementById('pm-time-total');
     if (!fillEl || !thumbEl || !currentEl || !totalEl) return;
 
-    const current = audio?.currentTime ?? 0;
-    const duration = audio?.duration ?? 0;
+    const duration = audio?.duration
+      || WorldChoirLiveConfig?.EVENT?.liveSong?.durationSeconds
+      || 0;
+    const current = Number.isFinite(displayTime) ? displayTime : (audio?.currentTime ?? 0);
     const pct = duration > 0 ? Math.min((current / duration) * 100, 100) : 0;
 
     fillEl.style.width = `${pct}%`;
@@ -308,7 +310,7 @@ const LyricsDisplay = (() => {
     }
     if (nextEl.textContent !== next) nextEl.textContent = next || '\u00a0';
 
-    if (audio) updateProgress(audio);
+    if (audio || Number.isFinite(currentTime)) updateProgress(audio, currentTime);
     updateVoiceCount();
   }
 
