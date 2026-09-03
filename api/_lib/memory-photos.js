@@ -356,9 +356,25 @@ async function createMemoryPhoto({
   const createdAt = new Date().toISOString();
   const subtype = contentType.replace(/^image\//, '');
   const ext = IMAGE_EXT_MAP[subtype] || 'jpg';
-
-  // Concurrency-safe daily uniqueness: first write of lock wins.
   const lockPath = userDayPath(eid, user.id, day);
+
+  // Soft pre-check (authoritative uniqueness is overwrite:false below).
+  try {
+    const existing = await readBlobJson(lockPath);
+    if (existing?.photoId) {
+      const e = new Error('You’ve already shared today’s memory.');
+      e.code = 'DAILY_MEMORY_LIMIT_REACHED';
+      throw e;
+    }
+  } catch (err) {
+    if (err?.code === 'DAILY_MEMORY_LIMIT_REACHED') throw err;
+  }
+
+  // Upload media before claiming the day lock so a failed upload doesn't burn the quota.
+  const pathname = mediaPath(eid, user.id, photoId, ext);
+  await putPrivateBinary(pathname, buffer, contentType, { overwrite: true });
+  const imageUrl = mediaProxyUrl(pathname);
+
   try {
     await writeJson(lockPath, {
       userId: user.id,
@@ -374,7 +390,6 @@ async function createMemoryPhoto({
       e.code = 'DAILY_MEMORY_LIMIT_REACHED';
       throw e;
     }
-    // Some blob errors wrap differently — re-check lock file.
     try {
       const existing = await readBlobJson(lockPath);
       if (existing?.photoId) {
@@ -387,10 +402,6 @@ async function createMemoryPhoto({
     }
     throw err;
   }
-
-  const pathname = mediaPath(eid, user.id, photoId, ext);
-  await putPrivateBinary(pathname, buffer, contentType, { overwrite: true });
-  const imageUrl = mediaProxyUrl(pathname);
 
   const voiceName = pledge?.voiceName || pledge?.display_name || null;
   const row = {
