@@ -228,6 +228,21 @@ html.wc-live-gate .wc-global-live--boot {
 
 .wc-live-sound-toggle__icon {
   display: block;
+  pointer-events: none;
+}
+
+.wc-live-sound-toggle__icon[hidden] {
+  display: none !important;
+}
+
+.wc-live-sound-toggle.is-on .wc-live-sound-toggle__icon--off,
+.wc-live-sound-toggle.is-off .wc-live-sound-toggle__icon--on {
+  display: none !important;
+}
+
+.wc-live-sound-toggle.is-on .wc-live-sound-toggle__icon--on,
+.wc-live-sound-toggle.is-off .wc-live-sound-toggle__icon--off {
+  display: block !important;
 }
 
 .pm-header--live,
