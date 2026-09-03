@@ -437,6 +437,7 @@ const WorldChoirHome = (() => {
   function render() {
     const root = document.getElementById('home-content');
     if (!root) return;
+    if (document.documentElement.classList.contains('wc-live-gate')) return;
     if (LiveEventMode.isActive()) return;
     if (typeof GlobalLiveEvent !== 'undefined' && GlobalLiveEvent.isActive()) return;
 

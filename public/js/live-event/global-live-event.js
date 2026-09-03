@@ -12,6 +12,10 @@ const GlobalLiveEvent = (() => {
     RATE_THRESHOLD_S: 0.2,
     MAX_RATE: 1.04,
     MIN_RATE: 0.96,
+    VIDEO_SEEK_THRESHOLD_S: 0.45,
+    VIDEO_RATE_THRESHOLD_S: 0.08,
+    VIDEO_MAX_RATE: 1.06,
+    VIDEO_MIN_RATE: 0.94,
     PRELOAD_LEAD_MS: 30 * 60 * 1000,
   };
 
@@ -29,6 +33,7 @@ const GlobalLiveEvent = (() => {
   let videoFailed = false;
   let videoEndedLocally = false;
   let preloaded = false;
+  let initPromise = null;
 
   function esc(str) {
     const el = document.createElement('span');
@@ -58,7 +63,8 @@ const GlobalLiveEvent = (() => {
                 preload="auto"
                 muted
                 autoplay
-                crossorigin="anonymous"
+                disablepictureinpicture
+                disableremoteplayback
               ></video>
             </div>
             <div class="wc-global-live__pre-fallback" id="wc-global-live-pre-fallback" hidden>
@@ -89,20 +95,68 @@ const GlobalLiveEvent = (() => {
     `);
   }
 
+  function clearLiveGate() {
+    document.documentElement.classList.remove('wc-live-gate');
+    getShell()?.classList.remove('wc-global-live--boot');
+  }
+
+  function getLiveSongAudio() {
+    let el = document.getElementById('wc-live-song-audio');
+    if (!el) {
+      el = document.createElement('audio');
+      el.id = 'wc-live-song-audio';
+      el.preload = 'auto';
+      el.setAttribute('playsinline', '');
+      document.body.appendChild(el);
+    }
+    const url = WorldChoirLiveConfig.EVENT.liveSong.audioUrl;
+    if (el.getAttribute('data-src') !== url) {
+      el.setAttribute('data-src', url);
+      el.src = url;
+    }
+    return el;
+  }
+
+  async function primeLiveSongAudio() {
+    const el = getLiveSongAudio();
+    try {
+      if (el.readyState < 1) await waitForAudioReady(el);
+      const wasMuted = el.muted;
+      const prevVolume = el.volume;
+      el.muted = true;
+      el.volume = 0;
+      await el.play();
+      el.pause();
+      el.currentTime = 0;
+      el.muted = wasMuted;
+      el.volume = prevVolume || 1;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function bindUnlockHandlers() {
-    const unlock = () => {
+    const unlock = async () => {
       if (audioUnlocked) return;
       audioUnlocked = true;
       document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
+      document.getElementById('wc-live-song-unlock')?.setAttribute('hidden', '');
       const preVideo = document.getElementById('wc-global-live-video');
       if (preVideo && state === 'PRE_EVENT') {
         preVideo.muted = false;
       }
+      await primeLiveSongAudio();
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        if (ctx.state === 'suspended') ctx.resume();
+        if (ctx.state === 'suspended') await ctx.resume();
       } catch {
         /* ignore */
+      }
+      if (state === 'LIVE_SONG' && audioEl?.paused) {
+        audioEl.play().then(() => {
+          LyricsDisplay.startSync(audioEl);
+        }).catch(() => {});
       }
     };
     ['pointerdown', 'keydown', 'touchstart'].forEach((evt) => {
@@ -113,6 +167,7 @@ const GlobalLiveEvent = (() => {
   function showTakeover() {
     const shell = getShell();
     if (!shell) return;
+    clearLiveGate();
     shell.classList.add('is-active');
     shell.setAttribute('aria-hidden', 'false');
     document.body.classList.add('wc-global-live-active');
@@ -296,8 +351,6 @@ const GlobalLiveEvent = (() => {
     audioEl.pause();
     audioEl.removeEventListener('ended', onSongEnded);
     audioEl.removeEventListener('error', onSongError);
-    audioEl.src = '';
-    audioEl.load();
     audioEl = null;
     LyricsDisplay.stopSync();
   }
@@ -331,22 +384,31 @@ const GlobalLiveEvent = (() => {
       mode.setAttribute('aria-hidden', 'true');
     }
     document.getElementById('wc-live-song-unlock')?.setAttribute('hidden', '');
+    document.getElementById('home-page')?.removeAttribute('hidden');
     document.getElementById('nav-root')?.removeAttribute('hidden');
     if (state !== 'PRE_EVENT') {
       document.body.style.overflow = '';
+      document.body.classList.remove('wc-global-live-active');
     }
   }
 
   function showLiveSongShell() {
-    hideTakeover();
+    const shell = getShell();
     const mode = document.getElementById('live-event-mode');
     const content = document.getElementById('live-event-content');
     if (!mode || !content) return false;
 
+    clearLiveGate();
+    document.getElementById('wc-global-live-pre')?.setAttribute('hidden', '');
+    shell?.classList.remove('is-active');
+    shell?.setAttribute('aria-hidden', 'true');
+
     mode.classList.add('active');
     mode.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('wc-global-live-active');
     document.body.style.overflow = 'hidden';
     document.getElementById('nav-root')?.setAttribute('hidden', '');
+    document.getElementById('home-page')?.setAttribute('hidden', '');
     active = true;
 
     LyricsDisplay.mount(content);
@@ -407,17 +469,31 @@ const GlobalLiveEvent = (() => {
     const actualDur = getActualVideoDurationSec();
     const clamped = Math.max(0, Math.min(targetSec, actualDur - 0.05));
 
-    if (Math.abs(videoEl.currentTime - clamped) > 0.35) {
-      videoEl.currentTime = clamped;
+    if (Math.abs(videoEl.currentTime - clamped) > 0.08) {
+      videoEl.pause();
+      await new Promise((resolve) => {
+        const finish = () => {
+          videoEl.removeEventListener('seeked', finish);
+          resolve();
+        };
+        videoEl.addEventListener('seeked', finish, { once: true });
+        videoEl.currentTime = clamped;
+        setTimeout(resolve, 150);
+      });
     }
+
+    videoEl.muted = !audioUnlocked;
+    videoEl.playsInline = true;
 
     if (autoplay) {
       try {
-        videoEl.muted = !audioUnlocked;
         if (videoEl.paused) await videoEl.play();
         if (audioUnlocked) videoEl.muted = false;
       } catch {
-        if (!audioUnlocked) {
+        try {
+          videoEl.muted = true;
+          await videoEl.play();
+        } catch {
           document.getElementById('wc-global-live-unlock')?.removeAttribute('hidden');
         }
       }
@@ -430,15 +506,21 @@ const GlobalLiveEvent = (() => {
     const actual = videoEl.currentTime;
     const diff = expected - actual;
 
-    // Desktop: only hard-seek on large drift — avoid playback-rate nudging (causes audio glitches).
-    if (Math.abs(diff) > 2.5) {
+    if (Math.abs(diff) > SYNC.VIDEO_SEEK_THRESHOLD_S) {
       videoEl.playbackRate = 1;
       videoEl.currentTime = expected;
       if (videoEl.paused) videoEl.play().catch(() => {});
       return;
     }
 
-    videoEl.playbackRate = 1;
+    if (Math.abs(diff) > SYNC.VIDEO_RATE_THRESHOLD_S) {
+      videoEl.playbackRate = Math.max(
+        SYNC.VIDEO_MIN_RATE,
+        Math.min(SYNC.VIDEO_MAX_RATE, 1 + diff * 0.4),
+      );
+    } else {
+      videoEl.playbackRate = 1;
+    }
   }
 
   async function onVideoEnded() {
@@ -447,12 +529,58 @@ const GlobalLiveEvent = (() => {
     transitioning = true;
     state = 'TRANSITIONING_TO_LIVE';
 
-    await reportVideoEnded();
-    if (!actualLiveSongStartUtc) {
-      actualLiveSongStartUtc = new Date(WorldChoirServerTime.nowMs()).toISOString();
+    const nowMs = WorldChoirServerTime.nowMs();
+    const target = getTargetSongPositionSec(nowMs);
+    const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
+
+    if (target >= duration - 0.5) {
+      state = 'LIVE_FINISHED';
+      onSongEnded();
+      transitioning = false;
+      return;
     }
 
-    await enterLiveSong({ fromVideoEnd: true });
+    state = 'LIVE_SONG';
+    cleanupVideo();
+    if (!mountLiveLyrics()) {
+      onSongError();
+      transitioning = false;
+      return;
+    }
+
+    audioEl = getLiveSongAudio();
+    if (!audioEl._wcBound) {
+      audioEl._wcBound = true;
+      audioEl.addEventListener('ended', onSongEnded);
+      audioEl.addEventListener('error', onSongError);
+    }
+
+    const seekTo = Math.min(target, audioEl.duration || target, duration - 0.05);
+    if (audioEl.readyState >= 1) {
+      audioEl.currentTime = seekTo;
+    }
+    audioEl.muted = false;
+    audioEl.volume = 1;
+
+    // Start play synchronously in the video-ended chain before any await (iOS handoff).
+    const playPromise = audioEl.play();
+
+    reportVideoEnded().then(() => {
+      if (!actualLiveSongStartUtc) {
+        actualLiveSongStartUtc = new Date(WorldChoirServerTime.nowMs()).toISOString();
+      }
+    }).catch(() => {});
+
+    try {
+      await playPromise;
+      LyricsDisplay.startSync(audioEl);
+      LyricsDisplay.update(audioEl.currentTime, audioEl);
+      document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
+      document.getElementById('wc-live-song-unlock')?.setAttribute('hidden', '');
+    } catch {
+      await startLiveAudio(target);
+    }
+
     transitioning = false;
   }
 
@@ -460,6 +588,7 @@ const GlobalLiveEvent = (() => {
     if (state === 'PRE_EVENT' && active) return;
     state = 'PRE_EVENT';
     showPreEventUI();
+    getLiveSongAudio();
     await prepareVideo();
 
     const nowMs = WorldChoirServerTime.nowMs();
@@ -484,6 +613,15 @@ const GlobalLiveEvent = (() => {
     }
 
     await seekVideoTo(target, { autoplay: true });
+    for (let attempt = 0; attempt < 5 && videoEl && videoEl.paused && !videoFailed; attempt++) {
+      try {
+        videoEl.muted = !audioUnlocked;
+        await videoEl.play();
+        break;
+      } catch {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
     updateCountdownUI(nowMs);
   }
 
@@ -501,8 +639,7 @@ const GlobalLiveEvent = (() => {
 
   async function startLiveAudio(target) {
     if (!audioEl) {
-      audioEl = new Audio(WorldChoirLiveConfig.EVENT.liveSong.audioUrl);
-      audioEl.preload = 'auto';
+      audioEl = getLiveSongAudio();
       audioEl.addEventListener('ended', onSongEnded);
       audioEl.addEventListener('error', onSongError);
       await waitForAudioReady(audioEl);
@@ -510,19 +647,30 @@ const GlobalLiveEvent = (() => {
 
     const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
     const seekTo = Math.min(target, audioEl.duration || target, duration - 0.05);
-    if (Math.abs(audioEl.currentTime - seekTo) > 0.35) {
+    if (Math.abs(audioEl.currentTime - seekTo) > 0.2) {
       audioEl.currentTime = seekTo;
     }
 
-    try {
-      await audioEl.play();
-      LyricsDisplay.startSync(audioEl);
-      LyricsDisplay.update(audioEl.currentTime, audioEl);
-      document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
-    } catch (err) {
-      console.warn('Live song autoplay blocked:', err);
-      showLiveSongUnlock();
+    audioEl.muted = false;
+    audioEl.volume = 1;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await audioEl.play();
+        LyricsDisplay.startSync(audioEl);
+        LyricsDisplay.update(audioEl.currentTime, audioEl);
+        document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
+        document.getElementById('wc-live-song-unlock')?.setAttribute('hidden', '');
+        return;
+      } catch (err) {
+        if (attempt < 4) {
+          await new Promise((resolve) => setTimeout(resolve, 80));
+        }
+      }
     }
+
+    console.warn('Live song autoplay blocked');
+    showLiveSongUnlock();
   }
 
   function showLiveSongUnlock() {
@@ -531,15 +679,20 @@ const GlobalLiveEvent = (() => {
       btn = document.createElement('button');
       btn.type = 'button';
       btn.id = 'wc-live-song-unlock';
-      btn.className = 'wc-global-live__unlock';
-      btn.textContent = 'Tap to join the live song';
+      btn.className = 'wc-global-live__unlock wc-global-live__unlock--song';
+      btn.innerHTML = '<span class="wc-global-live__unlock-title">Tap to join the live song</span><span class="wc-global-live__unlock-sub">The world is singing now</span>';
       document.body.appendChild(btn);
     }
     btn.removeAttribute('hidden');
     btn.onclick = async () => {
+      audioUnlocked = true;
       try {
-        await audioEl?.play();
-        LyricsDisplay.startSync(audioEl);
+        if (!audioEl) {
+          await startLiveAudio(getTargetSongPositionSec(WorldChoirServerTime.nowMs()));
+        } else {
+          await audioEl.play();
+          LyricsDisplay.startSync(audioEl);
+        }
         btn.setAttribute('hidden', '');
       } catch { /* still blocked */ }
     };
@@ -623,6 +776,8 @@ const GlobalLiveEvent = (() => {
     preloaded = true;
     const { videoUrl } = WorldChoirLiveConfig.EVENT.preEvent;
     const { audioUrl } = WorldChoirLiveConfig.EVENT.liveSong;
+
+    getLiveSongAudio();
 
     const linkV = document.createElement('link');
     linkV.rel = 'preload';
@@ -800,8 +955,45 @@ const GlobalLiveEvent = (() => {
     }
   }
 
-  async function init() {
+  function applyImmediateLiveGate() {
     ensureShell();
+    const nowMs = Date.now();
+    const next = computeState(nowMs);
+    if (next === 'NORMAL' || next === 'LIVE_FINISHED') return false;
+
+    clearLiveGate();
+    document.getElementById('home-page')?.setAttribute('hidden', '');
+    document.getElementById('earth-canvas')?.setAttribute('hidden', '');
+    document.getElementById('ambient-bg')?.setAttribute('hidden', '');
+    document.getElementById('nav-root')?.setAttribute('hidden', '');
+    document.body.classList.add('wc-global-live-active');
+    document.body.style.overflow = 'hidden';
+
+    if (next === 'PRE_EVENT') {
+      state = 'PRE_EVENT';
+      document.getElementById('wc-global-live-pre')?.removeAttribute('hidden');
+      const shell = getShell();
+      shell?.classList.add('is-active');
+      shell?.setAttribute('aria-hidden', 'false');
+      active = true;
+      return true;
+    }
+
+    if (next === 'LIVE_SONG') {
+      state = 'LIVE_SONG';
+      showLiveSongShell();
+      return true;
+    }
+
+    return false;
+  }
+
+  async function init() {
+    if (initPromise) return initPromise;
+
+    initPromise = (async () => {
+    ensureShell();
+    applyImmediateLiveGate();
     if (typeof LiveEventMode !== 'undefined') {
       if (!document.getElementById('live-event-mode')) {
         document.body.insertAdjacentHTML('beforeend', `
@@ -827,6 +1019,9 @@ const GlobalLiveEvent = (() => {
 
     startLoops();
     await tick();
+    })();
+
+    return initPromise;
   }
 
   function isActive() {

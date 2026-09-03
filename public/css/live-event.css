@@ -72,6 +72,19 @@ body.wc-global-live-active #nav-root {
   max-height: none;
   object-fit: contain;
   background: #000;
+  pointer-events: none;
+}
+
+.wc-global-live__video::-webkit-media-controls {
+  display: none !important;
+}
+
+.wc-global-live__video::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
+.wc-global-live--boot {
+  display: none;
 }
 
 .wc-global-live__pre-fallback {
@@ -145,6 +158,42 @@ body.wc-global-live-active #nav-root {
   font-size: 0.85rem;
   cursor: pointer;
   z-index: 2;
+}
+
+.wc-global-live__unlock--song {
+  position: fixed;
+  inset: 0;
+  transform: none;
+  left: 0;
+  bottom: 0;
+  border-radius: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 13000;
+  padding: 24px;
+}
+
+.wc-global-live__unlock-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.wc-global-live__unlock-sub {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+#wc-live-song-audio {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .wc-global-live__rotate-hint {

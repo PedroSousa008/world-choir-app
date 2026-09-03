@@ -14,10 +14,97 @@
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260902z">
   <link rel="stylesheet" href="css/home.css?v=20260903h">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
-  <link rel="stylesheet" href="css/live-event.css?v=20260903g">
+  <link rel="stylesheet" href="css/live-event.css?v=20260903j">
   <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
+  <script src="js/world-choir-event-schedule.js?v=20260903j"></script>
+  <script src="js/live-event/live-event-config.js?v=20260903j"></script>
+  <script>
+    (function wcLiveHeadGate() {
+      function inLiveWindow() {
+        try {
+          var pre = WorldChoirLiveConfig.getPreEventStartMs();
+          var end = WorldChoirLiveConfig.getEventStartMs() + WorldChoirLiveConfig.getSongDurationMs();
+          return Date.now() >= pre && Date.now() < end;
+        } catch (e) {
+          return false;
+        }
+      }
+      if (inLiveWindow()) {
+        document.documentElement.classList.add('wc-live-gate');
+      }
+    })();
+  </script>
+  <style>
+    html.wc-live-gate #home-page,
+    html.wc-live-gate #earth-canvas,
+    html.wc-live-gate .ambient-bg,
+    html.wc-live-gate #nav-root {
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+    html.wc-live-gate body {
+      background: #000;
+    }
+    html.wc-live-gate .wc-global-live--boot {
+      display: flex !important;
+      flex-direction: column;
+      position: fixed;
+      inset: 0;
+      z-index: 12000;
+      background: #000;
+    }
+    html.wc-live-gate #live-event-mode.active {
+      display: flex !important;
+      position: fixed;
+      inset: 0;
+      z-index: 12000;
+      background: #000;
+    }
+  </style>
 </head>
 <body>
+  <div class="wc-global-live wc-global-live--boot" id="wc-global-live" aria-hidden="true">
+    <div class="wc-global-live__ambient" aria-hidden="true"></div>
+    <section class="wc-global-live__pre" id="wc-global-live-pre" hidden>
+      <div class="wc-global-live__pre-inner">
+        <div class="wc-global-live__video-wrap" id="wc-global-live-video-wrap">
+          <video
+            class="wc-global-live__video"
+            id="wc-global-live-video"
+            playsinline
+            webkit-playsinline
+            preload="auto"
+            muted
+            autoplay
+            disablepictureinpicture
+            disableremoteplayback
+          ></video>
+        </div>
+        <div class="wc-global-live__pre-fallback" id="wc-global-live-pre-fallback" hidden>
+          <p class="wc-global-live__brand">World Choir 2027</p>
+          <p class="wc-global-live__tagline">The world is about to sing</p>
+          <p class="wc-global-live__countdown" id="wc-global-live-countdown" aria-live="polite">—</p>
+          <p class="wc-global-live__fallback-note" id="wc-global-live-fallback-note">
+            Preparing the live experience…
+          </p>
+        </div>
+        <div class="wc-global-live__countdown-bar" id="wc-global-live-countdown-bar" aria-live="polite">
+          <span class="wc-global-live__countdown-label">Singing in</span>
+          <span class="wc-global-live__countdown-value" id="wc-global-live-countdown-value">—</span>
+        </div>
+        <button type="button" class="wc-global-live__unlock" id="wc-global-live-unlock" hidden>
+          Tap to enable sound for the live event
+        </button>
+      </div>
+      <p class="wc-global-live__rotate-hint" id="wc-global-live-rotate-hint" aria-live="polite">
+        Rotate your device for the full cinematic view
+      </p>
+    </section>
+    <section class="wc-global-live__song" id="wc-global-live-song" hidden>
+      <div id="wc-global-live-song-content"></div>
+    </section>
+  </div>
+  <audio id="wc-live-song-audio" preload="auto" playsinline webkit-playsinline></audio>
   <canvas id="earth-canvas" aria-hidden="true"></canvas>
   <div class="ambient-bg" id="ambient-bg"></div>
 
@@ -66,7 +153,6 @@
 
   <div id="nav-root"></div>
 
-  <script src="js/world-choir-event-schedule.js?v=20260903i"></script>
   <script src="js/world-choir-config.js?v=20260903f"></script>
   <script src="js/world-choir-thank-you.js?v=20260903h"></script>
   <script src="js/world-choir-calendar.js?v=20260902u"></script>
@@ -81,13 +167,32 @@
   <script src="js/world-choir-participation.js"></script>
   <script src="js/world-choir-practice-config.js"></script>
   <script src="js/profile/lyrics-display.js"></script>
-  <script src="js/live-event/live-event-config.js?v=20260903f"></script>
-  <script src="js/live-event/server-time-sync.js?v=20260903c"></script>
-  <script src="js/live-event/global-live-event.js?v=20260903i"></script>
-  <script src="js/world-choir-live-event.js?v=20260903g"></script>
-  <script src="js/world-choir-global-live-bootstrap.js?v=20260903c"></script>
+  <script src="js/live-event/server-time-sync.js?v=20260903j"></script>
+  <script src="js/live-event/global-live-event.js?v=20260903j"></script>
+  <script src="js/world-choir-live-event.js?v=20260903j"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260819a"></script>
-  <script src="js/world-choir-home.js?v=20260903h"></script>
-  <script>WorldChoirHome.init();</script>
+  <script src="js/world-choir-home.js?v=20260903j"></script>
+  <script>
+    (function bootWorldChoirHome() {
+      function startHome() {
+        if (typeof WorldChoirHome !== 'undefined') WorldChoirHome.init();
+      }
+      function boot() {
+        if (typeof GlobalLiveEvent === 'undefined') {
+          startHome();
+          return;
+        }
+        GlobalLiveEvent.init().then(startHome).catch(function (err) {
+          console.warn('Global live event init failed:', err);
+          startHome();
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+      } else {
+        boot();
+      }
+    })();
+  </script>
 </body>
 </html>
