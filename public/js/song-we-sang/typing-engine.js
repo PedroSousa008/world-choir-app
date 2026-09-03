@@ -94,9 +94,10 @@ const SongWeSangTypingEngine = (() => {
     underline.setAttribute('class', 'sws-letter__underline');
     underline.setAttribute('fill', 'none');
     // Thin, nearly flat hand stroke with tiny natural wobble — left→right.
+    // Starts under "e" in The (~14%), extends past "In" (~96%).
     underline.setAttribute(
       'd',
-      'M22 3.2 C 38 3.8, 54 2.6, 70 3.4 C 86 4.1, 102 2.7, 118 3.5 C 124 3.8, 128 3.2, 131 3.4'
+      'M22 3.2 C 40 3.8, 58 2.6, 76 3.4 C 94 4.1, 112 2.7, 130 3.5 C 140 3.9, 148 3.1, 154 3.4'
     );
 
     const heart = document.createElementNS(NS, 'path');
@@ -105,7 +106,7 @@ const SongWeSangTypingEngine = (() => {
     // Small quick outline heart near the right end of the underline, slightly below.
     heart.setAttribute(
       'd',
-      'M136 18.5 C 132.4 14.6, 132.2 11.6, 134.3 11.6 C 135.5 11.6, 136.2 12.5, 136.2 12.5 C 136.2 12.5, 136.9 11.6, 138.1 11.6 C 140.3 11.6, 140.4 14.7, 136 18.5'
+      'M155 18.5 C 151.4 14.6, 151.2 11.6, 153.3 11.6 C 154.5 11.6, 155.2 12.5, 155.2 12.5 C 155.2 12.5, 155.9 11.6, 157.1 11.6 C 159.3 11.6, 159.4 14.7, 155 18.5'
     );
 
     svg.appendChild(underline);
