@@ -6,16 +6,20 @@
  */
 const GlobalLiveEvent = (() => {
   const SYNC = {
-    TICK_MS: 400,
-    POLL_MS: 2500,
-    SEEK_THRESHOLD_S: 1.25,
-    RATE_THRESHOLD_S: 0.2,
-    MAX_RATE: 1.04,
-    MIN_RATE: 0.96,
-    VIDEO_SEEK_THRESHOLD_S: 0.45,
-    VIDEO_RATE_THRESHOLD_S: 0.08,
-    VIDEO_MAX_RATE: 1.06,
-    VIDEO_MIN_RATE: 0.94,
+    TICK_MS: 750,
+    POLL_MS: 4000,
+    // Only hard-seek when clearly behind/ahead — small drift must not stutter playback.
+    SEEK_THRESHOLD_S: 4.0,
+    HARD_SEEK_S: 10.0,
+    RATE_THRESHOLD_S: 1.0,
+    MAX_RATE: 1.02,
+    MIN_RATE: 0.98,
+    SEEK_COOLDOWN_MS: 5000,
+    VIDEO_SEEK_THRESHOLD_S: 4.0,
+    VIDEO_HARD_SEEK_S: 10.0,
+    VIDEO_RATE_THRESHOLD_S: 1.0,
+    VIDEO_MAX_RATE: 1.02,
+    VIDEO_MIN_RATE: 0.98,
     PRELOAD_LEAD_MS: 30 * 60 * 1000,
   };
 
@@ -27,6 +31,8 @@ const GlobalLiveEvent = (() => {
   let actualLiveSongStartUtc = null;
   let audioUnlocked = false;
   let transitioning = false;
+  let lastAudioSeekAt = 0;
+  let lastVideoSeekAt = 0;
 
   let videoEl = null;
   let audioEl = null;
@@ -97,43 +103,55 @@ const GlobalLiveEvent = (() => {
   }
 
   function canPrimeLiveAudio() {
+    // Only warm audio during pre-event. Never prime during LIVE_SONG —
+    // priming used to seek to 0 and restart the global timeline for that user.
     if (!shouldRunLivePlayback()) return false;
     if (isPostEventPlaybackBlocked()) return false;
     if (isPracticeModeActive()) return false;
+    if (state === 'LIVE_SONG' || state === 'TRANSITIONING_TO_LIVE') return false;
     const nowMs = WorldChoirServerTime.nowMs?.() ?? Date.now();
-    const next = computeState(nowMs);
-    return next === 'PRE_EVENT' || next === 'LIVE_SONG';
+    return computeState(nowMs) === 'PRE_EVENT';
   }
 
   function stopLiveSongElement() {
     const el = document.getElementById('wc-live-song-audio');
+    if (el && !el.paused) el.pause();
+    if (audioEl && !audioEl.paused) audioEl.pause();
+    // NEVER reset currentTime here — that restarts the song for rejoining users.
+    LyricsDisplay.stopSync();
+  }
+
+  function resetLiveSongToStart() {
+    const el = document.getElementById('wc-live-song-audio');
     if (el) {
       el.pause();
       el.muted = true;
-      try {
-        el.currentTime = 0;
-      } catch {
-        /* ignore */
-      }
+      try { el.currentTime = 0; } catch { /* ignore */ }
     }
     if (audioEl) {
       audioEl.pause();
-      try {
-        audioEl.currentTime = 0;
-      } catch {
-        /* ignore */
-      }
+      try { audioEl.currentTime = 0; } catch { /* ignore */ }
     }
     LyricsDisplay.stopSync();
   }
 
   function finalizeLiveEventPlayback() {
-    stopLiveSongElement();
+    resetLiveSongToStart();
     cleanupMedia();
     hideTakeover();
     hideLiveSongShell();
+    hideAllUnlockUi();
     active = false;
     state = 'LIVE_FINISHED';
+  }
+
+  function hideAllUnlockUi() {
+    document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
+    const songUnlock = document.getElementById('wc-live-song-unlock');
+    if (songUnlock) {
+      songUnlock.setAttribute('hidden', '');
+      songUnlock.remove();
+    }
   }
 
   function ensureShell() {
@@ -213,22 +231,17 @@ const GlobalLiveEvent = (() => {
     const el = getLiveSongAudio();
     try {
       if (el.readyState < 1) await waitForAudioReady(el);
-      const wasMuted = el.muted;
-      const prevVolume = el.volume;
+      // Warm the element only — do NOT leave the song playing during the video.
+      // A playing underlay can hit `ended` mid-video and kill the whole live flow.
       el.muted = true;
       el.volume = 0;
       await el.play();
-      // Keep a silent playing underlay when possible — unmuting an already-playing
-      // element at song start succeeds more often than a cold play().
-      if (state === 'PRE_EVENT' || state === 'TRANSITIONING_TO_LIVE') {
-        el.muted = true;
-        el.volume = 0;
-        return true;
-      }
       el.pause();
-      el.currentTime = 0;
-      el.muted = wasMuted;
-      el.volume = prevVolume || 1;
+      // Stay parked near the start only while still in pre-event.
+      if (state === 'PRE_EVENT') {
+        try { el.currentTime = 0; } catch { /* ignore */ }
+      }
+      el.volume = 1;
       return true;
     } catch {
       return false;
@@ -238,20 +251,7 @@ const GlobalLiveEvent = (() => {
   function bindUnlockHandlers() {
     const unlock = async () => {
       audioUnlocked = true;
-      document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
-      document.getElementById('wc-live-song-unlock')?.setAttribute('hidden', '');
-
-      const preVideo = document.getElementById('wc-global-live-video');
-      if (preVideo && state === 'PRE_EVENT') {
-        try {
-          preVideo.muted = false;
-          if (preVideo.paused) await preVideo.play();
-        } catch {
-          preVideo.muted = true;
-        }
-      }
-
-      await primeLiveSongAudio();
+      hideAllUnlockUi();
 
       try {
         if (!window.__wcAudioCtx) {
@@ -265,12 +265,29 @@ const GlobalLiveEvent = (() => {
       }
 
       if (state === 'LIVE_SONG') {
+        // Never prime/reset during the song — only resume at the global position.
+        if (audioEl) {
+          audioEl.muted = false;
+          audioEl.volume = 1;
+        }
         const target = getTargetSongPositionSec(WorldChoirServerTime.nowMs());
         await startLiveAudio(target);
+        return;
       }
+
+      const preVideo = document.getElementById('wc-global-live-video');
+      if (preVideo && state === 'PRE_EVENT') {
+        try {
+          preVideo.muted = false;
+          if (preVideo.paused) await preVideo.play();
+        } catch {
+          preVideo.muted = true;
+        }
+      }
+
+      await primeLiveSongAudio();
     };
 
-    // Any prior interaction on the page unlocks autoplay for later.
     ['pointerdown', 'keydown', 'touchstart', 'click'].forEach((evt) => {
       document.addEventListener(evt, unlock, { capture: true, passive: true });
     });
@@ -419,11 +436,8 @@ const GlobalLiveEvent = (() => {
       if (data.actualLiveSongStartUtc) {
         if (isSongStartValidForCurrentEvent(data.actualLiveSongStartUtc)) {
           actualLiveSongStartUtc = data.actualLiveSongStartUtc;
-        } else {
-          actualLiveSongStartUtc = null;
         }
-      } else {
-        actualLiveSongStartUtc = null;
+        // Keep a previously valid local start if the server briefly returns null/stale.
       }
       return data;
     } catch {
@@ -463,6 +477,7 @@ const GlobalLiveEvent = (() => {
     audioEl.pause();
     audioEl.removeEventListener('ended', onSongEnded);
     audioEl.removeEventListener('error', onSongError);
+    audioEl._wcBound = false;
     audioEl = null;
     LyricsDisplay.stopSync();
   }
@@ -504,7 +519,7 @@ const GlobalLiveEvent = (() => {
     }
   }
 
-  function showLiveSongShell() {
+  function showLiveSongShell(atSec = 0) {
     const shell = getShell();
     const mode = document.getElementById('live-event-mode');
     const content = document.getElementById('live-event-content');
@@ -514,6 +529,7 @@ const GlobalLiveEvent = (() => {
     document.getElementById('wc-global-live-pre')?.setAttribute('hidden', '');
     shell?.classList.remove('is-active');
     shell?.setAttribute('aria-hidden', 'true');
+    hideAllUnlockUi();
 
     mode.classList.add('active');
     mode.setAttribute('aria-hidden', 'false');
@@ -523,7 +539,7 @@ const GlobalLiveEvent = (() => {
     document.getElementById('home-page')?.setAttribute('hidden', '');
     active = true;
 
-    LyricsDisplay.mountLive(content);
+    LyricsDisplay.mountLive(content, atSec);
     return true;
   }
 
@@ -573,18 +589,19 @@ const GlobalLiveEvent = (() => {
     if (!videoEl || videoFailed) return;
     const actualDur = getActualVideoDurationSec();
     const clamped = Math.max(0, Math.min(targetSec, actualDur - 0.05));
+    const drift = Math.abs(videoEl.currentTime - clamped);
 
-    if (Math.abs(videoEl.currentTime - clamped) > 0.08) {
-      videoEl.pause();
-      await new Promise((resolve) => {
-        const finish = () => {
-          videoEl.removeEventListener('seeked', finish);
-          resolve();
-        };
-        videoEl.addEventListener('seeked', finish, { once: true });
-        videoEl.currentTime = clamped;
-        setTimeout(resolve, 150);
-      });
+    // Only seek when meaningfully off — tiny corrections cause stutter / rebuffer.
+    if (drift > SYNC.VIDEO_SEEK_THRESHOLD_S) {
+      const now = Date.now();
+      if (drift > SYNC.VIDEO_HARD_SEEK_S || now - lastVideoSeekAt > SYNC.SEEK_COOLDOWN_MS) {
+        lastVideoSeekAt = now;
+        try {
+          videoEl.currentTime = clamped;
+        } catch {
+          /* ignore */
+        }
+      }
     }
 
     videoEl.muted = !audioUnlocked;
@@ -599,7 +616,7 @@ const GlobalLiveEvent = (() => {
           videoEl.muted = true;
           await videoEl.play();
         } catch {
-          document.getElementById('wc-global-live-unlock')?.removeAttribute('hidden');
+          /* keep trying on next tick — never block with an overlay */
         }
       }
     }
@@ -607,25 +624,39 @@ const GlobalLiveEvent = (() => {
 
   function syncVideoToGlobal(nowMs) {
     if (!videoEl || videoFailed || videoEndedLocally) return;
-    const expected = getTargetVideoPositionSec(nowMs);
-    const actual = videoEl.currentTime;
-    const diff = expected - actual;
-
-    if (Math.abs(diff) > SYNC.VIDEO_SEEK_THRESHOLD_S) {
-      videoEl.playbackRate = 1;
-      videoEl.currentTime = expected;
+    if (videoEl.seeking) return;
+    if (videoEl.readyState < 2) {
       if (videoEl.paused) videoEl.play().catch(() => {});
       return;
     }
 
-    if (Math.abs(diff) > SYNC.VIDEO_RATE_THRESHOLD_S) {
+    const expected = getTargetVideoPositionSec(nowMs);
+    const actual = videoEl.currentTime;
+    const diff = expected - actual;
+    const abs = Math.abs(diff);
+
+    if (abs > SYNC.VIDEO_SEEK_THRESHOLD_S) {
+      const now = Date.now();
+      const allowSeek = abs > SYNC.VIDEO_HARD_SEEK_S || now - lastVideoSeekAt > SYNC.SEEK_COOLDOWN_MS;
+      if (allowSeek) {
+        lastVideoSeekAt = now;
+        videoEl.playbackRate = 1;
+        try { videoEl.currentTime = expected; } catch { /* ignore */ }
+      }
+      if (videoEl.paused) videoEl.play().catch(() => {});
+      return;
+    }
+
+    if (abs > SYNC.VIDEO_RATE_THRESHOLD_S) {
       videoEl.playbackRate = Math.max(
         SYNC.VIDEO_MIN_RATE,
-        Math.min(SYNC.VIDEO_MAX_RATE, 1 + diff * 0.4),
+        Math.min(SYNC.VIDEO_MAX_RATE, 1 + diff * 0.04),
       );
-    } else {
+    } else if (videoEl.playbackRate !== 1) {
       videoEl.playbackRate = 1;
     }
+
+    if (videoEl.paused) videoEl.play().catch(() => {});
   }
 
   async function onVideoEnded() {
@@ -651,7 +682,7 @@ const GlobalLiveEvent = (() => {
 
     state = 'LIVE_SONG';
     cleanupVideo();
-    if (!mountLiveLyrics()) {
+    if (!mountLiveLyrics(target)) {
       onSongError();
       transitioning = false;
       return;
@@ -684,8 +715,7 @@ const GlobalLiveEvent = (() => {
       await playPromise;
       LyricsDisplay.startSync(audioEl);
       LyricsDisplay.update(audioEl.currentTime, audioEl);
-      document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
-      document.getElementById('wc-live-song-unlock')?.setAttribute('hidden', '');
+      hideAllUnlockUi();
     } catch {
       await startLiveAudio(target);
     }
@@ -740,8 +770,8 @@ const GlobalLiveEvent = (() => {
     updateCountdownUI(nowMs);
   }
 
-  function mountLiveLyrics() {
-    return showLiveSongShell();
+  function mountLiveLyrics(atSec = 0) {
+    return showLiveSongShell(atSec);
   }
 
   async function waitForAudioReady(el) {
@@ -754,89 +784,69 @@ const GlobalLiveEvent = (() => {
 
   async function startLiveAudio(target) {
     if (!shouldRunLivePlayback() || isPostEventPlaybackBlocked()) {
-      stopLiveSongElement();
       return;
     }
-    if (!isLiveSongUiActive()) showLiveSongShell();
+    if (!isLiveSongUiActive()) showLiveSongShell(target);
+    hideAllUnlockUi();
 
     if (!audioEl) {
       audioEl = getLiveSongAudio();
-      audioEl.addEventListener('ended', onSongEnded);
-      audioEl.addEventListener('error', onSongError);
+      if (!audioEl._wcBound) {
+        audioEl._wcBound = true;
+        audioEl.addEventListener('ended', onSongEnded);
+        audioEl.addEventListener('error', onSongError);
+      }
       try {
         await waitForAudioReady(audioEl);
       } catch {
-        showLiveSongUnlock();
+        // Keep lyrics up and retry on later ticks — never block with an overlay.
         return;
       }
     }
 
     const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
-    const seekTo = Math.min(target, audioEl.duration || target, duration - 0.05);
-    if (Math.abs(audioEl.currentTime - seekTo) > 0.2) {
+    const seekTo = Math.min(Math.max(0, target), audioEl.duration || target, duration - 0.05);
+    const drift = Math.abs((audioEl.currentTime || 0) - seekTo);
+    // On cold start / rejoin, land on the global position. Avoid tiny seeks while playing.
+    if (audioEl.paused || audioEl.ended || drift > 0.75) {
       try {
         audioEl.currentTime = seekTo;
-      } catch {
-        /* ignore */
-      }
+        lastAudioSeekAt = Date.now();
+      } catch { /* ignore */ }
     }
 
-    audioEl.muted = false;
+    // Always keep playback running for lyric sync. Prefer unmuted; fall back to muted.
     audioEl.volume = 1;
-
-    // Prefer automatic start. Only show the tap overlay if the browser blocks it.
-    for (let attempt = 0; attempt < 8; attempt++) {
+    for (let attempt = 0; attempt < 6; attempt++) {
       try {
+        audioEl.muted = attempt > 2 ? true : false;
         await audioEl.play();
-        audioUnlocked = true;
+        if (!audioEl.muted) audioUnlocked = true;
         LyricsDisplay.startSync(audioEl);
         LyricsDisplay.update(audioEl.currentTime, audioEl);
-        document.getElementById('wc-global-live-unlock')?.setAttribute('hidden', '');
-        document.getElementById('wc-live-song-unlock')?.setAttribute('hidden', '');
-        return;
-      } catch (err) {
-        // If a silent underlay was already running, unmuting sometimes needs one more try.
-        audioEl.muted = false;
-        audioEl.volume = 1;
-        if (attempt < 7) {
-          await new Promise((resolve) => setTimeout(resolve, 60));
+        hideAllUnlockUi();
+        // If we had to start muted, keep trying to unmute without blocking UI.
+        if (audioEl.muted) {
+          try {
+            audioEl.muted = false;
+            audioUnlocked = true;
+          } catch { /* ignore */ }
         }
+        return;
+      } catch {
+        if (attempt < 5) await new Promise((r) => setTimeout(r, 50));
       }
     }
-
-    console.warn('Live song autoplay blocked — showing unlock fallback');
-    showLiveSongUnlock();
   }
 
   function showLiveSongUnlock() {
-    let btn = document.getElementById('wc-live-song-unlock');
-    if (!btn) {
-      btn = document.createElement('button');
-      btn.type = 'button';
-      btn.id = 'wc-live-song-unlock';
-      btn.className = 'wc-global-live__unlock wc-global-live__unlock--song';
-      btn.innerHTML = '<span class="wc-global-live__unlock-title">Tap to join the live song</span><span class="wc-global-live__unlock-sub">The world is singing now</span>';
-      document.body.appendChild(btn);
-    }
-    btn.removeAttribute('hidden');
-    btn.onclick = async () => {
-      audioUnlocked = true;
-      try {
-        if (!audioEl) {
-          await startLiveAudio(getTargetSongPositionSec(WorldChoirServerTime.nowMs()));
-        } else {
-          await audioEl.play();
-          LyricsDisplay.startSync(audioEl);
-        }
-        btn.setAttribute('hidden', '');
-      } catch { /* still blocked */ }
-    };
+    // Hard rule: never cover the lyrics with a tap overlay.
+    hideAllUnlockUi();
   }
 
   async function enterLiveSong({ fromVideoEnd = false, forceRejoin = false } = {}) {
     if (!shouldRunLivePlayback() || isPostEventPlaybackBlocked()) {
       dismissLiveUiIfOffHome();
-      stopLiveSongElement();
       return;
     }
     const nowMs = WorldChoirServerTime.nowMs();
@@ -849,52 +859,72 @@ const GlobalLiveEvent = (() => {
       return;
     }
 
+    hideAllUnlockUi();
+
     if (state === 'LIVE_SONG' && audioEl && !forceRejoin) {
-      if (!isLiveSongUiActive()) showLiveSongShell();
-      if (audioEl.paused) {
-        showLiveSongUnlock();
-        await audioEl.play().catch(() => showLiveSongUnlock());
-      } else {
-        syncSongToGlobal(nowMs);
-      }
+      if (!isLiveSongUiActive()) showLiveSongShell(target);
+      await startLiveAudio(target);
+      if (audioEl && !audioEl.paused) syncSongToGlobal(nowMs);
       return;
     }
 
     state = 'LIVE_SONG';
-    if (forceRejoin) cleanupAudio();
     cleanupVideo();
-    if (!mountLiveLyrics()) {
+    if (!mountLiveLyrics(target)) {
       onSongError();
       return;
     }
 
+    // Reuse existing audio element on rejoin — never wipe position back to 0.
+    audioEl = getLiveSongAudio();
+    if (!audioEl._wcBound) {
+      audioEl._wcBound = true;
+      audioEl.addEventListener('ended', onSongEnded);
+      audioEl.addEventListener('error', onSongError);
+    }
     await startLiveAudio(target);
   }
 
   function syncSongToGlobal(nowMs) {
     if (!audioEl) return;
-    if (!isLiveSongUiActive()) showLiveSongShell();
-    if (audioEl.paused) {
-      showLiveSongUnlock();
-      audioEl.play().catch(() => showLiveSongUnlock());
+    if (!isLiveSongUiActive()) showLiveSongShell(getTargetSongPositionSec(nowMs));
+    if (audioEl.seeking) return;
+
+    if (audioEl.paused || audioEl.ended) {
+      startLiveAudio(getTargetSongPositionSec(nowMs)).catch(() => {});
       return;
     }
+
     const expected = getTargetSongPositionSec(nowMs);
     const actual = audioEl.currentTime;
     const diff = expected - actual;
+    const abs = Math.abs(diff);
 
-    if (Math.abs(diff) > SYNC.SEEK_THRESHOLD_S) {
-      audioEl.playbackRate = 1;
-      audioEl.currentTime = expected;
-      LyricsDisplay.update(expected, audioEl);
+    if (abs > SYNC.SEEK_THRESHOLD_S) {
+      const now = Date.now();
+      const allowSeek = abs > SYNC.HARD_SEEK_S || now - lastAudioSeekAt > SYNC.SEEK_COOLDOWN_MS;
+      if (allowSeek) {
+        lastAudioSeekAt = now;
+        audioEl.playbackRate = 1;
+        try { audioEl.currentTime = expected; } catch { /* ignore */ }
+        LyricsDisplay.update(expected, audioEl);
+      }
       return;
     }
 
-    if (Math.abs(diff) > SYNC.RATE_THRESHOLD_S) {
-      audioEl.playbackRate = Math.max(SYNC.MIN_RATE, Math.min(SYNC.MAX_RATE, 1 + diff * 0.12));
-    } else {
+    if (abs > SYNC.RATE_THRESHOLD_S) {
+      audioEl.playbackRate = Math.max(SYNC.MIN_RATE, Math.min(SYNC.MAX_RATE, 1 + diff * 0.03));
+    } else if (audioEl.playbackRate !== 1) {
       audioEl.playbackRate = 1;
     }
+
+    if (audioEl.muted) {
+      try {
+        audioEl.muted = false;
+        audioUnlocked = true;
+      } catch { /* ignore */ }
+    }
+
     LyricsDisplay.update(audioEl.currentTime, audioEl);
   }
 
@@ -950,15 +980,13 @@ const GlobalLiveEvent = (() => {
   }
 
   async function tick() {
-    await WorldChoirServerTime.sync();
+    // Use cached server offset — do not block every tick on network sync.
     const nowMs = WorldChoirServerTime.nowMs();
     const next = computeState(nowMs);
 
     if (isPostEventPlaybackBlocked()) {
       if (state !== 'LIVE_FINISHED') {
         onSongEnded();
-      } else {
-        stopLiveSongElement();
       }
       return;
     }
@@ -975,15 +1003,12 @@ const GlobalLiveEvent = (() => {
     if (next === 'LIVE_FINISHED') {
       if (state !== 'LIVE_FINISHED') {
         onSongEnded();
-      } else {
-        stopLiveSongElement();
       }
       return;
     }
 
     if (!shouldRunLivePlayback()) {
       dismissLiveUiIfOffHome();
-      stopLiveSongElement();
       state = next;
       return;
     }
@@ -1001,7 +1026,6 @@ const GlobalLiveEvent = (() => {
         await enterLiveSong();
         return;
       }
-      // Even if the video failed/404'd, we must still join the live song on time.
       if (next === 'LIVE_SONG' || hasPreEventVideoTimelineElapsed(nowMs)) {
         if (!videoEndedLocally && !transitioning) {
           await onVideoEnded();
@@ -1013,10 +1037,9 @@ const GlobalLiveEvent = (() => {
       if (!videoFailed) {
         syncVideoToGlobal(nowMs);
       } else {
-        // Keep a clear fallback + unlock so the screen is never empty black.
         document.getElementById('wc-global-live-pre-fallback')?.removeAttribute('hidden');
         document.getElementById('wc-global-live-video-wrap')?.setAttribute('hidden', '');
-        document.getElementById('wc-global-live-unlock')?.removeAttribute('hidden');
+        hideAllUnlockUi();
       }
       return;
     }
@@ -1027,16 +1050,11 @@ const GlobalLiveEvent = (() => {
     }
 
     if (state === 'LIVE_SONG') {
-      // Never tear down audio during the live song just because a transient
-      // gate check failed — remount UI and keep trying to play.
-      if (!isLiveSongUiActive()) {
-        showLiveSongShell();
-      }
+      if (!isLiveSongUiActive()) showLiveSongShell(getTargetSongPositionSec(nowMs));
+      hideAllUnlockUi();
+      const target = getTargetSongPositionSec(nowMs);
       if (!audioEl || audioEl.paused || audioEl.ended) {
-        showLiveSongUnlock();
-        startLiveAudio(getTargetSongPositionSec(nowMs)).catch(() => {
-          showLiveSongUnlock();
-        });
+        await startLiveAudio(target);
       } else {
         syncSongToGlobal(nowMs);
       }
@@ -1049,16 +1067,9 @@ const GlobalLiveEvent = (() => {
   }
 
   async function pollAuthoritative() {
-    if (isPostEventPlaybackBlocked()) {
-      stopLiveSongElement();
-      return;
-    }
-    if (!shouldRunLivePlayback()) {
-      dismissLiveUiIfOffHome();
-      stopLiveSongElement();
-      return;
-    }
-    if (state !== 'PRE_EVENT' && state !== 'LIVE_SONG') return;
+    if (isPostEventPlaybackBlocked()) return;
+    if (!shouldRunLivePlayback()) return;
+    if (state !== 'PRE_EVENT' && state !== 'LIVE_SONG' && state !== 'NORMAL') return;
     await fetchAuthoritativeState();
     const songStartUtc = getAuthoritativeSongStartUtc();
     if (songStartUtc && state === 'PRE_EVENT' && !videoEndedLocally) {
@@ -1070,49 +1081,43 @@ const GlobalLiveEvent = (() => {
   }
 
   function onVisibility() {
-    if (document.hidden) {
-      pauseLiveMedia();
-      return;
-    }
-    if (isPostEventPlaybackBlocked()) {
-      stopLiveSongElement();
-      return;
-    }
+    // Do not pause/stop on hide — that caused rejoins to restart or die.
+    if (document.hidden) return;
+
+    if (isPostEventPlaybackBlocked()) return;
     if (!shouldRunLivePlayback()) {
       dismissLiveUiIfOffHome();
-      stopLiveSongElement();
       return;
     }
+
     WorldChoirServerTime.sync(true).then(async () => {
       await fetchAuthoritativeState();
-      if (state === 'LIVE_SONG') {
-        if (!canPlayLiveSongAudio()) {
-          stopLiveSongElement();
-          return;
-        }
-        const nowMs = WorldChoirServerTime.nowMs();
-        const needsRejoin = !audioEl || audioEl.ended || audioEl.readyState < 1;
-        if (needsRejoin) {
-          await enterLiveSong({ forceRejoin: true });
-        } else {
-          syncSongToGlobal(nowMs);
-          if (canPlayLiveSongAudio()) {
-            await audioEl.play().catch(() => {});
-          }
+      const nowMs = WorldChoirServerTime.nowMs();
+      const next = computeState(nowMs);
+
+      if (next === 'LIVE_SONG') {
+        state = 'LIVE_SONG';
+        hideAllUnlockUi();
+        if (!isLiveSongUiActive()) showLiveSongShell(getTargetSongPositionSec(nowMs));
+        await enterLiveSong({ forceRejoin: false });
+        return;
+      }
+
+      if (next === 'PRE_EVENT') {
+        if (state !== 'PRE_EVENT') {
+          await enterPreEvent();
+        } else if (videoEl && !videoFailed && !videoEndedLocally) {
+          await seekVideoTo(getTargetVideoPositionSec(nowMs), { autoplay: true });
         }
         return;
       }
-      if (state === 'PRE_EVENT' && videoEl && !videoFailed && !videoEndedLocally) {
-        const target = getTargetVideoPositionSec(WorldChoirServerTime.nowMs());
-        await seekVideoTo(target, { autoplay: true });
-      }
+
       await tick();
     }).catch(() => {});
   }
 
   function onPageHide() {
-    pauseLiveMedia();
-    stopLiveSongElement();
+    // Intentionally do nothing destructive — leaving the tab must not reset playback.
   }
 
   function startLoops() {
@@ -1228,7 +1233,8 @@ const GlobalLiveEvent = (() => {
 
     if (next === 'LIVE_SONG') {
       state = 'LIVE_SONG';
-      showLiveSongShell();
+      const atSec = getTargetSongPositionSec(nowMs);
+      showLiveSongShell(atSec);
       return true;
     }
 

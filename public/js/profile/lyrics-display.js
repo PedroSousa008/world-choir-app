@@ -242,9 +242,9 @@ const LyricsDisplay = (() => {
     `;
   }
 
-  function mountLive(container) {
+  function mountLive(container, atSec = 0) {
     container.innerHTML = renderLiveShell();
-    update(0);
+    update(Math.max(0, Number(atSec) || 0));
   }
 
   function updateVoiceCount() {

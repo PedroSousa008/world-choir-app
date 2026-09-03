@@ -160,22 +160,16 @@ body.wc-global-live-active #nav-root {
   z-index: 2;
 }
 
+/* Never allow a full-screen tap gate over lyrics — sound unlocks from any gesture. */
+#wc-live-song-unlock,
 .wc-global-live__unlock--song {
-  position: fixed;
-  inset: 0;
-  transform: none;
-  left: 0;
-  bottom: 0;
-  border-radius: 0;
-  border: none;
-  background: rgba(0, 0, 0, 0.92);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  z-index: 13000;
-  padding: 24px;
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.wc-global-live__unlock[hidden] {
+  display: none !important;
 }
 
 .wc-global-live__unlock-title {
