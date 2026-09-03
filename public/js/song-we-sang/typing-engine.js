@@ -84,8 +84,8 @@ const SongWeSangTypingEngine = (() => {
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
     svg.setAttribute('class', 'sws-letter__flourish');
-    // viewBox: line starts under "e" in The (~14%), ends just before "In" (~82%).
-    svg.setAttribute('viewBox', '0 0 160 26');
+    // Wider than the text so the stroke can continue past "In".
+    svg.setAttribute('viewBox', '0 0 180 26');
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
     svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
@@ -93,11 +93,10 @@ const SongWeSangTypingEngine = (() => {
     const underline = document.createElementNS(NS, 'path');
     underline.setAttribute('class', 'sws-letter__underline');
     underline.setAttribute('fill', 'none');
-    // Thin, nearly flat hand stroke with tiny natural wobble — left→right.
-    // Starts under "e" in The (~14%), extends past "In" (~96%).
+    // Starts under "e" in The; continues through and past "In".
     underline.setAttribute(
       'd',
-      'M22 3.2 C 40 3.8, 58 2.6, 76 3.4 C 94 4.1, 112 2.7, 130 3.5 C 140 3.9, 148 3.1, 154 3.4'
+      'M22 3.2 C 42 3.8, 62 2.6, 82 3.4 C 102 4.1, 122 2.7, 142 3.5 C 155 3.9, 165 3.1, 174 3.4'
     );
 
     const heart = document.createElementNS(NS, 'path');
@@ -106,7 +105,7 @@ const SongWeSangTypingEngine = (() => {
     // Small quick outline heart near the right end of the underline, slightly below.
     heart.setAttribute(
       'd',
-      'M155 18.5 C 151.4 14.6, 151.2 11.6, 153.3 11.6 C 154.5 11.6, 155.2 12.5, 155.2 12.5 C 155.2 12.5, 155.9 11.6, 157.1 11.6 C 159.3 11.6, 159.4 14.7, 155 18.5'
+      'M171 18.5 C 167.4 14.6, 167.2 11.6, 169.3 11.6 C 170.5 11.6, 171.2 12.5, 171.2 12.5 C 171.2 12.5, 171.9 11.6, 173.1 11.6 C 175.3 11.6, 175.4 14.7, 171 18.5'
     );
 
     svg.appendChild(underline);
@@ -131,8 +130,8 @@ const SongWeSangTypingEngine = (() => {
     }
     const span = signatureEl.querySelector('span');
     const textW = span ? span.offsetWidth : 0;
-    // Match signature text width exactly so path % align with letters.
-    if (textW > 0) svg.style.width = `${Math.round(textW)}px`;
+    // Wider than the signature so the underline can continue past "In".
+    if (textW > 0) svg.style.width = `${Math.round(textW + 28)}px`;
     const underline = svg.querySelector('.sws-letter__underline');
     const heart = svg.querySelector('.sws-letter__heart');
     if (underline) prepareFlourishStroke(underline);
