@@ -543,9 +543,8 @@ const WorldChoirHome = (() => {
             <img class="home-after-memory__bg" src="${POST_EVENT_IMAGES.memory}" alt="" decoding="async" width="800" height="360">
             <div class="home-after-memory__overlay" aria-hidden="true"></div>
             <div class="home-after-memory__content">
-              <p class="home-after-card__eyebrow">The world's memory is ready</p>
+              <button type="button" class="home-after-memory__btn" id="home-open-memory">Explore the Memory ›</button>
               <p class="home-after-memory__tagline">Relive the moment. Remember forever.</p>
-              <button type="button" class="home-after-memory__btn" id="home-open-memory">Explore the memory ›</button>
             </div>
           </section>
         </div>
