@@ -20,7 +20,12 @@ const GlobalLiveEvent = (() => {
     VIDEO_RATE_THRESHOLD_S: 1.0,
     VIDEO_MAX_RATE: 1.02,
     VIDEO_MIN_RATE: 0.98,
+    // Light <link preload> starts this far before the pre-event video.
     PRELOAD_LEAD_MS: 30 * 60 * 1000,
+    // Aggressive media warm-up: 5 minutes before the video (= 10 min before the song).
+    WARMUP_LEAD_MS: 5 * 60 * 1000,
+    // How many leading seconds of video/audio to buffer before the video starts.
+    WARMUP_BUFFER_S: 25,
   };
 
   /** @type {'NORMAL'|'PRE_EVENT'|'TRANSITIONING_TO_LIVE'|'LIVE_SONG'|'LIVE_FINISHED'} */
@@ -34,12 +39,14 @@ const GlobalLiveEvent = (() => {
   let lastAudioSeekAt = 0;
   let lastVideoSeekAt = 0;
   let audioLockPromise = null;
+  let mediaWarmed = false;
+  let warmingInFlight = null;
+  let preloaded = false;
 
   let videoEl = null;
   let audioEl = null;
   let videoFailed = false;
   let videoEndedLocally = false;
-  let preloaded = false;
   let initPromise = null;
 
   function esc(str) {
@@ -125,15 +132,22 @@ const GlobalLiveEvent = (() => {
     return isLiveSongUiActive();
   }
 
+  function isInWarmupWindow(nowMs = WorldChoirServerTime.nowMs?.() ?? Date.now()) {
+    const preStart = WorldChoirLiveConfig.getPreEventStartMs();
+    return nowMs >= preStart - SYNC.WARMUP_LEAD_MS && nowMs < preStart;
+  }
+
   function canPrimeLiveAudio() {
-    // Only warm audio during pre-event. Never prime during LIVE_SONG —
+    // Warm audio during warmup + pre-event. Never prime during LIVE_SONG —
     // priming used to seek to 0 and restart the global timeline for that user.
     if (!shouldRunLivePlayback()) return false;
     if (isPostEventPlaybackBlocked()) return false;
     if (isPracticeModeActive()) return false;
     if (state === 'LIVE_SONG' || state === 'TRANSITIONING_TO_LIVE') return false;
     const nowMs = WorldChoirServerTime.nowMs?.() ?? Date.now();
-    return computeState(nowMs) === 'PRE_EVENT';
+    const next = computeState(nowMs);
+    if (next === 'PRE_EVENT' || state === 'PRE_EVENT') return true;
+    return isInWarmupWindow(nowMs);
   }
 
   function stopLiveSongElement() {
@@ -208,6 +222,7 @@ const GlobalLiveEvent = (() => {
                 preload="auto"
                 muted
                 autoplay
+                controlslist="nodownload nofullscreen noremoteplayback"
                 disablepictureinpicture
                 disableremoteplayback
               ></video>
@@ -696,9 +711,17 @@ const GlobalLiveEvent = (() => {
     if (!videoEl) return;
 
     const url = WorldChoirLiveConfig.EVENT.preEvent.videoUrl;
+    videoEl.controls = false;
+    videoEl.playsInline = true;
+    videoEl.muted = true;
+    videoEl.setAttribute('playsinline', '');
+    videoEl.setAttribute('webkit-playsinline', '');
+    videoEl.setAttribute('preload', 'auto');
+
     if (videoEl.getAttribute('data-src') !== url) {
       videoEl.setAttribute('data-src', url);
       videoEl.src = url;
+      try { videoEl.load(); } catch { /* ignore */ }
     }
 
     return new Promise((resolve) => {
@@ -730,7 +753,127 @@ const GlobalLiveEvent = (() => {
       }
       videoEl.addEventListener('loadedmetadata', done, { once: true });
       videoEl.addEventListener('error', onErr, { once: true });
+      setTimeout(done, 8000);
     });
+  }
+
+  function getBufferedEndSec(el) {
+    try {
+      if (!el?.buffered || !el.buffered.length) return 0;
+      return el.buffered.end(el.buffered.length - 1);
+    } catch {
+      return 0;
+    }
+  }
+
+  function waitForMediaBuffer(el, minSeconds, timeoutMs = 180000) {
+    return new Promise((resolve) => {
+      if (!el) {
+        resolve(false);
+        return;
+      }
+      const start = Date.now();
+      let timer = null;
+      const cleanup = () => {
+        el.removeEventListener('progress', onProgress);
+        el.removeEventListener('canplay', onProgress);
+        el.removeEventListener('canplaythrough', onProgress);
+        if (timer) clearInterval(timer);
+      };
+      const check = () => {
+        if (getBufferedEndSec(el) >= minSeconds || el.readyState >= 4) {
+          cleanup();
+          resolve(true);
+          return;
+        }
+        if (Date.now() - start >= timeoutMs) {
+          cleanup();
+          resolve(getBufferedEndSec(el) > 2);
+        }
+      };
+      const onProgress = () => check();
+      el.addEventListener('progress', onProgress);
+      el.addEventListener('canplay', onProgress);
+      el.addEventListener('canplaythrough', onProgress);
+      timer = setInterval(check, 400);
+      check();
+    });
+  }
+
+  async function cacheLiveMediaUrls() {
+    if (typeof caches === 'undefined') return;
+    try {
+      const cache = await caches.open('wc-live-media-v1');
+      const videoUrl = WorldChoirLiveConfig.EVENT.preEvent.videoUrl;
+      const audioUrl = WorldChoirLiveConfig.EVENT.liveSong.audioUrl;
+      await Promise.all([
+        cache.match(videoUrl).then((hit) => hit || cache.add(videoUrl)).catch(() => {}),
+        cache.match(audioUrl).then((hit) => hit || cache.add(audioUrl)).catch(() => {}),
+      ]);
+    } catch {
+      /* Cache API optional */
+    }
+  }
+
+  /**
+   * Background warm-up: starts 5 minutes before the pre-event video.
+   * Does NOT take over the UI — only buffers video/audio so mobile starts instantly.
+   */
+  async function warmLiveMedia() {
+    if (mediaWarmed) return true;
+    if (warmingInFlight) return warmingInFlight;
+    if (!shouldRunLivePlayback() || isPostEventPlaybackBlocked()) return false;
+
+    warmingInFlight = (async () => {
+      ensureShell();
+      preloadAssets().catch(() => {});
+      cacheLiveMediaUrls().catch(() => {});
+
+      await prepareVideo();
+      if (videoEl && !videoFailed) {
+        videoEl.controls = false;
+        videoEl.muted = true;
+        videoEl.playsInline = true;
+        try {
+          // Prime the mobile decoder pipeline (muted, hidden shell).
+          if (videoEl.readyState < 2) {
+            await Promise.race([
+              new Promise((r) => videoEl.addEventListener('loadeddata', r, { once: true })),
+              new Promise((r) => setTimeout(r, 4000)),
+            ]);
+          }
+          try { videoEl.currentTime = 0; } catch { /* ignore */ }
+          await videoEl.play();
+          await waitForMediaBuffer(videoEl, SYNC.WARMUP_BUFFER_S, 200000);
+          // Stay paused at 0 until the real pre-event window — only if still warming.
+          if (state === 'NORMAL' || isInWarmupWindow()) {
+            videoEl.pause();
+            try { videoEl.currentTime = 0; } catch { /* ignore */ }
+          }
+        } catch {
+          // Autoplay may still be blocked without a gesture — keep downloading.
+          try { videoEl.load(); } catch { /* ignore */ }
+          await waitForMediaBuffer(videoEl, Math.min(12, SYNC.WARMUP_BUFFER_S), 200000);
+        }
+      }
+
+      try {
+        await primeLiveSongAudio();
+        const audio = getLiveSongAudio();
+        if (audio) await waitForMediaBuffer(audio, Math.min(15, SYNC.WARMUP_BUFFER_S), 120000);
+      } catch {
+        /* audio warm is best-effort */
+      }
+
+      mediaWarmed = getBufferedEndSec(videoEl) > 3 || (videoEl && videoEl.readyState >= 3);
+      return mediaWarmed;
+    })();
+
+    try {
+      return await warmingInFlight;
+    } finally {
+      warmingInFlight = null;
+    }
   }
 
   async function seekVideoTo(targetSec, { autoplay = true } = {}) {
@@ -738,6 +881,9 @@ const GlobalLiveEvent = (() => {
     const actualDur = getActualVideoDurationSec();
     const clamped = Math.max(0, Math.min(targetSec, actualDur - 0.05));
     const drift = Math.abs(videoEl.currentTime - clamped);
+
+    videoEl.controls = false;
+    videoEl.playsInline = true;
 
     // Only seek when meaningfully off — tiny corrections cause stutter / rebuffer.
     if (drift > SYNC.VIDEO_SEEK_THRESHOLD_S) {
@@ -752,8 +898,8 @@ const GlobalLiveEvent = (() => {
       }
     }
 
-    videoEl.muted = !audioUnlocked;
-    videoEl.playsInline = true;
+    // Mobile autoplay only works reliably when muted first.
+    videoEl.muted = true;
 
     if (autoplay) {
       try {
@@ -864,6 +1010,17 @@ const GlobalLiveEvent = (() => {
     state = 'PRE_EVENT';
     showPreEventUI();
     getLiveSongAudio();
+
+    // Finish background warm-up so the first frame is already buffered.
+    if (warmingInFlight) {
+      await Promise.race([
+        warmingInFlight.catch(() => {}),
+        new Promise((r) => setTimeout(r, 2500)),
+      ]);
+    } else if (!mediaWarmed) {
+      warmLiveMedia().catch(() => {});
+    }
+
     await prepareVideo();
 
     const nowMs = WorldChoirServerTime.nowMs();
@@ -879,6 +1036,7 @@ const GlobalLiveEvent = (() => {
       videoEl.addEventListener('ended', () => {
         if (shouldLoopPreEventVideo() && !hasPreEventVideoTimelineElapsed(WorldChoirServerTime.nowMs())) {
           videoEl.currentTime = 0;
+          videoEl.muted = true;
           videoEl.play().catch(() => {});
           return;
         }
@@ -886,28 +1044,69 @@ const GlobalLiveEvent = (() => {
       });
       videoEl.addEventListener('playing', () => {
         document.getElementById('wc-global-live-pre-fallback')?.setAttribute('hidden', '');
+        document.getElementById('wc-global-live-video-wrap')?.removeAttribute('hidden');
+        videoEl.classList.add('is-playing');
       });
     }
 
+    if (videoEl) {
+      videoEl.controls = false;
+      videoEl.muted = true;
+      // Prefer canplay before the first seek/play on mobile.
+      if (videoEl.readyState < 3) {
+        await Promise.race([
+          new Promise((r) => videoEl.addEventListener('canplay', r, { once: true })),
+          new Promise((r) => setTimeout(r, 2000)),
+        ]);
+      }
+    }
+
     await seekVideoTo(target, { autoplay: true });
-    for (let attempt = 0; attempt < 8 && videoEl && videoEl.paused && !videoFailed; attempt++) {
+
+    // Mobile rule: always unlock playback muted first (never show a native play button).
+    for (let attempt = 0; attempt < 12 && videoEl && videoEl.paused && !videoFailed; attempt++) {
       try {
-        // Prefer sound from the start; fall back to muted autoplay if the browser blocks it.
-        videoEl.muted = attempt > 2;
+        videoEl.controls = false;
+        videoEl.muted = true;
+        videoEl.playsInline = true;
         await videoEl.play();
-        if (!videoEl.muted) audioUnlocked = true;
         break;
       } catch {
-        await new Promise((resolve) => setTimeout(resolve, 120));
+        await new Promise((resolve) => setTimeout(resolve, 150));
       }
+    }
+
+    if (videoEl && !videoEl.paused && audioUnlocked) {
+      try { videoEl.muted = false; } catch { /* ignore */ }
     }
     if (videoEl && !videoEl.paused && !videoEl.muted) {
       audioUnlocked = true;
     }
     updateSoundToggleUi();
+
+    // Soft fallback copy only — never a play button / unlock overlay.
     if (!videoEl || videoEl.paused || videoFailed) {
+      const note = document.getElementById('wc-global-live-fallback-note');
+      if (note) note.textContent = 'Preparing the live video…';
       document.getElementById('wc-global-live-pre-fallback')?.removeAttribute('hidden');
+      // Keep hammering play — mobile often needs a few more ticks once bytes arrive.
+      const retryPlay = () => {
+        if (!videoEl || videoFailed || state !== 'PRE_EVENT') return;
+        if (!videoEl.paused) {
+          document.getElementById('wc-global-live-pre-fallback')?.setAttribute('hidden', '');
+          return;
+        }
+        videoEl.muted = true;
+        videoEl.play().then(() => {
+          if (audioUnlocked) videoEl.muted = false;
+          updateSoundToggleUi();
+        }).catch(() => {});
+      };
+      setTimeout(retryPlay, 400);
+      setTimeout(retryPlay, 1200);
+      setTimeout(retryPlay, 2500);
     }
+
     primeLiveSongAudio().catch(() => {});
     updateCountdownUI(nowMs);
   }
@@ -1310,6 +1509,13 @@ const GlobalLiveEvent = (() => {
     }
 
     if (next === 'NORMAL') {
+      const preStart = WorldChoirLiveConfig.getPreEventStartMs();
+      // 5 minutes before the video: buffer video + song so mobile starts instantly.
+      if (nowMs >= preStart - SYNC.WARMUP_LEAD_MS) {
+        warmLiveMedia().catch(() => {});
+      } else if (preStart - nowMs <= SYNC.PRELOAD_LEAD_MS) {
+        preloadAssets().catch(() => {});
+      }
       if (active) {
         cleanupMedia();
         hideTakeover();
@@ -1588,6 +1794,9 @@ const GlobalLiveEvent = (() => {
     const preStart = WorldChoirLiveConfig.getPreEventStartMs();
     if (preStart - nowMs <= SYNC.PRELOAD_LEAD_MS) {
       preloadAssets().catch(() => {});
+    }
+    if (preStart - nowMs <= SYNC.WARMUP_LEAD_MS) {
+      warmLiveMedia().catch(() => {});
     }
 
     startLoops();

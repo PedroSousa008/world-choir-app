@@ -131,14 +131,33 @@ html.wc-live-gate .wc-global-live--boot {
   object-fit: contain;
   background: #000;
   pointer-events: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
+/* Never show Safari/Chrome's big native play button overlay. */
 .wc-global-live__video::-webkit-media-controls {
   display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .wc-global-live__video::-webkit-media-controls-enclosure {
   display: none !important;
+  -webkit-appearance: none !important;
+}
+
+.wc-global-live__video::-webkit-media-controls-start-playback-button,
+.wc-global-live__video::-webkit-media-controls-play-button,
+.wc-global-live__video::-webkit-media-controls-overlay-play-button {
+  display: none !important;
+  -webkit-appearance: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
 }
 
 .wc-global-live--boot {
