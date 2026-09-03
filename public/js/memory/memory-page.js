@@ -478,8 +478,12 @@ const WorldChoirMemory = (() => {
     root.classList.toggle('is-open', open);
   }
 
+  function cooldownMessage() {
+    return 'You’ve already shared a memory. You can share another in 24 hours.';
+  }
+
   function applyPostingAvailability(snap) {
-    const blocked = Boolean(snap?.postedToday) || snap?.canPost === false;
+    const blocked = Boolean(snap?.postedToday) || snap?.canPost === false || snap?.onCooldown;
     ['mem-fab-camera', 'mem-fab-device'].forEach((id) => {
       const btn = document.getElementById(id);
       if (!btn) return;
@@ -533,7 +537,7 @@ const WorldChoirMemory = (() => {
       ? WorldChoirMemoryFeed.getSnapshot()
       : null;
     if (snap?.postedToday) {
-      showToast('You’ve already shared today’s memory.');
+      showToast(cooldownMessage());
       return;
     }
 
@@ -682,7 +686,7 @@ const WorldChoirMemory = (() => {
     document.getElementById('mem-fab-camera')?.addEventListener('click', () => {
       const snap = WorldChoirMemoryFeed.getSnapshot();
       if (snap.postedToday) {
-        showToast('You’ve already shared today’s memory. You can share another photo tomorrow.');
+        showToast(cooldownMessage());
         setFabOpen(false);
         return;
       }
@@ -692,7 +696,7 @@ const WorldChoirMemory = (() => {
     document.getElementById('mem-fab-device')?.addEventListener('click', () => {
       const snap = WorldChoirMemoryFeed.getSnapshot();
       if (snap.postedToday) {
-        showToast('You’ve already shared today’s memory. You can share another photo tomorrow.');
+        showToast(cooldownMessage());
         setFabOpen(false);
         return;
       }
@@ -703,7 +707,7 @@ const WorldChoirMemory = (() => {
       setFabOpen(false);
       const snap = WorldChoirMemoryFeed.getSnapshot();
       if (snap.postedToday) {
-        showToast('You’ve already shared today’s memory. You can share another photo tomorrow.');
+        showToast(cooldownMessage());
         return;
       }
       openComposer(null, null, null);
@@ -766,7 +770,7 @@ const WorldChoirMemory = (() => {
           postBtn.textContent = 'Post Memory';
         }
         if (err?.code === 'DAILY_MEMORY_LIMIT_REACHED') {
-          showToast('You’ve already shared today’s memory. You can share another photo tomorrow.');
+          showToast(cooldownMessage());
           applyPostingAvailability({ postedToday: true, canPost: false });
           closeComposer();
           return;

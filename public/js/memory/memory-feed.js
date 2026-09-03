@@ -1,12 +1,14 @@
 /**
  * WorldChoirMemoryFeed — chronological Memory photo stream (oldest → newest).
- * Keeps a bounded history/current/future window; never loads the full feed.
+ * Photos auto-expire after 24h. New posts appear via continuous live polling.
  */
 const WorldChoirMemoryFeed = (() => {
   const PAGE_SIZE = 30;
   const FUTURE_LOW = 8;
   const HISTORY_MAX = 40;
-  const LIVE_POLL_MS = 7000;
+  const PHOTO_TTL_MS = 24 * 60 * 60 * 1000;
+  const LIVE_POLL_FAST_MS = 2500;
+  const LIVE_POLL_NORMAL_MS = 5000;
   const PROGRESS_DEBOUNCE_MS = 600;
 
   const state = {
@@ -24,6 +26,8 @@ const WorldChoirMemoryFeed = (() => {
     isReconnecting: false,
     canPost: true,
     postedToday: false,
+    onCooldown: false,
+    nextAllowedAt: null,
     transitionLocked: false,
     listeners: new Set(),
   };
@@ -32,6 +36,7 @@ const WorldChoirMemoryFeed = (() => {
   let progressTimer = null;
   let backoffMs = 1000;
   let destroyed = false;
+  let pollInFlight = false;
 
   function eventId() {
     return (typeof WorldChoirConfig !== 'undefined'
@@ -70,6 +75,17 @@ const WorldChoirMemoryFeed = (() => {
     return { createdAt: photo.createdAt, id: photo.id };
   }
 
+  function isAlive(photo) {
+    if (!photo) return false;
+    if (photo.expiresAt) {
+      const exp = Date.parse(photo.expiresAt);
+      if (Number.isFinite(exp)) return Date.now() < exp;
+    }
+    const t = Date.parse(photo.createdAt || photo.publishedAt || '');
+    if (!Number.isFinite(t)) return false;
+    return Date.now() - t < PHOTO_TTL_MS;
+  }
+
   function notify() {
     state.listeners.forEach((fn) => {
       try { fn(getSnapshot()); } catch { /* ignore */ }
@@ -84,7 +100,7 @@ const WorldChoirMemoryFeed = (() => {
       future: state.future.slice(),
       left: state.history.length ? state.history[state.history.length - 1] : null,
       right: state.future[0] || null,
-      isWaitingForLive: atEnd,
+      isWaitingForLive: atEnd || (!state.current && !state.isInitialLoading),
       isPrefetching: Boolean(state.current) && !state.future.length && (state.hasMore || state.isFetchingMore),
       isEmpty: !state.current && !state.isInitialLoading,
       isInitialLoading: state.isInitialLoading,
@@ -92,6 +108,8 @@ const WorldChoirMemoryFeed = (() => {
       isReconnecting: state.isReconnecting,
       canPost: state.canPost,
       postedToday: state.postedToday,
+      onCooldown: state.onCooldown,
+      nextAllowedAt: state.nextAllowedAt,
       canGoNext: Boolean(state.future[0]),
       canGoPrev: state.history.length > 0,
       transitionLocked: state.transitionLocked,
@@ -103,8 +121,15 @@ const WorldChoirMemoryFeed = (() => {
     return () => state.listeners.delete(fn);
   }
 
+  function applyStatus(data) {
+    if (typeof data?.canPost === 'boolean') state.canPost = data.canPost;
+    if (typeof data?.postedToday === 'boolean') state.postedToday = data.postedToday;
+    if (typeof data?.onCooldown === 'boolean') state.onCooldown = data.onCooldown;
+    if (data?.nextAllowedAt !== undefined) state.nextAllowedAt = data.nextAllowedAt || null;
+  }
+
   function rememberPhoto(photo) {
-    if (!photo?.id) return false;
+    if (!photo?.id || !isAlive(photo)) return false;
     if (state.knownIds.has(photo.id)) return false;
     state.knownIds.add(photo.id);
     const c = cursorOf(photo);
@@ -116,27 +141,74 @@ const WorldChoirMemoryFeed = (() => {
 
   function insertFutureSorted(photos) {
     const hw = state.forwardHighWater;
+    let added = false;
     for (const photo of photos) {
-      if (!photo?.id) continue;
-      // Late arrivals behind the high-water mark must not enter the future queue.
+      if (!photo?.id || !isAlive(photo)) continue;
       if (hw && compareCursor(cursorOf(photo), hw) <= 0) {
         state.knownIds.add(photo.id);
         continue;
       }
-      if (!rememberPhoto(photo)) continue;
+      if (state.current?.id === photo.id
+        || state.history.some((p) => p.id === photo.id)
+        || state.future.some((p) => p.id === photo.id)) {
+        state.knownIds.add(photo.id);
+        const c = cursorOf(photo);
+        if (!state.newestKnown || compareCursor(c, state.newestKnown) > 0) {
+          state.newestKnown = c;
+        }
+        continue;
+      }
+      if (state.knownIds.has(photo.id)) continue;
+
+      state.knownIds.add(photo.id);
+      const c = cursorOf(photo);
+      if (!state.newestKnown || compareCursor(c, state.newestKnown) > 0) {
+        state.newestKnown = c;
+      }
       state.future.push(photo);
+      added = true;
     }
-    state.future.sort((a, b) => compareCursor(cursorOf(a), cursorOf(b)));
+    if (added) state.future.sort((a, b) => compareCursor(cursorOf(a), cursorOf(b)));
+    return added;
   }
 
   function trimHistory() {
     if (state.history.length > HISTORY_MAX) {
-      const drop = state.history.splice(0, state.history.length - HISTORY_MAX);
-      drop.forEach((p) => {
-        // Keep knownIds so they never reappear as "new" from the right.
-        void p;
-      });
+      state.history.splice(0, state.history.length - HISTORY_MAX);
     }
+  }
+
+  function sweepExpired() {
+    let changed = false;
+    const histLen = state.history.length;
+    state.history = state.history.filter(isAlive);
+    if (state.history.length !== histLen) changed = true;
+
+    const futLen = state.future.length;
+    state.future = state.future.filter(isAlive);
+    if (state.future.length !== futLen) changed = true;
+
+    if (state.current && !isAlive(state.current)) {
+      changed = true;
+      if (state.future.length) {
+        state.current = state.future.shift();
+        if (!state.forwardHighWater
+          || compareCursor(cursorOf(state.current), state.forwardHighWater) > 0) {
+          state.forwardHighWater = cursorOf(state.current);
+          scheduleProgressPersist();
+        }
+      } else if (state.history.length) {
+        state.current = state.history.pop();
+      } else {
+        state.current = null;
+      }
+    }
+
+    if (changed) {
+      updateWaitingFlag();
+      notify();
+    }
+    return changed;
   }
 
   function scheduleProgressPersist() {
@@ -170,17 +242,18 @@ const WorldChoirMemoryFeed = (() => {
         }),
       });
     } catch {
-      /* offline — high-water stays local until next success */
+      /* offline */
     }
   }
 
-  async function fetchPage({ afterCreatedAt = null, afterId = null } = {}) {
+  async function fetchPage({ afterCreatedAt = null, afterId = null, live = false } = {}) {
     const params = new URLSearchParams({
       eventId: eventId(),
       limit: String(PAGE_SIZE),
     });
     const id = deviceId();
     if (id) params.set('deviceId', id);
+    if (live) params.set('live', '1');
     if (afterCreatedAt) {
       params.set('afterCreatedAt', afterCreatedAt);
       if (afterId) params.set('afterId', afterId);
@@ -191,6 +264,13 @@ const WorldChoirMemoryFeed = (() => {
     });
     if (!res.ok) throw new Error('feed_fetch_failed');
     return res.json();
+  }
+
+  function updateWaitingFlag() {
+    state.isWaitingForLive = (
+      (!state.current && !state.isInitialLoading)
+      || (Boolean(state.current) && !state.future.length && !state.hasMore && !state.isFetchingMore)
+    );
   }
 
   async function ensureFutureBuffer() {
@@ -206,12 +286,12 @@ const WorldChoirMemoryFeed = (() => {
       const data = await fetchPage({
         afterCreatedAt: after?.createdAt || null,
         afterId: after?.id || null,
+        live: true,
       });
       insertFutureSorted(data.items || []);
       state.nextCursor = data.nextCursor || null;
       state.hasMore = Boolean(data.nextCursor);
-      if (typeof data.canPost === 'boolean') state.canPost = data.canPost;
-      if (typeof data.postedToday === 'boolean') state.postedToday = data.postedToday;
+      applyStatus(data);
       backoffMs = 1000;
       state.isReconnecting = false;
     } catch {
@@ -227,20 +307,12 @@ const WorldChoirMemoryFeed = (() => {
     }
   }
 
-  function updateWaitingFlag() {
-    state.isWaitingForLive = Boolean(state.current)
-      && !state.future.length
-      && !state.hasMore
-      && !state.isFetchingMore;
-  }
-
   async function loadInitial() {
     state.isInitialLoading = true;
     notify();
     try {
       const data = await fetchPage({});
-      if (typeof data.canPost === 'boolean') state.canPost = data.canPost;
-      if (typeof data.postedToday === 'boolean') state.postedToday = data.postedToday;
+      applyStatus(data);
 
       if (data.progress?.lastConsumedCreatedAt) {
         state.forwardHighWater = {
@@ -249,20 +321,24 @@ const WorldChoirMemoryFeed = (() => {
         };
       }
 
-      const upcoming = Array.isArray(data.items) ? data.items : [];
+      const upcoming = (Array.isArray(data.items) ? data.items : []).filter(isAlive);
       upcoming.forEach((p) => rememberPhoto(p));
 
-      if (data.resumePhoto) {
-        rememberPhoto(data.resumePhoto);
-        state.current = data.resumePhoto;
-        state.future = upcoming.filter((p) => p.id !== data.resumePhoto.id);
+      const resume = data.resumePhoto && isAlive(data.resumePhoto) ? data.resumePhoto : null;
+      if (resume) {
+        rememberPhoto(resume);
+        state.current = resume;
+        state.future = upcoming.filter((p) => p.id !== resume.id);
         state.history = [];
       } else if (upcoming.length) {
         state.current = upcoming[0];
         state.future = upcoming.slice(1);
         state.history = [];
-        state.forwardHighWater = cursorOf(state.current);
-        scheduleProgressPersist();
+        if (!state.forwardHighWater
+          || compareCursor(cursorOf(state.current), state.forwardHighWater) > 0) {
+          state.forwardHighWater = cursorOf(state.current);
+          scheduleProgressPersist();
+        }
       } else {
         state.current = null;
         state.future = [];
@@ -285,56 +361,89 @@ const WorldChoirMemoryFeed = (() => {
   }
 
   async function pollNewer() {
-    if (destroyed) return;
-    if (!state.newestKnown && !state.current) return;
-    const after = state.newestKnown || cursorOf(state.current);
-    if (!after?.createdAt) return;
+    if (destroyed || pollInFlight) return;
+    pollInFlight = true;
     try {
-      const params = new URLSearchParams({
-        eventId: eventId(),
-        limit: String(PAGE_SIZE),
+      sweepExpired();
+
+      // Empty feed: discover the first alive photos without progress resume.
+      if (!state.current) {
+        const data = await fetchPage({ live: true });
+        applyStatus(data);
+        const items = (data.items || []).filter(isAlive);
+        if (items.length) {
+          items.forEach((p) => rememberPhoto(p));
+          state.current = items[0];
+          state.future = items.slice(1);
+          state.nextCursor = data.nextCursor || null;
+          state.hasMore = Boolean(data.nextCursor);
+          state.forwardHighWater = cursorOf(state.current);
+          scheduleProgressPersist();
+          updateWaitingFlag();
+          notify();
+          prefetchImages();
+        }
+        state.isReconnecting = false;
+        backoffMs = 1000;
+        return;
+      }
+
+      const after = state.newestKnown || cursorOf(state.current);
+      if (!after?.createdAt) return;
+
+      const data = await fetchPage({
         afterCreatedAt: after.createdAt,
         afterId: after.id || '',
+        live: true,
       });
-      const id = deviceId();
-      if (id) params.set('deviceId', id);
-      const res = await fetch(`/api/memory-photos?${params}`, {
-        credentials: 'same-origin',
-        cache: 'no-store',
-      });
-      if (!res.ok) throw new Error('poll_failed');
-      const data = await res.json();
-      const items = data.items || [];
+      applyStatus(data);
+      const items = (data.items || []).filter(isAlive);
       if (items.length) {
         insertFutureSorted(items);
         if (data.nextCursor) {
           state.nextCursor = data.nextCursor;
           state.hasMore = true;
+        } else if (!state.hasMore) {
+          state.hasMore = false;
         }
         updateWaitingFlag();
         notify();
+        prefetchImages();
       }
-      if (typeof data.canPost === 'boolean') state.canPost = data.canPost;
-      if (typeof data.postedToday === 'boolean') state.postedToday = data.postedToday;
       state.isReconnecting = false;
       backoffMs = 1000;
     } catch {
       state.isReconnecting = true;
       notify();
+    } finally {
+      pollInFlight = false;
     }
   }
 
-  function startLivePoll() {
+  function livePollDelay() {
+    const snap = getSnapshot();
+    if (snap.isEmpty || snap.isWaitingForLive || !snap.right) return LIVE_POLL_FAST_MS;
+    return LIVE_POLL_NORMAL_MS;
+  }
+
+  function scheduleNextPoll() {
     stopLivePoll();
-    pollTimer = setInterval(() => {
-      if (document.visibilityState === 'hidden') return;
-      // Always poll for newer than newestKnown — especially important at end of stream.
-      pollNewer();
-    }, LIVE_POLL_MS);
+    if (destroyed) return;
+    pollTimer = setTimeout(async () => {
+      if (destroyed) return;
+      if (document.visibilityState !== 'hidden') {
+        await pollNewer();
+      }
+      scheduleNextPoll();
+    }, livePollDelay());
+  }
+
+  function startLivePoll() {
+    scheduleNextPoll();
   }
 
   function stopLivePoll() {
-    if (pollTimer) clearInterval(pollTimer);
+    if (pollTimer) clearTimeout(pollTimer);
     pollTimer = null;
   }
 
@@ -366,7 +475,6 @@ const WorldChoirMemoryFeed = (() => {
     const prev = state.history.pop();
     if (leaving) state.future.unshift(leaving);
     state.current = prev;
-    // Do NOT move high-water backward.
     updateWaitingFlag();
     notify();
     prefetchImages();
@@ -432,15 +540,28 @@ const WorldChoirMemoryFeed = (() => {
     if (!res.ok) {
       const err = new Error(data.error || 'Could not share memory.');
       err.code = data.code || 'POST_FAILED';
+      err.nextAllowedAt = data.nextAllowedAt || null;
       throw err;
     }
     state.canPost = false;
     state.postedToday = true;
+    state.onCooldown = true;
+    state.nextAllowedAt = data.photo?.expiresAt || null;
     if (data.photo) {
-      insertFutureSorted([data.photo]);
+      // Enter global stream by timestamp — poll/insert handles position.
+      if (!state.current) {
+        rememberPhoto(data.photo);
+        state.current = data.photo;
+        state.forwardHighWater = cursorOf(data.photo);
+        scheduleProgressPersist();
+      } else {
+        insertFutureSorted([data.photo]);
+      }
       updateWaitingFlag();
     }
     notify();
+    // Force an immediate live check so other tabs / race paths converge.
+    pollNewer();
     return data.photo;
   }
 
@@ -463,6 +584,7 @@ const WorldChoirMemoryFeed = (() => {
     if (document.visibilityState === 'visible') {
       pollNewer();
       ensureFutureBuffer();
+      scheduleNextPoll();
     }
   }
 
@@ -494,5 +616,6 @@ const WorldChoirMemoryFeed = (() => {
     removePhotoId,
     getUserLocationSnapshot,
     PAGE_SIZE,
+    PHOTO_TTL_MS,
   };
 })();

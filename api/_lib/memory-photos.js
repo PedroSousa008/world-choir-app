@@ -1,5 +1,7 @@
 /**
- * Memory photos — event-scoped global chronological feed.
+ * Memory photos — event-scoped chronological feed.
+ * Photos live 24 hours from server publish time, then leave the public stream.
+ * Users may post at most once every 24 hours (rolling window).
  * Blob layout under wc-data/memory/{eventId}/…
  */
 const { randomUUID } = require('crypto');
@@ -18,6 +20,7 @@ const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const MAX_CAPTION = 200;
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 50;
+const PHOTO_TTL_MS = 24 * 60 * 60 * 1000;
 
 const IMAGE_MIME_RE = /^image\/(jpeg|jpg|png|webp|gif)$/i;
 const IMAGE_EXT_MAP = {
@@ -40,8 +43,14 @@ function progressPath(eventId, userId) {
   return `${eventRoot(eventId)}/progress/${userId}.json`;
 }
 
-function userDayPath(eventId, userId, day) {
-  return `${eventRoot(eventId)}/by-user-day/${userId}/${day}.json`;
+/** Rolling 24h cooldown record (replaces calendar-day locks). */
+function userCooldownPath(eventId, userId) {
+  return `${eventRoot(eventId)}/by-user/${userId}/last-post.json`;
+}
+
+/** Short-lived create lock to reduce double-tap races. */
+function userCreateLockPath(eventId, userId) {
+  return `${eventRoot(eventId)}/by-user/${userId}/create-lock.json`;
 }
 
 function feedDayPath(eventId, day) {
@@ -58,6 +67,18 @@ function mediaPath(eventId, userId, photoId, ext) {
 
 function utcDayString(date = new Date()) {
   return date.toISOString().slice(0, 10);
+}
+
+function expiresAtFrom(createdAt) {
+  const t = Date.parse(createdAt);
+  if (!Number.isFinite(t)) return null;
+  return new Date(t + PHOTO_TTL_MS).toISOString();
+}
+
+function isWithinTtl(createdAt, nowMs = Date.now()) {
+  const t = Date.parse(createdAt);
+  if (!Number.isFinite(t)) return false;
+  return nowMs - t < PHOTO_TTL_MS;
 }
 
 function compareCursor(a, b) {
@@ -114,12 +135,14 @@ function sanitizeCaption(raw) {
   return text;
 }
 
-function publicPhoto(row) {
+function publicPhoto(row, nowMs = Date.now()) {
   if (!row || row.deletedAt || row.moderationStatus === 'rejected') return null;
   if (row.moderationStatus && row.moderationStatus !== 'approved' && row.moderationStatus !== 'pending') {
     return null;
   }
-  // Pending treated as approved for now until moderation tooling exists.
+  const createdAt = row.publishedAt || row.createdAt;
+  if (!isWithinTtl(createdAt, nowMs)) return null;
+
   return {
     id: row.id,
     eventId: row.eventId,
@@ -131,7 +154,8 @@ function publicPhoto(row) {
     city: row.city || null,
     country: row.country || null,
     createdAt: row.createdAt,
-    publishedAt: row.publishedAt || row.createdAt,
+    publishedAt: createdAt,
+    expiresAt: row.expiresAt || expiresAtFrom(createdAt),
     moderationStatus: row.moderationStatus || 'approved',
   };
 }
@@ -178,7 +202,11 @@ async function appendFeedIndex(eventId, entry) {
   const day = utcDayString(new Date(entry.createdAt));
   const items = await readFeedDay(eventId, day);
   if (!items.some((i) => i.id === entry.id)) {
-    items.push({ id: entry.id, createdAt: entry.createdAt });
+    items.push({
+      id: entry.id,
+      createdAt: entry.createdAt,
+      expiresAt: entry.expiresAt || expiresAtFrom(entry.createdAt),
+    });
     items.sort((a, b) => compareCursor(a, b));
     await writeFeedDay(eventId, day, items);
   }
@@ -205,8 +233,13 @@ async function getMemoryPhoto(eventId, photoId) {
   return loadPhoto(eventId, photoId);
 }
 
+function aliveWindowStartDay(nowMs = Date.now()) {
+  return utcDayString(new Date(nowMs - PHOTO_TTL_MS));
+}
+
 /**
  * Cursor feed: oldest → newest after optional cursor.
+ * Only photos still inside the 24h lifetime are returned.
  */
 async function listMemoryPhotos({
   eventId,
@@ -217,6 +250,8 @@ async function listMemoryPhotos({
   assertBlobConfigured();
   const id = String(eventId || 'world-choir-2027').trim();
   const take = Math.min(MAX_LIMIT, Math.max(1, Number(limit) || DEFAULT_LIMIT));
+  const nowMs = Date.now();
+  const minAliveIso = new Date(nowMs - PHOTO_TTL_MS).toISOString();
   const cursor = afterCreatedAt
     ? { createdAt: String(afterCreatedAt), id: String(afterId || '') }
     : null;
@@ -226,15 +261,23 @@ async function listMemoryPhotos({
     return { items: [], nextCursor: null };
   }
 
-  const startDay = cursor?.createdAt
+  // Only scan days that can still contain alive photos.
+  const aliveStart = aliveWindowStartDay(nowMs);
+  const rangeStart = cursor?.createdAt
     ? String(cursor.createdAt).slice(0, 10)
-    : meta.oldestDay;
+    : aliveStart;
+  const startDay = rangeStart < aliveStart ? aliveStart : rangeStart;
+  if (startDay > meta.newestDay) {
+    return { items: [], nextCursor: null };
+  }
+
   const days = dayRange(startDay, meta.newestDay);
   const items = [];
 
   for (const day of days) {
     const dayItems = await readFeedDay(id, day);
     for (const entry of dayItems) {
+      if (String(entry.createdAt || '') < minAliveIso) continue;
       if (!isAfterCursor(entry, cursor)) continue;
       const photo = await loadPhoto(id, entry.id);
       if (!photo) continue;
@@ -277,7 +320,6 @@ async function saveUserProgress({ eventId, userId, lastConsumedPhotoId, lastCons
     lastConsumedCreatedAt: String(lastConsumedCreatedAt || ''),
   };
 
-  // High-water mark only — never move progress backward.
   if (
     existing?.lastConsumedCreatedAt
     && compareCursor(
@@ -298,19 +340,80 @@ async function saveUserProgress({ eventId, userId, lastConsumedPhotoId, lastCons
   return row;
 }
 
-async function getTodayPostStatus({ deviceId, eventId }) {
-  const user = await findUserByDevice(deviceId);
-  if (!user) return { canPost: false, postedToday: false, reason: 'NO_USER' };
-  const day = utcDayString();
+async function readUserCooldown(eventId, userId) {
   try {
-    const lock = await readBlobJson(userDayPath(eventId, user.id, day));
-    if (lock?.photoId) {
-      return { canPost: false, postedToday: true, photoId: lock.photoId, day };
-    }
+    return await readBlobJson(userCooldownPath(eventId, userId));
   } catch {
-    /* none */
+    return null;
   }
-  return { canPost: true, postedToday: false, day };
+}
+
+function cooldownActive(cooldown, nowMs = Date.now()) {
+  if (!cooldown?.createdAt) return false;
+  return isWithinTtl(cooldown.createdAt, nowMs);
+}
+
+async function getPostStatus({ deviceId, eventId }) {
+  const user = await findUserByDevice(deviceId);
+  if (!user) {
+    return {
+      canPost: false,
+      postedToday: false,
+      onCooldown: false,
+      reason: 'NO_USER',
+      nextAllowedAt: null,
+    };
+  }
+  const cooldown = await readUserCooldown(eventId, user.id);
+  if (cooldownActive(cooldown)) {
+    const nextAllowedAt = expiresAtFrom(cooldown.createdAt);
+    return {
+      canPost: false,
+      postedToday: true,
+      onCooldown: true,
+      photoId: cooldown.photoId || null,
+      lastPostedAt: cooldown.createdAt,
+      nextAllowedAt,
+    };
+  }
+  return {
+    canPost: true,
+    postedToday: false,
+    onCooldown: false,
+    nextAllowedAt: null,
+  };
+}
+
+/** @deprecated use getPostStatus — kept for callers during rename */
+async function getTodayPostStatus(args) {
+  return getPostStatus(args);
+}
+
+function limitError(nextAllowedAt) {
+  const err = new Error('You’ve already shared a memory. You can share another in 24 hours.');
+  err.code = 'DAILY_MEMORY_LIMIT_REACHED';
+  err.nextAllowedAt = nextAllowedAt || null;
+  return err;
+}
+
+async function acquireCreateLock(eventId, userId, photoId, createdAt) {
+  const lockPath = userCreateLockPath(eventId, userId);
+  try {
+    await writeJson(lockPath, { photoId, createdAt }, { overwrite: false });
+    return;
+  } catch {
+    try {
+      const existing = await readBlobJson(lockPath);
+      const at = Date.parse(existing?.createdAt || '');
+      // Stale lock (>2 min) can be taken over.
+      if (Number.isFinite(at) && Date.now() - at < 2 * 60 * 1000) {
+        throw limitError(expiresAtFrom(existing.createdAt));
+      }
+    } catch (err) {
+      if (err?.code === 'DAILY_MEMORY_LIMIT_REACHED') throw err;
+    }
+    await writeJson(lockPath, { photoId, createdAt }, { overwrite: true });
+  }
 }
 
 async function createMemoryPhoto({
@@ -351,57 +454,28 @@ async function createMemoryPhoto({
     throw err;
   }
 
-  const day = utcDayString();
-  const photoId = randomUUID();
-  const createdAt = new Date().toISOString();
-  const subtype = contentType.replace(/^image\//, '');
-  const ext = IMAGE_EXT_MAP[subtype] || 'jpg';
-  const lockPath = userDayPath(eid, user.id, day);
-
-  // Soft pre-check (authoritative uniqueness is overwrite:false below).
-  try {
-    const existing = await readBlobJson(lockPath);
-    if (existing?.photoId) {
-      const e = new Error('You’ve already shared today’s memory.');
-      e.code = 'DAILY_MEMORY_LIMIT_REACHED';
-      throw e;
-    }
-  } catch (err) {
-    if (err?.code === 'DAILY_MEMORY_LIMIT_REACHED') throw err;
+  const existingCooldown = await readUserCooldown(eid, user.id);
+  if (cooldownActive(existingCooldown)) {
+    throw limitError(expiresAtFrom(existingCooldown.createdAt));
   }
 
-  // Upload media before claiming the day lock so a failed upload doesn't burn the quota.
+  const photoId = randomUUID();
+  const createdAt = new Date().toISOString();
+  const expiresAt = expiresAtFrom(createdAt);
+  const subtype = contentType.replace(/^image\//, '');
+  const ext = IMAGE_EXT_MAP[subtype] || 'jpg';
+
+  await acquireCreateLock(eid, user.id, photoId, createdAt);
+
+  // Re-check cooldown after lock (another request may have finished).
+  const cooldownAgain = await readUserCooldown(eid, user.id);
+  if (cooldownActive(cooldownAgain)) {
+    throw limitError(expiresAtFrom(cooldownAgain.createdAt));
+  }
+
   const pathname = mediaPath(eid, user.id, photoId, ext);
   await putPrivateBinary(pathname, buffer, contentType, { overwrite: true });
   const imageUrl = mediaProxyUrl(pathname);
-
-  try {
-    await writeJson(lockPath, {
-      userId: user.id,
-      eventId: eid,
-      day,
-      photoId,
-      createdAt,
-    }, { overwrite: false });
-  } catch (err) {
-    const msg = String(err?.message || err || '');
-    if (/overwrite|already|exist|409|412/i.test(msg)) {
-      const e = new Error('You’ve already shared today’s memory.');
-      e.code = 'DAILY_MEMORY_LIMIT_REACHED';
-      throw e;
-    }
-    try {
-      const existing = await readBlobJson(lockPath);
-      if (existing?.photoId) {
-        const e = new Error('You’ve already shared today’s memory.');
-        e.code = 'DAILY_MEMORY_LIMIT_REACHED';
-        throw e;
-      }
-    } catch (inner) {
-      if (inner?.code === 'DAILY_MEMORY_LIMIT_REACHED') throw inner;
-    }
-    throw err;
-  }
 
   const voiceName = pledge?.voiceName || pledge?.display_name || null;
   const row = {
@@ -417,14 +491,42 @@ async function createMemoryPhoto({
     country,
     createdAt,
     publishedAt: createdAt,
-    postingDay: day,
+    expiresAt,
+    postingDay: utcDayString(new Date(createdAt)),
     moderationStatus: 'approved',
     deletedAt: null,
     fileName: String(fileName || '').slice(0, 120),
   };
 
   await writeJson(photoPath(eid, photoId), row, { overwrite: true });
-  await appendFeedIndex(eid, { id: photoId, createdAt });
+  await appendFeedIndex(eid, { id: photoId, createdAt, expiresAt });
+
+  const cooldownRow = {
+    userId: user.id,
+    eventId: eid,
+    photoId,
+    createdAt,
+    expiresAt,
+    updatedAt: new Date().toISOString(),
+  };
+  await writeJson(userCooldownPath(eid, user.id), cooldownRow, { overwrite: true });
+
+  // If another create raced and wrote a different cooldown winner, drop ours.
+  const confirmed = await readUserCooldown(eid, user.id);
+  if (confirmed?.photoId && confirmed.photoId !== photoId && cooldownActive(confirmed)) {
+    const confirmedEarlier = compareCursor(
+      { createdAt: confirmed.createdAt, id: confirmed.photoId },
+      { createdAt, id: photoId }
+    ) < 0;
+    if (confirmedEarlier || confirmed.photoId !== photoId) {
+      await writeJson(photoPath(eid, photoId), {
+        ...row,
+        deletedAt: new Date().toISOString(),
+        moderationStatus: 'rejected',
+      }, { overwrite: true });
+      throw limitError(expiresAtFrom(confirmed.createdAt));
+    }
+  }
 
   return publicPhoto(row);
 }
@@ -436,8 +538,12 @@ module.exports = {
   getMemoryPhoto,
   getUserProgress,
   saveUserProgress,
+  getPostStatus,
   getTodayPostStatus,
   compareCursor,
   utcDayString,
+  expiresAtFrom,
+  isWithinTtl,
+  PHOTO_TTL_MS,
   MAX_CAPTION,
 };

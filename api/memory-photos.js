@@ -5,7 +5,7 @@ const {
   getMemoryPhoto,
   getUserProgress,
   saveUserProgress,
-  getTodayPostStatus,
+  getPostStatus,
 } = require('./_lib/memory-photos');
 
 module.exports = async function handler(req, res) {
@@ -21,6 +21,7 @@ module.exports = async function handler(req, res) {
       const eventId = String(req.query?.eventId || 'world-choir-2027').trim();
       const deviceId = String(req.query?.deviceId || '').trim();
       const view = String(req.query?.view || 'feed').trim();
+      const live = String(req.query?.live || '') === '1' || view === 'live';
       const afterCreatedAt = req.query?.afterCreatedAt
         ? String(req.query.afterCreatedAt)
         : null;
@@ -32,10 +33,11 @@ module.exports = async function handler(req, res) {
           return res.status(200).json({
             canPost: false,
             postedToday: false,
+            onCooldown: false,
             progress: null,
           });
         }
-        const status = await getTodayPostStatus({ deviceId, eventId });
+        const status = await getPostStatus({ deviceId, eventId });
         const user = await findUserByDevice(deviceId);
         const progress = user?.id ? await getUserProgress(eventId, user.id) : null;
         return res.status(200).json({ ...status, progress });
@@ -53,9 +55,10 @@ module.exports = async function handler(req, res) {
         }
       }
 
-      // Initial load (no explicit cursor): resume after high-water mark.
-      if (!afterCreatedAt && progress?.lastConsumedCreatedAt) {
+      // Initial load (no explicit cursor, not a live poll): resume after high-water mark.
+      if (!live && !afterCreatedAt && progress?.lastConsumedCreatedAt) {
         resumePhoto = await getMemoryPhoto(eventId, progress.lastConsumedPhotoId);
+        // Expired resume photo → start at first still-alive unseen item after cursor.
         feedAfterCreatedAt = progress.lastConsumedCreatedAt;
         feedAfterId = progress.lastConsumedPhotoId || '';
       }
@@ -67,9 +70,14 @@ module.exports = async function handler(req, res) {
         limit,
       });
 
+      // If resume photo expired and we have upcoming, client treats first upcoming as current.
+      if (resumePhoto == null && !live && !afterCreatedAt && progress?.lastConsumedCreatedAt) {
+        // leave resumePhoto null — client starts at items[0]
+      }
+
       const status = deviceId
-        ? await getTodayPostStatus({ deviceId, eventId })
-        : { canPost: false, postedToday: false };
+        ? await getPostStatus({ deviceId, eventId })
+        : { canPost: false, postedToday: false, onCooldown: false };
 
       return res.status(200).json({
         items: feed.items,
@@ -78,7 +86,9 @@ module.exports = async function handler(req, res) {
         progress,
         canPost: Boolean(status.canPost),
         postedToday: Boolean(status.postedToday),
-        day: status.day || null,
+        onCooldown: Boolean(status.onCooldown),
+        nextAllowedAt: status.nextAllowedAt || null,
+        photoTtlHours: 24,
       });
     }
 
@@ -124,6 +134,7 @@ module.exports = async function handler(req, res) {
             return res.status(409).json({
               error: err.message,
               code,
+              nextAllowedAt: err.nextAllowedAt || null,
             });
           }
           if (
