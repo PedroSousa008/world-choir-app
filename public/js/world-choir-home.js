@@ -367,19 +367,19 @@ const WorldChoirHome = (() => {
             </div>
             <section class="home-after-card home-after-card--stats home-after-stats-float" aria-label="World Choir event statistics" style="position:absolute;left:20px;right:20px;top:85%;z-index:6;margin:0">
               <div class="home-after-stats-row">
-                <div class="home-after-voices-stat">
+                <a class="home-after-voices-stat" href="map.html" id="home-stat-voices-link">
                   <div class="home-after-voices-stat__num-wrap">
                     <span class="home-after-voices-stat__num" id="home-stat-voices">${formatStat(merged.voices)}</span>
                   </div>
                   <span class="home-after-stat__label">People sang</span>
-                </div>
+                </a>
                 <div class="home-after-stats-row__divider" aria-hidden="true"></div>
-                <div class="home-after-voices-stat">
+                <a class="home-after-voices-stat" href="daily-acts.html" id="home-stat-acts-link">
                   <div class="home-after-voices-stat__num-wrap">
                     <span class="home-after-voices-stat__num" id="home-stat-acts">${formatStat(merged.dailyActsCompleted)}</span>
                   </div>
                   <span class="home-after-stat__label">Daily Acts Completed</span>
-                </div>
+                </a>
               </div>
             </section>
           </div>
@@ -438,6 +438,13 @@ const WorldChoirHome = (() => {
   function bindPostEventActions() {
     document.getElementById('home-open-memory')?.addEventListener('click', () => {
       window.location.href = 'memory.html';
+    });
+
+    ['map.html', 'daily-acts.html'].forEach((href) => {
+      const link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = href;
+      document.head.appendChild(link);
     });
 
     const openPromise = () => {

@@ -694,6 +694,17 @@
   text-align: center;
 }
 
+a.home-after-voices-stat {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a.home-after-voices-stat:active {
+  opacity: 0.75;
+}
+
 .home-after-voices-stat__num-wrap {
   flex: 0 0 auto;
   display: flex;
