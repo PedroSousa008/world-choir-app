@@ -706,93 +706,6 @@ const WorldChoirHome = (() => {
   }
 
   let homeView = 'unknown';
-  let helpOpen = false;
-  let helpBound = false;
-
-  function helpLightbulbTop() {
-    const logo = document.querySelector('.home-logo');
-    if (logo) {
-      const r = logo.getBoundingClientRect();
-      return Math.max(56, Math.round(r.top + r.height * 0.28));
-    }
-    return Math.round(92 + (window.visualViewport?.offsetTop || 0));
-  }
-
-  function syncHelpTabPosition() {
-    const tab = document.getElementById('home-help-tab');
-    if (!tab || tab.hidden) return;
-    tab.style.top = `${helpLightbulbTop()}px`;
-  }
-
-  function measureHelpPanelHeight() {
-    const headline = document.querySelector('.home-headline');
-    if (!headline) return 0;
-    const bottom = headline.getBoundingClientRect().bottom;
-    return Math.max(0, Math.round(bottom));
-  }
-
-  function setHelpOpen(open) {
-    helpOpen = !!open;
-    const tab = document.getElementById('home-help-tab');
-    const panel = document.getElementById('home-help-panel');
-    if (!tab || !panel) return;
-
-    tab.setAttribute('aria-expanded', helpOpen ? 'true' : 'false');
-    if (helpOpen) {
-      panel.hidden = false;
-      panel.setAttribute('aria-hidden', 'false');
-      panel.style.height = `${measureHelpPanelHeight()}px`;
-    } else {
-      panel.hidden = true;
-      panel.setAttribute('aria-hidden', 'true');
-      panel.style.height = '0px';
-    }
-  }
-
-  function syncHelpChrome() {
-    const tab = document.getElementById('home-help-tab');
-    const panel = document.getElementById('home-help-panel');
-    if (!tab || !panel) return;
-
-    const show = isPreEvent() && !LiveEventMode.isActive() && homeView === 'countdown';
-    tab.hidden = !show;
-    if (!show) {
-      setHelpOpen(false);
-      return;
-    }
-    syncHelpTabPosition();
-    if (helpOpen) {
-      panel.style.height = `${measureHelpPanelHeight()}px`;
-    }
-  }
-
-  function bindHelpUi() {
-    if (helpBound) return;
-    helpBound = true;
-    const tab = document.getElementById('home-help-tab');
-    const panel = document.getElementById('home-help-panel');
-    if (!tab || !panel) return;
-
-    tab.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setHelpOpen(!helpOpen);
-    });
-
-    // Empty placeholder — tap closes for now.
-    panel.addEventListener('click', () => setHelpOpen(false));
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && helpOpen) setHelpOpen(false);
-    });
-
-    window.addEventListener('resize', () => {
-      syncHelpChrome();
-    }, { passive: true });
-    window.visualViewport?.addEventListener('resize', () => {
-      syncHelpChrome();
-    }, { passive: true });
-  }
 
   function paintPostEvent(viewId) {
     fetchPostEventStats();
@@ -819,6 +732,7 @@ const WorldChoirHome = (() => {
     homeReady = true;
     mountPostEventHome();
     homeView = viewId;
+    syncHomeHelpUi();
   }
 
   function clearStaleLiveUi() {
@@ -869,19 +783,18 @@ const WorldChoirHome = (() => {
         root.innerHTML = renderCountdownHome();
         bindActions();
         homeView = 'countdown';
-        syncHelpChrome();
+        syncHomeHelpUi();
       } else {
         // Countdown stays mounted for speed — still refresh pledge CTA when state resolves.
         updatePledgeButton();
-        syncHelpChrome();
+        syncHomeHelpUi();
       }
       return;
     }
 
     if (LiveEventMode.isDuringLiveSong()) {
       homeReady = true;
-      setHelpOpen(false);
-      document.getElementById('home-help-tab')?.setAttribute('hidden', '');
+      homeView = homeView === 'live' ? 'live' : homeView;
       if (homeView !== 'live') {
         root.innerHTML = `
         <p class="home-brand home-brand--live"><span class="live-dot"></span> LIVE</p>
@@ -890,13 +803,12 @@ const WorldChoirHome = (() => {
       `;
         homeView = 'live';
       }
+      syncHomeHelpUi();
       return;
     }
 
     paintPostEvent('post-event');
-    setHelpOpen(false);
-    const helpTab = document.getElementById('home-help-tab');
-    if (helpTab) helpTab.hidden = true;
+    syncHomeHelpUi();
   }
 
   function updateCountdown() {
@@ -938,6 +850,110 @@ const WorldChoirHome = (() => {
       else window.location.href = 'daily-acts.html';
     });
     document.getElementById('share-btn')?.addEventListener('click', shareCountdown);
+    syncHomeHelpUi();
+  }
+
+  /* ─── Home help tab (pre-event countdown only) ─── */
+
+  let homeHelpBound = false;
+  let homeHelpOpen = false;
+
+  function helpBulbSvg() {
+    return `
+      <svg class="home-help-tab__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+        <path d="M9 18h6M10 21h4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+        <path d="M12 3a6.5 6.5 0 0 0-3.9 11.7c.5.4.9 1 .9 1.6V17h6v-.7c0-.6.4-1.2.9-1.6A6.5 6.5 0 0 0 12 3Z" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+      </svg>
+    `;
+  }
+
+  function ensureHomeHelpUi() {
+    if (!document.getElementById('home-help-tab')) {
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.id = 'home-help-tab';
+      tab.className = 'home-help-tab';
+      tab.setAttribute('aria-label', 'Help');
+      tab.setAttribute('aria-expanded', 'false');
+      tab.setAttribute('aria-controls', 'home-help-panel');
+      tab.hidden = true;
+      tab.innerHTML = helpBulbSvg();
+      document.body.appendChild(tab);
+    }
+    if (!document.getElementById('home-help-panel')) {
+      const panel = document.createElement('div');
+      panel.id = 'home-help-panel';
+      panel.className = 'home-help-panel';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-label', 'Help');
+      panel.setAttribute('aria-hidden', 'true');
+      panel.hidden = true;
+      document.body.appendChild(panel);
+    }
+    if (!homeHelpBound) {
+      homeHelpBound = true;
+      document.getElementById('home-help-tab')?.addEventListener('click', toggleHomeHelpPanel);
+      window.addEventListener('resize', () => {
+        if (homeHelpOpen) layoutHomeHelpPanel();
+      });
+      window.visualViewport?.addEventListener('resize', () => {
+        if (homeHelpOpen) layoutHomeHelpPanel();
+      });
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' && homeHelpOpen) closeHomeHelpPanel();
+      });
+    }
+  }
+
+  function layoutHomeHelpPanel() {
+    const panel = document.getElementById('home-help-panel');
+    if (!panel || panel.hidden) return;
+    const headline = document.querySelector('#home-content .home-headline');
+    if (!headline) {
+      panel.style.height = '0px';
+      return;
+    }
+    const bottom = headline.getBoundingClientRect().bottom;
+    panel.style.height = `${Math.max(0, Math.round(bottom))}px`;
+  }
+
+  function openHomeHelpPanel() {
+    ensureHomeHelpUi();
+    const tab = document.getElementById('home-help-tab');
+    const panel = document.getElementById('home-help-panel');
+    if (!tab || !panel || tab.hidden) return;
+    homeHelpOpen = true;
+    panel.hidden = false;
+    panel.setAttribute('aria-hidden', 'false');
+    tab.setAttribute('aria-expanded', 'true');
+    layoutHomeHelpPanel();
+  }
+
+  function closeHomeHelpPanel() {
+    const tab = document.getElementById('home-help-tab');
+    const panel = document.getElementById('home-help-panel');
+    homeHelpOpen = false;
+    if (panel) {
+      panel.hidden = true;
+      panel.setAttribute('aria-hidden', 'true');
+      panel.style.height = '';
+    }
+    tab?.setAttribute('aria-expanded', 'false');
+  }
+
+  function toggleHomeHelpPanel() {
+    if (homeHelpOpen) closeHomeHelpPanel();
+    else openHomeHelpPanel();
+  }
+
+  function syncHomeHelpUi() {
+    ensureHomeHelpUi();
+    const tab = document.getElementById('home-help-tab');
+    if (!tab) return;
+    const show = isPreEvent() && !LiveEventMode.isActive() && homeView === 'countdown';
+    tab.hidden = !show;
+    if (!show) closeHomeHelpPanel();
+    else if (homeHelpOpen) layoutHomeHelpPanel();
   }
 
   /* ─── Calendar & Share ─── */
@@ -989,8 +1005,6 @@ const WorldChoirHome = (() => {
     if (warmFromPledge || warmFromPostEventCache) homeReady = true;
 
     startHome();
-    bindHelpUi();
-    syncHelpChrome();
 
     // Always resolve pledge state so the CTA never stays a blank skeleton.
     const fallback = setTimeout(() => {

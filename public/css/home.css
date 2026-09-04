@@ -116,66 +116,6 @@
   letter-spacing: 0.02em;
 }
 
-/* ─── Home help tab (edge) + empty placeholder panel ─── */
-
-.home-help-tab {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 92px);
-  right: 0;
-  z-index: 55;
-  width: 46px;
-  height: 58px;
-  margin: 0;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 11px;
-  background: #2c2e34;
-  color: #2f8fa3;
-  cursor: pointer;
-  transform: translateX(52%) rotate(11deg);
-  transform-origin: center center;
-  -webkit-tap-highlight-color: transparent;
-  box-shadow: none;
-  outline: none;
-}
-
-.home-help-tab:focus-visible {
-  outline: 2px solid rgba(47, 143, 163, 0.55);
-  outline-offset: 2px;
-}
-
-.home-help-tab__icon {
-  width: 22px;
-  height: 22px;
-  display: block;
-  /* Keep the bulb centered in the tab so ~half is clipped by the viewport edge. */
-  transform: translateX(1px);
-  pointer-events: none;
-}
-
-.home-help-panel {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 54;
-  width: 100%;
-  height: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: rgba(40, 42, 48, 0.72);
-  pointer-events: auto;
-}
-
-.home-help-panel[hidden],
-.home-help-tab[hidden] {
-  display: none !important;
-}
-
 .home-meta--pledged {
   color: var(--accent-aurora);
   margin-top: 20px;
@@ -228,6 +168,71 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/* ─── Home help tab + empty placeholder panel ─── */
+
+.home-help-tab {
+  position: fixed;
+  top: max(56px, calc(env(safe-area-inset-top, 0px) + 48px));
+  right: 0;
+  z-index: 45;
+  width: 48px;
+  height: 34px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: #2c2e33;
+  color: #3ba7c4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Half off-screen; right edge sits a little higher than the left. */
+  transform: translateX(50%) rotate(-11deg);
+  transform-origin: center center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  box-shadow: none;
+}
+
+.home-help-tab[hidden] {
+  display: none !important;
+}
+
+.home-help-tab:focus-visible {
+  outline: 2px solid rgba(59, 167, 196, 0.55);
+  outline-offset: 2px;
+}
+
+.home-help-tab__icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  /* Push icon toward the clipped right edge so about half stays visible. */
+  transform: translateX(7px);
+  pointer-events: none;
+}
+
+.home-help-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(36, 38, 42, 0.72);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  pointer-events: auto;
+}
+
+.home-help-panel[hidden] {
+  display: none !important;
 }
 
 /* Primary CTA */
