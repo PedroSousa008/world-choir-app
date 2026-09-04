@@ -4,61 +4,6 @@
  * Photo carousel data lives in WorldChoirMemoryFeed.
  */
 const WorldChoirMemoryData = (() => {
-  const DEMO_STAMPS = [
-    {
-      id: 'pledged',
-      label: 'I Pledged',
-      icon: 'heart',
-      accent: 'cyan',
-      earned: true,
-      earnedAt: '2027-09-21',
-      detail: '21 Sep 2027',
-    },
-    {
-      id: 'sang',
-      label: 'I Sang',
-      icon: 'music',
-      accent: 'magenta',
-      earned: true,
-      earnedAt: '2027-09-21',
-      detail: '21 Sep 2027',
-    },
-    {
-      id: 'promised',
-      label: 'I Promised',
-      icon: 'peace',
-      accent: 'pink',
-      earned: true,
-      earnedAt: '2027-09-21',
-      detail: '21 Sep 2027',
-    },
-    {
-      id: 'daily-acts',
-      label: 'Daily Acts',
-      icon: 'sprout',
-      accent: 'green',
-      earned: true,
-      earnedAt: '2027-09-21',
-      detail: '7 Days',
-    },
-    {
-      id: 'shared-peace',
-      label: 'Shared Peace',
-      icon: 'people',
-      accent: 'blue',
-      earned: false,
-      detail: 'Locked',
-    },
-    {
-      id: 'pass-the-world',
-      label: 'Pass the World',
-      icon: 'globe',
-      accent: 'amber',
-      earned: false,
-      detail: 'Locked',
-    },
-  ];
-
   function eventId() {
     return (typeof WorldChoirConfig !== 'undefined'
       && (WorldChoirConfig.CURRENT_EVENT?.id || WorldChoirConfig.ACTIVE_EVENT?.id))
@@ -270,15 +215,10 @@ const WorldChoirMemoryData = (() => {
     }
   }
 
-  function getStamps() {
-    return DEMO_STAMPS.map((s) => ({ ...s }));
-  }
-
   return {
     getDefaultEvent,
     loadEventArchive,
     loadPassTheWorldRoute,
-    getStamps,
     eventId,
     deviceId,
   };
