@@ -43,34 +43,6 @@
   border-radius: 16px;
 }
 
-.dap-wt__arrow {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-  pointer-events: none;
-  overflow: visible;
-  opacity: 0;
-  transition: opacity 0.26s ease;
-}
-
-.dap-wt.is-visible .dap-wt__arrow {
-  opacity: 1;
-}
-
-.dap-wt__arrow-path {
-  fill: none;
-  stroke: var(--accent-aurora, #4ec5e8);
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.dap-wt__arrow-head {
-  fill: var(--accent-aurora, #4ec5e8);
-}
-
 .dap-wt__callout {
   position: fixed;
   z-index: 3;
@@ -121,39 +93,6 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-.dap-wt__close {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 14px);
-  right: 14px;
-  z-index: 5;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  margin: 0;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(242, 239, 232, 0.88);
-  cursor: pointer;
-  appearance: none;
-  pointer-events: auto;
-  -webkit-tap-highlight-color: transparent;
-  opacity: 0;
-  transition: opacity 0.26s ease;
-}
-
-.dap-wt.is-visible .dap-wt__close {
-  opacity: 1;
-}
-
-.dap-wt__close:focus-visible {
-  outline: 2px solid var(--accent-aurora, #4ec5e8);
-  outline-offset: 2px;
 }
 
 .dap-wt__footer {
@@ -243,9 +182,7 @@ body.dap-wt-active .daily-acts-page {
 
 @media (prefers-reduced-motion: reduce) {
   .dap-wt__spotlight,
-  .dap-wt__arrow,
   .dap-wt__callout,
-  .dap-wt__close,
   .dap-wt__footer,
   .dap-wt__dot {
     transition: none;

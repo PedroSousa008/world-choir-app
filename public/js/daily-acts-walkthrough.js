@@ -87,7 +87,6 @@ const DailyActsWalkthrough = (() => {
     rootEl.setAttribute('aria-hidden', 'true');
     rootEl.innerHTML = `
       <div class="dap-wt__spotlight" id="dap-wt-spotlight" aria-hidden="true"></div>
-      <svg class="dap-wt__arrow" id="dap-wt-arrow" aria-hidden="true"></svg>
       <div
         class="dap-wt__callout"
         id="dap-wt-callout"
@@ -100,11 +99,6 @@ const DailyActsWalkthrough = (() => {
         <h2 class="dap-wt__callout-title" id="dap-wt-title"></h2>
         <p class="dap-wt__callout-copy" id="dap-wt-copy"></p>
       </div>
-      <button type="button" class="dap-wt__close" id="dap-wt-close" aria-label="Close Daily Acts guide">
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-          <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
-        </svg>
-      </button>
       <div class="dap-wt__footer">
         <div class="dap-wt__dots" id="dap-wt-dots" aria-hidden="true"></div>
         <button type="button" class="dap-wt__next" id="dap-wt-next">Next</button>
@@ -115,10 +109,6 @@ const DailyActsWalkthrough = (() => {
     document.getElementById('dap-wt-next')?.addEventListener('click', (e) => {
       e.preventDefault();
       onPrimary();
-    });
-    document.getElementById('dap-wt-close')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      complete();
     });
     document.addEventListener('keydown', onKeydown);
     window.addEventListener('resize', onResize, { passive: true });
@@ -234,79 +224,6 @@ const DailyActsWalkthrough = (() => {
     return callout.getBoundingClientRect();
   }
 
-  function drawArrow(fromRect, toRect, stepIndex) {
-    const svg = document.getElementById('dap-wt-arrow');
-    if (!svg || !fromRect || !toRect) return;
-
-    const from = {
-      x: fromRect.left + fromRect.width / 2,
-      y: fromRect.top + fromRect.height / 2,
-    };
-    const to = {
-      x: toRect.left + toRect.width / 2,
-      y: toRect.top + toRect.height / 2,
-    };
-
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    const absX = Math.abs(dx);
-    const absY = Math.abs(dy);
-
-    let sx;
-    let sy;
-    if (absX > absY) {
-      sx = dx > 0 ? fromRect.right : fromRect.left;
-      sy = from.y;
-    } else {
-      sx = from.x;
-      sy = dy > 0 ? fromRect.bottom : fromRect.top;
-    }
-
-    let ex;
-    let ey;
-    if (Math.abs(to.x - sx) > Math.abs(to.y - sy)) {
-      ex = to.x > sx ? toRect.left - 4 : toRect.right + 4;
-      ey = to.y;
-    } else {
-      ex = to.x;
-      ey = to.y > sy ? toRect.top - 4 : toRect.bottom + 4;
-    }
-
-    let c1x;
-    let c1y;
-    let c2x;
-    let c2y;
-    if (stepIndex === 0) {
-      c1x = sx + (ex - sx) * 0.35;
-      c1y = sy - 28;
-      c2x = sx + (ex - sx) * 0.7;
-      c2y = ey - 10;
-    } else if (stepIndex === 1) {
-      c1x = sx + 20;
-      c1y = sy - 36;
-      c2x = ex + 10;
-      c2y = ey + 8;
-    } else {
-      c1x = sx + (ex - sx) * 0.4;
-      c1y = sy + 24;
-      c2x = ex - 12;
-      c2y = ey + 8;
-    }
-
-    const angle = Math.atan2(ey - c2y, ex - c2x);
-    const head = 7;
-    const hx1 = ex - head * Math.cos(angle - Math.PI / 6);
-    const hy1 = ey - head * Math.sin(angle - Math.PI / 6);
-    const hx2 = ex - head * Math.cos(angle + Math.PI / 6);
-    const hy2 = ey - head * Math.sin(angle + Math.PI / 6);
-
-    svg.setAttribute('viewBox', `0 0 ${window.innerWidth} ${window.innerHeight}`);
-    svg.innerHTML = `
-      <path class="dap-wt__arrow-path" d="M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${ex.toFixed(1)} ${ey.toFixed(1)}"/>
-      <path class="dap-wt__arrow-head" d="M ${ex.toFixed(1)} ${ey.toFixed(1)} L ${hx1.toFixed(1)} ${hy1.toFixed(1)} L ${hx2.toFixed(1)} ${hy2.toFixed(1)} Z"/>
-    `;
-  }
-
   function applySpotlight(target, stepIndex) {
     const spot = document.getElementById('dap-wt-spotlight');
     if (!spot || !target) return null;
@@ -343,10 +260,9 @@ const DailyActsWalkthrough = (() => {
     scrollTargetIntoView(target);
 
     const doLayout = () => {
-      const spotRect = applySpotlight(target, step);
+      applySpotlight(target, step);
       updateCopy();
-      const calloutRect = placeCallout(target.getBoundingClientRect(), step);
-      if (spotRect && calloutRect) drawArrow(calloutRect, spotRect, step);
+      placeCallout(target.getBoundingClientRect(), step);
     };
 
     if (prefersReducedMotion()) doLayout();
@@ -360,7 +276,6 @@ const DailyActsWalkthrough = (() => {
 
     const fadeEls = [
       document.getElementById('dap-wt-callout'),
-      document.getElementById('dap-wt-arrow'),
     ];
     fadeEls.forEach((el) => {
       if (el) el.style.opacity = '0';
@@ -412,8 +327,6 @@ const DailyActsWalkthrough = (() => {
         rootEl.setAttribute('aria-hidden', 'true');
       }
       document.body.classList.remove('dap-wt-active');
-      const svg = document.getElementById('dap-wt-arrow');
-      if (svg) svg.innerHTML = '';
     };
 
     if (rootEl && !prefersReducedMotion()) {
