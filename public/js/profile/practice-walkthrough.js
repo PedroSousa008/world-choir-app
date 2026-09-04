@@ -70,9 +70,9 @@ const PracticeWalkthrough = (() => {
     const root = document.getElementById('practice-mode') || document;
     if (stepIndex === 0) {
       return (
-        root.querySelector('.pm-lyrics')
-        || root.querySelector('#lyric-current')
-        || document.querySelector('.pm-lyrics')
+        root.querySelector('#lyric-current')
+        || root.querySelector('.pm-lyrics__row')
+        || root.querySelector('.pm-lyrics')
         || document.getElementById('lyric-current')
       );
     }
@@ -83,6 +83,42 @@ const PracticeWalkthrough = (() => {
       return root.querySelector('#practice-restart-btn') || document.getElementById('practice-restart-btn');
     }
     return root.querySelector('#practice-share-btn') || document.getElementById('practice-share-btn');
+  }
+
+  /** Tight highlight around the active lyric + upcoming line (not the full lyrics flex area). */
+  function getLyricsSpotlightRect() {
+    const root = document.getElementById('practice-mode') || document;
+    const current = root.querySelector('#lyric-current');
+    const next = root.querySelector('#lyric-next');
+    const leftWave = root.querySelector('.pm-waveform--left');
+    const rightWave = root.querySelector('.pm-waveform--right');
+    const parts = [current, leftWave, rightWave, next].filter(Boolean);
+    if (!parts.length) return null;
+
+    const rects = parts.map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 || r.height > 0);
+    if (!rects.length) return null;
+
+    let left = Math.min(...rects.map((r) => r.left));
+    let top = Math.min(...rects.map((r) => r.top));
+    let right = Math.max(...rects.map((r) => r.right));
+    let bottom = Math.max(...rects.map((r) => r.bottom));
+
+    // Small breathing room — keep it snug around the lyric text.
+    const padX = 10;
+    const padY = 8;
+    left -= padX;
+    top -= padY;
+    right += padX;
+    bottom += padY;
+
+    return {
+      left,
+      top,
+      width: Math.max(0, right - left),
+      height: Math.max(0, bottom - top),
+      right,
+      bottom,
+    };
   }
 
   function ensureDom() {
@@ -231,14 +267,37 @@ const PracticeWalkthrough = (() => {
     const spot = document.getElementById('pm-wt-spotlight');
     if (!spot || !target) return null;
 
-    const rect = target.getBoundingClientRect();
-    const pad = stepIndex === 0 ? PAD : 5;
-    const left = rect.left - pad;
-    const top = rect.top - pad;
-    const width = rect.width + pad * 2;
-    const height = rect.height + pad * 2;
+    let left;
+    let top;
+    let width;
+    let height;
+
+    if (stepIndex === 0) {
+      const tight = getLyricsSpotlightRect();
+      if (tight) {
+        left = tight.left;
+        top = tight.top;
+        width = tight.width;
+        height = tight.height;
+      } else {
+        const rect = target.getBoundingClientRect();
+        const pad = 4;
+        left = rect.left - pad;
+        top = rect.top - pad;
+        width = rect.width + pad * 2;
+        height = rect.height + pad * 2;
+      }
+    } else {
+      const rect = target.getBoundingClientRect();
+      const pad = 5;
+      left = rect.left - pad;
+      top = rect.top - pad;
+      width = rect.width + pad * 2;
+      height = rect.height + pad * 2;
+    }
 
     spot.classList.toggle('pm-wt__spotlight--round', stepIndex >= 1);
+    spot.classList.toggle('pm-wt__spotlight--lyrics', stepIndex === 0);
     spot.style.left = `${Math.round(left)}px`;
     spot.style.top = `${Math.round(top)}px`;
     spot.style.width = `${Math.round(width)}px`;
@@ -255,9 +314,12 @@ const PracticeWalkthrough = (() => {
     scrollTargetIntoView(target);
 
     const doLayout = () => {
-      applySpotlight(target, step);
+      const spotRect = applySpotlight(target, step);
       updateCopy();
-      placeCallout(target.getBoundingClientRect(), step);
+      const calloutAnchor = step === 0 && spotRect
+        ? spotRect
+        : target.getBoundingClientRect();
+      placeCallout(calloutAnchor, step);
     };
 
     if (prefersReducedMotion()) doLayout();

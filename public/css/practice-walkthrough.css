@@ -39,6 +39,10 @@
   border-radius: 999px;
 }
 
+.pm-wt__spotlight--lyrics {
+  border-radius: 16px;
+}
+
 .pm-wt__callout {
   position: fixed;
   z-index: 3;
