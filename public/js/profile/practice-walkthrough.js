@@ -67,20 +67,26 @@ const PracticeWalkthrough = (() => {
   }
 
   function getTarget(stepIndex) {
+    const root = document.getElementById('practice-mode') || document;
     if (stepIndex === 0) {
-      return document.querySelector('.pm-lyrics') || document.getElementById('lyric-current');
+      return (
+        root.querySelector('.pm-lyrics')
+        || root.querySelector('#lyric-current')
+        || document.querySelector('.pm-lyrics')
+        || document.getElementById('lyric-current')
+      );
     }
     if (stepIndex === 1) {
-      return document.getElementById('practice-pause-btn');
+      return root.querySelector('#practice-pause-btn') || document.getElementById('practice-pause-btn');
     }
     if (stepIndex === 2) {
-      return document.getElementById('practice-restart-btn');
+      return root.querySelector('#practice-restart-btn') || document.getElementById('practice-restart-btn');
     }
-    return document.getElementById('practice-share-btn');
+    return root.querySelector('#practice-share-btn') || document.getElementById('practice-share-btn');
   }
 
   function ensureDom() {
-    if (rootEl) return rootEl;
+    if (rootEl && document.body.contains(rootEl)) return rootEl;
     rootEl = document.createElement('div');
     rootEl.id = 'pm-walkthrough';
     rootEl.className = 'pm-wt';
@@ -105,7 +111,8 @@ const PracticeWalkthrough = (() => {
         <button type="button" class="pm-wt__next" id="pm-wt-next">Next</button>
       </div>
     `;
-    document.body.appendChild(rootEl);
+    const host = document.getElementById('practice-mode') || document.body;
+    host.appendChild(rootEl);
 
     document.getElementById('pm-wt-next')?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -277,7 +284,7 @@ const PracticeWalkthrough = (() => {
   function start() {
     if (active) return;
     const target = getTarget(0);
-    if (!target) return;
+    if (!target) return false;
 
     ensureDom();
     active = true;
@@ -287,20 +294,24 @@ const PracticeWalkthrough = (() => {
 
     document.body.classList.add('pm-wt-active');
     rootEl.hidden = false;
+    rootEl.removeAttribute('hidden');
     rootEl.setAttribute('aria-hidden', 'false');
+    rootEl.classList.add('is-visible');
 
     updateCopy();
+    layout();
     requestAnimationFrame(() => {
-      rootEl.classList.add('is-visible');
       layout();
       document.getElementById('pm-wt-next')?.focus?.();
     });
+    return true;
   }
 
   function teardownOverlay() {
     if (rootEl) {
       rootEl.classList.remove('is-visible');
       rootEl.hidden = true;
+      rootEl.setAttribute('hidden', '');
       rootEl.setAttribute('aria-hidden', 'true');
     }
     document.body.classList.remove('pm-wt-active');
@@ -336,10 +347,9 @@ const PracticeWalkthrough = (() => {
   function onPracticeReady() {
     if (active) {
       layout();
-      return;
+      return true;
     }
-    if (!getTarget(0)) return;
-    start();
+    return start();
   }
 
   /** Hard cleanup when Practice exits mid-guide. */

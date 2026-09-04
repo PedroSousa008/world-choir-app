@@ -169,6 +169,7 @@ const ProfilePage = (() => {
         clearTimeout(fallback);
         console.error('Failed to connect to World Choir database:', err);
         revealProfile();
+        maybeOpenPracticeFromQuery();
       });
   }
 

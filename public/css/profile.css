@@ -418,6 +418,13 @@
   align-items: stretch;
 }
 
+/* Walkthrough lives inside #practice-mode — keep it above playing UI */
+.practice-mode > .pm-wt {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+}
+
 /* Ambient keeps the existing JS-injected element intact (no-op visually now) */
 .practice-mode__ambient {
   display: none;

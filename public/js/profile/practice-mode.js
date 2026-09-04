@@ -244,14 +244,31 @@ const PracticeMode = (() => {
     guideLocked = true;
     syncPauseButton();
 
+    const tryStartWalkthrough = (attempt = 0) => {
+      if (typeof PracticeWalkthrough === 'undefined') {
+        consumeGuideTrigger();
+        guideLocked = false;
+        return;
+      }
+
+      const started = PracticeWalkthrough.onPracticeReady();
+      if (started || PracticeWalkthrough.isActive?.()) {
+        consumeGuideTrigger();
+        return;
+      }
+
+      if (attempt < 30) {
+        setTimeout(() => tryStartWalkthrough(attempt + 1), 50);
+        return;
+      }
+
+      consumeGuideTrigger();
+      guideLocked = false;
+      console.warn('Practice walkthrough: could not start overlay');
+    };
+
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (typeof PracticeWalkthrough !== 'undefined') {
-          PracticeWalkthrough.onPracticeReady();
-        } else {
-          guideLocked = false;
-        }
-      });
+      requestAnimationFrame(() => tryStartWalkthrough(0));
     });
   }
 
@@ -302,7 +319,7 @@ const PracticeMode = (() => {
     document.body.style.overflow = 'hidden';
 
     if (hasGuideTrigger()) {
-      consumeGuideTrigger();
+      // Trigger is consumed when the walkthrough successfully finds its targets.
       startPlaybackPausedForGuide();
     } else {
       startCountdown();

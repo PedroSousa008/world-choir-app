@@ -1,9 +1,9 @@
 /* Practice the Song — guide-triggered contextual walkthrough */
 
 .pm-wt {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 450;
+  z-index: 500;
   pointer-events: none;
 }
 
