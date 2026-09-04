@@ -842,42 +842,72 @@ const WorldChoirHome = (() => {
     document.getElementById('countdown-seconds').textContent = String(t.seconds).padStart(2, '0');
   }
 
-  function layoutHomeGuideOverlay() {
-    const overlay = document.getElementById('home-guide-overlay');
-    const headline = document.querySelector('#home-content .home-headline');
-    if (!overlay || overlay.hidden || !headline) return;
-    const bottom = Math.ceil(headline.getBoundingClientRect().bottom);
-    overlay.style.top = '0px';
-    overlay.style.height = `${Math.max(0, bottom)}px`;
+  let homeGuideFocusBefore = null;
+  let homeGuideCloseTimer = null;
+
+  function prefersReducedMotion() {
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
   }
 
   function closeHomeGuide() {
     const overlay = document.getElementById('home-guide-overlay');
     const btn = document.getElementById('home-guide-btn');
-    if (overlay) {
-      overlay.hidden = true;
-      overlay.setAttribute('aria-hidden', 'true');
-      overlay.style.height = '';
+    if (!overlay || (overlay.hidden && !overlay.classList.contains('is-open'))) {
+      document.body.classList.remove('home-guide-open');
+      return;
     }
+
+    if (homeGuideCloseTimer) {
+      clearTimeout(homeGuideCloseTimer);
+      homeGuideCloseTimer = null;
+    }
+
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('home-guide-open');
     if (btn) btn.setAttribute('aria-expanded', 'false');
-    window.removeEventListener('resize', layoutHomeGuideOverlay);
+
+    const finish = () => {
+      homeGuideCloseTimer = null;
+      overlay.hidden = true;
+      if (homeGuideFocusBefore && typeof homeGuideFocusBefore.focus === 'function') {
+        try { homeGuideFocusBefore.focus(); } catch { /* ignore */ }
+      }
+      homeGuideFocusBefore = null;
+    };
+
+    if (prefersReducedMotion()) finish();
+    else homeGuideCloseTimer = setTimeout(finish, 260);
   }
 
   function openHomeGuide() {
     const overlay = document.getElementById('home-guide-overlay');
     const btn = document.getElementById('home-guide-btn');
-    const headline = document.querySelector('#home-content .home-headline');
-    if (!overlay || !headline) return;
+    if (!overlay) return;
+
+    if (homeGuideCloseTimer) {
+      clearTimeout(homeGuideCloseTimer);
+      homeGuideCloseTimer = null;
+    }
+
+    homeGuideFocusBefore = document.activeElement;
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('home-guide-open');
     if (btn) btn.setAttribute('aria-expanded', 'true');
-    layoutHomeGuideOverlay();
-    window.addEventListener('resize', layoutHomeGuideOverlay, { passive: true });
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        overlay.classList.add('is-open');
+        document.getElementById('home-guide-close')?.focus?.();
+      });
+    });
   }
 
   function toggleHomeGuide() {
     const overlay = document.getElementById('home-guide-overlay');
-    if (!overlay || overlay.hidden) openHomeGuide();
+    if (!overlay) return;
+    if (overlay.hidden || !overlay.classList.contains('is-open')) openHomeGuide();
     else closeHomeGuide();
   }
 
@@ -1000,6 +1030,17 @@ const WorldChoirHome = (() => {
     document.getElementById('home-guide-btn')?.addEventListener('click', (e) => {
       e.preventDefault();
       toggleHomeGuide();
+    });
+    document.getElementById('home-guide-close')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeHomeGuide();
+    });
+    document.getElementById('home-guide-gotit')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeHomeGuide();
+    });
+    document.getElementById('home-guide-backdrop')?.addEventListener('click', () => {
+      closeHomeGuide();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeHomeGuide();

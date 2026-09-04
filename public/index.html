@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
-  <link rel="stylesheet" href="css/home.css?v=20260904ca">
+  <link rel="stylesheet" href="css/home.css?v=20260904cb">
   <link rel="preload" as="image" href="images/after-event.png?v=20260903p">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
   <link rel="stylesheet" href="css/live-event.css?v=20260904as">
@@ -126,7 +126,7 @@
       type="button"
       class="home-guide-btn"
       id="home-guide-btn"
-      aria-label="Suggestions and guide"
+      aria-label="Open World Choir guide"
       aria-expanded="false"
       aria-controls="home-guide-overlay"
       hidden
@@ -141,7 +141,106 @@
       id="home-guide-overlay"
       hidden
       aria-hidden="true"
-    ></div>
+    >
+      <div class="home-guide-backdrop" id="home-guide-backdrop" tabindex="-1"></div>
+      <div
+        class="home-guide-panel"
+        id="home-guide-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="home-guide-title"
+      >
+        <div class="home-guide-panel__handle" aria-hidden="true"></div>
+        <button type="button" class="home-guide-panel__close" id="home-guide-close" aria-label="Close guide">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+            <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        <p class="home-guide-panel__brand">WORLD CHOIR</p>
+        <h2 class="home-guide-panel__title" id="home-guide-title">Discover what you can do</h2>
+        <p class="home-guide-panel__lead">A global movement, in your hands.</p>
+
+        <div class="home-guide-grid" role="list">
+          <article class="home-guide-card" role="listitem">
+            <span class="home-guide-card__icon home-guide-card__icon--cyan" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false">
+                <circle cx="9" cy="8" r="2.6" fill="none" stroke="currentColor" stroke-width="1.75"/>
+                <circle cx="16" cy="8.5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.75"/>
+                <path d="M3.8 18.5c.7-2.9 2.7-4.5 5.2-4.5s4.5 1.6 5.2 4.5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                <path d="M13.2 16.8c.7-1.5 2-2.3 3.6-2.3 1.4 0 2.6.6 3.3 1.7" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <h3 class="home-guide-card__title">Join the Chorus</h3>
+            <p class="home-guide-card__copy">Be part of a global moment and add your voice.</p>
+          </article>
+
+          <article class="home-guide-card" role="listitem">
+            <span class="home-guide-card__icon home-guide-card__icon--cyan" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false">
+                <path d="M9 18V5.5l11-2V16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+                <circle cx="7" cy="18" r="2.4" fill="none" stroke="currentColor" stroke-width="1.75"/>
+                <circle cx="18" cy="16" r="2.4" fill="none" stroke="currentColor" stroke-width="1.75"/>
+              </svg>
+            </span>
+            <h3 class="home-guide-card__title">Practice the Song</h3>
+            <p class="home-guide-card__copy">Learn, listen and get ready for the big day.</p>
+          </article>
+
+          <article class="home-guide-card" role="listitem">
+            <span class="home-guide-card__icon home-guide-card__icon--coral" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false">
+                <path d="M12 20s-6.5-4.1-6.5-9.2A3.9 3.9 0 0 1 12 7.5a3.9 3.9 0 0 1 6.5 3.3C18.5 15.9 12 20 12 20z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <h3 class="home-guide-card__title">Daily Acts of Peace</h3>
+            <p class="home-guide-card__copy">Small actions. A kinder world.</p>
+          </article>
+
+          <article class="home-guide-card" role="listitem">
+            <span class="home-guide-card__icon home-guide-card__icon--violet" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false">
+                <circle cx="12" cy="12" r="8.25" fill="none" stroke="currentColor" stroke-width="1.75"/>
+                <path d="M3.75 12h16.5M12 3.75c2.5 2.5 4.1 5.7 4.1 8.25S14.5 17.75 12 20.25M12 3.75C9.5 6.25 7.9 9.45 7.9 12s1.6 5.75 4.1 8.25" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <h3 class="home-guide-card__title">Explore the Map</h3>
+            <p class="home-guide-card__copy">See voices from around the world in real time.</p>
+          </article>
+
+          <article class="home-guide-card" role="listitem">
+            <span class="home-guide-card__icon home-guide-card__icon--green" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false">
+                <path d="M8.2 11.2V7.1a1.55 1.55 0 0 1 3.1 0V11" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                <path d="M11.3 11V6.5a1.55 1.55 0 1 1 3.1 0V11" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+                <path d="M14.4 11.2V8.2a1.55 1.55 0 1 1 3.1 0v6.1a5 5 0 0 1-5 5H11.8a4.8 4.8 0 0 1-4.8-4.8v-3a1.55 1.55 0 0 1 3.1 0v1.6" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M17.6 5.2c0 1.2-1.7 2.2-1.7 2.2S14.2 6.4 14.2 5.2a1.1 1.1 0 0 1 1.7-.9 1.1 1.1 0 0 1 1.7.9z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <h3 class="home-guide-card__title">Make a Donation</h3>
+            <p class="home-guide-card__copy">Support causes that create change.</p>
+          </article>
+
+          <article class="home-guide-card" role="listitem">
+            <span class="home-guide-card__icon home-guide-card__icon--gold" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="28" height="28" focusable="false">
+                <path d="M12 4.2l1.8 4.1 4.5.5-3.4 3.1.9 4.4L12 14.5 8.2 16.3l.9-4.4-3.4-3.1 4.5-.5L12 4.2z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <h3 class="home-guide-card__title">Build Your Passport</h3>
+            <p class="home-guide-card__copy">Collect stamps and achievements on your journey.</p>
+          </article>
+        </div>
+
+        <p class="home-guide-tagline">
+          <span class="home-guide-tagline__line" aria-hidden="true"></span>
+          <span class="home-guide-tagline__text">ONE SONG. A BRIGHTER TOMORROW.</span>
+          <span class="home-guide-tagline__line" aria-hidden="true"></span>
+        </p>
+
+        <button type="button" class="home-guide-gotit" id="home-guide-gotit">Got it</button>
+      </div>
+    </div>
     <div id="home-content"></div>
   </main>
   <script>
@@ -268,7 +367,7 @@
   <script src="js/live-event/global-live-event.js?v=20260904as"></script>
   <script src="js/world-choir-live-event.js?v=20260904an"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260819a"></script>
-  <script src="js/world-choir-home.js?v=20260904bz"></script>
+  <script src="js/world-choir-home.js?v=20260904ca"></script>
   <script>
     (function bootWorldChoirHome() {
       function startHome() {
