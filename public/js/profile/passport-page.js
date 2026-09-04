@@ -507,14 +507,25 @@ const PassportPage = (() => {
     if (typeof PassTheWorld !== 'undefined') PassTheWorld.destroy();
   }
 
+  function dismissPassportStampsGuide() {
+    if (typeof PassportStampsWalkthrough !== 'undefined') {
+      PassportStampsWalkthrough.dismiss?.();
+    }
+  }
+
   function showChapter(chapter, opts = {}) {
     const next = resolveChapter(chapter);
     applyChapter(next, opts);
     if (next === 'stamps') {
       unmountPassTheWorld();
       const card = document.querySelector('.passport-card');
-      scheduleStampReveals(card);
+      const guideActive = typeof PassportStampsWalkthrough !== 'undefined'
+        && PassportStampsWalkthrough.isActive?.();
+      if (!guideActive) {
+        scheduleStampReveals(card);
+      }
     } else if (next === 'story') {
+      dismissPassportStampsGuide();
       mountPassTheWorld();
     } else {
       unmountPassTheWorld();
@@ -582,6 +593,12 @@ const PassportPage = (() => {
     const nextSig = stampSignature(fresh);
     passportData = fresh;
 
+    // Keep guide presentation stable — never wipe temporary stamps mid-tour.
+    if (typeof PassportStampsWalkthrough !== 'undefined' && PassportStampsWalkthrough.isActive?.()) {
+      if (chapter !== 'story') updateMainStats(chapter);
+      return;
+    }
+
     if (chapter === 'story' && document.getElementById('passport-story-host')?.querySelector('.ptw')) {
       updateStoryStats(fresh);
       return;
@@ -628,10 +645,19 @@ const PassportPage = (() => {
 
     if (chapter === 'stamps') {
       const card = root.querySelector('.passport-card');
-      scheduleStampReveals(card);
+      const guideActive = typeof PassportStampsWalkthrough !== 'undefined'
+        && PassportStampsWalkthrough.isActive?.();
+      if (!guideActive) {
+        scheduleStampReveals(card);
+      }
     } else if (chapter === 'story') {
       mountPassTheWorld();
     }
+  }
+
+  function maybeStartPassportStampsGuide() {
+    if (typeof PassportStampsWalkthrough === 'undefined') return;
+    PassportStampsWalkthrough.onPageReady?.();
   }
 
   async function mount() {
@@ -655,6 +681,7 @@ const PassportPage = (() => {
       passportData = cached;
       paint(cached, chapter, { animate: false });
       hadWarmPaint = true;
+      maybeStartPassportStampsGuide();
     } else if (chapter === 'story') {
       root.innerHTML = renderLoading('story');
       bindStoryBack();
@@ -667,11 +694,13 @@ const PassportPage = (() => {
         passportData = fast;
         paint(fast, chapter, { animate: false });
         hadWarmPaint = true;
+        maybeStartPassportStampsGuide();
       } catch {
         root.innerHTML = renderLoading(chapter);
         WorldChoirPassport.revealFeatureImages(root);
         bindInteractions();
         applyChapter(chapter, { syncUrl: true, historyMode: 'replace' });
+        maybeStartPassportStampsGuide();
       }
     }
 
@@ -681,6 +710,7 @@ const PassportPage = (() => {
         typeof PassportRoute !== 'undefined' ? PassportRoute.getPage() : activeChapter
       );
       applyFreshPassportData(fresh, current, { hadWarmPaint });
+      maybeStartPassportStampsGuide();
     } catch (err) {
       console.error(err);
       if (!passportData) {
@@ -713,5 +743,5 @@ const PassportPage = (() => {
     }
   }
 
-  return { init, showChapter, updateJourneyStats, refreshJourneyStats, updateJourneyStatsKm, liveJourneyTotalKm };
+  return { init, showChapter, updateJourneyStats, refreshJourneyStats, updateJourneyStatsKm, liveJourneyTotalKm, getPassportData: () => passportData };
 })();

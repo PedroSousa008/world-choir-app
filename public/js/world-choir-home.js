@@ -968,6 +968,33 @@ const WorldChoirHome = (() => {
     window.location.href = 'passport.html?page=story';
   }
 
+  function resolveGuidePledgeStatus() {
+    if (typeof WorldChoirPledgeState !== 'undefined' && WorldChoirPledgeState.isPledged?.()) {
+      return true;
+    }
+    if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.hasPledged?.()) {
+      return true;
+    }
+    const pledge = typeof WorldChoirDB !== 'undefined'
+      ? WorldChoirDB.getPledgeForCurrentUser?.()
+      : null;
+    const n = pledge?.voiceNumber ?? pledge?.voice_number;
+    return n != null && n !== '' && !Number.isNaN(Number(n));
+  }
+
+  function openPassportStampsFromGuide() {
+    const pledged = resolveGuidePledgeStatus();
+    try {
+      sessionStorage.setItem('wc_passport_stamps_from_guide', '1');
+      sessionStorage.setItem('wc_passport_stamps_guide_pledged', pledged ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+    closeHomeGuide();
+    // Always open Passport cover — guide Step 1 teaches fingerprint → Stamps.
+    window.location.href = 'passport.html';
+  }
+
   function bindActions() {
     document.getElementById('pledge-btn')?.addEventListener('click', () => WorldChoirParticipation.open());
     document.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
@@ -1094,6 +1121,10 @@ const WorldChoirHome = (() => {
     document.getElementById('home-guide-card-pass-the-world')?.addEventListener('click', (e) => {
       e.preventDefault();
       openPassTheWorldFromGuide();
+    });
+    document.getElementById('home-guide-card-passport-stamps')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      openPassportStampsFromGuide();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeHomeGuide();

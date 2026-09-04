@@ -1149,6 +1149,73 @@ const PassportStamps = (() => {
     return `<div class="passport-stamps" role="list">${items}</div>`;
   }
 
+  /** Guide-only presentation — never mutates earned stamp / pledge state. */
+  let guidePresentationActive = false;
+
+  function isGuidePresentationActive() {
+    return guidePresentationActive;
+  }
+
+  function buildGuideVoiceJoinedOnlyStatuses() {
+    const stamp = PASSPORT_STAMPS.find((entry) => entry.id === 'your-voice-joined');
+    if (!stamp) return [];
+    return [{
+      stamp,
+      unlocked: true,
+      shouldReveal: false,
+      pledged: true,
+      hasLocation: true,
+      unlockDate: null,
+      reason: 'guide_presentation',
+    }];
+  }
+
+  function applyGuidePresentation(scope = document, { pledged = false } = {}) {
+    const card = scope.querySelector?.('.passport-card') || scope.closest?.('.passport-card') || scope;
+    const wrap = card?.querySelector?.('.passport-stamps-wrap');
+    if (!wrap) return false;
+
+    guidePresentationActive = true;
+    wrap.dataset.guidePresentation = pledged ? 'voice-joined-only' : 'unpledged-real';
+
+    if (!pledged) {
+      // Keep the real unpledged / empty collection presentation.
+      return true;
+    }
+
+    const esc = (s) => String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    wrap.innerHTML = renderGrid(buildGuideVoiceJoinedOnlyStatuses(), { esc });
+    return true;
+  }
+
+  function clearGuidePresentation(scope = document, realStampStatuses = null) {
+    const card = scope.querySelector?.('.passport-card') || scope.closest?.('.passport-card') || scope;
+    const wrap = card?.querySelector?.('.passport-stamps-wrap');
+    guidePresentationActive = false;
+    if (!wrap) return false;
+
+    const wasGuideOnly = wrap.dataset.guidePresentation === 'voice-joined-only';
+    delete wrap.dataset.guidePresentation;
+
+    const statuses = Array.isArray(realStampStatuses)
+      ? realStampStatuses.map((status) => ({ ...status, shouldReveal: false }))
+      : (wasGuideOnly ? [] : null);
+
+    if (!statuses) return true;
+
+    const esc = (s) => String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    wrap.innerHTML = renderGrid(statuses, { esc });
+    return true;
+  }
+
   function prefersReducedMotion() {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
   }
@@ -1439,6 +1506,9 @@ const PassportStamps = (() => {
     evaluateStampUnlock,
     resolveAllStatuses,
     renderGrid,
+    applyGuidePresentation,
+    clearGuidePresentation,
+    isGuidePresentationActive,
     bindRevealAnimations,
     scheduleRevealAnimations,
     shouldAnimateReveal,
