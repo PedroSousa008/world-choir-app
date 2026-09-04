@@ -1,5 +1,5 @@
 /**
- * Passport Stamps — contextual 4-step walkthrough.
+ * Passport Stamps — contextual 2-step walkthrough.
  * Launches ONLY from the Home lightbulb guide → Passport Stamps.
  * Spans Passport cover (fingerprint) → Passport Stamps (pledge variants).
  * Ephemeral / replayable — no permanent "seen" storage.
@@ -74,12 +74,12 @@ const PassportStampsWalkthrough = (() => {
       ? {
         title: 'Your Voice Joined',
         copy: 'Your first stamp marks the moment your voice became part of World Choir.',
-        button: 'Next',
+        button: 'Got it',
       }
       : {
         title: 'Your Stamps',
         copy: 'This is where the moments you create with World Choir become part of your story.',
-        button: 'Next',
+        button: 'Got it',
       };
 
     return [
@@ -89,16 +89,6 @@ const PassportStampsWalkthrough = (() => {
         button: 'Next',
       },
       step2,
-      {
-        title: 'Your Collection',
-        copy: 'Each stamp becomes a memory of how you took part in the journey.',
-        button: 'Next',
-      },
-      {
-        title: 'Continue Your Story',
-        copy: 'Keep taking part and your Passport will grow with new memories.',
-        button: 'Got it',
-      },
     ];
   }
 
@@ -116,28 +106,15 @@ const PassportStampsWalkthrough = (() => {
         || document.querySelector('.passport-card__feature-img')
       );
     }
-    if (stepIndex === 1) {
-      if (variant === 'pledged') {
-        return (
-          card?.querySelector('[data-stamp-id="your-voice-joined"] .passport-stamp__frame')
-          || card?.querySelector('[data-stamp-id="your-voice-joined"]')
-          || document.querySelector('[data-stamp-id="your-voice-joined"] .passport-stamp__frame')
-          || document.querySelector('[data-stamp-id="your-voice-joined"]')
-        );
-      }
-      return card;
-    }
-    if (stepIndex === 2) {
+    if (variant === 'pledged') {
       return (
-        card?.querySelector('.passport-stamps-wrap')
-        || card?.querySelector('.passport-stamps')
-        || card
+        card?.querySelector('[data-stamp-id="your-voice-joined"] .passport-stamp__frame')
+        || card?.querySelector('[data-stamp-id="your-voice-joined"]')
+        || document.querySelector('[data-stamp-id="your-voice-joined"] .passport-stamp__frame')
+        || document.querySelector('[data-stamp-id="your-voice-joined"]')
       );
     }
-    return (
-      document.getElementById('passport-continue-story')
-      || card?.querySelector('.passport-inside-footer')
-    );
+    return card;
   }
 
   function ensureDom() {
@@ -255,16 +232,11 @@ const PassportStampsWalkthrough = (() => {
         top = clamp(targetRect.top - ch - 14, margin + 48, footerTop - ch);
       }
     } else if (stepIndex === 1 && variant === 'pledged') {
-      left = clamp(targetRect.right + 10, margin, vw - cw - margin);
-      if (left + cw > vw - margin) {
-        left = clamp(targetRect.left - cw - 10, margin, vw - cw - margin);
-      }
-      top = clamp(targetRect.top + targetRect.height / 2 - ch / 2, margin + 48, footerTop - ch);
-    } else if (stepIndex === 3) {
+      // Sit clearly above the stamp so the callout never covers it.
       left = clamp(targetRect.left + targetRect.width / 2 - cw / 2, margin, vw - cw - margin);
-      top = clamp(targetRect.top - ch - 14, margin + 48, footerTop - ch);
-      if (top < margin + 48) {
-        top = clamp(targetRect.bottom + 12, margin + 48, footerTop - ch);
+      top = clamp(targetRect.top - ch - 18, margin + 48, footerTop - ch);
+      if (top + ch > targetRect.top - 8) {
+        top = clamp(targetRect.top - ch - 28, margin + 40, footerTop - ch);
       }
     } else {
       left = clamp(targetRect.left + 10, margin, vw - cw - margin);
@@ -304,7 +276,7 @@ const PassportStampsWalkthrough = (() => {
       width = size;
       height = size;
     } else {
-      const pad = stepIndex === 1 && variant === 'pledged' ? 6 : stepIndex === 3 ? 4 : 8;
+      const pad = variant === 'pledged' ? 6 : 8;
       left = rect.left - pad;
       top = rect.top - pad;
       width = rect.width + pad * 2;
@@ -314,8 +286,7 @@ const PassportStampsWalkthrough = (() => {
     spot.classList.toggle('psw-wt__spotlight--circle', stepIndex === 0);
     spot.classList.toggle('psw-wt__spotlight--stamp', stepIndex === 1 && variant === 'pledged');
     spot.classList.toggle('psw-wt__spotlight--card', stepIndex === 1 && variant === 'unpledged');
-    spot.classList.toggle('psw-wt__spotlight--collection', stepIndex === 2);
-    spot.classList.toggle('psw-wt__spotlight--footer', stepIndex === 3);
+    spot.classList.remove('psw-wt__spotlight--collection', 'psw-wt__spotlight--footer');
 
     spot.style.left = `${Math.round(left)}px`;
     spot.style.top = `${Math.round(top)}px`;
