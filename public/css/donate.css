@@ -243,6 +243,36 @@
   color: var(--df-muted);
 }
 
+/* ─── Post-event total donated ─── */
+
+.df-total-donated {
+  margin: 4px 0 28px;
+  padding: 22px 18px 26px;
+  text-align: center;
+  border: 1px solid var(--df-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.df-total-donated__label {
+  margin: 0 0 12px;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--df-muted);
+}
+
+.df-total-donated__amount {
+  margin: 0;
+  font-size: clamp(2.6rem, 11vw, 3.75rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--df-warm);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ─── Featured ─── */
 
 .df-featured {

@@ -1,0 +1,30 @@
+---
+description: Keep Memory tab design and data wiring intact
+globs: public/memory.html,public/css/memory-page.css,public/js/memory/**
+alwaysApply: true
+---
+
+# Memory Tab Design Lock (Absolute)
+
+The Memory tab design is **finished and locked**. Do not redesign, restyle, or rearrange it unless the user explicitly asks.
+
+## Keep intact
+
+- Layout order: topbar (logo only) → intro → photo carousel → About the Event → Stamps Achieved → Pass the World Itinerary → FAB / composer
+- Stamps Achieved: max **4** most recently unlocked real passport stamps, no dates, empty slots stay empty, passport-inside background fill
+- No My Passport miniature; no “More Memories” footer; no top-right search
+- “View full route” → `passport.html?page=story`
+- Book nav icon for Memory
+- Fast first paint: shell immediately, hydrate event / stamps / route / feed in background (never block on network)
+
+## Keep working
+
+- Unlocked stamps from `PassportStamps` / `WorldChoirPassport.loadPassportData` only
+- Event archive counts and Pass the World itinerary from real loaders
+- Memory photo feed create / consume / cooldown rules
+
+## Do not
+
+- Change Memory visual structure as a side effect of other work
+- Reintroduce demo stamps, passport cover miniature, or search
+- Slow first paint by awaiting network before the shell paints

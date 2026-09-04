@@ -865,6 +865,29 @@ const WorldChoirDonate = (() => {
     bindFoundationCardEvents(mount);
   }
 
+  function isPostEventDonate() {
+    return typeof WorldChoirConfig !== 'undefined'
+      && WorldChoirConfig.isMemoryUnlocked?.() === true;
+  }
+
+  function renderTotalDonatedBanner() {
+    if (!isPostEventDonate()) return '';
+
+    const currency = typeof CreatorFoundationsStore !== 'undefined'
+      ? CreatorFoundationsStore.getCurrency()
+      : 'EUR';
+    const total = typeof CreatorFoundationsStore !== 'undefined'
+      ? CreatorFoundationsStore.getTotalDonatedToCharities()
+      : 0;
+
+    return `
+      <section class="df-total-donated df-rise df-rise-delay-2" aria-label="Total donated to charities">
+        <p class="df-total-donated__label">Total Donated to Charities</p>
+        <p class="df-total-donated__amount">${esc(formatMoney(total, currency))}</p>
+      </section>
+    `;
+  }
+
   function renderHappeningNow() {
     return '';
   }
@@ -966,6 +989,7 @@ const WorldChoirDonate = (() => {
       ${renderTopbar()}
       ${demoBanner}
       ${renderIntro()}
+      ${renderTotalDonatedBanner()}
       ${renderDiscoveryChrome()}
       <div id="df-foundations-mount">${renderFoundationsMountHtml()}</div>
       ${renderHappeningNow()}
@@ -1998,6 +2022,7 @@ const WorldChoirDonate = (() => {
     root.innerHTML = `
       ${renderTopbar()}
       ${renderIntro()}
+      ${renderTotalDonatedBanner()}
       ${renderDiscoveryChrome()}
       <div id="df-foundations-mount">${renderPendingFoundations()}</div>
     `;

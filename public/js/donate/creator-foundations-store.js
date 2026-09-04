@@ -193,6 +193,11 @@ const CreatorFoundationsStore = (() => {
     }, 0);
   }
 
+  /** Platform-wide verified donation sum across all charities (real ledger only). */
+  function getTotalDonatedToCharities() {
+    return Math.round(getRaisedAmount() * 100) / 100;
+  }
+
   function hasVerifiedRaisedData(filter = {}) {
     return getVerifiedDonations(filter).length > 0;
   }
@@ -583,6 +588,7 @@ const CreatorFoundationsStore = (() => {
     getSuggestedAmounts,
     getUniqueSupporterCount,
     getRaisedAmount,
+    getTotalDonatedToCharities,
     getCauses,
     normalizeCause,
     listActive,
