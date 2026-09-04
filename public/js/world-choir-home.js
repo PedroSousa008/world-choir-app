@@ -139,19 +139,22 @@ const WorldChoirHome = (() => {
   }
 
   function renderPledgeButton() {
-    const pledgeState = WorldChoirPledgeState.getState();
+    const pledgeState = typeof WorldChoirPledgeState !== 'undefined'
+      ? WorldChoirPledgeState.getState()
+      : 'loading';
 
-    // Only show the skeleton while the full Home shell is still loading.
-    // Once Home is visible, never leave a permanent empty CTA.
-    if (pledgeState === 'loading' && !homeReady) {
+    // Never show "I'll Sing" until pledge state is known — and never for pledged voices.
+    if (pledgeState === 'loading') {
       return '<div class="btn-hero-skeleton" aria-hidden="true"></div>';
     }
+    if (pledgeState === 'pledged') {
+      return '';
+    }
 
-    const pledged = pledgeState === 'pledged';
     return `
-      <button class="btn-hero ${pledged ? 'btn-hero--pledged' : ''}" id="pledge-btn" type="button" ${pledged ? 'disabled' : ''}>
+      <button class="btn-hero" id="pledge-btn" type="button">
         <span class="btn-hero__glow"></span>
-        <span class="btn-hero__text">${pledged ? "You're Singing" : "I'll Sing"}</span>
+        <span class="btn-hero__text">I'll Sing</span>
       </button>
     `;
   }
@@ -184,8 +187,6 @@ const WorldChoirHome = (() => {
 
   function renderCountdownHome() {
     const t = WorldChoirConfig.getTimeRemaining();
-    const pledgeState = WorldChoirPledgeState.getState();
-    const pledged = pledgeState === 'pledged';
     const e = WorldChoirConfig.ACTIVE_EVENT;
 
     return `

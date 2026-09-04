@@ -18,6 +18,12 @@ const WorldChoirPledgeState = (() => {
     window.dispatchEvent(new CustomEvent('wc-pledge-state', { detail: state }));
   }
 
+  function userHasVoiceNumber(pledge) {
+    if (!pledge) return false;
+    const n = pledge.voiceNumber ?? pledge.voice_number;
+    return n != null && n !== '' && Number(n) > 0;
+  }
+
   function syncFromDB() {
     if (typeof WorldChoirDB === 'undefined' || !WorldChoirDB.isPledgeLoaded()) {
       if (state !== 'loading') {
@@ -27,7 +33,12 @@ const WorldChoirPledgeState = (() => {
       return state;
     }
 
-    const next = WorldChoirDB.hasPledged() ? 'pledged' : 'not_pledged';
+    const pledge = typeof WorldChoirDB.getPledgeForCurrentUser === 'function'
+      ? WorldChoirDB.getPledgeForCurrentUser()
+      : null;
+    const next = (WorldChoirDB.hasPledged() || userHasVoiceNumber(pledge))
+      ? 'pledged'
+      : 'not_pledged';
     if (state !== next) {
       state = next;
       notify();
@@ -44,12 +55,19 @@ const WorldChoirPledgeState = (() => {
         .then(syncFromDB)
         .catch((err) => {
           console.error('WorldChoirPledgeState init failed:', err);
-          state = 'not_pledged';
-          notify();
+          // Do not assume not_pledged — keep loading so Home never flashes "I'll Sing"
+          // for people who already have a Voice number.
+          if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.isPledgeLoaded()) {
+            syncFromDB();
+          } else if (state !== 'loading') {
+            state = 'loading';
+            notify();
+          }
         });
 
       window.addEventListener('wc-pledge-added', syncFromDB);
       window.addEventListener('wc-pledge-updated', syncFromDB);
+      window.addEventListener('wc-pledges-synced', syncFromDB);
     }
     return initPromise;
   }
