@@ -184,6 +184,40 @@ const PassportStampsWalkthrough = (() => {
     goToStep(step + 1);
   }
 
+  function getFingerprintEl() {
+    return (
+      document.getElementById('passport-open-inside')
+      || document.querySelector('.passport-card__feature--btn')
+    );
+  }
+
+  function onFingerprintGuideClick(e) {
+    if (!active || step !== 0 || transitioning) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation?.();
+    goToStampsAndContinue();
+  }
+
+  function bindFingerprintGuideTap() {
+    const el = getFingerprintEl();
+    if (!el || el.dataset.pswGuideBound === '1') return;
+    el.dataset.pswGuideBound = '1';
+    el.addEventListener('click', onFingerprintGuideClick, true);
+  }
+
+  function unbindFingerprintGuideTap() {
+    const el = getFingerprintEl();
+    if (!el) return;
+    el.removeEventListener('click', onFingerprintGuideClick, true);
+    delete el.dataset.pswGuideBound;
+  }
+
+  function syncStepClass() {
+    document.body.classList.toggle('psw-wt-step-0', active && step === 0);
+    document.body.classList.toggle('psw-wt-step-1', active && step === 1);
+  }
+
   function renderDots() {
     const el = document.getElementById('psw-wt-dots');
     if (!el) return;
@@ -350,6 +384,7 @@ const PassportStampsWalkthrough = (() => {
   function goToStampsAndContinue() {
     if (transitioning) return;
     transitioning = true;
+    syncStepClass();
 
     const callout = document.getElementById('psw-wt-callout');
     const spot = document.getElementById('psw-wt-spotlight');
@@ -373,6 +408,7 @@ const PassportStampsWalkthrough = (() => {
         }
         if (ok) applyStampsGuidePresentation();
         step = 1;
+        syncStepClass();
         requestAnimationFrame(() => {
           layout();
           if (callout) callout.style.opacity = '';
@@ -401,6 +437,7 @@ const PassportStampsWalkthrough = (() => {
     if (transitioning) return;
     transitioning = true;
     step = nextStep;
+    syncStepClass();
 
     const callout = document.getElementById('psw-wt-callout');
     if (callout) callout.style.opacity = '0';
@@ -437,6 +474,8 @@ const PassportStampsWalkthrough = (() => {
     document.body.classList.add('psw-wt-active');
     document.body.classList.toggle('psw-wt-pledged', variant === 'pledged');
     document.body.classList.toggle('psw-wt-unpledged', variant === 'unpledged');
+    syncStepClass();
+    bindFingerprintGuideTap();
 
     rootEl.hidden = false;
     rootEl.removeAttribute('hidden');
@@ -453,13 +492,20 @@ const PassportStampsWalkthrough = (() => {
   }
 
   function teardownOverlay() {
+    unbindFingerprintGuideTap();
     if (rootEl) {
       rootEl.classList.remove('is-visible');
       rootEl.hidden = true;
       rootEl.setAttribute('hidden', '');
       rootEl.setAttribute('aria-hidden', 'true');
     }
-    document.body.classList.remove('psw-wt-active', 'psw-wt-pledged', 'psw-wt-unpledged');
+    document.body.classList.remove(
+      'psw-wt-active',
+      'psw-wt-pledged',
+      'psw-wt-unpledged',
+      'psw-wt-step-0',
+      'psw-wt-step-1'
+    );
   }
 
   function complete({ early = false } = {}) {

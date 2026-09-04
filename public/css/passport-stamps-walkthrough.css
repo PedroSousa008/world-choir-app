@@ -12,7 +12,7 @@
 }
 
 .psw-wt.is-visible {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .psw-wt__spotlight {
@@ -181,6 +181,15 @@ body.psw-wt-active .passport-stats,
 body.psw-wt-active .passport-permanence,
 body.psw-wt-active .passport-header {
   pointer-events: none;
+}
+
+/* Step 1: fingerprint remains tappable to advance the guide. */
+body.psw-wt-active.psw-wt-step-0 #passport-open-inside,
+body.psw-wt-active.psw-wt-step-0 .passport-card__feature--btn {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 530;
+  cursor: pointer;
 }
 
 body.psw-wt-active .bottom-nav {
