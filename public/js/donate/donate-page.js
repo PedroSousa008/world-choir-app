@@ -76,6 +76,61 @@ const WorldChoirDonate = (() => {
     return initials(foundation.foundationName || foundation.creatorName).slice(0, 2);
   }
 
+  function getDonateShuffleUserKey() {
+    try {
+      if (typeof WorldChoirDB !== 'undefined') {
+        const userId = WorldChoirDB.getCurrentUser?.()?.id;
+        if (userId) return String(userId);
+        const deviceId = WorldChoirDB.getDeviceId?.();
+        if (deviceId) return String(deviceId);
+      }
+    } catch {
+      /* fall through */
+    }
+    try {
+      return localStorage.getItem('wc_anonymous_device_id') || 'anonymous';
+    } catch {
+      return 'anonymous';
+    }
+  }
+
+  function getDonateShuffleDayKey(now = new Date()) {
+    // Local calendar day — order rotates once per day for each user.
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function hashDonateShuffleKey(str) {
+    let h = 2166136261;
+    const s = String(str || '');
+    for (let i = 0; i < s.length; i += 1) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  /**
+   * Daily per-user foundation order: stable for the same user+day,
+   * different across users, and reshuffles every local day.
+   * New foundations are included automatically.
+   */
+  function shuffleFoundationsDailyForUser(items) {
+    const list = Array.isArray(items) ? items.slice() : [];
+    if (list.length < 2) return list;
+    const seed = `${getDonateShuffleUserKey()}|${getDonateShuffleDayKey()}`;
+    return list.sort((a, b) => {
+      const idA = String(a?.id || a?.foundationName || '');
+      const idB = String(b?.id || b?.foundationName || '');
+      const ha = hashDonateShuffleKey(`${seed}|${idA}`);
+      const hb = hashDonateShuffleKey(`${seed}|${idB}`);
+      if (ha !== hb) return ha - hb;
+      return idA.localeCompare(idB);
+    });
+  }
+
   function getFilteredFoundations() {
     const category = selectedCause === 'all' ? null : selectedCause;
     const query = searchOpen ? searchQuery : '';
@@ -86,7 +141,7 @@ const WorldChoirDonate = (() => {
       category,
       query,
     });
-    return result.items || [];
+    return shuffleFoundationsDailyForUser(result.items || []);
   }
 
   function getAllFoundations() {
