@@ -844,6 +844,7 @@ const WorldChoirHome = (() => {
 
   let homeGuideFocusBefore = null;
   let homeGuideCloseTimer = null;
+  let homeGuideOpen = false;
 
   function prefersReducedMotion() {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
@@ -854,6 +855,7 @@ const WorldChoirHome = (() => {
     const btn = document.getElementById('home-guide-btn');
     if (!overlay || (overlay.hidden && !overlay.classList.contains('is-open'))) {
       document.body.classList.remove('home-guide-open');
+      homeGuideOpen = false;
       return;
     }
 
@@ -862,15 +864,20 @@ const WorldChoirHome = (() => {
       homeGuideCloseTimer = null;
     }
 
+    homeGuideOpen = false;
     overlay.classList.remove('is-open');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('home-guide-open');
     if (btn) btn.setAttribute('aria-expanded', 'false');
+    syncHomeGuideVisibility();
 
     const finish = () => {
       homeGuideCloseTimer = null;
       overlay.hidden = true;
-      if (homeGuideFocusBefore && typeof homeGuideFocusBefore.focus === 'function') {
+      const restore = document.getElementById('home-guide-btn');
+      if (restore && !restore.hidden && typeof restore.focus === 'function') {
+        try { restore.focus(); } catch { /* ignore */ }
+      } else if (homeGuideFocusBefore && typeof homeGuideFocusBefore.focus === 'function') {
         try { homeGuideFocusBefore.focus(); } catch { /* ignore */ }
       }
       homeGuideFocusBefore = null;
@@ -891,10 +898,14 @@ const WorldChoirHome = (() => {
     }
 
     homeGuideFocusBefore = document.activeElement;
+    homeGuideOpen = true;
     overlay.hidden = false;
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('home-guide-open');
-    if (btn) btn.setAttribute('aria-expanded', 'true');
+    if (btn) {
+      btn.hidden = true;
+      btn.setAttribute('aria-expanded', 'true');
+    }
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -914,13 +925,13 @@ const WorldChoirHome = (() => {
   function syncHomeGuideVisibility() {
     const btn = document.getElementById('home-guide-btn');
     if (!btn) return;
-    const show = isPreEvent() && !LiveEventMode.isActive() && homeView === 'countdown';
-    if (show) {
-      btn.hidden = false;
-    } else {
+    const allowed = isPreEvent() && !LiveEventMode.isActive() && homeView === 'countdown';
+    if (!allowed) {
       btn.hidden = true;
-      closeHomeGuide();
+      if (homeGuideOpen) closeHomeGuide();
+      return;
     }
+    btn.hidden = homeGuideOpen;
   }
 
   function bindActions() {
