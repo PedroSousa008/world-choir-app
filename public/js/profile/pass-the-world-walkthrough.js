@@ -11,7 +11,7 @@ const PassTheWorldWalkthrough = (() => {
   const STEPS = [
     {
       title: 'Visit My City',
-      copy: 'Call the plane to your city and invite others to join the journey.',
+      copy: 'Invite the World to your city and become part of its journey around the globe.',
       button: 'Next',
     },
     {
@@ -71,7 +71,11 @@ const PassTheWorldWalkthrough = (() => {
         || document.querySelector('.passport-stats')
       );
     }
-    return document.getElementById('ptw-map') || document.querySelector('.ptw-map-wrap');
+    return (
+      document.querySelector('.ptw-map-wrap')
+      || document.getElementById('ptw-map')
+      || document.querySelector('.ptw-map')
+    );
   }
 
   function ensureDom() {
@@ -161,18 +165,53 @@ const PassTheWorldWalkthrough = (() => {
     return Math.max(min, Math.min(max, n));
   }
 
-  function scrollTargetIntoView(target) {
+  function scrollTargetIntoView(target, { block = 'center' } = {}) {
     if (!target || typeof target.scrollIntoView !== 'function') return;
     const rect = target.getBoundingClientRect();
     const footerReserve = 160;
     const topReserve = 72;
     const visible = rect.top >= topReserve && rect.bottom <= window.innerHeight - footerReserve;
-    if (visible) return;
+    if (visible && block === 'center') return;
     target.scrollIntoView({
-      block: 'center',
+      block,
       inline: 'nearest',
       behavior: prefersReducedMotion() ? 'auto' : 'smooth',
     });
+  }
+
+  /** Only Steps 3 and 4 change scroll position. Steps 1–2 stay put. */
+  function scrollForStep(stepIndex, target) {
+    if (stepIndex === 0 || stepIndex === 1) return;
+
+    if (stepIndex === 2) {
+      scrollTargetIntoView(target, { block: 'center' });
+      return;
+    }
+
+    // Step 4 — return to the map at the top of Pass the World
+    const mapWrap =
+      document.querySelector('.ptw-map-wrap')
+      || document.getElementById('ptw-map')
+      || target;
+    if (!mapWrap) return;
+
+    const story = document.getElementById('passport-story-view');
+    const scroller =
+      (story && story.scrollHeight > story.clientHeight ? story : null)
+      || document.scrollingElement
+      || document.documentElement;
+
+    if (prefersReducedMotion()) {
+      mapWrap.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'auto' });
+      if (scroller && scroller !== mapWrap) {
+        const top = mapWrap.getBoundingClientRect().top + (scroller.scrollTop || window.scrollY || 0) - 12;
+        if (typeof scroller.scrollTo === 'function') scroller.scrollTo(0, Math.max(0, top));
+        else window.scrollTo(0, Math.max(0, top));
+      }
+      return;
+    }
+
+    mapWrap.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'smooth' });
   }
 
   function placeCallout(targetRect, stepIndex) {
@@ -223,11 +262,22 @@ const PassTheWorldWalkthrough = (() => {
     if (!spot || !target) return null;
 
     const rect = target.getBoundingClientRect();
-    const pad = stepIndex === 0 ? 6 : stepIndex === 3 ? 8 : 5;
-    const left = rect.left - pad;
-    const top = rect.top - pad;
-    const width = rect.width + pad * 2;
-    const height = rect.height + pad * 2;
+    const pad = stepIndex === 0 ? 6 : stepIndex === 3 ? 4 : 5;
+    let left = rect.left - pad;
+    let top = rect.top - pad;
+    let width = rect.width + pad * 2;
+    let height = rect.height + pad * 2;
+
+    // Keep the map highlight tight to the visible map frame.
+    if (stepIndex === 3) {
+      const maxH = Math.min(height, Math.round(window.innerHeight * 0.42));
+      if (height > maxH) {
+        height = maxH;
+      }
+      // Clamp inside viewport so the ring sits on the map, not off-screen after scroll.
+      left = clamp(left, 8, window.innerWidth - width - 8);
+      top = clamp(top, 8, window.innerHeight - height - 120);
+    }
 
     spot.classList.toggle('ptw-wt__spotlight--pill', stepIndex === 0 || stepIndex === 1);
     spot.classList.toggle('ptw-wt__spotlight--map', stepIndex === 3);
@@ -245,19 +295,30 @@ const PassTheWorldWalkthrough = (() => {
     const target = getTarget(step);
     if (!target) return;
 
-    scrollTargetIntoView(target);
+    scrollForStep(step, target);
+
+    const settleMs = prefersReducedMotion()
+      ? 0
+      : (step === 2 ? 180 : step === 3 ? 280 : 40);
 
     const doLayout = () => {
-      applySpotlight(target, step);
+      const freshTarget = getTarget(step) || target;
+      applySpotlight(freshTarget, step);
       updateCopy();
-      placeCallout(target.getBoundingClientRect(), step);
+      placeCallout(freshTarget.getBoundingClientRect(), step);
       if (step === 3 && typeof PassTheWorldMap !== 'undefined') {
         PassTheWorldMap.invalidateSize?.();
+        // Re-measure after Leaflet/map resize.
+        requestAnimationFrame(() => {
+          const mapTarget = getTarget(3) || freshTarget;
+          applySpotlight(mapTarget, 3);
+          placeCallout(mapTarget.getBoundingClientRect(), 3);
+        });
       }
     };
 
-    if (prefersReducedMotion()) doLayout();
-    else requestAnimationFrame(() => setTimeout(doLayout, step === 2 || step === 3 ? 120 : 40));
+    if (settleMs === 0) doLayout();
+    else requestAnimationFrame(() => setTimeout(doLayout, settleMs));
   }
 
   function goToStep(nextStep) {
