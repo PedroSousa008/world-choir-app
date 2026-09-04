@@ -327,7 +327,7 @@ const WorldChoirMemory = (() => {
   }
 
   function renderStampsAchieved(unlockedStatuses) {
-    const slots = Array.from({ length: 6 }, (_, i) => unlockedStatuses[i] || null);
+    const slots = Array.from({ length: 4 }, (_, i) => unlockedStatuses[i] || null);
     return `
       <section class="mem-section mem-stamps-section" aria-labelledby="mem-stamps-label">
         <div class="mem-section-row">
@@ -433,6 +433,69 @@ const WorldChoirMemory = (() => {
     `;
   }
 
+  function stampAchievedAtMs(status, passportData) {
+    if (status?.unlockDate) {
+      const t = new Date(status.unlockDate).getTime();
+      if (Number.isFinite(t)) return t;
+    }
+
+    const stamp = status?.stamp;
+    const type = stamp?.unlockType;
+    const eventId = stamp?.eventId || 'world-choir-2027';
+    const UnlockType = typeof PassportStamps !== 'undefined' ? PassportStamps.UnlockType : null;
+
+    if (
+      type === UnlockType?.PLEDGE_JOINED
+      || type === 'PLEDGE_JOINED'
+      || type === UnlockType?.MAP_PIONEER
+      || type === 'MAP_PIONEER'
+    ) {
+      const raw = passportData?.pledge?.pledged_at || passportData?.user?.created_at;
+      const t = raw ? new Date(raw).getTime() : NaN;
+      if (Number.isFinite(t)) return t;
+    }
+
+    if (type === UnlockType?.PROMISE_SUBMITTED || type === 'PROMISE_SUBMITTED') {
+      const promise = typeof WorldChoirDB !== 'undefined'
+        ? WorldChoirDB.getPromiseForCurrentUser?.(eventId)
+        : null;
+      const raw = promise?.submitted_at || promise?.created_at;
+      const t = raw ? new Date(raw).getTime() : NaN;
+      if (Number.isFinite(t)) return t;
+    }
+
+    if (
+      (type === UnlockType?.EVENT_PARTICIPATION_COMPLETED || type === 'EVENT_PARTICIPATION_COMPLETED')
+      && typeof PassportStamps?.getStampUnlockDate === 'function'
+    ) {
+      const d = PassportStamps.getStampUnlockDate(stamp);
+      const t = d ? new Date(d).getTime() : NaN;
+      if (Number.isFinite(t)) return t;
+    }
+
+    if (type === UnlockType?.PLEDGE_ANNIVERSARY_1_YEAR || type === 'PLEDGE_ANNIVERSARY_1_YEAR') {
+      const raw = passportData?.pledge?.pledged_at;
+      if (raw) {
+        const d = new Date(raw);
+        if (Number.isFinite(d.getTime())) {
+          d.setUTCDate(d.getUTCDate() + 365);
+          return d.getTime();
+        }
+      }
+    }
+
+    // Progression proxy when no concrete unlock timestamp exists (milestones, daily acts, etc.).
+    let base = NaN;
+    try {
+      const event = PassportStamps?.getEventById?.(eventId);
+      if (event?.eventDateUTC) base = new Date(event.eventDateUTC).getTime();
+    } catch {
+      /* fall through */
+    }
+    if (!Number.isFinite(base)) base = Date.UTC(2027, 8, 21);
+    return base + ((Number(stamp?.revealOrder) || 0) * 86400000);
+  }
+
   async function loadUnlockedStamps() {
     if (typeof WorldChoirPassport === 'undefined') return [];
     try {
@@ -440,8 +503,12 @@ const WorldChoirMemory = (() => {
       const statuses = Array.isArray(data?.stamps) ? data.stamps : [];
       return statuses
         .filter((s) => s && s.unlocked === true && s.stamp)
-        .sort((a, b) => (Number(a.stamp.revealOrder) || 999) - (Number(b.stamp.revealOrder) || 999))
-        .slice(0, 6);
+        .sort((a, b) => {
+          const diff = stampAchievedAtMs(b, data) - stampAchievedAtMs(a, data);
+          if (diff !== 0) return diff;
+          return (Number(b.stamp?.revealOrder) || 0) - (Number(a.stamp?.revealOrder) || 0);
+        })
+        .slice(0, 4);
     } catch {
       return [];
     }
