@@ -31,12 +31,19 @@ const WorldChoirMemory = (() => {
     return num.toLocaleString('en-US');
   }
 
-  function searchIconSvg() {
+  function renderTopbar() {
     return `
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <circle cx="11" cy="11" r="7"/>
-        <path d="M20 20l-3.5-3.5" stroke-linecap="round"/>
-      </svg>
+      <div class="df-topbar mem-topbar">
+        <a class="df-topbar__logo" href="index.html" aria-label="World Choir home">
+          <img
+            src="images/world-choir-logo-donate.png?v=20260813v"
+            alt="World Choir"
+            width="105"
+            height="35"
+            decoding="async"
+          >
+        </a>
+      </div>
     `;
   }
 
@@ -75,25 +82,6 @@ const WorldChoirMemory = (() => {
     return place
       ? `World Choir memory shared from ${place}`
       : 'World Choir memory';
-  }
-
-  function renderTopbar() {
-    return `
-      <div class="df-topbar mem-topbar">
-        <a class="df-topbar__logo" href="index.html" aria-label="World Choir home">
-          <img
-            src="images/world-choir-logo-donate.png?v=20260813v"
-            alt="World Choir"
-            width="105"
-            height="35"
-            decoding="async"
-          >
-        </a>
-        <button type="button" class="df-search-trigger" id="mem-search-open" aria-label="Search memories">
-          ${searchIconSvg()}
-        </button>
-      </div>
-    `;
   }
 
   function renderIntro() {
@@ -243,7 +231,7 @@ const WorldChoirMemory = (() => {
 
   function renderEventCard(event) {
     return `
-      <section class="mem-section" aria-labelledby="mem-about-label">
+      <section class="mem-section" id="mem-event-host" aria-labelledby="mem-about-label">
         <h2 class="df-section-label" id="mem-about-label">About the event</h2>
         <article class="mem-card mem-event-card">
           <div class="mem-event-card__top">
@@ -329,7 +317,7 @@ const WorldChoirMemory = (() => {
   function renderStampsAchieved(unlockedStatuses) {
     const slots = Array.from({ length: 4 }, (_, i) => unlockedStatuses[i] || null);
     return `
-      <section class="mem-section mem-stamps-section" aria-labelledby="mem-stamps-label">
+      <section class="mem-section mem-stamps-section" id="mem-stamps-host" aria-labelledby="mem-stamps-label">
         <div class="mem-section-row">
           <h2 class="df-section-label mem-section-row__label" id="mem-stamps-label">Stamps Achieved</h2>
           <a class="mem-link" href="passport.html?page=stamps">View all</a>
@@ -346,9 +334,9 @@ const WorldChoirMemory = (() => {
   function renderItinerary(stops) {
     if (!stops.length) {
       return `
-        <section class="mem-section">
+        <section class="mem-section" id="mem-route-host">
           <div class="mem-section-row">
-            <h2 class="df-section-label mem-section-row__label">Pass the World – Itinerary</h2>
+            <h2 class="df-section-label mem-section-row__label" id="mem-route-label">Pass the World – Itinerary</h2>
           </div>
           <p class="mem-empty">The Pass the World route will appear here.</p>
         </section>
@@ -366,7 +354,7 @@ const WorldChoirMemory = (() => {
     `).join('');
 
     return `
-      <section class="mem-section" aria-labelledby="mem-route-label">
+      <section class="mem-section" id="mem-route-host" aria-labelledby="mem-route-label">
         <div class="mem-section-row">
           <h2 class="df-section-label mem-section-row__label" id="mem-route-label">Pass the World – Itinerary</h2>
           <a class="mem-link" href="passport.html?page=story">View full route</a>
@@ -487,10 +475,10 @@ const WorldChoirMemory = (() => {
     return base + ((Number(stamp?.revealOrder) || 0) * 86400000);
   }
 
-  async function loadUnlockedStamps() {
+  async function loadUnlockedStamps({ fast = true } = {}) {
     if (typeof WorldChoirPassport === 'undefined') return [];
     try {
-      const data = await WorldChoirPassport.loadPassportData();
+      const data = await WorldChoirPassport.loadPassportData({ fast });
       const statuses = Array.isArray(data?.stamps) ? data.stamps : [];
       return statuses
         .filter((s) => s && s.unlocked === true && s.stamp)
@@ -778,59 +766,116 @@ const WorldChoirMemory = (() => {
       }
     });
 
-    document.getElementById('mem-search-open')?.addEventListener('click', () => {
-      document.getElementById('mem-route-label')?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
-    });
-
     document.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape' && composerOpen) closeComposer();
     });
   }
 
-  async function render() {
+  function replaceHost(id, html) {
+    const host = document.getElementById(id);
+    if (!host) return;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = String(html || '').trim();
+    const next = wrap.firstElementChild;
+    if (!next) return;
+    host.replaceWith(next);
+  }
+
+  function startFeed() {
+    if (typeof WorldChoirMemoryFeed === 'undefined') return;
+    if (feedUnsub) {
+      feedUnsub();
+      feedUnsub = null;
+    }
+    feedUnsub = WorldChoirMemoryFeed.subscribe((snap) => {
+      updateCarouselView(snap);
+      applyPostingAvailability(snap);
+    });
+    void WorldChoirMemoryFeed.init().then(() => {
+      updateCarouselView(WorldChoirMemoryFeed.getSnapshot());
+      applyPostingAvailability(WorldChoirMemoryFeed.getSnapshot());
+    }).catch(() => {
+      /* keep carousel shell */
+    });
+  }
+
+  function paintShell() {
     const el = document.getElementById('memory-content');
     if (!el) return;
 
-    const [event, route, unlockedStamps] = await Promise.all([
-      WorldChoirMemoryData.loadEventArchive(),
-      WorldChoirMemoryData.loadPassTheWorldRoute(),
-      loadUnlockedStamps(),
-    ]);
+    const event = typeof WorldChoirMemoryData !== 'undefined'
+      ? WorldChoirMemoryData.getDefaultEvent()
+      : {
+        songTitle: 'Imagine',
+        songArtwork: 'images/imagine-after.png',
+        date: '—',
+        eventName: 'World Choir 2027',
+        participantCount: 0,
+        countryCount: 0,
+        promisesCount: 0,
+        dailyActsCompleted: null,
+      };
 
     el.innerHTML = `
       ${renderTopbar()}
       ${renderIntro()}
       ${renderCarouselShell()}
       ${renderEventCard(event)}
-      ${renderStampsAchieved(unlockedStamps)}
-      ${renderItinerary(route)}
+      ${renderStampsAchieved([])}
+      ${renderItinerary([])}
       ${renderFab()}
       ${renderComposer()}
     `;
 
     bound = false;
     bindInteractions();
-
-    if (feedUnsub) {
-      feedUnsub();
-      feedUnsub = null;
-    }
-    if (typeof WorldChoirMemoryFeed !== 'undefined') {
-      feedUnsub = WorldChoirMemoryFeed.subscribe((snap) => {
-        updateCarouselView(snap);
-        applyPostingAvailability(snap);
-      });
-      await WorldChoirMemoryFeed.init();
-      updateCarouselView(WorldChoirMemoryFeed.getSnapshot());
-      applyPostingAvailability(WorldChoirMemoryFeed.getSnapshot());
-    }
+    startFeed();
   }
 
-  async function init() {
-    await (typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.ready() : Promise.resolve());
+  async function hydrate() {
+    try {
+      await (typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.ready() : Promise.resolve());
+    } catch {
+      /* continue with local fallbacks */
+    }
+
+    const eventTask = typeof WorldChoirMemoryData !== 'undefined'
+      ? WorldChoirMemoryData.loadEventArchive().then((event) => {
+        replaceHost('mem-event-host', renderEventCard(event));
+      }).catch(() => {})
+      : Promise.resolve();
+
+    const routeTask = typeof WorldChoirMemoryData !== 'undefined'
+      ? WorldChoirMemoryData.loadPassTheWorldRoute().then((route) => {
+        replaceHost('mem-route-host', renderItinerary(route));
+      }).catch(() => {})
+      : Promise.resolve();
+
+    const stampsFast = loadUnlockedStamps({ fast: true }).then((stamps) => {
+      replaceHost('mem-stamps-host', renderStampsAchieved(stamps));
+      return stamps;
+    }).catch(() => []);
+
+    const stampsFull = stampsFast.then(() => loadUnlockedStamps({ fast: false })).then((stamps) => {
+      replaceHost('mem-stamps-host', renderStampsAchieved(stamps));
+    }).catch(() => {});
+
+    await Promise.allSettled([eventTask, routeTask, stampsFull]);
+  }
+
+  function render() {
+    paintShell();
+    void hydrate();
+  }
+
+  function init() {
     if (typeof WorldChoirNav !== 'undefined' && !WorldChoirNav.guardMemoryRoute()) return;
     if (typeof WorldChoirNav !== 'undefined') WorldChoirNav.startWatcher('memory');
-    await render();
+    // Paint immediately — never wait on DB / network before first Memory UI.
+    paintShell();
+    void hydrate();
+    // Warm DB in parallel without blocking first paint.
+    void (typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.ready() : Promise.resolve());
   }
 
   return { init, render };

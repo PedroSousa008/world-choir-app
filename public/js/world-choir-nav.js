@@ -95,6 +95,12 @@ const WorldChoirNav = (() => {
     ],
     memory: [
       'memory.html',
+      'css/memory-page.css?v=20260904bt',
+      'js/memory/memory-data.js?v=20260904bt',
+      'js/memory/memory-feed.js?v=20260904bt',
+      'js/memory/memory-page.js?v=20260904bt',
+      'js/profile/passport-stamps.js?v=20260902a',
+      'js/profile/world-choir-passport.js?v=20260902q',
     ],
     'daily-acts': [
       'daily-acts.html',
