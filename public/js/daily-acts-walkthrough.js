@@ -23,7 +23,7 @@ const DailyActsWalkthrough = (() => {
     },
     {
       title: 'Explore Categories',
-      copy: 'Find acts that inspire you, from kindness to courage.',
+      copy: 'Find acts that inspire you, across different categories.',
       button: 'Got it',
       spotlight: 'categories',
     },
