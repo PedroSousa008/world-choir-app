@@ -672,6 +672,15 @@ const DailyActsPage = (() => {
     el.innerHTML = renderMain();
     bindGrid();
     markTodayViewed();
+    maybeDailyActsWalkthrough();
+  }
+
+  function maybeDailyActsWalkthrough() {
+    if (typeof DailyActsWalkthrough === 'undefined') return;
+    if (view.mode !== 'grid') return;
+    requestAnimationFrame(() => {
+      DailyActsWalkthrough.onPageReady({ mode: 'grid' });
+    });
   }
 
   function closeSheet() {
