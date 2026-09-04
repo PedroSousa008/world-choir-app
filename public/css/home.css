@@ -18,6 +18,63 @@
   justify-content: center;
 }
 
+/* Suggestions / Guide tab — upper-right edge, understated */
+.home-guide-btn {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 22px);
+  right: 0;
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 40px;
+  margin: 0;
+  padding: 0 6px 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  background: #1c1d21;
+  color: var(--accent-aurora);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+}
+
+.home-guide-btn[hidden] {
+  display: none !important;
+}
+
+.home-guide-btn__icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.home-guide-btn:focus-visible {
+  outline: 2px solid var(--accent-aurora);
+  outline-offset: 2px;
+}
+
+/* Empty guide overlay: top of app → bottom of home headline */
+.home-guide-overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 40;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(88, 90, 96, 0.52);
+  pointer-events: auto;
+}
+
+.home-guide-overlay[hidden] {
+  display: none !important;
+}
+
 #earth-canvas {
   position: fixed;
   inset: 0;

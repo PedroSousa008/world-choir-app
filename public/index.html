@@ -122,6 +122,26 @@
   <div class="ambient-bg" id="ambient-bg"></div>
 
   <main class="home-page home-page--centered" id="home-page">
+    <button
+      type="button"
+      class="home-guide-btn"
+      id="home-guide-btn"
+      aria-label="Suggestions and guide"
+      aria-expanded="false"
+      aria-controls="home-guide-overlay"
+      hidden
+    >
+      <svg class="home-guide-btn__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+        <path d="M9.5 18h5M10.5 21h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M12 3.5a5.25 5.25 0 0 0-3.2 9.4c.55.42.9 1.05.95 1.75v.1h4.5v-.1c.05-.7.4-1.33.95-1.75A5.25 5.25 0 0 0 12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div
+      class="home-guide-overlay"
+      id="home-guide-overlay"
+      hidden
+      aria-hidden="true"
+    ></div>
     <div id="home-content"></div>
   </main>
   <script>
