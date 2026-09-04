@@ -1,9 +1,10 @@
 /**
- * Daily Acts of Peace — first-visit sequential walkthrough (3 steps).
- * Overlay only; does not redesign the underlying page.
+ * Daily Acts of Peace — contextual 3-step walkthrough.
+ * Launches ONLY when Daily Acts is opened from the Home lightbulb guide.
+ * Ephemeral / replayable — no permanent "seen" storage.
  */
 const DailyActsWalkthrough = (() => {
-  const STORAGE_KEY = 'wc_daily_acts_walkthrough_completed';
+  const TRIGGER_KEY = 'wc_daily_acts_from_guide';
   const PAD = 6;
   const TRANSITION_MS = 260;
 
@@ -38,17 +39,26 @@ const DailyActsWalkthrough = (() => {
     return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
   }
 
-  function isCompleted() {
+  /** One-shot transient trigger set by the Home lightbulb guide card. */
+  function hasGuideTrigger() {
     try {
-      return localStorage.getItem(STORAGE_KEY) === '1';
+      return sessionStorage.getItem(TRIGGER_KEY) === '1';
     } catch {
-      return true;
+      return false;
     }
   }
 
-  function markCompleted() {
+  function consumeGuideTrigger() {
     try {
-      localStorage.setItem(STORAGE_KEY, '1');
+      sessionStorage.removeItem(TRIGGER_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function armGuideTrigger() {
+    try {
+      sessionStorage.setItem(TRIGGER_KEY, '1');
     } catch {
       /* ignore */
     }
@@ -98,7 +108,6 @@ const DailyActsWalkthrough = (() => {
       <div class="dap-wt__footer">
         <div class="dap-wt__dots" id="dap-wt-dots" aria-hidden="true"></div>
         <button type="button" class="dap-wt__next" id="dap-wt-next">Next</button>
-        <p class="dap-wt__tagline">A kinder world starts with you.</p>
       </div>
     `;
     document.body.appendChild(rootEl);
@@ -158,7 +167,7 @@ const DailyActsWalkthrough = (() => {
     if (title) title.textContent = meta.title;
     if (copy) copy.textContent = meta.copy;
     if (next) next.textContent = meta.button;
-    if (sr) sr.textContent = `Step ${step + 1} of ${STEPS.length}: ${meta.title}`;
+    if (sr) sr.textContent = `${meta.title}. ${meta.copy}`;
     renderDots();
   }
 
@@ -191,13 +200,11 @@ const DailyActsWalkthrough = (() => {
     const cw = Math.min(252, vw - 40);
     callout.style.width = `${cw}px`;
 
-    // Measure after width set
     const ch = callout.offsetHeight || 110;
     let left;
     let top;
 
     if (stepIndex === 0) {
-      // Prefer right of card; fall back below
       left = targetRect.right + 14;
       top = targetRect.top + targetRect.height / 2 - ch / 2;
       if (left + cw > vw - margin) {
@@ -205,14 +212,12 @@ const DailyActsWalkthrough = (() => {
         top = targetRect.bottom + 16;
       }
     } else if (stepIndex === 1) {
-      // Below-left of journey button
       left = clamp(targetRect.right - cw - 8, margin, vw - cw - margin);
       top = targetRect.bottom + 18;
       if (top + ch > footerTop) {
         top = clamp(targetRect.top - ch - 16, margin + 48, footerTop - ch);
       }
     } else {
-      // Below categories
       left = clamp(targetRect.left + 8, margin, vw - cw - margin);
       top = targetRect.bottom + 18;
       if (top + ch > footerTop) {
@@ -242,7 +247,6 @@ const DailyActsWalkthrough = (() => {
       y: toRect.top + toRect.height / 2,
     };
 
-    // Start on callout edge facing the target
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     const absX = Math.abs(dx);
@@ -258,7 +262,6 @@ const DailyActsWalkthrough = (() => {
       sy = dy > 0 ? fromRect.bottom : fromRect.top;
     }
 
-    // End just outside target edge
     let ex;
     let ey;
     if (Math.abs(to.x - sx) > Math.abs(to.y - sy)) {
@@ -269,7 +272,6 @@ const DailyActsWalkthrough = (() => {
       ey = to.y > sy ? toRect.top - 4 : toRect.bottom + 4;
     }
 
-    // Curved control points
     let c1x;
     let c1y;
     let c2x;
@@ -347,7 +349,6 @@ const DailyActsWalkthrough = (() => {
       if (spotRect && calloutRect) drawArrow(calloutRect, spotRect, step);
     };
 
-    // Allow smooth scroll to settle briefly
     if (prefersReducedMotion()) doLayout();
     else requestAnimationFrame(() => setTimeout(doLayout, 40));
   }
@@ -377,7 +378,7 @@ const DailyActsWalkthrough = (() => {
   }
 
   function start() {
-    if (active || isCompleted()) return;
+    if (active) return;
     const target = getTarget(0);
     if (!target) return;
 
@@ -399,12 +400,8 @@ const DailyActsWalkthrough = (() => {
   }
 
   function complete() {
-    if (!active && !rootEl) {
-      markCompleted();
-      return;
-    }
+    if (!active && !rootEl) return;
 
-    markCompleted();
     active = false;
     transitioning = false;
 
@@ -428,28 +425,27 @@ const DailyActsWalkthrough = (() => {
   }
 
   /**
-   * Called after Daily Acts grid paint. Starts once if needed, or re-layouts if active.
+   * Called after Daily Acts grid paint.
+   * Starts only when a fresh lightbulb-guide navigation trigger was armed.
    */
   function onPageReady({ mode } = {}) {
-    if (isCompleted()) return;
     if (mode && mode !== 'grid') return;
-    // Only start/refresh when grid targets exist
     if (!document.querySelector('.dap-grid .dap-square')) return;
 
     if (active) {
       layout();
       return;
     }
+    if (!hasGuideTrigger()) return;
+    if (!getTarget(0)) return;
+    consumeGuideTrigger();
     start();
   }
 
   return {
     onPageReady,
-    isCompleted,
-    /** Test helper / force reset — not used by production UI */
-    reset() {
-      try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
-    },
+    armGuideTrigger,
+    isActive: () => active,
   };
 })();
 

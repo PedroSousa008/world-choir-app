@@ -934,6 +934,20 @@ const WorldChoirHome = (() => {
     btn.hidden = homeGuideOpen;
   }
 
+  function openDailyActsFromGuide() {
+    try {
+      sessionStorage.setItem('wc_daily_acts_from_guide', '1');
+    } catch {
+      /* ignore */
+    }
+    closeHomeGuide();
+    if (typeof DailyActsPeace !== 'undefined' && typeof DailyActsPeace.open === 'function') {
+      DailyActsPeace.open({ tab: 'today' });
+    } else {
+      window.location.href = 'daily-acts.html';
+    }
+  }
+
   function bindActions() {
     document.getElementById('pledge-btn')?.addEventListener('click', () => WorldChoirParticipation.open());
     document.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
@@ -1048,6 +1062,10 @@ const WorldChoirHome = (() => {
     });
     document.getElementById('home-guide-backdrop')?.addEventListener('click', () => {
       closeHomeGuide();
+    });
+    document.getElementById('home-guide-card-daily-acts')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      openDailyActsFromGuide();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeHomeGuide();

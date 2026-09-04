@@ -1,4 +1,4 @@
-/* Daily Acts of Peace — first-visit guided walkthrough */
+/* Daily Acts of Peace — guide-triggered contextual walkthrough */
 
 .dap-wt {
   position: fixed;
@@ -126,7 +126,7 @@
 .dap-wt__close {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 14px);
-  left: 14px;
+  right: 14px;
   z-index: 5;
   display: inline-flex;
   align-items: center;
@@ -221,17 +221,6 @@
   outline-offset: 2px;
 }
 
-.dap-wt__tagline {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 0.78rem;
-  font-weight: 400;
-  font-style: italic;
-  letter-spacing: 0.01em;
-  color: rgba(242, 239, 232, 0.62);
-  text-align: center;
-}
-
 body.dap-wt-active {
   overflow: hidden;
 }
@@ -246,10 +235,6 @@ body.dap-wt-active .daily-acts-page {
 }
 
 @media (max-height: 640px) {
-  .dap-wt__tagline {
-    display: none;
-  }
-
   .dap-wt__footer {
     gap: 10px;
     bottom: calc(var(--nav-height, 84px) + 6px + env(safe-area-inset-bottom, 0px));

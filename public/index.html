@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
-  <link rel="stylesheet" href="css/home.css?v=20260904cf">
+  <link rel="stylesheet" href="css/home.css?v=20260904cg">
   <link rel="preload" as="image" href="images/after-event.png?v=20260903p">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
   <link rel="stylesheet" href="css/live-event.css?v=20260904as">
@@ -159,8 +159,14 @@
         <h2 class="home-guide-panel__title" id="home-guide-title">Start Exploring</h2>
         <p class="home-guide-panel__subtitle">See what you can do.</p>
 
-        <div class="home-guide-grid" role="list">
-          <article class="home-guide-card" role="listitem">
+        <div class="home-guide-grid">
+          <button
+            type="button"
+            class="home-guide-card home-guide-card--action"
+            id="home-guide-card-daily-acts"
+            data-home-guide-action="daily-acts"
+            aria-label="Open Daily Acts of Peace guide"
+          >
             <span class="home-guide-card__icon home-guide-card__icon--coral" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" focusable="false">
                 <circle cx="12" cy="12" r="9"/>
@@ -171,9 +177,9 @@
             </span>
             <h3 class="home-guide-card__title">Daily Acts of Peace</h3>
             <p class="home-guide-card__copy">Small actions.<br>A kinder world.</p>
-          </article>
+          </button>
 
-          <article class="home-guide-card" role="listitem">
+          <article class="home-guide-card">
             <span class="home-guide-card__icon home-guide-card__icon--cyan" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" focusable="false">
                 <path d="M9 18V5.5l11-2V16"/>
@@ -185,7 +191,7 @@
             <p class="home-guide-card__copy">Learn, listen and get ready for the big day.</p>
           </article>
 
-          <article class="home-guide-card" role="listitem">
+          <article class="home-guide-card">
             <span class="home-guide-card__icon home-guide-card__icon--violet" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" focusable="false">
                 <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
@@ -195,7 +201,7 @@
             <p class="home-guide-card__copy">Bring the World Choir to your city.</p>
           </article>
 
-          <article class="home-guide-card" role="listitem">
+          <article class="home-guide-card">
             <span class="home-guide-card__icon home-guide-card__icon--gold" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" focusable="false">
                 <path d="M14 13V8.5C14 7 15 4 12 4S10 7 10 8.5V13"/>
@@ -335,7 +341,7 @@
   <script src="js/live-event/global-live-event.js?v=20260904as"></script>
   <script src="js/world-choir-live-event.js?v=20260904an"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260819a"></script>
-  <script src="js/world-choir-home.js?v=20260904cc"></script>
+  <script src="js/world-choir-home.js?v=20260904cd"></script>
   <script>
     (function bootWorldChoirHome() {
       function startHome() {

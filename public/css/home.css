@@ -187,6 +187,20 @@
   text-align: center;
 }
 
+.home-guide-card--action {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-guide-card--action:focus-visible {
+  outline: 2px solid var(--accent-aurora);
+  outline-offset: 2px;
+}
+
 .home-guide-card__icon {
   display: inline-flex;
   align-items: center;
