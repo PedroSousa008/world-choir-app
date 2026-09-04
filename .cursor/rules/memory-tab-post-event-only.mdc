@@ -27,4 +27,5 @@ The **Memory** tab must **never** appear before the World Choir live event is fi
 
 ## Temporary test schedule note
 
-While `TEMP_EVENT_TEST_OVERRIDE_ENABLED` is true, event start is a same-day UTC test time (not official 2027-09-21). Memory still unlocks only **after that test event ends**. Official date returns to **21 September 2027** when the user asks to restore it.
+Official event start is **21 September 2027** (`2027-09-21T16:00:00.000Z`).
+`TEMP_EVENT_TEST_OVERRIDE_ENABLED` must stay **false** unless the user explicitly asks to run a same-day test. Memory still unlocks only **after** the active event ends.
