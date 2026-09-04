@@ -786,6 +786,7 @@ const WorldChoirHome = (() => {
         // Countdown stays mounted for speed — still refresh pledge CTA when state resolves.
         updatePledgeButton();
       }
+      syncHomeHelpUi();
       return;
     }
 
@@ -803,6 +804,7 @@ const WorldChoirHome = (() => {
     }
 
     paintPostEvent('post-event');
+    syncHomeHelpUi();
   }
 
   function updateCountdown() {
@@ -844,6 +846,100 @@ const WorldChoirHome = (() => {
       else window.location.href = 'daily-acts.html';
     });
     document.getElementById('share-btn')?.addEventListener('click', shareCountdown);
+  }
+
+  /* ─── Home help tab (placeholder panel) ─── */
+  let helpUiBound = false;
+
+  function isHelpTabContext() {
+    return isPreEvent()
+      && !isPostEvent()
+      && !LiveEventMode.isActive()
+      && !(typeof GlobalLiveEvent !== 'undefined' && GlobalLiveEvent.isActive());
+  }
+
+  function layoutHelpPanel() {
+    const panel = document.getElementById('home-help-panel');
+    const headline = document.querySelector('#home-content .home-headline');
+    if (!panel || panel.hidden) return;
+    if (!headline) {
+      panel.style.height = '0px';
+      return;
+    }
+    const bottom = headline.getBoundingClientRect().bottom;
+    panel.style.height = `${Math.max(0, Math.ceil(bottom))}px`;
+  }
+
+  function closeHomeHelp() {
+    const tab = document.getElementById('home-help-tab');
+    const panel = document.getElementById('home-help-panel');
+    if (panel) {
+      panel.hidden = true;
+      panel.setAttribute('aria-hidden', 'true');
+      panel.style.height = '';
+    }
+    tab?.setAttribute('aria-expanded', 'false');
+  }
+
+  function openHomeHelp() {
+    if (!isHelpTabContext()) return;
+    const tab = document.getElementById('home-help-tab');
+    const panel = document.getElementById('home-help-panel');
+    if (!panel) return;
+    panel.hidden = false;
+    panel.setAttribute('aria-hidden', 'false');
+    tab?.setAttribute('aria-expanded', 'true');
+    layoutHelpPanel();
+  }
+
+  function toggleHomeHelp() {
+    const panel = document.getElementById('home-help-panel');
+    if (!panel || panel.hidden) openHomeHelp();
+    else closeHomeHelp();
+  }
+
+  function syncHomeHelpUi() {
+    const tab = document.getElementById('home-help-tab');
+    if (!tab) return;
+    const show = isHelpTabContext();
+    tab.hidden = !show;
+    if (!show) closeHomeHelp();
+    else if (!document.getElementById('home-help-panel')?.hidden) layoutHelpPanel();
+  }
+
+  function bindHomeHelpUi() {
+    if (helpUiBound) {
+      syncHomeHelpUi();
+      return;
+    }
+    const tab = document.getElementById('home-help-tab');
+    const panel = document.getElementById('home-help-panel');
+    if (!tab || !panel) return;
+    helpUiBound = true;
+
+    tab.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      toggleHomeHelp();
+    });
+
+    // Tap below the empty panel (countdown area) dismisses without adding UI chrome.
+    document.addEventListener('click', (ev) => {
+      if (panel.hidden) return;
+      const t = ev.target;
+      if (tab.contains(t) || panel.contains(t)) return;
+      closeHomeHelp();
+    });
+
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && !panel.hidden) closeHomeHelp();
+    });
+
+    window.addEventListener('resize', () => {
+      if (!panel.hidden) layoutHelpPanel();
+    }, { passive: true });
+
+    syncHomeHelpUi();
   }
 
   /* ─── Calendar & Share ─── */
@@ -938,6 +1034,7 @@ const WorldChoirHome = (() => {
   function startHome() {
     initBackground();
     WorldChoirNav.startWatcher('home');
+    bindHomeHelpUi();
 
     WorldChoirParticipation.init({
       onSuccess: async (pledge) => {

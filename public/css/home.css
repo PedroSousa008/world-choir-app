@@ -102,6 +102,62 @@
   color: var(--text-primary);
 }
 
+/* ─── Subtle Home help tab (pre-event only) ─── */
+
+.home-help-tab {
+  position: fixed;
+  top: 58px;
+  right: 0;
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 52px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 11px;
+  background: #2c2e33;
+  color: #2e8bc0;
+  cursor: pointer;
+  /* Half off-screen; left edge sits slightly higher than the right. */
+  transform: translateX(50%) rotate(9deg);
+  transform-origin: center center;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+}
+
+.home-help-tab[hidden] {
+  display: none !important;
+}
+
+.home-help-tab__icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  /* Keep only about half the bulb in the visible half of the tab. */
+  transform: translateX(7px);
+  pointer-events: none;
+}
+
+.home-help-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(40, 42, 46, 0.72);
+  pointer-events: auto;
+}
+
+.home-help-panel[hidden] {
+  display: none !important;
+}
+
 .home-copy {
   font-size: 1rem;
   color: var(--text-secondary);
