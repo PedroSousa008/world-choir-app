@@ -410,155 +410,46 @@
 
 /* ─── Passport + stamps ─── */
 
-.mem-split {
-  display: grid;
-  grid-template-columns: minmax(0, 0.4fr) minmax(0, 0.6fr);
-  gap: 12px;
+.mem-stamps-section {
   margin-top: 28px;
-  align-items: start;
-}
-
-.mem-passport-link {
-  padding: 14px 12px 16px;
-  overflow: hidden;
-}
-
-.mem-passport-frame {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  /* Full cover card scaled down — reserve visual height after transform. */
-  --mem-passport-base: 372px;
-  --mem-passport-scale: 0.48;
-  height: calc((var(--mem-passport-base) / 0.7) * var(--mem-passport-scale));
-  overflow: hidden;
-}
-
-.mem-passport-scale {
-  width: var(--mem-passport-base);
-  flex: 0 0 var(--mem-passport-base);
-  transform: scale(var(--mem-passport-scale));
-  transform-origin: top center;
-  pointer-events: none;
-}
-
-.mem-passport-scale .passport-card {
-  width: var(--mem-passport-base) !important;
-  max-width: var(--mem-passport-base) !important;
-}
-
-@media (max-width: 360px) {
-  .mem-split {
-    grid-template-columns: 1fr;
-  }
-
-  .mem-passport-frame {
-    --mem-passport-scale: 0.52;
-  }
 }
 
 .mem-stamps-card {
-  padding: 14px 10px 12px;
+  padding: 14px 12px 16px;
 }
 
 .mem-stamps-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px 6px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px 6px;
+  align-items: center;
+  justify-items: center;
+  min-height: 52px;
 }
 
-.mem-stamp {
-  text-align: center;
+.mem-stamp-slot {
+  width: 100%;
+  max-width: 48px;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
 }
 
-.mem-stamp__seal {
-  position: relative;
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 6px;
-  display: grid;
-  place-items: center;
-  color: var(--df-accent);
+.mem-stamp-slot--empty {
+  visibility: hidden;
 }
 
-.mem-stamp__ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 1.5px solid currentColor;
-  opacity: 0.85;
-  box-shadow: inset 0 0 0 4px rgba(0, 0, 0, 0.35);
-}
-
-.mem-stamp__ring::after {
-  content: '';
-  position: absolute;
-  inset: 5px;
-  border-radius: 50%;
-  border: 1px dashed currentColor;
-  opacity: 0.55;
-}
-
-.mem-stamp__label {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90%;
-  font-size: 0.42rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  line-height: 1.1;
-  color: currentColor;
-  opacity: 0.95;
-}
-
-.mem-stamp__icon {
-  display: inline-flex;
-  width: 18px;
-  height: 18px;
-  margin-top: 10px;
-}
-
-.mem-stamp__icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.mem-stamp__lock {
-  position: absolute;
-  right: 6px;
-  bottom: 8px;
-  width: 12px;
-  height: 12px;
-  opacity: 0.7;
-}
-
-.mem-stamp__lock svg {
-  width: 12px;
-  height: 12px;
-}
-
-.mem-stamp__detail {
-  margin: 0;
-  font-size: 0.5rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--df-muted);
-}
-
-.mem-stamp--cyan { color: #4ec5e8; }
-.mem-stamp--magenta { color: #c77dff; }
-.mem-stamp--pink { color: #ff6b9d; }
-.mem-stamp--green { color: #6dcf8a; }
-.mem-stamp--blue { color: #5b8cff; }
-.mem-stamp--amber { color: #e0b15a; }
-
-.mem-stamp.is-locked {
-  color: #6a6e78;
-  opacity: 0.72;
+.mem-stamp-slot__img {
+  width: 100%;
+  height: 100%;
+  max-width: 44px;
+  max-height: 44px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* ─── Pass the World route ─── */

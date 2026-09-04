@@ -297,43 +297,46 @@ const WorldChoirMemory = (() => {
     `;
   }
 
-  function renderStamp(stamp) {
-    const locked = !stamp.earned;
+  function stampImageSrc(stampDef) {
+    const key = stampDef?.imageKey;
+    const cfg = key && typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig[key] : null;
+    return cfg?.src || cfg?.url || stampDef?.image?.src || stampDef?.image?.url || '';
+  }
+
+  function renderStampSlot(status) {
+    if (!status?.stamp) {
+      return `<div class="mem-stamp-slot mem-stamp-slot--empty" role="presentation" aria-hidden="true"></div>`;
+    }
+    const { stamp } = status;
+    const src = stampImageSrc(stamp);
+    if (!src) {
+      return `<div class="mem-stamp-slot mem-stamp-slot--empty" role="presentation" aria-hidden="true"></div>`;
+    }
     return `
-      <div class="mem-stamp${locked ? ' is-locked' : ''} mem-stamp--${esc(stamp.accent)}" role="listitem">
-        <div class="mem-stamp__seal" aria-hidden="true">
-          <span class="mem-stamp__ring"></span>
-          <span class="mem-stamp__label">${esc(stamp.label)}</span>
-          <span class="mem-stamp__icon">${iconSvg(stamp.icon)}</span>
-          ${locked ? `<span class="mem-stamp__lock">${iconSvg('lock')}</span>` : ''}
-        </div>
-        <p class="mem-stamp__detail">${esc(stamp.detail || '')}</p>
+      <div class="mem-stamp-slot" role="listitem" aria-label="${esc(stamp.title || 'Stamp')}">
+        <img
+          class="mem-stamp-slot__img"
+          src="${esc(src)}"
+          alt=""
+          decoding="async"
+          loading="lazy"
+          draggable="false"
+        >
       </div>
     `;
   }
 
-  function renderPassportAndStamps(passportHtml, stamps) {
+  function renderStampsAchieved(unlockedStatuses) {
+    const slots = Array.from({ length: 6 }, (_, i) => unlockedStatuses[i] || null);
     return `
-      <section class="mem-split" aria-label="Passport and stamps">
-        <div class="mem-split__passport">
-          <h2 class="df-section-label">My Passport</h2>
-          <a class="mem-passport-link mem-card" href="passport.html" aria-label="Open your World Choir Passport">
-            <div class="mem-passport-frame" id="mem-passport-host">
-              <div class="mem-passport-scale">
-                ${passportHtml}
-              </div>
-            </div>
-          </a>
+      <section class="mem-section mem-stamps-section" aria-labelledby="mem-stamps-label">
+        <div class="mem-section-row">
+          <h2 class="df-section-label mem-section-row__label" id="mem-stamps-label">Stamps Achieved</h2>
+          <a class="mem-link" href="passport.html?page=stamps">View all</a>
         </div>
-        <div class="mem-split__stamps">
-          <div class="mem-section-row">
-            <h2 class="df-section-label mem-section-row__label">Stamps Achieved</h2>
-            <a class="mem-link" href="passport.html">View all</a>
-          </div>
-          <div class="mem-card mem-stamps-card">
-            <div class="mem-stamps-grid" role="list">
-              ${stamps.map(renderStamp).join('')}
-            </div>
+        <div class="mem-card mem-stamps-card">
+          <div class="mem-stamps-grid" role="list">
+            ${slots.map(renderStampSlot).join('')}
           </div>
         </div>
       </section>
@@ -430,25 +433,17 @@ const WorldChoirMemory = (() => {
     `;
   }
 
-  async function buildPassportHtml() {
-    if (typeof WorldChoirPassport === 'undefined') {
-      return `<p class="mem-empty">Your Passport will appear here.</p>`;
-    }
+  async function loadUnlockedStamps() {
+    if (typeof WorldChoirPassport === 'undefined') return [];
     try {
-      const data = await WorldChoirPassport.loadPassportData({ fast: true });
-      // Cover page only — full card chrome + fields, scaled via CSS miniature.
-      return WorldChoirPassport.renderCard(data, {
-        interactive: false,
-        id: 'mem-world-choir-passport',
-        page: 'cover',
-      });
+      const data = await WorldChoirPassport.loadPassportData();
+      const statuses = Array.isArray(data?.stamps) ? data.stamps : [];
+      return statuses
+        .filter((s) => s && s.unlocked === true && s.stamp)
+        .sort((a, b) => (Number(a.stamp.revealOrder) || 999) - (Number(b.stamp.revealOrder) || 999))
+        .slice(0, 6);
     } catch {
-      return WorldChoirPassport.renderCard({}, {
-        loading: true,
-        interactive: false,
-        id: 'mem-world-choir-passport',
-        page: 'cover',
-      });
+      return [];
     }
   }
 
@@ -738,19 +733,18 @@ const WorldChoirMemory = (() => {
     const el = document.getElementById('memory-content');
     if (!el) return;
 
-    const [event, route] = await Promise.all([
+    const [event, route, unlockedStamps] = await Promise.all([
       WorldChoirMemoryData.loadEventArchive(),
       WorldChoirMemoryData.loadPassTheWorldRoute(),
+      loadUnlockedStamps(),
     ]);
-    const stamps = WorldChoirMemoryData.getStamps();
-    const passportHtml = await buildPassportHtml();
 
     el.innerHTML = `
       ${renderTopbar()}
       ${renderIntro()}
       ${renderCarouselShell()}
       ${renderEventCard(event)}
-      ${renderPassportAndStamps(passportHtml, stamps)}
+      ${renderStampsAchieved(unlockedStamps)}
       ${renderItinerary(route)}
       ${renderMoreMemories()}
       ${renderFab()}
