@@ -976,14 +976,12 @@
   gap: 10px;
   margin-top: auto;
   padding-top: 8px;
-  font-size: 0.72rem;
-  line-height: 1.35;
 }
 
 .df-fcard__status {
-  font-size: inherit;
+  font-size: 0.72rem;
   color: var(--df-muted);
-  line-height: inherit;
+  line-height: 1.35;
 }
 
 .df-fcard__arrow {
@@ -996,8 +994,8 @@
 }
 
 .df-fcard__arrow svg {
-  width: 1em;
-  height: 1em;
+  width: 0.72rem;
+  height: 0.72rem;
   stroke: currentColor;
   fill: none;
   stroke-width: 1.5;
