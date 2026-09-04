@@ -44,10 +44,11 @@ const WorldChoirEventSchedule = (() => {
   }
 
   /**
-   * 4 Sep 2026 00:55 Europe/Lisbon (WEST, UTC+1) = 2026-09-03T23:55:00.000Z
-   * Fixed absolute instant so Home countdown is minutes, not “1 day”.
+   * TEMP: event treated as completed so Memory tab stays available for design work.
+   * Restore to a future instant (or official 2027-09-21) when the user asks.
+   * Was: 4 Sep 2026 00:55 Europe/Lisbon = 2026-09-03T23:55:00.000Z
    */
-  const TEST_EVENT_START_UTC = '2026-09-03T23:55:00.000Z';
+  const TEST_EVENT_START_UTC = '2026-09-03T22:00:00.000Z';
 
   function getTestEventStartUtc() {
     return TEST_EVENT_START_UTC;

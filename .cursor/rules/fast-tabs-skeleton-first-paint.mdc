@@ -1,0 +1,27 @@
+---
+description: All tabs must load instantly with skeletons — never a blank/black screen
+alwaysApply: true
+---
+
+# Fast Tabs + Skeleton First Paint (Absolute)
+
+Every World Choir tab — **before and after the event** — must feel instant.
+
+## Non-negotiable rules
+
+1. **Never show an empty black screen** while JS boots or data loads.
+2. **First paint must be a skeleton** (or cached real UI) that matches the page layout.
+3. Prefer **HTML-inline skeletons** in the page shell so they appear before deferred scripts run.
+4. **Do not block first Home/tab paint** on live-event init, network, or slow async work. Start the page UI immediately; load live/network in parallel.
+5. Warm navigations may skip full-page skeleton only when **cached data for that mode** is already available.
+6. Applies to **all current tabs** (Home, Map, Profile, Passport, Donate, Daily Acts, Memory, etc.) in both pre-event and post-event states.
+
+## Home-specific
+
+- `#home-content` must never start empty.
+- Pre-event → countdown skeleton; post-event → post-event skeleton.
+- Clear stale `wc-live-gate` / live overlays when the event is already completed so Home can paint.
+
+## When changing loading code
+
+If a change introduces a blank frame, fix it before shipping. Speed + skeleton continuity is a permanent product requirement, not optional polish.

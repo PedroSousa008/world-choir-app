@@ -712,7 +712,11 @@ const WorldChoirHome = (() => {
     if (isPostEvent()) {
       clearStaleLiveUi();
     }
-    if (document.documentElement.classList.contains('wc-live-gate')) return;
+    // After the event, never keep the live black gate. Before/during live, gate may hide Home.
+    if (document.documentElement.classList.contains('wc-live-gate')) {
+      if (isPostEvent()) clearStaleLiveUi();
+      else return;
+    }
     if (typeof GlobalLiveEvent !== 'undefined' && GlobalLiveEvent.isActive()) return;
 
     if (isPostEvent() && LiveEventMode.hasCompletedFlow()) {
@@ -826,7 +830,16 @@ const WorldChoirHome = (() => {
 
   function init() {
     homeReady = false;
-    if (isPostEvent()) fetchPostEventStats();
+    if (isPostEvent()) {
+      clearStaleLiveUi();
+      fetchPostEventStats();
+    }
+
+    // If HTML already painted a first-paint skeleton, treat that as the skeleton view.
+    const root = document.getElementById('home-content');
+    if (root?.querySelector('.home-skeleton, .home-after--skeleton')) {
+      homeView = 'skeleton';
+    }
 
     // Warm navigations can skip the full-page skeleton — but only when the
     // cached data matches the current home mode. Post-event stats cache must
