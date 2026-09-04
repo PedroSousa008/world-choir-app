@@ -12,7 +12,7 @@
 }
 
 .pm-wt.is-visible {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .pm-wt__spotlight {
@@ -157,9 +157,13 @@
 }
 
 body.pm-wt-active .practice-mode #practice-mode-content,
-body.pm-wt-active .practice-mode #practice-controls,
-body.pm-wt-active .practice-mode #practice-close-x {
+body.pm-wt-active .practice-mode #practice-controls {
   pointer-events: none;
+}
+
+/* Keep Practice page close usable during the guide (exits Practice, does not autoplay). */
+body.pm-wt-active .practice-mode #practice-close-x {
+  pointer-events: auto;
 }
 
 body.pm-wt-active .bottom-nav {
