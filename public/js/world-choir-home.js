@@ -145,7 +145,7 @@ const WorldChoirHome = (() => {
 
     // Never show "I'll Sing" until we know the user is not pledged.
     if (pledgeState === 'loading') {
-      return '<div class="btn-hero-skeleton" aria-hidden="true"></div>';
+      return '<div class="btn-hero-skeleton" id="home-pledge-slot" aria-hidden="true"></div>';
     }
 
     if (pledgeState === 'pledged') {
@@ -162,6 +162,43 @@ const WorldChoirHome = (() => {
         <span class="btn-hero__text">I'll Sing</span>
       </button>
     `;
+  }
+
+  /** Swap the Home CTA in place — countdown view otherwise skips full re-renders. */
+  function updatePledgeButton() {
+    if (!isPreEvent() || LiveEventMode.isActive()) return;
+    const html = renderPledgeButton().trim();
+    if (!html) return;
+
+    const wrap = document.createElement('div');
+    wrap.innerHTML = html;
+    const next = wrap.firstElementChild;
+    if (!next) return;
+
+    const current = document.getElementById('pledge-btn')
+      || document.getElementById('home-pledge-slot')
+      || document.querySelector('.btn-hero-skeleton');
+
+    if (current) {
+      if (
+        current.id === next.id
+        && current.className === next.className
+        && current.textContent.trim() === next.textContent.trim()
+      ) {
+        return;
+      }
+      current.replaceWith(next);
+    } else {
+      const actions = document.querySelector('.secondary-actions');
+      const song = document.querySelector('.home-song');
+      if (actions?.parentNode) actions.parentNode.insertBefore(next, actions);
+      else if (song?.parentNode) song.insertAdjacentElement('afterend', next);
+      else return;
+    }
+
+    if (next.id === 'pledge-btn' && !next.disabled) {
+      next.addEventListener('click', () => WorldChoirParticipation.open());
+    }
   }
 
   /** Full-page skeleton matching the Home layout (shown only until data is ready). */
@@ -745,6 +782,9 @@ const WorldChoirHome = (() => {
         root.innerHTML = renderCountdownHome();
         bindActions();
         homeView = 'countdown';
+      } else {
+        // Countdown stays mounted for speed — still refresh pledge CTA when state resolves.
+        updatePledgeButton();
       }
       return;
     }
@@ -914,6 +954,7 @@ const WorldChoirHome = (() => {
     WorldChoirPledgeState.subscribe(() => {
       if (isPreEvent() && !LiveEventMode.isActive()) {
         if (!homeReady) revealHome();
+        else if (homeView === 'countdown') updatePledgeButton();
         else render();
       }
     });
