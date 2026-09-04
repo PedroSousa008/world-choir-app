@@ -976,23 +976,28 @@
   gap: 10px;
   margin-top: auto;
   padding-top: 8px;
-}
-
-.df-fcard__status {
   font-size: 0.72rem;
-  color: var(--df-muted);
   line-height: 1.35;
 }
 
+.df-fcard__status {
+  font-size: inherit;
+  color: var(--df-muted);
+  line-height: inherit;
+}
+
 .df-fcard__arrow {
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
   color: var(--df-warm-soft);
+  line-height: 1;
   transition: transform 0.25s ease, color 0.25s ease;
 }
 
 .df-fcard__arrow svg {
-  width: 18px;
-  height: 18px;
+  width: 1em;
+  height: 1em;
   stroke: currentColor;
   fill: none;
   stroke-width: 1.5;
