@@ -800,6 +800,7 @@ const WorldChoirHome = (() => {
       `;
         homeView = 'live';
       }
+      syncHomeHelpUi();
       return;
     }
 
