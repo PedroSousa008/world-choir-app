@@ -147,13 +147,22 @@
 }
 
 .home-guide-panel__title {
-  margin: 8px 36px 14px;
+  margin: 8px 36px 6px;
   font-family: var(--font-sans);
   font-size: clamp(1.25rem, 4.8vw, 1.5rem);
   font-weight: 650;
   letter-spacing: -0.02em;
   line-height: 1.15;
   color: #ffffff;
+}
+
+.home-guide-panel__subtitle {
+  margin: 0 36px 14px;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text-muted);
 }
 
 .home-guide-grid {
