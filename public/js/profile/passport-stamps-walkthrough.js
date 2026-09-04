@@ -514,13 +514,15 @@ const PassportStampsWalkthrough = (() => {
       return;
     }
 
+    // Restore real stamps immediately — don't wait for overlay fade.
+    if (guidePresentationApplied || step >= 1) {
+      restoreRealStamps();
+    }
+
     active = false;
     transitioning = false;
 
     const finish = () => {
-      if (guidePresentationApplied || step >= 1) {
-        restoreRealStamps();
-      }
       teardownOverlay();
       clearStoredPledgeFlag();
     };

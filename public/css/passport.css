@@ -643,6 +643,11 @@
   cursor: pointer;
 }
 
+/* Guide presentation: hide other stamps without destroying DOM (instant restore). */
+.passport-stamp--guide-hidden {
+  display: none !important;
+}
+
 .passport-stamp--unlocked:focus-visible {
   outline: 2px solid rgba(26, 48, 87, 0.55);
   outline-offset: 3px;

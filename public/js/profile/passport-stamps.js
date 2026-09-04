@@ -1183,12 +1183,56 @@ const PassportStamps = (() => {
       return true;
     }
 
+    // Fast path: hide other stamps in-place so Got it can restore instantly
+    // without reloading images.
+    const stamps = [...wrap.querySelectorAll('.passport-stamp')];
+    const voice = stamps.find((el) => el.dataset.stampId === 'your-voice-joined');
+
+    if (voice) {
+      stamps.forEach((el) => {
+        if (el === voice) {
+          el.classList.remove('passport-stamp--guide-hidden');
+          el.hidden = false;
+          // Ensure unlocked artwork is showing during the guide step.
+          const img = el.querySelector('.passport-stamp__img');
+          const stampDef = PASSPORT_STAMPS.find((entry) => entry.id === 'your-voice-joined');
+          if (img && stampDef) {
+            const unlockedImage = resolveStampImage(stampDef, { unlocked: true });
+            const unlockedSrc = unlockedImage?.url || unlockedImage?.src;
+            if (unlockedSrc && img.getAttribute('src') !== unlockedSrc) {
+              img.setAttribute('src', unlockedSrc);
+            }
+            img.loading = 'eager';
+          }
+          el.classList.remove(
+            'passport-stamp--locked',
+            'passport-stamp--revealing',
+            'passport-stamp--reveal-slot',
+            'passport-stamp--reveal-pending',
+            'passport-stamp--locked-blur'
+          );
+          el.classList.add('passport-stamp--unlocked');
+          el.dataset.stampUnlocked = '1';
+          el.querySelector('.passport-stamp__locked-msg')?.remove();
+        } else {
+          el.classList.add('passport-stamp--guide-hidden');
+        }
+      });
+      return true;
+    }
+
+    // Fallback only if the voice stamp isn't in the live DOM yet.
     const esc = (s) => String(s)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+    wrap.dataset.guidePresentation = 'voice-joined-only-rebuild';
     wrap.innerHTML = renderGrid(buildGuideVoiceJoinedOnlyStatuses(), { esc });
+    wrap.querySelectorAll('.passport-stamp__img').forEach((img) => {
+      img.loading = 'eager';
+      img.fetchPriority = 'high';
+    });
     return true;
   }
 
@@ -1198,14 +1242,25 @@ const PassportStamps = (() => {
     guidePresentationActive = false;
     if (!wrap) return false;
 
-    const wasGuideOnly = wrap.dataset.guidePresentation === 'voice-joined-only';
+    const mode = wrap.dataset.guidePresentation || '';
     delete wrap.dataset.guidePresentation;
 
+    // Instant restore: unhide stamps that were only visually suppressed.
+    if (mode === 'voice-joined-only') {
+      wrap.querySelectorAll('.passport-stamp--guide-hidden').forEach((el) => {
+        el.classList.remove('passport-stamp--guide-hidden');
+      });
+      return true;
+    }
+
+    if (mode === 'unpledged-real') {
+      return true;
+    }
+
+    // Rebuild path (fallback when guide replaced the stamp DOM).
     const statuses = Array.isArray(realStampStatuses)
       ? realStampStatuses.map((status) => ({ ...status, shouldReveal: false }))
-      : (wasGuideOnly ? [] : null);
-
-    if (!statuses) return true;
+      : [];
 
     const esc = (s) => String(s)
       .replace(/&/g, '&amp;')
@@ -1213,6 +1268,10 @@ const PassportStamps = (() => {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
     wrap.innerHTML = renderGrid(statuses, { esc });
+    wrap.querySelectorAll('.passport-stamp__img').forEach((img) => {
+      img.loading = 'eager';
+      img.fetchPriority = 'high';
+    });
     return true;
   }
 
