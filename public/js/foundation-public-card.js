@@ -88,12 +88,6 @@ const FoundationPublicCard = (() => {
     return `${sentence.slice(0, maxLen - 1).trim()}…`;
   }
 
-  function isNewFoundation(foundation) {
-    return !(foundation.activeProjectCount > 0)
-      && !(foundation.totalRaised > 0)
-      && !(foundation.uniqueSupporters > 0);
-  }
-
   function causeTags(foundation) {
     const tags = [];
     const primary = foundation.primaryCategory;
@@ -114,11 +108,8 @@ const FoundationPublicCard = (() => {
   }
 
   function statusLine(foundation, currency) {
-    if (isNewFoundation(foundation)) return 'New Foundation.';
-    if (foundation.raisedKnown && foundation.totalRaised > 0) {
-      return `${formatMoney(foundation.totalRaised, currency || foundation.currency || 'EUR')} raised`;
-    }
-    return 'Be among the first to support this foundation.';
+    const amount = Number(foundation.totalRaised) || 0;
+    return `Total Raised: ${formatMoney(amount, currency || foundation.currency || 'EUR')}`;
   }
 
   function metaLine(foundation) {
@@ -149,9 +140,6 @@ const FoundationPublicCard = (() => {
             : `<span class="df-fcard__glyph">${esc(identityGlyph(foundation))}</span>`}
         </span>
         <span class="df-fcard__body" aria-hidden="${interactive ? 'true' : 'false'}">
-          ${isNewFoundation(foundation)
-            ? '<span class="df-fcard__badge">New to World Choir</span>'
-            : ''}
           <h3 class="df-fcard__name">${esc(name)}</h3>
           ${meta ? `<p class="df-fcard__meta">${esc(meta)}</p>` : ''}
           ${mission ? `<p class="df-fcard__mission">${esc(mission)}</p>` : ''}
