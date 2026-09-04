@@ -547,15 +547,16 @@ const WorldChoirDB = (() => {
 
   function getPledgeForCurrentUser(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
     if (myPledgeCache !== undefined) {
-      if (myPledgeCache && myPledgeCache.event_id === eventId) {
-        return myPledgeCache;
+      if (myPledgeCache) {
+        const eid = myPledgeCache.event_id || myPledgeCache.eventId;
+        if (!eid || eid === eventId) return myPledgeCache;
       }
       return null;
     }
 
     if (remoteUser?.id) {
       return (cachedPledges || []).find(
-        (p) => p.user_id === remoteUser.id && p.event_id === eventId
+        (p) => p.user_id === remoteUser.id && (p.event_id === eventId || p.eventId === eventId)
       ) || null;
     }
 

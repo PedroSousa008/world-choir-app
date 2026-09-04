@@ -24,6 +24,11 @@ const WorldChoirPledgeState = (() => {
     return n != null && n !== '' && Number(n) > 0;
   }
 
+  function resolveStateFromPledge(pledge) {
+    if (pledge || userHasVoiceNumber(pledge)) return 'pledged';
+    return 'not_pledged';
+  }
+
   function syncFromDB() {
     if (typeof WorldChoirDB === 'undefined' || !WorldChoirDB.isPledgeLoaded()) {
       if (state !== 'loading') {
@@ -36,7 +41,7 @@ const WorldChoirPledgeState = (() => {
     const pledge = typeof WorldChoirDB.getPledgeForCurrentUser === 'function'
       ? WorldChoirDB.getPledgeForCurrentUser()
       : null;
-    const next = (WorldChoirDB.hasPledged() || userHasVoiceNumber(pledge))
+    const next = (WorldChoirDB.hasPledged?.() || userHasVoiceNumber(pledge))
       ? 'pledged'
       : 'not_pledged';
     if (state !== next) {
@@ -46,6 +51,18 @@ const WorldChoirPledgeState = (() => {
     return state;
   }
 
+  async function resolveFromMyPledge() {
+    if (typeof WorldChoirDB === 'undefined' || typeof WorldChoirDB.syncMyPledge !== 'function') {
+      return syncFromDB();
+    }
+    try {
+      await WorldChoirDB.syncMyPledge();
+    } catch (err) {
+      console.error('WorldChoirPledgeState syncMyPledge failed:', err);
+    }
+    return syncFromDB();
+  }
+
   function init() {
     if (!initPromise) {
       initPromise = (typeof WorldChoirDB !== 'undefined'
@@ -53,15 +70,13 @@ const WorldChoirPledgeState = (() => {
         : Promise.resolve()
       )
         .then(syncFromDB)
-        .catch((err) => {
+        .catch(async (err) => {
           console.error('WorldChoirPledgeState init failed:', err);
-          // Do not assume not_pledged — keep loading so Home never flashes "I'll Sing"
-          // for people who already have a Voice number.
-          if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.isPledgeLoaded()) {
+          // Bootstrap may fail on map pledges while my-pledge still works — resolve CTA from that.
+          await resolveFromMyPledge();
+          // If still unknown, stay loading only briefly; never flash I'll Sing for pledged voices.
+          if (state === 'loading' && typeof WorldChoirDB !== 'undefined' && WorldChoirDB.isPledgeLoaded()) {
             syncFromDB();
-          } else if (state !== 'loading') {
-            state = 'loading';
-            notify();
           }
         });
 
@@ -81,6 +96,7 @@ const WorldChoirPledgeState = (() => {
   return {
     init,
     refresh: syncFromDB,
+    resolveFromMyPledge,
     getState: () => state,
     isLoaded: () => state !== 'loading',
     isPledged: () => state === 'pledged',

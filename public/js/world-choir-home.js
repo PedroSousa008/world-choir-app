@@ -143,12 +143,17 @@ const WorldChoirHome = (() => {
       ? WorldChoirPledgeState.getState()
       : 'loading';
 
-    // Never show "I'll Sing" until pledge state is known — and never for pledged voices.
+    // Never show "I'll Sing" until we know the user is not pledged.
     if (pledgeState === 'loading') {
       return '<div class="btn-hero-skeleton" aria-hidden="true"></div>';
     }
+
     if (pledgeState === 'pledged') {
-      return '';
+      return `
+        <button class="btn-hero btn-hero--pledged" id="pledge-btn" type="button" disabled aria-disabled="true">
+          <span class="btn-hero__text">You're Singing</span>
+        </button>
+      `;
     }
 
     return `
@@ -851,7 +856,7 @@ const WorldChoirHome = (() => {
 
     startHome();
 
-    // Always resolve pledge state so the "I'll Sing" button never stays skeleton.
+    // Always resolve pledge state so the CTA never stays a blank skeleton.
     const fallback = setTimeout(() => {
       if (!homeReady) {
         homeReady = true;
@@ -867,13 +872,27 @@ const WorldChoirHome = (() => {
         else render();
         maybeLaunchHomeExtras();
       })
-      .catch((err) => {
+      .catch(async (err) => {
         clearTimeout(fallback);
         console.error('Failed to connect to World Choir database:', err);
+        try {
+          await WorldChoirPledgeState.resolveFromMyPledge?.();
+        } catch {
+          /* keep going */
+        }
         homeReady = true;
         render();
         maybeLaunchHomeExtras();
       });
+
+    // If pledge state is still loading after warm paint, force a my-pledge refresh.
+    setTimeout(() => {
+      if (typeof WorldChoirPledgeState === 'undefined') return;
+      if (WorldChoirPledgeState.getState() !== 'loading') return;
+      void WorldChoirPledgeState.resolveFromMyPledge?.().then(() => {
+        if (isPreEvent() && !LiveEventMode.isActive()) render();
+      });
+    }, 1200);
   }
 
   function startHome() {
