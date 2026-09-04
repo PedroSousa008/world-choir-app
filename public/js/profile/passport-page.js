@@ -485,12 +485,25 @@ const PassportPage = (() => {
     if (PassTheWorld.isMounted?.() && host.querySelector('.ptw')) {
       if (typeof PassTheWorldMap !== 'undefined') PassTheWorldMap.invalidateSize?.();
       refreshJourneyStats();
+      if (typeof PassTheWorldWalkthrough !== 'undefined') {
+        PassTheWorldWalkthrough.onPageReady?.();
+      }
       return;
     }
-    PassTheWorld.mount(host).then(() => refreshJourneyStats()).catch(() => refreshJourneyStats());
+    PassTheWorld.mount(host)
+      .then(() => {
+        refreshJourneyStats();
+        if (typeof PassTheWorldWalkthrough !== 'undefined') {
+          PassTheWorldWalkthrough.onPageReady?.();
+        }
+      })
+      .catch(() => refreshJourneyStats());
   }
 
   function unmountPassTheWorld() {
+    if (typeof PassTheWorldWalkthrough !== 'undefined') {
+      PassTheWorldWalkthrough.dismiss?.();
+    }
     if (typeof PassTheWorld !== 'undefined') PassTheWorld.destroy();
   }
 

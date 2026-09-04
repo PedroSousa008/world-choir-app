@@ -30,6 +30,15 @@ const PassTheWorld = (() => {
   let itineraryPage = 0;
   let itineraryPanelHome = null;
   let itineraryScrollLockHandler = null;
+  let guideDemoActive = false;
+
+  const GUIDE_DEMO_CITY = {
+    city: 'Braga',
+    country: 'Portugal',
+    countryCode: 'PT',
+    latitude: 41.5518,
+    longitude: -8.4229,
+  };
 
   function esc(s) {
     return String(s ?? '')
@@ -755,6 +764,7 @@ const PassTheWorld = (() => {
   }
 
   async function onInvite() {
+    if (guideDemoActive) return;
     if (submitting) return;
     submitting = true;
     const btn = root?.querySelector('[data-ptw-invite]');
@@ -897,6 +907,7 @@ const PassTheWorld = (() => {
   }
 
   function openPanel(mode) {
+    if (guideDemoActive) return;
     const panel = root?.querySelector('[data-ptw-panel]') || getItineraryPanel();
     const content = panel?.querySelector('[data-ptw-panel-content]');
     if (!panel || !content || !lastPayload) return;
@@ -928,6 +939,7 @@ const PassTheWorld = (() => {
   }
 
   async function refresh() {
+    if (guideDemoActive) return lastPayload;
     const data = await fetchState();
     lastPayload = data;
     paintBody(data);
@@ -939,6 +951,80 @@ const PassTheWorld = (() => {
       PassportPage.updateJourneyStats(data.stats);
     }
     return data;
+  }
+
+  /** Local presentation only — Braga / no destination / Visit my City visible. */
+  function buildGuideDemoPayload(real) {
+    const base = real && typeof real === 'object' ? real : {};
+    const journey = base.journey && typeof base.journey === 'object' ? base.journey : {};
+    return {
+      ...base,
+      journey: {
+        ...journey,
+        status: 'WAITING_FOR_FIRST_CALL',
+        current: { ...GUIDE_DEMO_CITY },
+        origin: null,
+        destination: null,
+        progress: null,
+        invitationCount: 0,
+        lastReveal: null,
+        revealEndAt: null,
+        invitationWindow: null,
+        viewer: {
+          countryLoaded: true,
+          countryEligible: true,
+          canInviteNow: true,
+          sameCountry: false,
+          hasInvited: false,
+        },
+      },
+      // Keep real cumulative stats / itinerary for educational Step 3.
+      stats: base.stats || journey.stats || null,
+      itinerary: Array.isArray(base.itinerary) ? base.itinerary : [],
+    };
+  }
+
+  function enterGuideDemo() {
+    if (!mounted || !lastPayload) return false;
+    if (guideDemoActive) return true;
+    guideDemoActive = true;
+    stopPolling();
+    closePanel();
+    const demo = buildGuideDemoPayload(lastPayload);
+    paintBody(demo);
+    if (typeof PassTheWorldMap !== 'undefined') {
+      PassTheWorldMap.renderJourney(demo);
+      requestAnimationFrame(() => {
+        PassTheWorldMap.invalidateSize?.();
+        PassTheWorldMap.frameOnPlane?.({ animate: false, force: true });
+      });
+    }
+    return true;
+  }
+
+  function exitGuideDemo() {
+    if (!guideDemoActive) return;
+    guideDemoActive = false;
+    closePanel();
+    if (lastPayload) {
+      paintBody(lastPayload);
+      paintItineraryPanel();
+      if (typeof PassTheWorldMap !== 'undefined') {
+        PassTheWorldMap.renderJourney(lastPayload);
+        requestAnimationFrame(() => {
+          PassTheWorldMap.invalidateSize?.();
+          PassTheWorldMap.frameOnPlane?.({ animate: false, force: true });
+        });
+      }
+      if (typeof PassportPage !== 'undefined' && PassportPage.updateJourneyStats) {
+        PassportPage.updateJourneyStats(lastPayload.stats);
+      }
+    }
+    if (mounted) startPolling();
+  }
+
+  function isGuideDemo() {
+    return guideDemoActive;
   }
 
   function bindLiveProgress() {
@@ -1049,6 +1135,9 @@ const PassTheWorld = (() => {
       bindLiveProgress();
       await refresh();
       startPolling();
+      if (typeof PassTheWorldWalkthrough !== 'undefined') {
+        PassTheWorldWalkthrough.onPageReady?.();
+      }
     } catch (err) {
       const body = root.querySelector('[data-ptw-body]');
       if (body) {
@@ -1071,6 +1160,7 @@ const PassTheWorld = (() => {
   }
 
   function destroy() {
+    guideDemoActive = false;
     stopPolling();
     closePanel();
     if (typeof PassTheWorldMap !== 'undefined') PassTheWorldMap.destroy();
@@ -1094,5 +1184,14 @@ const PassTheWorld = (() => {
     return lastPayload?.stats || null;
   }
 
-  return { mount, destroy, refresh, isMounted, getStats };
+  return {
+    mount,
+    destroy,
+    refresh,
+    isMounted,
+    getStats,
+    enterGuideDemo,
+    exitGuideDemo,
+    isGuideDemo,
+  };
 })();

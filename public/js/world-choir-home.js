@@ -958,6 +958,16 @@ const WorldChoirHome = (() => {
     window.location.href = 'profile.html?practice=1';
   }
 
+  function openPassTheWorldFromGuide() {
+    try {
+      sessionStorage.setItem('wc_ptw_from_guide', '1');
+    } catch {
+      /* ignore */
+    }
+    closeHomeGuide();
+    window.location.href = 'passport.html?page=story';
+  }
+
   function bindActions() {
     document.getElementById('pledge-btn')?.addEventListener('click', () => WorldChoirParticipation.open());
     document.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
@@ -1080,6 +1090,10 @@ const WorldChoirHome = (() => {
     document.getElementById('home-guide-card-practice')?.addEventListener('click', (e) => {
       e.preventDefault();
       openPracticeFromGuide();
+    });
+    document.getElementById('home-guide-card-pass-the-world')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      openPassTheWorldFromGuide();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeHomeGuide();
