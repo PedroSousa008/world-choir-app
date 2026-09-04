@@ -369,22 +369,13 @@ const WorldChoirMemory = (() => {
       <section class="mem-section" aria-labelledby="mem-route-label">
         <div class="mem-section-row">
           <h2 class="df-section-label mem-section-row__label" id="mem-route-label">Pass the World – Itinerary</h2>
-          <a class="mem-link" href="map.html">View full route</a>
+          <a class="mem-link" href="passport.html?page=story">View full route</a>
         </div>
         <div class="mem-card mem-route-card">
           <div class="mem-route" role="list">
             ${nodes}
           </div>
         </div>
-      </section>
-    `;
-  }
-
-  function renderMoreMemories() {
-    return `
-      <section class="mem-section mem-more" aria-labelledby="mem-more-label">
-        <h2 class="df-section-label" id="mem-more-label">More Memories</h2>
-        <p class="mem-empty mem-empty--soft">Community memories will continue to gather here.</p>
       </section>
     `;
   }
@@ -788,7 +779,7 @@ const WorldChoirMemory = (() => {
     });
 
     document.getElementById('mem-search-open')?.addEventListener('click', () => {
-      document.getElementById('mem-more-label')?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
+      document.getElementById('mem-route-label')?.scrollIntoView({ behavior: REDUCED_MOTION ? 'auto' : 'smooth' });
     });
 
     document.addEventListener('keydown', (ev) => {
@@ -813,7 +804,6 @@ const WorldChoirMemory = (() => {
       ${renderEventCard(event)}
       ${renderStampsAchieved(unlockedStamps)}
       ${renderItinerary(route)}
-      ${renderMoreMemories()}
       ${renderFab()}
       ${renderComposer()}
     `;

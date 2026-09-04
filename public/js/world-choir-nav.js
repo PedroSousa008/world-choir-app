@@ -12,6 +12,7 @@ const WorldChoirNav = (() => {
   const NAV_ICON_SVGS = {
     home: `<svg class="nav-icon__svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M4 10.75 12 4l8 6.75V19a1.25 1.25 0 0 1-1.25 1.25H15v-5.5H9v5.5H5.25A1.25 1.25 0 0 1 4 19v-8.25Z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/></svg>`,
     map: `<svg class="nav-icon__svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M3 12h18M12 3c2.75 2.75 4.5 6.25 4.5 9s-1.75 6.25-4.5 9M12 3c-2.75 2.75-4.5 6.25-4.5 9s1.75 6.25 4.5 9" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`,
+    memory: `<svg class="nav-icon__svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M4 5.5C4 4.67 4.67 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/><path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/><path d="M12 4v16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`,
     profile: `<svg class="nav-icon__svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="12" cy="8" r="3.75" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M5 20.25c.9-3.35 3.75-5.25 7-5.25s6.1 1.9 7 5.25" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`,
   };
 
@@ -19,7 +20,7 @@ const WorldChoirNav = (() => {
     { id: 'home', href: 'index.html', label: 'Home', iconSvg: NAV_ICON_SVGS.home },
     { id: 'map', href: 'map.html', label: 'Map', iconSvg: NAV_ICON_SVGS.map },
     { id: 'donate', href: 'donate.html', label: 'Donate', icon: '♡' },
-    { id: 'memory', href: 'memory.html', label: 'Memory', icon: '◇', requiresMemory: true },
+    { id: 'memory', href: 'memory.html', label: 'Memory', iconSvg: NAV_ICON_SVGS.memory, requiresMemory: true },
     { id: 'profile', href: 'profile.html', label: 'Profile', iconSvg: NAV_ICON_SVGS.profile },
   ];
 
