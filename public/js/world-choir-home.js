@@ -1046,10 +1046,6 @@ const WorldChoirHome = (() => {
       e.preventDefault();
       closeHomeGuide();
     });
-    document.getElementById('home-guide-gotit')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      closeHomeGuide();
-    });
     document.getElementById('home-guide-backdrop')?.addEventListener('click', () => {
       closeHomeGuide();
     });
