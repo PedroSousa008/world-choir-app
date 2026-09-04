@@ -948,6 +948,16 @@ const WorldChoirHome = (() => {
     }
   }
 
+  function openPracticeFromGuide() {
+    try {
+      sessionStorage.setItem('wc_practice_from_guide', '1');
+    } catch {
+      /* ignore */
+    }
+    closeHomeGuide();
+    window.location.href = 'profile.html?practice=1';
+  }
+
   function bindActions() {
     document.getElementById('pledge-btn')?.addEventListener('click', () => WorldChoirParticipation.open());
     document.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
@@ -1066,6 +1076,10 @@ const WorldChoirHome = (() => {
     document.getElementById('home-guide-card-daily-acts')?.addEventListener('click', (e) => {
       e.preventDefault();
       openDailyActsFromGuide();
+    });
+    document.getElementById('home-guide-card-practice')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      openPracticeFromGuide();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeHomeGuide();

@@ -1,16 +1,20 @@
 /**
  * PracticeMode — full-screen practice flow with countdown, audio, lyrics
  *
- * Functional logic is unchanged. Only the control wiring has been updated
- * to match the new visual shell rendered by LyricsDisplay.
+ * Functional logic is unchanged for normal entry.
+ * Guide entry (Home lightbulb) skips countdown, mounts paused, then starts
+ * the real player when PracticeWalkthrough finishes with Got it.
  */
 const PracticeMode = (() => {
+  const GUIDE_TRIGGER_KEY = 'wc_practice_from_guide';
+
   let audio = null;
   let container = null;
   let contentEl = null;
   let controlsEl = null;
   let state = 'idle';
   let onExitCallback = null;
+  let guideLocked = false;
 
   const STATES = {
     IDLE: 'idle',
@@ -32,6 +36,22 @@ const PracticeMode = (() => {
     return document.getElementById('practice-controls');
   }
 
+  function hasGuideTrigger() {
+    try {
+      return sessionStorage.getItem(GUIDE_TRIGGER_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function consumeGuideTrigger() {
+    try {
+      sessionStorage.removeItem(GUIDE_TRIGGER_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
   function cleanupAudio() {
     if (!audio) return;
     audio.pause();
@@ -44,21 +64,21 @@ const PracticeMode = (() => {
   }
 
   function cleanup() {
+    if (typeof PracticeWalkthrough !== 'undefined') {
+      PracticeWalkthrough.dismiss?.();
+    }
+    guideLocked = false;
+    document.body.classList.remove('pm-wt-active');
     PracticeCountdown.clear();
     LyricsDisplay.stopSync();
     cleanupAudio();
     state = STATES.IDLE;
-    // Legacy controls container (still used during countdown phase)
     if (controlsEl) controlsEl.innerHTML = '';
-    // Remove the close X if it exists
     const closeX = document.getElementById('practice-close-x');
     if (closeX) closeX.remove();
   }
 
-  // ─── Close X button (floats top-right, present during playing state) ───
-
   function mountCloseX() {
-    // Remove any existing one first
     const existing = document.getElementById('practice-close-x');
     if (existing) existing.remove();
 
@@ -78,8 +98,6 @@ const PracticeMode = (() => {
     if (container) container.appendChild(btn);
   }
 
-  // ─── Play/Pause icon toggle ───
-
   function syncPauseButton() {
     const btn = document.getElementById('practice-pause-btn');
     if (!btn || !audio) return;
@@ -97,7 +115,7 @@ const PracticeMode = (() => {
   }
 
   function togglePause() {
-    if (!audio) return;
+    if (guideLocked || !audio) return;
     if (audio.paused) {
       audio.play().catch(() => {});
     } else {
@@ -106,9 +124,8 @@ const PracticeMode = (() => {
     syncPauseButton();
   }
 
-  // ─── Share lyrics ───
-
   async function shareLyrics() {
+    if (guideLocked) return;
     const { title, artist } = WorldChoirPracticeConfig.PRACTICE_SONG;
     const lyricsText = WorldChoirPracticeConfig.PRACTICE_LYRICS.map((l) => l.text).join('\n');
     const shareText = `🎵 ${title} — ${artist}\n\n${lyricsText}\n\nJoin World Choir 2027 — September 21 at 16:00 UTC`;
@@ -130,10 +147,8 @@ const PracticeMode = (() => {
     }
   }
 
-  // ─── Restart ───
-
   function restartSong() {
-    if (!audio) return;
+    if (guideLocked || !audio) return;
     audio.currentTime = 0;
     if (audio.paused) {
       audio.play().catch(() => {});
@@ -141,14 +156,11 @@ const PracticeMode = (() => {
     }
   }
 
-  // ─── Wire in-shell controls (called after LyricsDisplay.mount) ───
-
   function wirePlayingControls() {
     document.getElementById('practice-pause-btn')?.addEventListener('click', togglePause);
     document.getElementById('practice-restart-btn')?.addEventListener('click', restartSong);
     document.getElementById('practice-share-btn')?.addEventListener('click', shareLyrics);
 
-    // Keep audio state in sync with browser-level pause events (e.g. phone call interruption)
     if (audio) {
       audio.addEventListener('pause', syncPauseButton);
       audio.addEventListener('play', syncPauseButton);
@@ -158,12 +170,9 @@ const PracticeMode = (() => {
   function handleSongEnd() {
     state = STATES.COMPLETE;
     LyricsDisplay.stopSync();
-    // Remove playing UI (which contains the controls)
     if (contentEl) contentEl.innerHTML = '';
-    // Remove close X
     const closeX = document.getElementById('practice-close-x');
     if (closeX) closeX.remove();
-    // Clear legacy controls container
     if (controlsEl) controlsEl.innerHTML = '';
     PracticeCompleteScreen.mount(contentEl, {
       onReplay: startSession,
@@ -192,36 +201,91 @@ const PracticeMode = (() => {
     document.getElementById('practice-error-return')?.addEventListener('click', exit);
   }
 
-  async function startPlayback() {
+  function mountPlayingShell() {
     state = STATES.PLAYING;
-    // The new shell (logo + lyrics + progress + controls + community panel) is all in LyricsDisplay
     LyricsDisplay.mount(contentEl);
-    // Legacy controls container no longer needed for playing state
     if (controlsEl) controlsEl.innerHTML = '';
-    // Float the close X over the practice overlay
     mountCloseX();
 
     audio = new Audio(WorldChoirPracticeConfig.PRACTICE_SONG.audioUrl);
+    audio.preload = 'auto';
     audio.addEventListener('ended', handleSongEnd);
     audio.addEventListener('error', handleAudioError);
 
     wirePlayingControls();
     syncPauseButton();
+  }
+
+  async function startPlayback() {
+    mountPlayingShell();
+    guideLocked = false;
 
     try {
       await audio.play();
       LyricsDisplay.startSync(audio);
+      syncPauseButton();
     } catch (err) {
       console.warn('Autoplay blocked or audio failed:', err);
       handleAudioError();
     }
   }
 
+  /** Guide entry: mount real Practice UI paused at t=0, then start walkthrough. */
+  function startPlaybackPausedForGuide() {
+    mountPlayingShell();
+    if (audio) {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {
+        /* ignore */
+      }
+    }
+    guideLocked = true;
+    syncPauseButton();
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (typeof PracticeWalkthrough !== 'undefined') {
+          PracticeWalkthrough.onPracticeReady();
+        } else {
+          guideLocked = false;
+        }
+      });
+    });
+  }
+
+  /** Called by PracticeWalkthrough after Got it — starts the real synced player from 0. */
+  async function beginGuidedPlayback() {
+    guideLocked = false;
+    document.body.classList.remove('pm-wt-active');
+    if (!audio) return;
+    try {
+      audio.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+    try {
+      await audio.play();
+      LyricsDisplay.startSync(audio);
+      syncPauseButton();
+    } catch (err) {
+      console.warn('Guided playback failed:', err);
+      handleAudioError();
+    }
+  }
+
+  /** Early guide dismiss — unlock controls, keep audio paused. */
+  function unlockGuideControls() {
+    guideLocked = false;
+    document.body.classList.remove('pm-wt-active');
+    syncPauseButton();
+  }
+
   function startCountdown() {
     state = STATES.COUNTDOWN;
     contentEl.innerHTML = '';
     if (controlsEl) controlsEl.innerHTML = '';
-    // Show a minimal exit during countdown (legacy exit button hidden; close X shown instead)
     mountCloseX();
     PracticeCountdown.mount(contentEl, { onComplete: startPlayback });
   }
@@ -234,14 +298,24 @@ const PracticeMode = (() => {
     if (!container || !contentEl) return;
 
     container.classList.add('active');
+    container.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
-    startCountdown();
+
+    if (hasGuideTrigger()) {
+      consumeGuideTrigger();
+      startPlaybackPausedForGuide();
+    } else {
+      startCountdown();
+    }
   }
 
   function exit() {
     cleanup();
     container = getContainer();
-    if (container) container.classList.remove('active');
+    if (container) {
+      container.classList.remove('active');
+      container.setAttribute('aria-hidden', 'true');
+    }
     document.body.style.overflow = '';
     onExitCallback?.();
   }
@@ -266,5 +340,13 @@ const PracticeMode = (() => {
     }
   }
 
-  return { init, open, exit, cleanup };
+  return {
+    init,
+    open,
+    exit,
+    cleanup,
+    beginGuidedPlayback,
+    unlockGuideControls,
+    isGuideLocked: () => guideLocked,
+  };
 })();

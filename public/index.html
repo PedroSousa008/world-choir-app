@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
-  <link rel="stylesheet" href="css/home.css?v=20260904cg">
+  <link rel="stylesheet" href="css/home.css?v=20260904ch">
   <link rel="preload" as="image" href="images/after-event.png?v=20260903p">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
   <link rel="stylesheet" href="css/live-event.css?v=20260904as">
@@ -179,7 +179,13 @@
             <p class="home-guide-card__copy">Small actions.<br>A kinder world.</p>
           </button>
 
-          <article class="home-guide-card">
+          <button
+            type="button"
+            class="home-guide-card home-guide-card--action"
+            id="home-guide-card-practice"
+            data-home-guide-action="practice"
+            aria-label="Open Practice the Song guide"
+          >
             <span class="home-guide-card__icon home-guide-card__icon--cyan" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" focusable="false">
                 <path d="M9 18V5.5l11-2V16"/>
@@ -189,7 +195,7 @@
             </span>
             <h3 class="home-guide-card__title">Practice the Song</h3>
             <p class="home-guide-card__copy">Learn, listen and get ready for the big day.</p>
-          </article>
+          </button>
 
           <article class="home-guide-card">
             <span class="home-guide-card__icon home-guide-card__icon--violet" aria-hidden="true">
@@ -341,7 +347,7 @@
   <script src="js/live-event/global-live-event.js?v=20260904as"></script>
   <script src="js/world-choir-live-event.js?v=20260904an"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260819a"></script>
-  <script src="js/world-choir-home.js?v=20260904cd"></script>
+  <script src="js/world-choir-home.js?v=20260904ce"></script>
   <script>
     (function bootWorldChoirHome() {
       function startHome() {
