@@ -419,18 +419,42 @@
 }
 
 .mem-passport-link {
-  padding: 12px;
+  padding: 14px 12px 16px;
   overflow: hidden;
 }
 
 .mem-passport-frame {
   display: flex;
   justify-content: center;
+  width: 100%;
+  /* Full cover card scaled down — reserve visual height after transform. */
+  --mem-passport-base: 372px;
+  --mem-passport-scale: 0.48;
+  height: calc((var(--mem-passport-base) / 0.7) * var(--mem-passport-scale));
+  overflow: hidden;
 }
 
-.mem-passport-frame .passport-card {
-  width: min(100%, 168px);
-  max-width: 168px;
+.mem-passport-scale {
+  width: var(--mem-passport-base);
+  flex: 0 0 var(--mem-passport-base);
+  transform: scale(var(--mem-passport-scale));
+  transform-origin: top center;
+  pointer-events: none;
+}
+
+.mem-passport-scale .passport-card {
+  width: var(--mem-passport-base) !important;
+  max-width: var(--mem-passport-base) !important;
+}
+
+@media (max-width: 360px) {
+  .mem-split {
+    grid-template-columns: 1fr;
+  }
+
+  .mem-passport-frame {
+    --mem-passport-scale: 0.52;
+  }
 }
 
 .mem-stamps-card {
@@ -535,16 +559,6 @@
 .mem-stamp.is-locked {
   color: #6a6e78;
   opacity: 0.72;
-}
-
-@media (max-width: 360px) {
-  .mem-split {
-    grid-template-columns: 1fr;
-  }
-
-  .mem-passport-frame .passport-card {
-    max-width: 200px;
-  }
 }
 
 /* ─── Pass the World route ─── */

@@ -41,22 +41,27 @@ const WorldChoirMemory = (() => {
   }
 
   function iconSvg(name) {
-    const common = 'fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"';
+    // Match tab / app icon language: 1.75 stroke, round caps, currentColor.
+    const common = 'fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"';
     const icons = {
-      calendar: `<svg viewBox="0 0 24 24" ${common}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`,
-      globe: `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>`,
-      voices: `<svg viewBox="0 0 24 24" ${common}><path d="M9 18V5l12-2v13"/><circle cx="7" cy="18" r="2.5"/><circle cx="19" cy="16" r="2.5"/></svg>`,
-      countries: `<svg viewBox="0 0 24 24" ${common}><path d="M4 20V6l7-2 9 3v13"/><path d="M11 4v16M4 10h7M11 13h9"/></svg>`,
-      promises: `<svg viewBox="0 0 24 24" ${common}><path d="M12 21s-7-4.5-7-10a7 7 0 0 1 14 0c0 5.5-7 10-7 10z"/></svg>`,
-      world: `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="12" r="9"/><path d="M2 12h20"/></svg>`,
+      calendar: `<svg viewBox="0 0 24 24" ${common}><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`,
+      // Same globe language as the Map tab.
+      globe: `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.75 2.75 4.5 6.25 4.5 9s-1.75 6.25-4.5 9M12 3c-2.75 2.75-4.5 6.25-4.5 9s1.75 6.25 4.5 9"/></svg>`,
+      // Same person language as the Profile tab — Voices.
+      voices: `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="8" r="3.75"/><path d="M5 20.25c.9-3.35 3.75-5.25 7-5.25s6.1 1.9 7 5.25"/></svg>`,
+      countries: `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.75 2.75 4.5 6.25 4.5 9s-1.75 6.25-4.5 9M12 3c-2.75 2.75-4.5 6.25-4.5 9s1.75 6.25 4.5 9"/></svg>`,
+      // Raised open hand — a vow / promise, not a heart.
+      promises: `<svg viewBox="0 0 24 24" ${common}><path d="M8.5 13.5V7.25a1.75 1.75 0 0 1 3.5 0V12"/><path d="M12 12V6.5a1.75 1.75 0 1 1 3.5 0V12"/><path d="M15.5 12.25V8.5a1.75 1.75 0 1 1 3.5 0v6.75a5.75 5.75 0 0 1-5.75 5.75H12A5.5 5.5 0 0 1 6.5 15V11.5a1.75 1.75 0 0 1 3.5 0V13.5"/></svg>`,
+      // Same peace mark used on Home Daily Acts.
+      peace: `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 12l-5.5 7.5"/><path d="M12 12l5.5 7.5"/></svg>`,
+      world: `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.75 2.75 4.5 6.25 4.5 9s-1.75 6.25-4.5 9M12 3c-2.75 2.75-4.5 6.25-4.5 9s1.75 6.25 4.5 9"/></svg>`,
       heart: `<svg viewBox="0 0 24 24" ${common}><path d="M12 21s-7-4.5-7-10a4.5 4.5 0 0 1 8-2.7A4.5 4.5 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>`,
       music: `<svg viewBox="0 0 24 24" ${common}><path d="M9 18V5l12-2v13"/><circle cx="7" cy="18" r="2.5"/><circle cx="19" cy="16" r="2.5"/></svg>`,
-      peace: `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="12" r="9"/><path d="M12 3v18M12 12l6.5 6.5M12 12 5.5 18.5"/></svg>`,
       sprout: `<svg viewBox="0 0 24 24" ${common}><path d="M12 22V11"/><path d="M12 11c0-4 3-7 7-7-1 4-4 7-7 7z"/><path d="M12 14c0-3-2.5-6-6-6 1 3 3 6 6 6z"/></svg>`,
-      people: `<svg viewBox="0 0 24 24" ${common}><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 19c0-3 2.5-5 6-5s6 2 6 5M14 19c.4-2 2-3.5 4.5-3.5 1.8 0 3.2.8 3.5 2.5"/></svg>`,
+      people: `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="8" r="3.75"/><path d="M5 20.25c.9-3.35 3.75-5.25 7-5.25s6.1 1.9 7 5.25"/></svg>`,
       camera: `<svg viewBox="0 0 24 24" ${common}><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`,
       image: `<svg viewBox="0 0 24 24" ${common}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m21 16-5-5-8 8"/></svg>`,
-      share: `<svg viewBox="0 0 24 24" ${common}><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.5 13.5 7 4M15.5 6.5l-7 4"/></svg>`,
+      share: `<svg viewBox="0 0 24 24" ${common}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.7 13.5l6.6 3.9M15.3 6.6L8.7 10.5"/></svg>`,
       plus: `<svg viewBox="0 0 24 24" ${common}><path d="M12 5v14M5 12h14"/></svg>`,
       lock: `<svg viewBox="0 0 24 24" ${common}><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`,
     };
@@ -282,7 +287,7 @@ const WorldChoirMemory = (() => {
               <span class="mem-stat__label">Promises Made</span>
             </div>
             <div class="mem-stat" role="listitem">
-              <span class="mem-stat__icon" aria-hidden="true">${iconSvg('sprout')}</span>
+              <span class="mem-stat__icon" aria-hidden="true">${iconSvg('peace')}</span>
               <span class="mem-stat__value">${event.dailyActsCompleted == null ? '—' : formatCount(event.dailyActsCompleted)}</span>
               <span class="mem-stat__label mem-stat__label--stack">Daily Acts<br>Completed</span>
             </div>
@@ -314,7 +319,9 @@ const WorldChoirMemory = (() => {
           <h2 class="df-section-label">My Passport</h2>
           <a class="mem-passport-link mem-card" href="passport.html" aria-label="Open your World Choir Passport">
             <div class="mem-passport-frame" id="mem-passport-host">
-              ${passportHtml}
+              <div class="mem-passport-scale">
+                ${passportHtml}
+              </div>
             </div>
           </a>
         </div>
@@ -429,6 +436,7 @@ const WorldChoirMemory = (() => {
     }
     try {
       const data = await WorldChoirPassport.loadPassportData({ fast: true });
+      // Cover page only — full card chrome + fields, scaled via CSS miniature.
       return WorldChoirPassport.renderCard(data, {
         interactive: false,
         id: 'mem-world-choir-passport',
@@ -439,6 +447,7 @@ const WorldChoirMemory = (() => {
         loading: true,
         interactive: false,
         id: 'mem-world-choir-passport',
+        page: 'cover',
       });
     }
   }
