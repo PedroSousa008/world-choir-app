@@ -86,8 +86,26 @@ const WorldChoirHome = (() => {
         '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
       share:
         '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.7 13.5l6.6 3.9M15.3 6.6L8.7 10.5"/></svg>',
-      carousel:
-        '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="14" height="14" rx="2"/><path d="M18 7.5v9"/><path d="M21 9v6"/></svg>',
+      // World Chain — globe + people ring (outline style matching Home action icons)
+      chain:
+        '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<circle cx="12" cy="12" r="9.1"/>'
+        + '<circle cx="12" cy="12" r="4.85"/>'
+        + '<ellipse cx="12" cy="12" rx="2" ry="4.85"/>'
+        + '<path d="M7.15 12h9.7"/>'
+        + '<circle cx="12" cy="2.7" r="1"/>'
+        + '<path d="M10.35 4.55c.85.7 1.85.7 2.7 0"/>'
+        + '<circle cx="21.3" cy="12" r="1"/>'
+        + '<path d="M19.45 10.35c-.7.85-.7 1.85 0 2.7"/>'
+        + '<circle cx="12" cy="21.3" r="1"/>'
+        + '<path d="M13.65 19.45c-.85-.7-1.85-.7-2.7 0"/>'
+        + '<circle cx="2.7" cy="12" r="1"/>'
+        + '<path d="M4.55 13.65c.7-.85.7-1.85 0-2.7"/>'
+        + '<circle cx="18.2" cy="5.8" r="0.75"/>'
+        + '<circle cx="18.2" cy="18.2" r="0.75"/>'
+        + '<circle cx="5.8" cy="18.2" r="0.75"/>'
+        + '<circle cx="5.8" cy="5.8" r="0.75"/>'
+        + '</svg>',
     };
     return icons[type] || '';
   }
@@ -154,7 +172,7 @@ const WorldChoirHome = (() => {
         <span class="pledged-actions__sep" aria-hidden="true"></span>
         <button type="button" class="pledged-actions__btn" id="share-btn" aria-label="Share Countdown">${actionIcon('share')}</button>
         <span class="pledged-actions__sep" aria-hidden="true"></span>
-        <button type="button" class="pledged-actions__btn" id="home-carousel-btn" aria-label="World Chain">${actionIcon('carousel')}</button>
+        <button type="button" class="pledged-actions__btn" id="home-carousel-btn" aria-label="World Chain">${actionIcon('chain')}</button>
       </div>
     `;
   }
