@@ -71,18 +71,45 @@ const WorldChainPage = (() => {
     return 'wc-chain-card__status--progress';
   }
 
-  function renderRoute(route = []) {
+  function renderRoute(route = [], chainStatus = '') {
     if (!route.length) return '';
+    const allDone = chainStatus === 'COMPLETED'
+      || route.every((s) => s.status === 'connected');
+    const activeIdx = route.findIndex((s) => s.status === 'active');
+    const selectedIdx = route.findIndex((s) => s.status === 'selected');
+
+    let actorIdx = -1;
+    let nextIdx = -1;
+    if (!allDone) {
+      if (activeIdx >= 0) {
+        // Current actor sits on the previous hop; destination is the active step.
+        actorIdx = Math.max(0, activeIdx - 1);
+        nextIdx = activeIdx;
+      } else if (selectedIdx >= 0) {
+        actorIdx = selectedIdx;
+        nextIdx = selectedIdx + 1 < route.length ? selectedIdx + 1 : -1;
+      }
+    }
+
     const parts = [];
     route.forEach((step, i) => {
-      const flagClass = step.status === 'connected'
-        ? 'is-connected'
-        : (step.status === 'active' || step.status === 'selected')
-          ? 'is-active'
-          : '';
+      let flagClass = 'is-future';
+      if (allDone || (actorIdx >= 0 && i < actorIdx)) {
+        flagClass = 'is-done';
+      } else if (i === actorIdx) {
+        flagClass = 'is-current';
+      } else if (i === nextIdx) {
+        flagClass = 'is-next';
+      }
+
       parts.push(flagCircle(step.country, flagClass));
       if (i < route.length - 1) {
-        const lineClass = step.status === 'connected' ? 'is-connected' : 'is-future';
+        let lineClass = 'is-future';
+        if (allDone || (actorIdx >= 0 && i < actorIdx)) {
+          lineClass = 'is-done';
+        } else if (i === actorIdx) {
+          lineClass = 'is-pending';
+        }
         parts.push(`<span class="wc-chain-route__line ${lineClass}" aria-hidden="true"></span>`);
       }
     });
@@ -128,7 +155,7 @@ const WorldChainPage = (() => {
           </p>
           <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
         </div>
-        ${renderRoute(chain.route)}
+        ${renderRoute(chain.route, chain.status)}
         <div class="wc-chain-card__footer">
           <p class="wc-chain-card__meta">
             ${esc(chain.countries)} countries · ${esc(chain.connections)} connections<br>
@@ -330,7 +357,7 @@ const WorldChainPage = (() => {
           </p>
           <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
         </div>
-        ${renderRoute(chain.route)}
+        ${renderRoute(chain.route, chain.status)}
         <p class="wc-chain-card__meta">
           ${esc(chain.progressLabel)}<br>
           ${esc(chain.routeSummary || '')}

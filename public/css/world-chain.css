@@ -45,12 +45,11 @@
   flex: 1;
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
+  color: var(--accent-aurora);
 }
 
 .wc-chain-topbar__spacer {
@@ -250,7 +249,7 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 4px 0 10px;
+  padding: 6px 2px 12px;
   margin: 0 0 10px;
 }
 
@@ -267,9 +266,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.38;
+  opacity: 0.32;
   background: rgba(255, 255, 255, 0.04);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.12);
+  position: relative;
+  z-index: 1;
 }
 
 .wc-chain-route__flag img {
@@ -284,34 +285,55 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-.wc-chain-route__flag.is-connected,
-.wc-chain-route__flag.is-active {
+.wc-chain-route__flag.is-done {
   opacity: 1;
+  box-shadow:
+    0 0 0 2px #6dcf9b,
+    0 0 10px rgba(109, 207, 155, 0.35);
+}
+
+.wc-chain-route__flag.is-current {
+  opacity: 1;
+  box-shadow:
+    0 0 0 2px var(--accent-aurora),
+    0 0 10px rgba(78, 197, 232, 0.4);
+}
+
+.wc-chain-route__flag.is-next {
+  opacity: 1;
+  box-shadow:
+    0 0 0 2px rgba(150, 154, 164, 0.95),
+    0 0 8px rgba(150, 154, 164, 0.25);
+}
+
+.wc-chain-route__flag.is-future {
+  opacity: 0.32;
 }
 
 .wc-chain-route__line {
-  flex: 0 0 18px;
+  flex: 0 0 16px;
   height: 2px;
-  margin: 0 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  margin: 0;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.wc-chain-route__line.is-connected {
-  background: var(--accent-aurora);
-  box-shadow: 0 0 8px rgba(78, 197, 232, 0.35);
+.wc-chain-route__line.is-done {
+  background: #6dcf9b;
+  box-shadow: 0 0 6px rgba(109, 207, 155, 0.35);
 }
 
-.wc-chain-route__line.is-active {
-  background: linear-gradient(90deg, var(--accent-aurora), rgba(78, 197, 232, 0.2));
+.wc-chain-route__line.is-pending {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--accent-aurora) 0 3px,
+    transparent 3px 6px
+  );
+  box-shadow: none;
 }
 
 .wc-chain-route__line.is-future {
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.16) 0 3px,
-    transparent 3px 6px
-  );
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .wc-chain-card__footer {
