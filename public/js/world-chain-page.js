@@ -346,9 +346,7 @@ const WorldChainPage = (() => {
 
         <section class="wc-viewer-hero">
           <h2 class="wc-viewer-hero__title">World Chain #${esc(chain.dailyChainNumber)}</h2>
-          <p class="wc-viewer-hero__meta">${esc(chain.countries)} countries · ${esc(chain.connections)} connections</p>
           <p class="wc-viewer-hero__route">${esc(startLabel)} → ${esc(destLabel)}</p>
-          <p class="wc-viewer-hero__line">Real people. Real connections.<br>A more connected world.</p>
         </section>
 
         <section class="wc-viewer-stats" aria-label="Chain summary">
@@ -373,11 +371,6 @@ const WorldChainPage = (() => {
         ${renderViewerRouteStrip(chain)}
 
         <section class="wc-viewer-progress">
-          <div class="wc-viewer-progress__head">
-            <h3 class="wc-viewer-progress__title">Country Progress</h3>
-            <p class="wc-viewer-progress__aside">Different places. A brighter tomorrow.</p>
-          </div>
-
           <div class="wc-viewer-table" role="table" aria-label="Country progress">
             <div class="wc-viewer-table__head" role="row">
               <span role="columnheader">#</span>
@@ -420,12 +413,6 @@ const WorldChainPage = (() => {
             <span class="wc-viewer-photobook__chevron" aria-hidden="true">›</span>
           </button>
         </section>
-
-        <blockquote class="wc-viewer-quote">
-          <span class="wc-viewer-quote__mark" aria-hidden="true">“</span>
-          <p class="wc-viewer-quote__text">A chain of voices is a chain of hope.</p>
-          <footer class="wc-viewer-quote__attr">— World Choir</footer>
-        </blockquote>
 
         <button type="button" class="wc-viewer-share" data-share-chain="${esc(chain.id)}">
           Share This Chain →

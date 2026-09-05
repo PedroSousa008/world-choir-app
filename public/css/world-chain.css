@@ -49,6 +49,7 @@
   font-weight: 600;
   letter-spacing: 0.34em;
   text-transform: uppercase;
+  text-align: center;
   color: var(--accent-aurora);
 }
 
