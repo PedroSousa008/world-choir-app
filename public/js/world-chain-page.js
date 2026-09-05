@@ -57,17 +57,18 @@ const WorldChainPage = (() => {
   }
 
   function statusDotClass(status) {
-    if (status === 'STUCK') return 'wc-chain-card__dot--stuck';
     if (status === 'COMPLETED') return 'wc-chain-card__dot--completed';
-    return '';
+    return 'wc-chain-card__dot--progress';
   }
 
   function statusLabel(status) {
-    if (status === 'IN_PROGRESS') return 'IN PROGRESS';
-    if (status === 'STUCK') return 'STUCK';
     if (status === 'COMPLETED') return 'COMPLETED';
-    if (status === 'EXPIRED') return 'EXPIRED';
-    return status || '';
+    return 'IN PROGRESS';
+  }
+
+  function statusToneClass(status) {
+    if (status === 'COMPLETED') return 'wc-chain-card__status--completed';
+    return 'wc-chain-card__status--progress';
   }
 
   function renderRoute(route = []) {
@@ -115,13 +116,11 @@ const WorldChainPage = (() => {
     return `
       <article class="wc-chain-card${named ? ' wc-chain-card--named' : ''}" data-chain-id="${esc(chain.id)}">
         <div class="wc-chain-card__head">
-          <div>
-            <h3 class="wc-chain-card__title">WORLD CHAIN #${esc(chain.dailyChainNumber)}</h3>
-            <p class="wc-chain-card__status">
-              <span class="wc-chain-card__dot ${statusDotClass(chain.status)}" aria-hidden="true"></span>
-              ${esc(statusLabel(chain.status))}
-            </p>
-          </div>
+          <h3 class="wc-chain-card__title">WORLD CHAIN #${esc(chain.dailyChainNumber)}</h3>
+          <p class="wc-chain-card__status ${statusToneClass(chain.status)}">
+            <span class="wc-chain-card__dot ${statusDotClass(chain.status)}" aria-hidden="true"></span>
+            ${esc(statusLabel(chain.status))}
+          </p>
           <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
         </div>
         ${renderRoute(chain.route)}
@@ -303,21 +302,8 @@ const WorldChainPage = (() => {
     `;
   }
 
-  function renderHelp(chain) {
-    if (chain.status !== 'STUCK') return '';
-    const active = (chain.route || []).find((s) => s.status === 'active');
-    if (!active) return '';
-    return `
-      <section class="wc-chain-turn">
-        <p class="wc-chain-turn__eyebrow">The world needs someone</p>
-        <p class="wc-chain-turn__copy">World Chain #${esc(chain.dailyChainNumber)} needs a Voice in:</p>
-        <p class="wc-chain-turn__dest">${flagDest(active.country)}</p>
-        <p class="wc-chain-turn__country">${esc(active.country)}</p>
-        ${active.requiredCity ? `<p class="wc-chain-turn__copy">📍 ${esc(active.requiredCity)}</p>` : ''}
-        <p class="wc-chain-turn__copy">Do you know someone? Share the challenge — don't invent a directory of Voices.</p>
-        <button type="button" class="wc-chain-primary" data-share-help="${esc(chain.id)}">HELP THIS CHAIN</button>
-      </section>
-    `;
+  function renderHelp() {
+    return '';
   }
 
   function renderDetail() {
@@ -337,12 +323,14 @@ const WorldChainPage = (() => {
     return `
       <div class="wc-chain-detail">
         <button type="button" class="wc-chain-detail__back" ${backAttr}>${backLabel}</button>
-        <h2 class="wc-chain-card__title">WORLD CHAIN #${esc(chain.dailyChainNumber)}</h2>
-        <p class="wc-chain-card__status" style="margin:8px 0 6px">
-          <span class="wc-chain-card__dot ${statusDotClass(chain.status)}" aria-hidden="true"></span>
-          ${esc(statusLabel(chain.status))}
-        </p>
-        <p class="wc-chain-card__timer" style="margin-bottom:16px">${esc(chain.timerLabel || '')}</p>
+        <div class="wc-chain-card__head wc-chain-card__head--detail">
+          <h2 class="wc-chain-card__title">WORLD CHAIN #${esc(chain.dailyChainNumber)}</h2>
+          <p class="wc-chain-card__status ${statusToneClass(chain.status)}">
+            <span class="wc-chain-card__dot ${statusDotClass(chain.status)}" aria-hidden="true"></span>
+            ${esc(statusLabel(chain.status))}
+          </p>
+          <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
+        </div>
         ${renderRoute(chain.route)}
         <p class="wc-chain-card__meta">
           ${esc(chain.progressLabel)}<br>

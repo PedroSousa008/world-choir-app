@@ -362,11 +362,7 @@ function deriveStatus(chain, nowMs = Date.now()) {
   const active = steps.find((s) => s.status === 'active');
   if (!active) return Status.IN_PROGRESS;
 
-  const anchor = active.activatedAt || chain.lastProgressAt || chain.startsAt;
-  const idleFrom = new Date(anchor).getTime();
-  if (Number.isFinite(idleFrom) && nowMs - idleFrom >= STUCK_AFTER_MS) {
-    return Status.STUCK;
-  }
+  // Idle chains stay In Progress — Stuck is not a user-facing state.
   return Status.IN_PROGRESS;
 }
 
@@ -406,10 +402,6 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     const done = new Date(chain.completedAt || nowMs).getTime();
     timerMs = Math.max(0, done - started);
     timerLabel = `Completed in ${formatDuration(timerMs)}`;
-  } else if (liveStatus === Status.STUCK) {
-    const anchor = active?.activatedAt || chain.lastProgressAt || chain.startsAt;
-    timerMs = Math.max(0, nowMs - new Date(anchor).getTime());
-    timerLabel = `${formatDuration(timerMs)} stuck`;
   } else if (liveStatus === Status.EXPIRED) {
     timerLabel = 'Expired';
   } else {
@@ -462,8 +454,6 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     cta = 'KEEP THE CHAIN ALIVE';
   } else if (viewerIsNamed) {
     cta = 'YOUR CHAIN';
-  } else if (liveStatus === Status.STUCK) {
-    cta = 'HELP THIS CHAIN';
   }
 
   return {
