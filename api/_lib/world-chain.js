@@ -29,11 +29,10 @@ const Status = {
   EXPIRED: 'EXPIRED',
 };
 
-/** Temporary test: force chain #1 to start in Portugal with Voice #5. */
+/** Temporary test: force one chain to start with a specific Voice (their country becomes the start). */
 const TEST_FORCE_STARTER = {
   enabled: true,
   chainIndex: 0,
-  startCountry: 'Portugal',
   voiceNumber: 5,
 };
 
@@ -42,8 +41,8 @@ function dayKeyUTC(date = new Date()) {
 }
 
 function rootPath(eventId, day) {
-  // v2: reset early test manifests that used fake numbering / pre-progressed routes
-  return `wc-data/world-chain/v2/${encodeURIComponent(eventId)}/${day}`;
+  // v3: regenerate so forced starter is voice-first (country follows the Voice).
+  return `wc-data/world-chain/v3/${encodeURIComponent(eventId)}/${day}`;
 }
 
 function manifestPath(eventId, day) {
@@ -227,6 +226,35 @@ function pickStartingVoice(country, byCountry, usersById, excludeVoiceIds, nowMs
   });
   if (!pool.length) return null;
   return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
+ * Build a country route of the requested length starting from `startCountry`.
+ * Remaining countries are filled from `pool` without duplicates.
+ */
+function buildCountryRoute(startCountry, length, pool) {
+  const routeCountries = [];
+  const start = normalizeCountry(startCountry);
+  if (start) routeCountries.push(start);
+  for (const c of pool) {
+    if (routeCountries.length >= length) break;
+    if (!routeCountries.some((x) => countriesEqual(x, c))) routeCountries.push(c);
+  }
+  return routeCountries;
+}
+
+/**
+ * Resolve a forced starter Voice for testing.
+ * The chain start country is always that Voice's pledged country.
+ */
+function resolveForcedStarter(byVoice, usersById, excludeVoiceIds, nowMs, voiceNumber) {
+  const pledge = byVoice.get(Number(voiceNumber));
+  if (!pledge) return null;
+  if (excludeVoiceIds.has(pledge.user_id)) return null;
+  if (!isAccountEligible(usersById.get(pledge.user_id), pledge, nowMs)) return null;
+  const country = normalizeCountry(pledge.country);
+  if (!country) return null;
+  return { pledge, country };
 }
 
 function buildRouteSteps(countries, citiesByCountry, startingPledge) {
@@ -456,36 +484,43 @@ async function generateDailyChains(eventId, day, now = new Date()) {
       ...shuffledCountries.slice(i % shuffledCountries.length),
       ...shuffledCountries.slice(0, i % shuffledCountries.length),
     ];
-    const routeCountries = [];
+
+    // Normal rule: the app selects a starting Voice → their country starts the chain.
+    // Test rule: force Voice #N as starter for one chain; rebuild the full route from their country.
     let starter = null;
+    let startCountry = null;
 
     const forceTest = TEST_FORCE_STARTER.enabled && i === TEST_FORCE_STARTER.chainIndex;
     if (forceTest) {
-      const forcedStart = normalizeCountry(TEST_FORCE_STARTER.startCountry);
-      routeCountries.push(forcedStart);
-      const forcedPledge = byVoice.get(Number(TEST_FORCE_STARTER.voiceNumber));
-      if (
-        forcedPledge
-        && !usedStartVoices.has(forcedPledge.user_id)
-        && isAccountEligible(usersById.get(forcedPledge.user_id), forcedPledge, nowMs)
-      ) {
-        starter = forcedPledge;
+      const forced = resolveForcedStarter(
+        byVoice,
+        usersById,
+        usedStartVoices,
+        nowMs,
+        TEST_FORCE_STARTER.voiceNumber
+      );
+      if (forced) {
+        starter = forced.pledge;
+        startCountry = forced.country;
       }
     }
 
-    for (const c of rotated) {
-      if (routeCountries.length >= length) break;
-      if (!routeCountries.some((x) => countriesEqual(x, c))) routeCountries.push(c);
+    if (!startCountry) {
+      // Pick a random eligible start country from today's rotation, then a random Voice there.
+      startCountry = rotated.find((c) => {
+        return !!pickStartingVoice(c, byCountry, usersById, usedStartVoices, nowMs);
+      }) || rotated[0];
     }
+
+    const routeCountries = buildCountryRoute(startCountry, length, rotated);
     if (routeCountries.length < MIN_CHAIN_LENGTH) continue;
 
     const finalCountry = routeCountries[routeCountries.length - 1];
     const finalCity = pickFinalCity(finalCountry, citiesByCountry, usedStartVoices);
     if (!finalCity?.city) continue;
 
-    const startCountry = routeCountries[0];
     if (!starter) {
-      starter = pickStartingVoice(startCountry, byCountry, usersById, usedStartVoices, nowMs);
+      starter = pickStartingVoice(routeCountries[0], byCountry, usersById, usedStartVoices, nowMs);
     }
     if (!starter) continue;
     usedStartVoices.add(starter.user_id);
