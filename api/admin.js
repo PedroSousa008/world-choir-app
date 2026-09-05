@@ -61,6 +61,13 @@ const {
   deleteMapSponsorDocument,
   readMapSponsorDocument,
 } = require('./_lib/map-sponsors-owner');
+const {
+  listOwnerPhotoBookChains,
+  getOwnerPhotoBookChain,
+  removeOwnerPhotoBookPhoto,
+  removeOwnerPhotoBookDescription,
+} = require('./_lib/world-chain-photo-book');
+const { DEFAULT_EVENT_ID } = require('./_lib/world-chain');
 const { getMapSponsorAnalytics } = require('./_lib/map-sponsors-analytics');
 const {
   buildMapSponsorAnalyticsReportHtml,
@@ -482,9 +489,51 @@ module.exports = async function handler(req, res) {
       return res.status(200).send(buffer);
     }
 
+    if (action === 'world-chain-photo-book' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const eventId = String(req.query.eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
+      const chainId = String(req.query.chainId || '').trim();
+      if (chainId) {
+        const detail = await getOwnerPhotoBookChain(eventId, chainId);
+        return res.status(200).json(detail);
+      }
+      const overview = await listOwnerPhotoBookChains(eventId);
+      return res.status(200).json(overview);
+    }
+
+    if (action === 'world-chain-photo-book-remove-photo' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const eventId = String(req.body?.eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
+      const removedBy = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const result = await removeOwnerPhotoBookPhoto({
+        eventId,
+        chainId: req.body?.chainId,
+        entryId: req.body?.entryId,
+        removedBy: removedBy || 'owner',
+      });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'world-chain-photo-book-remove-description' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const eventId = String(req.body?.eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
+      const removedBy = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const result = await removeOwnerPhotoBookDescription({
+        eventId,
+        chainId: req.body?.chainId,
+        entryId: req.body?.entryId,
+        removedBy: removedBy || 'owner',
+      });
+      return res.status(200).json(result);
+    }
+
     return res.status(404).json({ error: 'Unknown admin action' });
   } catch (err) {
     console.error(`api/admin (${action}) error:`, err);
+    if (err?.statusCode && err.statusCode >= 400 && err.statusCode < 500) {
+      return res.status(err.statusCode).json({ error: err.message || 'Request failed' });
+    }
     const payload = await jsonStorageError(err);
     const status = payload.storageUnavailable ? 503 : 500;
     return res.status(status).json(payload);

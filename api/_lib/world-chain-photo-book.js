@@ -17,6 +17,7 @@ const {
   DEFAULT_EVENT_ID,
   dayKeyUTC,
   CHAIN_STORAGE_VERSION,
+  listOwnerWorldChainSnapshots,
 } = require('./world-chain');
 
 const ROOT = 'wc-data/world-chain/photo-book';
@@ -92,6 +93,31 @@ function sanitizeMessage(raw) {
   const text = String(raw || '').replace(/\s+/g, ' ').trim();
   if (!text) return '';
   return [...text].slice(0, MAX_MESSAGE).join('');
+}
+
+/** Public-facing photo URL — null after Owner removal. */
+function entryPublicPhotoUrl(entry) {
+  if (!entry || entry.photoRemovedAt || entry.deletedAt) return null;
+  return entry.imageUrl || null;
+}
+
+/** Public-facing note — null after Owner removal or empty. */
+function entryPublicNote(entry) {
+  if (!entry || entry.descriptionRemovedAt || entry.deletedAt) return null;
+  const note = String(entry.message || '').trim();
+  return note || null;
+}
+
+function entryHasPublicPhoto(entry) {
+  return !!entryPublicPhotoUrl(entry);
+}
+
+function entryHasPublicNote(entry) {
+  return !!entryPublicNote(entry);
+}
+
+function entryHasAnyContribution(entry) {
+  return entryHasPublicPhoto(entry) || entryHasPublicNote(entry);
 }
 
 async function readStoredChain(eventId, chainId) {
@@ -219,8 +245,8 @@ function resolveViewerOneTimeEditOffer(chain, viewer, entry) {
     entryId: entry.id,
     connectionId: entry.connectionId || participantConnectionId(chain.id, viewer.userId),
     dailyChainNumber: chain.dailyChainNumber,
-    currentNote: entry.message || '',
-    currentPhotoUrl: entry.imageUrl || null,
+    currentNote: entryPublicNote(entry) || '',
+    currentPhotoUrl: entryPublicPhotoUrl(entry),
     voiceNumber: ONE_TIME_EDIT_VOICE_NUMBER,
   };
 }
@@ -338,6 +364,15 @@ async function updateChainPhotoBookEntryOneTime({
     oneTimeEditCompleted: true,
     oneTimeEditCompletedAt: updatedAt,
   };
+  if (parsedImage) {
+    next.photoRemovedAt = null;
+    next.photoRemovedBy = null;
+  }
+  // Restoring a note via one-time edit clears prior Owner description removal.
+  if (cleanMessage) {
+    next.descriptionRemovedAt = null;
+    next.descriptionRemovedBy = null;
+  }
 
   await writeJson(entryPath(eid, entry.id), next, { overwrite: true });
 
@@ -571,14 +606,14 @@ async function listChainPhotoBook(eventId, chainId, deviceId = '') {
     const entry = (p.userId && byUserId.get(p.userId))
       || (Number.isFinite(p.voiceNumber) ? byVoiceNumber.get(p.voiceNumber) : null)
       || null;
-    const note = entry?.message ? String(entry.message).trim() : '';
+    const note = entryPublicNote(entry);
     return {
       voiceId: p.userId,
       voiceNumber: p.voiceNumber,
       country: p.country,
       city: p.city,
-      photoUrl: entry?.imageUrl || null,
-      note: note || null,
+      photoUrl: entryPublicPhotoUrl(entry),
+      note,
       chainPosition: p.chainPosition,
       isFinalVoice: !!p.isFinalVoice,
       completedAt: p.completedAt || entry?.createdAt || null,
@@ -615,12 +650,227 @@ async function listChainPhotoBook(eventId, chainId, deviceId = '') {
   };
 }
 
+function buildOwnerParticipant(step, entry, routeLen) {
+  const photoUrl = entryPublicPhotoUrl(entry);
+  const note = entryPublicNote(entry);
+  const submittedAt = entry?.updatedAt || entry?.createdAt || step.completedAt || null;
+  return {
+    entryId: entry?.id || null,
+    voiceId: step.userId,
+    voiceNumber: step.voiceNumber,
+    country: step.country,
+    city: step.city,
+    chainPosition: step.chainPosition,
+    isFinalVoice: !!step.isFinalVoice || step.chainPosition === routeLen - 1,
+    photoUrl,
+    note,
+    hasPhoto: !!photoUrl,
+    hasDescription: !!note,
+    hasContribution: !!(photoUrl || note),
+    submittedAt,
+    photoSubmittedAt: photoUrl ? (entry?.updatedAt || entry?.createdAt || null) : null,
+    descriptionSubmittedAt: note ? (entry?.updatedAt || entry?.createdAt || null) : null,
+    photoRemovedAt: entry?.photoRemovedAt || null,
+    descriptionRemovedAt: entry?.descriptionRemovedAt || null,
+  };
+}
+
+function summarizeOwnerParticipants(participants) {
+  const total = participants.length;
+  const withPhotos = participants.filter((p) => p.hasPhoto).length;
+  const withDescriptions = participants.filter((p) => p.hasDescription).length;
+  const withContribution = participants.filter((p) => p.hasContribution).length;
+  const missingContent = participants.filter((p) => !p.hasPhoto || !p.hasDescription).length;
+  return {
+    participants: total,
+    withContribution,
+    photos: withPhotos,
+    descriptions: withDescriptions,
+    missingContent,
+  };
+}
+
+async function buildOwnerChainDetail(chain, eventId) {
+  const { byUserId, byVoiceNumber } = await loadEntriesByVoice(eventId, chain.id);
+  const steps = connectedParticipantSteps(chain);
+  const routeLen = (chain.route || []).length;
+  const participants = steps.map((step) => {
+    const entry = (step.userId && byUserId.get(step.userId))
+      || (Number.isFinite(step.voiceNumber) ? byVoiceNumber.get(step.voiceNumber) : null)
+      || null;
+    return buildOwnerParticipant(step, entry, routeLen);
+  });
+  const counts = summarizeOwnerParticipants(participants);
+  const start = (chain.route || [])[0];
+  const final = (chain.route || [])[routeLen - 1];
+  const routeSummary = start && final
+    ? `${start.country || '?'} → ${final.requiredCity || final.country || '?'}`
+    : '';
+  return {
+    chainId: chain.id,
+    dailyChainNumber: chain.dailyChainNumber || null,
+    dayKey: chain.dayKey || null,
+    status: chain.status || null,
+    completedAt: chain.completedAt || null,
+    startsAt: chain.startsAt || null,
+    routeSummary,
+    publicUrl: `/world-chain.html?chain=${encodeURIComponent(chain.id)}&view=photo-book`,
+    counts,
+    participants,
+  };
+}
+
+/** Owner overview: all chains sorted by chain number descending. */
+async function listOwnerPhotoBookChains(eventId = DEFAULT_EVENT_ID) {
+  const eid = String(eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
+  const snapshots = await listOwnerWorldChainSnapshots(eid);
+  const chains = [];
+  for (const chain of snapshots) {
+    const detail = await buildOwnerChainDetail(chain, eid);
+    chains.push({
+      chainId: detail.chainId,
+      dailyChainNumber: detail.dailyChainNumber,
+      dayKey: detail.dayKey,
+      status: detail.status,
+      completedAt: detail.completedAt,
+      startsAt: detail.startsAt,
+      routeSummary: detail.routeSummary,
+      publicUrl: detail.publicUrl,
+      counts: detail.counts,
+      dateLabel: detail.dayKey || (detail.completedAt || detail.startsAt || '').slice(0, 10) || null,
+    });
+  }
+  return {
+    eventId: eid,
+    serverNow: new Date().toISOString(),
+    chains,
+  };
+}
+
+async function getOwnerPhotoBookChain(eventId, chainId) {
+  const eid = String(eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
+  const cid = String(chainId || '').trim();
+  if (!cid) {
+    const err = new Error('chainId required');
+    err.statusCode = 400;
+    throw err;
+  }
+  const chain = await readStoredChain(eid, cid);
+  if (!chain) {
+    // Fall back to owner snapshots (archive / today)
+    const snapshots = await listOwnerWorldChainSnapshots(eid);
+    const found = snapshots.find((c) => c.id === cid);
+    if (!found) {
+      const err = new Error('World Chain not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    return buildOwnerChainDetail(found, eid);
+  }
+  return buildOwnerChainDetail(chain, eid);
+}
+
+async function loadEntryForOwnerModeration(eventId, chainId, entryId) {
+  const eid = String(eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
+  const cid = String(chainId || '').trim();
+  const id = String(entryId || '').trim();
+  if (!cid || !id) {
+    const err = new Error('chainId and entryId required');
+    err.statusCode = 400;
+    throw err;
+  }
+  let entry;
+  try {
+    entry = await readBlobJson(entryPath(eid, id));
+  } catch {
+    entry = null;
+  }
+  if (!entry || entry.deletedAt) {
+    const err = new Error('Photo Book entry not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (entry.chainId !== cid) {
+    const err = new Error('Entry does not belong to this chain');
+    err.statusCode = 404;
+    throw err;
+  }
+  return { eid, cid, entry };
+}
+
+async function removeOwnerPhotoBookPhoto({
+  eventId = DEFAULT_EVENT_ID,
+  chainId,
+  entryId,
+  removedBy = 'owner',
+}) {
+  assertBlobConfigured();
+  const { eid, entry } = await loadEntryForOwnerModeration(eventId, chainId, entryId);
+  if (!entryPublicPhotoUrl(entry)) {
+    const err = new Error('This entry has no photo to remove');
+    err.statusCode = 400;
+    throw err;
+  }
+  const at = new Date().toISOString();
+  const next = {
+    ...entry,
+    imageUrl: null,
+    // Keep imagePath for audit; public API ignores when photoRemovedAt is set.
+    photoRemovedAt: at,
+    photoRemovedBy: String(removedBy || 'owner').slice(0, 120),
+    updatedAt: at,
+  };
+  await writeJson(entryPath(eid, entry.id), next, { overwrite: true });
+  return {
+    ok: true,
+    removed: 'photo',
+    entryId: entry.id,
+    chainId: entry.chainId,
+    photoRemovedAt: at,
+  };
+}
+
+async function removeOwnerPhotoBookDescription({
+  eventId = DEFAULT_EVENT_ID,
+  chainId,
+  entryId,
+  removedBy = 'owner',
+}) {
+  assertBlobConfigured();
+  const { eid, entry } = await loadEntryForOwnerModeration(eventId, chainId, entryId);
+  if (!entryPublicNote(entry)) {
+    const err = new Error('This entry has no description to remove');
+    err.statusCode = 400;
+    throw err;
+  }
+  const at = new Date().toISOString();
+  const next = {
+    ...entry,
+    message: '',
+    descriptionRemovedAt: at,
+    descriptionRemovedBy: String(removedBy || 'owner').slice(0, 120),
+    updatedAt: at,
+  };
+  await writeJson(entryPath(eid, entry.id), next, { overwrite: true });
+  return {
+    ok: true,
+    removed: 'description',
+    entryId: entry.id,
+    chainId: entry.chainId,
+    descriptionRemovedAt: at,
+  };
+}
+
 module.exports = {
   MAX_MESSAGE,
   ONE_TIME_EDIT_VOICE_NUMBER,
   createChainPhotoBookEntry,
   updateChainPhotoBookEntryOneTime,
   listChainPhotoBook,
+  listOwnerPhotoBookChains,
+  getOwnerPhotoBookChain,
+  removeOwnerPhotoBookPhoto,
+  removeOwnerPhotoBookDescription,
   claimKeyFor,
   participantConnectionId,
   resolveViewerPhotoBookOffer,

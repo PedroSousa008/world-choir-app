@@ -1013,6 +1013,42 @@ async function getCompletedPayload(deviceId, eventId = DEFAULT_EVENT_ID) {
   };
 }
 
+/**
+ * Owner Photo Book: every known chain snapshot (archive + today), raw.
+ * Includes in-progress chains so moderation is available before completion.
+ */
+async function listOwnerWorldChainSnapshots(eventId = DEFAULT_EVENT_ID) {
+  assertBlobConfigured();
+  const now = new Date();
+  const nowMs = now.getTime();
+  const byId = new Map();
+
+  const index = await readArchiveIndex(eventId);
+  for (const id of index?.chainIds || []) {
+    const chain = await readArchivedChain(eventId, id);
+    if (chain) byId.set(chain.id, chain);
+  }
+
+  try {
+    await ensureDailyChains(eventId, now);
+    const day = dayKeyUTC(now);
+    const { chains: todayChains } = await loadDayChains(eventId, day);
+    for (const chain of todayChains) {
+      const live = { ...chain, status: deriveStatus(chain, nowMs) };
+      byId.set(chain.id, live);
+    }
+  } catch {
+    /* today optional */
+  }
+
+  return [...byId.values()].sort((a, b) => {
+    const nb = Number(b.dailyChainNumber) || 0;
+    const na = Number(a.dailyChainNumber) || 0;
+    if (nb !== na) return nb - na;
+    return String(b.dayKey || '').localeCompare(String(a.dayKey || ''));
+  });
+}
+
 async function getChainPayload(chainId, deviceId, eventId = DEFAULT_EVENT_ID) {
   const now = new Date();
   const day = dayKeyUTC(now);
@@ -1351,4 +1387,5 @@ module.exports = {
   connectVoice,
   publicChain,
   deriveStatus,
+  listOwnerWorldChainSnapshots,
 };

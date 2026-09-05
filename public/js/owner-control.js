@@ -15,6 +15,7 @@ const OwnerControl = (() => {
     { id: 'foundations', label: 'Creator Foundations' },
     { id: 'sponsors', label: 'Sponsors' },
     { id: 'event', label: 'Event' },
+    { id: 'world-chain-photo-book', label: 'World Chain Photo Book' },
     { id: 'daily-acts', label: 'Daily Acts' },
     { id: 'pass-the-world', label: 'Pass the World' },
     { id: 'growth', label: 'Growth' },
@@ -74,6 +75,14 @@ const OwnerControl = (() => {
     dapFormMode: false,
     dapForm: null,
     dapFormError: null,
+    wcpbOverview: null,
+    wcpbDetail: null,
+    wcpbSelectedChainId: null,
+    wcpbBusy: false,
+    wcpbFilter: 'all',
+    wcpbSort: 'chain',
+    wcpbQuery: '',
+    wcpbActionBusy: null,
     mapFilters: {
       mode: 'voices',
       country: '',
@@ -400,7 +409,13 @@ const OwnerControl = (() => {
       state.data = null;
       render();
     });
-    document.getElementById('owner-refresh')?.addEventListener('click', () => loadCenter());
+    document.getElementById('owner-refresh')?.addEventListener('click', () => {
+      if (state.section === 'world-chain-photo-book') {
+        ensureWcpbLoaded(false).then(() => render());
+        return;
+      }
+      loadCenter();
+    });
     document.getElementById('owner-open-search')?.addEventListener('click', openSearch);
     document.getElementById('owner-open-search-top')?.addEventListener('click', openSearch);
     bindSearch();
@@ -2265,6 +2280,48 @@ const OwnerControl = (() => {
     return OwnerPassTheWorld.render(state, { esc, money, num, when });
   }
 
+  async function ensureWcpbLoaded(silent = false) {
+    if (state.wcpbBusy) return;
+    state.wcpbBusy = true;
+    if (!silent) render();
+    try {
+      const overview = await api('world-chain-photo-book');
+      state.wcpbOverview = overview;
+      const chains = overview?.chains || [];
+      if (!state.wcpbSelectedChainId && chains.length) {
+        state.wcpbSelectedChainId = chains[0].chainId;
+      }
+      if (state.wcpbSelectedChainId
+        && !chains.some((c) => c.chainId === state.wcpbSelectedChainId)) {
+        state.wcpbSelectedChainId = chains[0]?.chainId || null;
+        state.wcpbDetail = null;
+      }
+      if (state.wcpbSelectedChainId) {
+        state.wcpbDetail = await api(
+          'world-chain-photo-book',
+          { query: `&chainId=${encodeURIComponent(state.wcpbSelectedChainId)}` }
+        );
+      } else {
+        state.wcpbDetail = null;
+      }
+    } catch (err) {
+      if (!silent) setFlash(err.message || 'Could not load World Chain Photo Book.', 'err');
+    } finally {
+      state.wcpbBusy = false;
+    }
+  }
+
+  function renderWorldChainPhotoBook() {
+    if (!state.wcpbOverview && !state.wcpbBusy) {
+      ensureWcpbLoaded().then(() => render());
+      return `<section class="owner-section"><p class="owner-muted">Loading World Chain Photo Book…</p></section>`;
+    }
+    if (typeof OwnerWorldChainPhotoBook === 'undefined') {
+      return `<section class="owner-section"><p class="owner-muted">World Chain Photo Book module not loaded.</p></section>`;
+    }
+    return OwnerWorldChainPhotoBook.render(state, { esc, money, num, when });
+  }
+
   async function ensurePromiseMemoryLoaded(silent = false) {
     if (state.pmBusy) return;
     state.pmBusy = true;
@@ -2946,6 +3003,7 @@ const OwnerControl = (() => {
       case 'foundations': return renderFoundations();
       case 'sponsors': return renderSponsors();
       case 'event': return renderEvent();
+      case 'world-chain-photo-book': return renderWorldChainPhotoBook();
       case 'daily-acts': return renderDailyActs();
       case 'pass-the-world': return renderPassTheWorld();
       case 'promise-memory': return renderPromiseMemory();
@@ -3604,6 +3662,18 @@ const OwnerControl = (() => {
       });
     } else if (typeof OwnerPassTheWorld !== 'undefined') {
       OwnerPassTheWorld.stopPolling();
+    }
+
+    if (typeof OwnerWorldChainPhotoBook !== 'undefined' && state.section === 'world-chain-photo-book') {
+      OwnerWorldChainPhotoBook.bind(root(), state, { esc, money, num, when }, {
+        api,
+        onRender: () => render(),
+        setFlash,
+        loadData: async (silent) => {
+          await ensureWcpbLoaded(silent);
+          render();
+        },
+      });
     }
 
     if (typeof OwnerPromiseMemory !== 'undefined' && state.section === 'promise-memory') {
