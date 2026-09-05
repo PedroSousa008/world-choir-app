@@ -373,9 +373,38 @@ function publicStep(step) {
     requiredCity: step.requiredCity || null,
     status: step.status,
     connectedAt: step.connectedAt || null,
+    activatedAt: step.activatedAt || null,
     assignedVoiceNumber: step.assignedVoiceNumber || null,
     assignedCity: step.assignedCity || null,
+    selectedByVoiceNumber: step.selectedByVoiceNumber || null,
   };
+}
+
+/** Current Voice responsible for continuing the chain (selected / active actor). */
+function resolveActiveSelectedVoice(chain) {
+  const steps = chain?.route || [];
+  const active = steps.find((s) => s.status === 'active') || null;
+  const selected = steps.find((s) => s.status === 'selected') || null;
+
+  if (active?.assignedVoiceId) {
+    return {
+      id: active.assignedVoiceId,
+      number: active.assignedVoiceNumber || null,
+    };
+  }
+  if (!chain?.starterAccepted && selected?.assignedVoiceId) {
+    return {
+      id: selected.assignedVoiceId,
+      number: selected.assignedVoiceNumber || null,
+    };
+  }
+  if (!chain?.starterAccepted && chain?.startingVoiceId) {
+    return {
+      id: chain.startingVoiceId,
+      number: chain.startingVoiceNumber || selected?.assignedVoiceNumber || null,
+    };
+  }
+  return { id: null, number: null };
 }
 
 function formatDuration(ms) {
@@ -456,6 +485,28 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     cta = 'YOUR CHAIN';
   }
 
+  const activeSelected = resolveActiveSelectedVoice(chain);
+  const isCurrentUserSelectedVoice = !!(
+    viewer?.userId
+    && activeSelected.id
+    && activeSelected.id === viewer.userId
+    && liveStatus !== Status.COMPLETED
+    && liveStatus !== Status.EXPIRED
+  );
+
+  const followingCount = Array.isArray(chain.followerIds)
+    ? chain.followerIds.length
+    : (Number(chain.followersCount) || 0);
+
+  let timeLeftLabel = '—';
+  if (liveStatus === Status.COMPLETED) {
+    timeLeftLabel = 'Done';
+  } else if (liveStatus === Status.EXPIRED) {
+    timeLeftLabel = 'Ended';
+  } else {
+    timeLeftLabel = formatDuration(timerMs);
+  }
+
   return {
     id: chain.id,
     dailyChainNumber: chain.dailyChainNumber,
@@ -466,11 +517,14 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     completedAt: chain.completedAt || null,
     timerLabel,
     timerMs,
+    timeLeftLabel,
     countries: steps.length,
     connections: Math.max(0, steps.length - 1),
+    connectionsCompleted: steps.filter((s) => s.status === 'connected' && s.position > 0).length,
     voicesConnected: connected,
     voicesTotal: steps.length,
     progressLabel: `${connected} / ${steps.length} VOICES CONNECTED`,
+    followingCount,
     startCountry: start?.country || null,
     finalCountry: final?.country || null,
     finalCity: final?.requiredCity || null,
@@ -481,13 +535,18 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     route: steps.map(publicStep),
     activeCountry: active?.country || pendingDestination?.country || null,
     activeRequiredCity: active?.requiredCity || pendingDestination?.requiredCity || null,
+    activeSelectedVoiceId: activeSelected.id,
+    activeSelectedVoiceNumber: activeSelected.number,
+    photoBookId: chain.photoBookId || `chain-${chain.id}`,
     cta,
     viewer: viewer ? {
       isStarter: chain.startingVoiceId === viewer.userId,
       isNamed: viewerIsNamed,
       needsStart: viewerNeedsStart,
       isActiveTurn: viewerIsTheirTurn,
+      isCurrentUserSelectedVoice,
       voiceNumber: viewer.voiceNumber || null,
+      voiceId: viewer.userId || null,
     } : null,
   };
 }
@@ -903,18 +962,31 @@ async function getChainPayload(chainId, deviceId, eventId = DEFAULT_EVENT_ID) {
   const day = dayKeyUTC(now);
   const viewer = await resolveViewer(deviceId, eventId);
   let chain = await readChain(eventId, day, chainId);
+  let fromArchive = false;
   if (!chain) {
     const { chains } = await loadDayChains(eventId, day);
     chain = chains.find((c) => c.id === chainId) || null;
   }
   if (!chain) {
     chain = await readArchivedChain(eventId, chainId);
+    fromArchive = !!chain;
   }
   if (!chain) {
     const err = new Error('Chain not found');
     err.statusCode = 404;
     throw err;
   }
+
+  // Soft-count followers when someone opens this chain (viewer detail).
+  if (viewer?.userId && !fromArchive) {
+    const ids = Array.isArray(chain.followerIds) ? chain.followerIds : [];
+    if (!ids.includes(viewer.userId)) {
+      chain.followerIds = [...ids, viewer.userId].slice(-5000);
+      chain.followersCount = chain.followerIds.length;
+      writeChain(eventId, day, chain).catch(() => {});
+    }
+  }
+
   return {
     serverNow: now.toISOString(),
     chain: publicChain(chain, now.getTime(), viewer),
@@ -1096,6 +1168,8 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   active.assignedVoiceId = target.user_id;
   active.assignedVoiceNumber = Number(target.voice_number);
   active.assignedCity = target.city || null;
+  active.selectedByVoiceId = viewer.userId;
+  active.selectedByVoiceNumber = viewer.voiceNumber || null;
   active.latitude = target.latitude ?? active.latitude;
   active.longitude = target.longitude ?? active.longitude;
 
@@ -1105,6 +1179,7 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     next.status = 'active';
     next.assignedVoiceId = target.user_id; // next actor is the voice just connected
     next.assignedVoiceNumber = Number(target.voice_number);
+    next.assignedCity = target.city || null;
     next.activatedAt = now.toISOString();
     chain.currentStep = nextIndex;
   } else {

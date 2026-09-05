@@ -7,7 +7,7 @@ const WorldChainPage = (() => {
     loading: true,
     error: null,
     data: null,
-    view: 'landing', // landing | detail | completed
+    view: 'landing', // landing | detail | completed | photo-book
     activeChainId: null,
     detailReturnView: 'landing',
     busy: false,
@@ -122,7 +122,12 @@ const WorldChainPage = (() => {
       <header class="wc-chain-topbar">
         <a class="wc-chain-back" href="index.html" aria-label="Back to Home">←</a>
         <h1 class="wc-chain-brand">World Chain</h1>
-        <span class="wc-chain-topbar__spacer" aria-hidden="true"></span>
+        <button type="button" class="wc-chain-help" data-wc-help aria-label="About World Chain" title="About World Chain">
+          <svg class="wc-chain-help__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 10.5v5.5M12 7.75h.01"/>
+          </svg>
+        </button>
       </header>
       <div class="wc-chain-hero">
         <img
@@ -140,6 +145,337 @@ const WorldChainPage = (() => {
             Completed Chains →
           </button>
         </div>
+      </div>
+    `;
+  }
+
+  function renderDetailTopbar(backAttr) {
+    return `
+      <header class="wc-chain-topbar">
+        <button type="button" class="wc-chain-back" ${backAttr} aria-label="Back">←</button>
+        <h1 class="wc-chain-brand">World Chain</h1>
+        <button type="button" class="wc-chain-help" data-wc-help aria-label="About World Chain" title="About World Chain">
+          <svg class="wc-chain-help__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7">
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 10.5v5.5M12 7.75h.01"/>
+          </svg>
+        </button>
+      </header>
+    `;
+  }
+
+  function formatVoiceNumber(n) {
+    const num = Number(n);
+    if (!Number.isFinite(num) || num <= 0) return '—';
+    return `#${num.toLocaleString('en-US')}`;
+  }
+
+  function formatRelativeAgo(iso) {
+    if (!iso) return '';
+    const t = new Date(iso).getTime();
+    if (!Number.isFinite(t)) return '';
+    const sec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+    if (sec < 60) return 'Just now';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 48) return `${hr}h ago`;
+    const days = Math.floor(hr / 24);
+    return `${days}d ago`;
+  }
+
+  function formatFollowing(n) {
+    const num = Number(n) || 0;
+    return num.toLocaleString('en-US');
+  }
+
+  function countryCode(country) {
+    if (typeof WorldChoirFlags !== 'undefined' && WorldChoirFlags.iso3ForCountry) {
+      return WorldChoirFlags.iso3ForCountry(country) || '';
+    }
+    return String(country || '').slice(0, 3).toUpperCase();
+  }
+
+  /**
+   * Viewer progress rows:
+   * - Completed: prior connected countries
+   * - In Progress: country of the active selected Voice (actor)
+   * - Not Yet Connected: remaining destinations (including the one being sought)
+   */
+  function progressRows(chain) {
+    const route = chain.route || [];
+    const allDone = chain.status === 'COMPLETED'
+      || (route.length > 0 && route.every((s) => s.status === 'connected'));
+    const activeIdx = route.findIndex((s) => s.status === 'active');
+    const selectedIdx = route.findIndex((s) => s.status === 'selected');
+
+    let actorIdx = -1;
+    if (!allDone) {
+      if (activeIdx > 0) actorIdx = activeIdx - 1;
+      else if (selectedIdx >= 0) actorIdx = selectedIdx;
+      else if (activeIdx === 0) actorIdx = 0;
+    }
+
+    const lastIdx = route.length - 1;
+
+    return route.map((step, i) => {
+      const base = {
+        index: i + 1,
+        country: step.country,
+        requiredCity: step.requiredCity || null,
+        voiceNumber: step.assignedVoiceNumber || null,
+        city: step.assignedCity || null,
+        connectedAt: step.connectedAt || null,
+      };
+
+      if (allDone || (step.status === 'connected' && i !== actorIdx)) {
+        return {
+          ...base,
+          uiStatus: 'completed',
+          statusLabel: 'Completed',
+          statusDetail: formatRelativeAgo(step.connectedAt) || 'Connected',
+        };
+      }
+
+      if (i === actorIdx) {
+        return {
+          ...base,
+          voiceNumber: step.assignedVoiceNumber || chain.activeSelectedVoiceNumber || null,
+          city: step.assignedCity || null,
+          uiStatus: 'active',
+          statusLabel: 'In Progress',
+          statusDetail: 'Waiting for next connection...',
+        };
+      }
+
+      return {
+        ...base,
+        voiceNumber: null,
+        city: null,
+        uiStatus: 'waiting',
+        statusLabel: 'Not Yet Connected',
+        statusDetail: i === lastIdx ? 'Final voice needed' : 'Waiting for connection...',
+      };
+    });
+  }
+
+  function renderViewerRouteStrip(chain) {
+    const rows = progressRows(chain);
+    if (!rows.length) return '';
+    const parts = [];
+    rows.forEach((row, i) => {
+      let nodeClass = 'is-pending';
+      let lineClass = 'is-pending';
+      if (row.uiStatus === 'completed') {
+        nodeClass = 'is-done';
+        lineClass = 'is-done';
+      } else if (row.uiStatus === 'active') {
+        nodeClass = 'is-live';
+        lineClass = 'is-live';
+      }
+      parts.push(`
+        <div class="wc-viewer-strip__node ${nodeClass}">
+          ${flagCircle(row.country, `wc-viewer-strip__flag ${nodeClass}`)}
+          <span class="wc-viewer-strip__code">${esc(countryCode(row.country))}</span>
+        </div>
+      `);
+      if (i < rows.length - 1) {
+        parts.push(`<span class="wc-viewer-strip__line ${lineClass}" aria-hidden="true"></span>`);
+      }
+    });
+    return `<div class="wc-viewer-strip" role="img" aria-label="Chain route">${parts.join('')}</div>`;
+  }
+
+  function renderProgressStatusCell(row) {
+    if (row.uiStatus === 'completed') {
+      return `
+        <div class="wc-viewer-status wc-viewer-status--done">
+          <span class="wc-viewer-status__icon" aria-hidden="true">
+            <svg viewBox="0 0 20 20" width="16" height="16" fill="none">
+              <circle cx="10" cy="10" r="8.25" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.2 10.2l2.4 2.4 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <div class="wc-viewer-status__text">
+            <span class="wc-viewer-status__label">Completed</span>
+            <span class="wc-viewer-status__detail">${esc(row.statusDetail)}</span>
+          </div>
+        </div>
+      `;
+    }
+    if (row.uiStatus === 'active') {
+      return `
+        <div class="wc-viewer-status wc-viewer-status--active">
+          <span class="wc-viewer-status__icon" aria-hidden="true">
+            <svg viewBox="0 0 20 20" width="16" height="16" fill="none">
+              <circle cx="10" cy="10" r="8.25" stroke="currentColor" stroke-width="1.5"/>
+              <circle class="wc-viewer-status__pulse" cx="10" cy="10" r="3.2" fill="currentColor"/>
+            </svg>
+          </span>
+          <div class="wc-viewer-status__text">
+            <span class="wc-viewer-status__label">In Progress</span>
+            <span class="wc-viewer-status__detail">${esc(row.statusDetail)}</span>
+          </div>
+        </div>
+      `;
+    }
+    return `
+      <div class="wc-viewer-status wc-viewer-status--wait">
+        <span class="wc-viewer-status__icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="none">
+            <circle cx="10" cy="10" r="8.25" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </span>
+        <div class="wc-viewer-status__text">
+          <span class="wc-viewer-status__label">Not Yet Connected</span>
+          <span class="wc-viewer-status__detail">${esc(row.statusDetail)}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderViewerDetail(chain) {
+    const backAttr = state.detailReturnView === 'completed' ? 'data-back-completed' : 'data-back-landing';
+    const rows = progressRows(chain);
+    const startLabel = chain.startCountry || '—';
+    const destLabel = chain.finalCity || chain.finalCountry || '—';
+
+    return `
+      <div class="wc-viewer">
+        ${renderDetailTopbar(backAttr)}
+
+        <section class="wc-viewer-hero">
+          <h2 class="wc-viewer-hero__title">World Chain #${esc(chain.dailyChainNumber)}</h2>
+          <p class="wc-viewer-hero__meta">${esc(chain.countries)} countries · ${esc(chain.connections)} connections</p>
+          <p class="wc-viewer-hero__route">${esc(startLabel)} → ${esc(destLabel)}</p>
+          <p class="wc-viewer-hero__line">Real people. Real connections.<br>A more connected world.</p>
+        </section>
+
+        <section class="wc-viewer-stats" aria-label="Chain summary">
+          <div class="wc-viewer-stats__cell">
+            <span class="wc-viewer-stats__num">${esc(chain.countries)}</span>
+            <span class="wc-viewer-stats__label">Countries</span>
+          </div>
+          <div class="wc-viewer-stats__cell">
+            <span class="wc-viewer-stats__num">${esc(chain.connections)}</span>
+            <span class="wc-viewer-stats__label">Connections</span>
+          </div>
+          <div class="wc-viewer-stats__cell">
+            <span class="wc-viewer-stats__num">${esc(chain.timeLeftLabel || String(chain.timerLabel || '—').replace(/\s*left$/i, '').trim() || '—')}</span>
+            <span class="wc-viewer-stats__label">Left</span>
+          </div>
+          <div class="wc-viewer-stats__cell">
+            <span class="wc-viewer-stats__num">${esc(formatFollowing(chain.followingCount))}</span>
+            <span class="wc-viewer-stats__label">Following</span>
+          </div>
+        </section>
+
+        ${renderViewerRouteStrip(chain)}
+
+        <section class="wc-viewer-progress">
+          <div class="wc-viewer-progress__head">
+            <h3 class="wc-viewer-progress__title">Country Progress</h3>
+            <p class="wc-viewer-progress__aside">Different places. A brighter tomorrow.</p>
+          </div>
+
+          <div class="wc-viewer-table" role="table" aria-label="Country progress">
+            <div class="wc-viewer-table__head" role="row">
+              <span role="columnheader">#</span>
+              <span role="columnheader">Country</span>
+              <span role="columnheader">Voice</span>
+              <span role="columnheader">Status</span>
+            </div>
+            ${rows.map((row) => `
+              <div class="wc-viewer-table__row wc-viewer-table__row--${esc(row.uiStatus)}" role="row">
+                <span class="wc-viewer-table__idx" role="cell">${esc(row.index)}</span>
+                <div class="wc-viewer-table__country" role="cell">
+                  ${flagCircle(row.country, 'wc-viewer-table__flag')}
+                  <span class="wc-viewer-table__country-name">${esc(row.country)}</span>
+                </div>
+                <div class="wc-viewer-table__voice" role="cell">
+                  ${row.voiceNumber
+                    ? `<span class="wc-viewer-table__voice-num">${esc(formatVoiceNumber(row.voiceNumber))}</span>
+                       <span class="wc-viewer-table__voice-city">${esc(row.city || '—')}</span>`
+                    : `<span class="wc-viewer-table__voice-num wc-viewer-table__voice-num--empty">—</span>`}
+                </div>
+                <div class="wc-viewer-table__status" role="cell">
+                  ${renderProgressStatusCell(row)}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <button type="button" class="wc-viewer-photobook" data-open-photo-book="${esc(chain.id)}">
+            <span class="wc-viewer-photobook__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6">
+                <path d="M5 4.5h11.5A2.5 2.5 0 0 1 19 7v12.5H7.5A2.5 2.5 0 0 0 5 22V4.5z"/>
+                <path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H19"/>
+                <path d="M9 10h6M9 14h4"/>
+              </svg>
+            </span>
+            <span class="wc-viewer-photobook__copy">
+              <span class="wc-viewer-photobook__title">Open Photo Book</span>
+              <span class="wc-viewer-photobook__sub">See the people behind this chain.</span>
+            </span>
+            <span class="wc-viewer-photobook__chevron" aria-hidden="true">›</span>
+          </button>
+        </section>
+
+        <blockquote class="wc-viewer-quote">
+          <span class="wc-viewer-quote__mark" aria-hidden="true">“</span>
+          <p class="wc-viewer-quote__text">A chain of voices is a chain of hope.</p>
+          <footer class="wc-viewer-quote__attr">— World Choir</footer>
+        </blockquote>
+
+        <button type="button" class="wc-viewer-share" data-share-chain="${esc(chain.id)}">
+          Share This Chain →
+        </button>
+      </div>
+    `;
+  }
+
+  function renderPhotoBook(chain) {
+    const backAttr = 'data-back-detail';
+    return `
+      <div class="wc-viewer">
+        ${renderDetailTopbar(backAttr)}
+        <section class="wc-viewer-hero">
+          <h2 class="wc-viewer-hero__title">Photo Book</h2>
+          <p class="wc-viewer-hero__meta">World Chain #${esc(chain?.dailyChainNumber || '')}</p>
+          <p class="wc-viewer-hero__line">The human side of this chain.</p>
+        </section>
+        <div class="wc-photobook-empty">
+          <p class="wc-photobook-empty__title">Moments will appear here</p>
+          <p class="wc-photobook-empty__copy">
+            As Voices connect across this chain, their shared moments will gather in this Photo Book —
+            a lasting record of the people behind each step.
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSelectedVoiceDetail(chain) {
+    const backAttr = state.detailReturnView === 'completed' ? 'data-back-completed' : 'data-back-landing';
+    /* Selected-Voice primary experience ships next; keep the existing turn flow for now. */
+    return `
+      <div class="wc-chain-detail wc-chain-detail--selected-voice">
+        ${renderDetailTopbar(backAttr)}
+        <div class="wc-chain-card__head wc-chain-card__head--detail">
+          <h2 class="wc-chain-card__title">WORLD CHAIN #${esc(chain.dailyChainNumber)}</h2>
+          <p class="wc-chain-card__status ${statusToneClass(chain.status)}">
+            <span class="wc-chain-card__dot ${statusDotClass(chain.status)}" aria-hidden="true"></span>
+            ${esc(statusLabel(chain.status))}
+          </p>
+          <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
+        </div>
+        ${renderRoute(chain.route)}
+        <p class="wc-chain-card__meta">
+          ${esc(chain.progressLabel)}<br>
+          ${esc(chain.routeSummary || '')}
+        </p>
+        ${renderTurnPanel(chain)}
+        ${renderCompleted(chain)}
       </div>
     `;
   }
@@ -335,39 +671,29 @@ const WorldChainPage = (() => {
 
   function renderDetail() {
     const chain = findChain(state.activeChainId);
-    const backLabel = state.detailReturnView === 'completed' ? '← Completed Chains' : '← World Chain';
     const backAttr = state.detailReturnView === 'completed' ? 'data-back-completed' : 'data-back-landing';
     if (!chain) {
       return `
-        <button type="button" class="wc-chain-detail__back" ${backAttr}>${backLabel}</button>
-        <div class="wc-chain-empty">
-          <h3 class="wc-chain-empty__title">Chain unavailable</h3>
-          <p class="wc-chain-empty__copy">This World Chain could not be loaded.</p>
+        <div class="wc-viewer">
+          ${renderDetailTopbar(backAttr)}
+          <div class="wc-chain-empty">
+            <h3 class="wc-chain-empty__title">Chain unavailable</h3>
+            <p class="wc-chain-empty__copy">This World Chain could not be loaded.</p>
+          </div>
         </div>
       `;
     }
 
-    return `
-      <div class="wc-chain-detail">
-        <button type="button" class="wc-chain-detail__back" ${backAttr}>${backLabel}</button>
-        <div class="wc-chain-card__head wc-chain-card__head--detail">
-          <h2 class="wc-chain-card__title">WORLD CHAIN #${esc(chain.dailyChainNumber)}</h2>
-          <p class="wc-chain-card__status ${statusToneClass(chain.status)}">
-            <span class="wc-chain-card__dot ${statusDotClass(chain.status)}" aria-hidden="true"></span>
-            ${esc(statusLabel(chain.status))}
-          </p>
-          <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
-        </div>
-        ${renderRoute(chain.route)}
-        <p class="wc-chain-card__meta">
-          ${esc(chain.progressLabel)}<br>
-          ${esc(chain.routeSummary || '')}
-        </p>
-        ${renderTurnPanel(chain)}
-        ${renderCompleted(chain)}
-        ${renderHelp(chain)}
-      </div>
-    `;
+    const isSelectedVoice = !!(
+      chain.viewer?.isCurrentUserSelectedVoice
+      || chain.viewer?.isActiveTurn
+    );
+
+    if (isSelectedVoice && chain.status !== 'COMPLETED') {
+      return renderSelectedVoiceDetail(chain);
+    }
+
+    return renderViewerDetail(chain);
   }
 
   function render() {
@@ -397,9 +723,15 @@ const WorldChainPage = (() => {
       return;
     }
 
-    if (state.view === 'detail') root.innerHTML = renderDetail();
-    else if (state.view === 'completed') root.innerHTML = renderCompletedList();
-    else root.innerHTML = renderLanding();
+    if (state.view === 'photo-book') {
+      root.innerHTML = renderPhotoBook(findChain(state.activeChainId));
+    } else if (state.view === 'detail') {
+      root.innerHTML = renderDetail();
+    } else if (state.view === 'completed') {
+      root.innerHTML = renderCompletedList();
+    } else {
+      root.innerHTML = renderLanding();
+    }
     bind();
   }
 
@@ -465,10 +797,16 @@ const WorldChainPage = (() => {
     );
     if (!res.ok) return;
     const body = await res.json();
-    if (!body.chain || !state.data) return;
-    const idx = state.data.chains.findIndex((c) => c.id === chainId);
-    if (idx >= 0) state.data.chains[idx] = body.chain;
-    else state.data.chains.push(body.chain);
+    if (!body.chain) return;
+    if (state.data) {
+      const idx = state.data.chains.findIndex((c) => c.id === chainId);
+      if (idx >= 0) state.data.chains[idx] = body.chain;
+      else state.data.chains.push(body.chain);
+    }
+    if (state.completed) {
+      const cidx = state.completed.findIndex((c) => c.id === chainId);
+      if (cidx >= 0) state.completed[cidx] = body.chain;
+    }
   }
 
   function shareHelp(chain) {
@@ -485,19 +823,35 @@ const WorldChainPage = (() => {
     navigator.clipboard?.writeText(`${text}\n${url}`).catch(() => {});
   }
 
+  function shareChain(chain) {
+    const text = `Follow World Chain #${chain.dailyChainNumber} — ${chain.routeSummary || 'real people, real connections'}.\n\nA more connected world.`;
+    const url = `${window.location.origin}/world-chain?chain=${encodeURIComponent(chain.id)}`;
+    if (navigator.share) {
+      navigator.share({ title: `World Chain #${chain.dailyChainNumber}`, text, url }).catch(() => {});
+      return;
+    }
+    navigator.clipboard?.writeText(`${text}\n${url}`).catch(() => {});
+  }
+
   function bind() {
     document.querySelector('[data-retry]')?.addEventListener('click', () => load());
     document.querySelectorAll('[data-open-completed]').forEach((btn) => {
       btn.addEventListener('click', () => loadCompleted());
     });
     document.querySelectorAll('[data-open-chain]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         state.detailReturnView = state.view === 'completed' ? 'completed' : 'landing';
         state.activeChainId = btn.getAttribute('data-open-chain');
         state.view = 'detail';
         state.feedback = null;
         render();
         window.scrollTo(0, 0);
+        try {
+          await refreshChain(state.activeChainId);
+          render();
+        } catch {
+          /* keep cached chain */
+        }
       });
     });
     document.querySelector('[data-back-landing]')?.addEventListener('click', () => {
@@ -513,6 +867,32 @@ const WorldChainPage = (() => {
       state.feedback = null;
       render();
       window.scrollTo(0, 0);
+    });
+    document.querySelector('[data-back-detail]')?.addEventListener('click', () => {
+      state.view = 'detail';
+      state.feedback = null;
+      render();
+      window.scrollTo(0, 0);
+    });
+    document.querySelectorAll('[data-open-photo-book]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.activeChainId = btn.getAttribute('data-open-photo-book') || state.activeChainId;
+        state.view = 'photo-book';
+        render();
+        window.scrollTo(0, 0);
+      });
+    });
+    document.querySelectorAll('[data-share-chain]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const chain = findChain(btn.getAttribute('data-share-chain'));
+        if (chain) shareChain(chain);
+      });
+    });
+    document.querySelectorAll('[data-wc-help]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const msg = 'World Chain connects real Voices across countries — one person, one place, one connection at a time.';
+        if (typeof window.alert === 'function') window.alert(msg);
+      });
     });
     document.querySelectorAll('[data-accept-start]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -600,7 +980,17 @@ const WorldChainPage = (() => {
     if (typeof WorldChoirNav !== 'undefined') {
       WorldChoirNav.startWatcher('world-chain');
     }
-    load();
+    const params = new URLSearchParams(window.location.search);
+    const deepChain = params.get('chain');
+    load().then(() => {
+      if (deepChain) {
+        state.activeChainId = deepChain;
+        state.view = 'detail';
+        state.detailReturnView = 'landing';
+        render();
+        refreshChain(deepChain).then(() => render()).catch(() => {});
+      }
+    });
   }
 
   return { init };
