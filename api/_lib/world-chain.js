@@ -461,7 +461,7 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
   } else if (viewerIsTheirTurn) {
     cta = 'KEEP THE CHAIN ALIVE';
   } else if (viewerIsNamed) {
-    cta = 'WATCH YOUR CHAIN';
+    cta = 'YOUR CHAIN';
   } else if (liveStatus === Status.STUCK) {
     cta = 'HELP THIS CHAIN';
   }
