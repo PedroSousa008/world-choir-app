@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260903p">
-  <link rel="stylesheet" href="css/profile.css?v=20260905a">
+  <link rel="stylesheet" href="css/profile.css?v=20260906a">
   <link rel="stylesheet" href="css/privacy-consent.css?v=20260905a">
   <link rel="stylesheet" href="css/world-choir-onboarding.css?v=20260816a">
     <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
@@ -39,13 +39,16 @@
     <div id="profile-daily-acts-root"></div>
 
     <footer class="profile-legal-footer" aria-label="Legal">
-      <button type="button" class="profile-legal-footer__btn" id="profile-privacy-prefs">Privacy preferences</button>
-      <span aria-hidden="true">·</span>
-      <a href="privacy-policy.html">Privacy Policy</a>
-      <span aria-hidden="true">·</span>
-      <a href="contact.html">Contact</a>
-      <span aria-hidden="true">·</span>
-      <a href="terms-and-conditions.html">Terms &amp; Conditions</a>
+      <div class="profile-legal-footer__row">
+        <button type="button" class="profile-legal-footer__btn" id="profile-privacy-prefs">Privacy preferences</button>
+        <span aria-hidden="true">·</span>
+        <a href="privacy-policy.html">Privacy Policy</a>
+        <span aria-hidden="true">·</span>
+        <a href="terms-and-conditions.html">Terms &amp; Conditions</a>
+      </div>
+      <div class="profile-legal-footer__row profile-legal-footer__row--contact">
+        <a href="contact.html">Contact</a>
+      </div>
     </footer>
   </main>
 
