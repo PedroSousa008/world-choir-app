@@ -15,7 +15,9 @@
 .home-page--centered {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  /* Match lightbulb top so Voices shares its vertical center line */
+  padding-top: calc(env(safe-area-inset-top, 0px) + 22px);
 }
 
 /* Suggestions / Guide tab — upper-right edge, understated */
@@ -293,6 +295,11 @@ body.home-guide-open {
 }
 
 .home-voices-counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Same height as .home-guide-btn so text center = lightbulb center */
+  min-height: 40px;
   margin: 0 auto 14px;
   font-size: 0.62rem;
   font-weight: 600;
@@ -1741,7 +1748,8 @@ a.home-after-card--song:active {
 .home-skel--voices {
   width: 7.5rem;
   height: 0.55rem;
-  margin: 0 auto 18px;
+  /* Center the bar inside the same 40px row as Voices / lightbulb */
+  margin: calc((40px - 0.55rem) / 2) auto calc((40px - 0.55rem) / 2 + 14px);
   border-radius: 999px;
 }
 
