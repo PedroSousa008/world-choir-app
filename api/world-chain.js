@@ -1,5 +1,7 @@
 const {
   DEFAULT_EVENT_ID,
+  CHAIN_ENGINE,
+  CHAIN_STORAGE_VERSION,
   ensureDailyChains,
   getTodayPayload,
   getChainPayload,
@@ -13,6 +15,8 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-WC-Chain-Engine', CHAIN_ENGINE || 'unknown');
+  res.setHeader('X-WC-Chain-Storage', CHAIN_STORAGE_VERSION || 'unknown');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 

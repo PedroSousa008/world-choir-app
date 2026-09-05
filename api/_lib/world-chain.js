@@ -29,7 +29,7 @@ const Status = {
   EXPIRED: 'EXPIRED',
 };
 
-/** Temporary test: force chain #1 to start in Portugal with Voice #5. */
+/** Temporary test: force chain #1 to start with Voice #5 (Portugal). */
 const TEST_FORCE_STARTER = {
   enabled: true,
   chainIndex: 0,
@@ -37,13 +37,16 @@ const TEST_FORCE_STARTER = {
   voiceNumber: 5,
 };
 
+/** Bump when generation rules change so the day regenerates. */
+const CHAIN_STORAGE_VERSION = 'v4';
+const CHAIN_ENGINE = 'starter-first-v4';
+
 function dayKeyUTC(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
 function rootPath(eventId, day) {
-  // v3: starter-first generation (Voice #5 / Portugal test chain + full 5 chains)
-  return `wc-data/world-chain/v3/${encodeURIComponent(eventId)}/${day}`;
+  return `wc-data/world-chain/${CHAIN_STORAGE_VERSION}/${encodeURIComponent(eventId)}/${day}`;
 }
 
 function manifestPath(eventId, day) {
@@ -127,17 +130,24 @@ function buildPledgeIndexes(pledges = [], usersById = new Map(), nowMs = Date.no
   const citiesByCountry = new Map();
 
   pledges.forEach((pledge) => {
-    if (!pledge || pledge.voice_number == null) return;
-    const voice = Number(pledge.voice_number);
+    if (!pledge) return;
+    const voice = Number(pledge.voice_number ?? pledge.voiceNumber);
     if (!Number.isFinite(voice)) return;
-    byVoice.set(voice, pledge);
+    // Normalize so downstream always reads voice_number.
+    const normalized = {
+      ...pledge,
+      voice_number: voice,
+      country: normalizeCountry(pledge.country),
+      city: String(pledge.city || '').trim(),
+    };
+    byVoice.set(voice, normalized);
 
-    const country = normalizeCountry(pledge.country);
+    const country = normalized.country;
     if (!country) return;
     if (!byCountry.has(country)) byCountry.set(country, []);
-    byCountry.get(country).push(pledge);
+    byCountry.get(country).push(normalized);
 
-    const city = String(pledge.city || '').trim();
+    const city = normalized.city;
     if (!city) return;
     const key = `${country.toLowerCase()}|${normalizeCity(city)}`;
     if (!citiesByCountry.has(country)) citiesByCountry.set(country, new Map());
@@ -148,18 +158,18 @@ function buildPledgeIndexes(pledges = [], usersById = new Map(), nowMs = Date.no
         country,
         voices: [],
         eligibleVoices: [],
-        latitude: pledge.latitude ?? null,
-        longitude: pledge.longitude ?? null,
+        latitude: normalized.latitude ?? null,
+        longitude: normalized.longitude ?? null,
       });
     }
     const entry = cityMap.get(key);
-    entry.voices.push(pledge);
-    const user = usersById.get(pledge.user_id);
-    if (isAccountEligible(user, pledge, nowMs)) {
-      entry.eligibleVoices.push(pledge);
-      if (entry.latitude == null && pledge.latitude != null) {
-        entry.latitude = pledge.latitude;
-        entry.longitude = pledge.longitude;
+    entry.voices.push(normalized);
+    const user = usersById.get(normalized.user_id);
+    if (isAccountEligible(user, normalized, nowMs)) {
+      entry.eligibleVoices.push(normalized);
+      if (entry.latitude == null && normalized.latitude != null) {
+        entry.latitude = normalized.latitude;
+        entry.longitude = normalized.longitude;
       }
     }
   });
@@ -267,13 +277,27 @@ function buildRouteCountries(startCountry, allCountries, length, seedStr) {
 
 function resolveForcedStarter(byVoice) {
   if (!TEST_FORCE_STARTER.enabled) return null;
-  const pledge = byVoice.get(Number(TEST_FORCE_STARTER.voiceNumber));
+  const voiceNum = Number(TEST_FORCE_STARTER.voiceNumber);
+  let pledge = byVoice.get(voiceNum) || null;
+  // Tolerate camelCase voiceNumber if an index row was mapped.
+  if (!pledge) {
+    for (const p of byVoice.values()) {
+      const n = Number(p?.voice_number ?? p?.voiceNumber);
+      if (n === voiceNum) {
+        pledge = p;
+        break;
+      }
+    }
+  }
   if (!pledge?.user_id) return null;
-  // Use the Voice's real country (Portugal for Voice #5); fall back to configured start.
   const country = normalizeCountry(pledge.country)
     || normalizeCountry(TEST_FORCE_STARTER.startCountry);
   if (!country) return null;
-  return { ...pledge, country };
+  return {
+    ...pledge,
+    voice_number: Number(pledge.voice_number ?? pledge.voiceNumber) || voiceNum,
+    country,
+  };
 }
 
 function buildRouteSteps(countries, citiesByCountry, startingPledge) {
@@ -628,36 +652,60 @@ async function generateDailyChains(eventId, day, now = new Date()) {
   const manifest = {
     eventId,
     dayKey: day,
+    engine: CHAIN_ENGINE,
+    storageVersion: CHAIN_STORAGE_VERSION,
     generatedAt: now.toISOString(),
     maxAvailableCountries: maxAvailable,
     chainIds: chains.map((c) => c.id),
     limited: chains.length < DAILY_CHAIN_COUNT,
-    reason: chains.length ? (chains.length < DAILY_CHAIN_COUNT ? 'partial_day' : null) : 'could_not_build_valid_routes',
+    reason: chains.length
+      ? (chains.length < DAILY_CHAIN_COUNT ? 'partial_day' : null)
+      : 'could_not_build_valid_routes',
   };
 
   try {
-    await writeJson(manifestPath(eventId, day), manifest, { overwrite: false });
-  } catch {
-    // Race: another generator won — read winner.
+    await writeJson(manifestPath(eventId, day), manifest, { overwrite: true });
+  } catch (err) {
+    // Prefer regenerating on conflict rather than serving a stale day.
     const existing = await readManifest(eventId, day);
-    if (existing) return existing;
-    throw new Error('Could not save World Chain day manifest');
+    if (existing?.engine === CHAIN_ENGINE && existing?.chainIds?.length) return existing;
+    throw err;
   }
 
   return manifest;
+}
+
+function isValidTestDay(manifest, chains) {
+  if (!manifest || !Array.isArray(manifest.chainIds)) return false;
+  if (manifest.engine !== CHAIN_ENGINE) return false;
+  if (chains.length < DAILY_CHAIN_COUNT) return false;
+  if (!TEST_FORCE_STARTER.enabled) return true;
+  const first = [...chains].sort((a, b) => (a.dailyChainNumber || 0) - (b.dailyChainNumber || 0))[0];
+  if (!first) return false;
+  const startCountry = first.route?.[0]?.country;
+  const voice = Number(first.startingVoiceNumber);
+  return voice === Number(TEST_FORCE_STARTER.voiceNumber)
+    && countriesEqual(startCountry, TEST_FORCE_STARTER.startCountry);
 }
 
 async function ensureDailyChains(eventId = DEFAULT_EVENT_ID, now = new Date()) {
   assertBlobConfigured();
   const day = dayKeyUTC(now);
   const existing = await readManifest(eventId, day);
-  if (existing?.chainIds) return existing;
+  if (existing?.chainIds?.length) {
+    const chains = [];
+    for (const id of existing.chainIds) {
+      const chain = await readChain(eventId, day, id);
+      if (chain) chains.push(chain);
+    }
+    if (isValidTestDay(existing, chains)) return existing;
+    // Stale / incomplete day (e.g. only 3 chains, or #1 not Voice 5) — rebuild.
+  }
   try {
     return await generateDailyChains(eventId, day, now);
   } catch (err) {
-    // If create raced, re-read.
     const again = await readManifest(eventId, day);
-    if (again) return again;
+    if (again?.engine === CHAIN_ENGINE && again?.chainIds?.length) return again;
     throw err;
   }
 }
@@ -720,6 +768,8 @@ async function getTodayPayload(deviceId, eventId = DEFAULT_EVENT_ID) {
   return {
     dayKey: day,
     serverNow: now.toISOString(),
+    engine: CHAIN_ENGINE,
+    storageVersion: CHAIN_STORAGE_VERSION,
     maxAvailableCountries: manifest.maxAvailableCountries ?? 0,
     limited,
     limitedReason: manifest.reason || null,
@@ -980,6 +1030,8 @@ module.exports = {
   DAILY_CHAIN_COUNT,
   ACCOUNT_AGE_MS,
   STUCK_AFTER_MS,
+  CHAIN_ENGINE,
+  CHAIN_STORAGE_VERSION,
   dayKeyUTC,
   ensureDailyChains,
   getTodayPayload,
