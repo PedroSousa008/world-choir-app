@@ -449,11 +449,19 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     )
   );
 
+  const viewerIsTheirTurn = !!(
+    viewerNeedsStart
+    || viewerIsCurrentActor
+    || (viewerIsActive && chain.starterAccepted)
+  );
+
   let cta = 'WATCH LIVE';
   if (liveStatus === Status.COMPLETED) {
     cta = 'VIEW COMPLETED CHAIN';
-  } else if (viewerIsNamed) {
+  } else if (viewerIsTheirTurn) {
     cta = 'KEEP THE CHAIN ALIVE';
+  } else if (viewerIsNamed) {
+    cta = 'WATCH YOUR CHAIN';
   } else if (liveStatus === Status.STUCK) {
     cta = 'HELP THIS CHAIN';
   }
@@ -488,7 +496,7 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
       isStarter: chain.startingVoiceId === viewer.userId,
       isNamed: viewerIsNamed,
       needsStart: viewerNeedsStart,
-      isActiveTurn: viewerIsCurrentActor || (viewerIsActive && chain.starterAccepted),
+      isActiveTurn: viewerIsTheirTurn,
       voiceNumber: viewer.voiceNumber || null,
     } : null,
   };

@@ -125,13 +125,15 @@ const WorldChainPage = (() => {
           <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
         </div>
         ${renderRoute(chain.route)}
-        <p class="wc-chain-card__meta">
-          ${esc(chain.countries)} countries · ${esc(chain.connections)} connections<br>
-          ${esc(chain.routeSummary || '')}
-        </p>
-        <button type="button" class="wc-chain-card__cta" data-open-chain="${esc(chain.id)}">
-          ${esc(chain.cta || 'WATCH LIVE')} →
-        </button>
+        <div class="wc-chain-card__footer">
+          <p class="wc-chain-card__meta">
+            ${esc(chain.countries)} countries · ${esc(chain.connections)} connections<br>
+            ${esc(chain.routeSummary || '')}
+          </p>
+          <button type="button" class="wc-chain-card__cta" data-open-chain="${esc(chain.id)}">
+            ${esc(chain.cta || 'WATCH LIVE')} →
+          </button>
+        </div>
       </article>
     `;
   }
