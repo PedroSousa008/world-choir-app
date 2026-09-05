@@ -60,7 +60,7 @@
 .wc-chain-hero {
   position: relative;
   width: calc(100% + 40px);
-  margin: 0 -20px 20px;
+  margin: 0 -20px 24px;
   aspect-ratio: 1619 / 971;
   overflow: hidden;
   background: #000;
@@ -98,26 +98,17 @@
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
 }
 
-.wc-chain-sub {
-  margin: 0 auto;
-  max-width: 22em;
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 400;
-  line-height: 1.55;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
 .wc-chain-explore {
   position: relative;
   z-index: 2;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: auto;
+  min-width: min(100%, 22em);
+  max-width: 100%;
   min-height: 48px;
-  margin: -40px 0 36px;
+  margin: 0 auto;
   padding: 12px 18px;
   border: 1px solid rgba(78, 197, 232, 0.35);
   border-radius: var(--radius-md);
@@ -133,6 +124,7 @@
   -webkit-tap-highlight-color: transparent;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  pointer-events: auto;
 }
 
 .wc-chain-explore:focus-visible {
