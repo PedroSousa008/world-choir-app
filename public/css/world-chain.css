@@ -147,6 +147,7 @@
   border-radius: var(--radius-md);
   background: rgba(12, 14, 22, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 9px;
 }
 
 .wc-chain-card--named {
@@ -167,7 +168,7 @@
 .wc-chain-card__title {
   margin: 0 0 6px;
   font-family: var(--font-sans);
-  font-size: 0.78rem;
+  font-size: 9px;
   font-weight: 500;
   letter-spacing: 0.02em;
   color: var(--text-muted);
@@ -179,7 +180,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-sans);
-  font-size: 0.68rem;
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -207,7 +208,7 @@
 .wc-chain-card__timer {
   flex-shrink: 0;
   font-family: var(--font-sans);
-  font-size: 0.78rem;
+  font-size: 9px;
   font-weight: 500;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
@@ -298,7 +299,7 @@
   min-width: 0;
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 0.82rem;
+  font-size: 9px;
   line-height: 1.45;
   color: var(--text-muted);
 }
@@ -322,7 +323,7 @@
   background: rgba(78, 197, 232, 0.07);
   color: var(--accent-aurora);
   font-family: var(--font-sans);
-  font-size: 0.58rem;
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.02em;
   line-height: 1.15;
