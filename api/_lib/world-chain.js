@@ -1043,6 +1043,14 @@ async function getChainPayload(chainId, deviceId, eventId = DEFAULT_EVENT_ID) {
     }
   }
 
+  let photoBookOffer = null;
+  try {
+    const { resolveViewerPhotoBookOffer } = require('./world-chain-photo-book');
+    photoBookOffer = await resolveViewerPhotoBookOffer(chain, viewer, eventId);
+  } catch {
+    photoBookOffer = null;
+  }
+
   return {
     serverNow: now.toISOString(),
     chain: await attachViewerConnectCooldown(
@@ -1053,6 +1061,7 @@ async function getChainPayload(chainId, deviceId, eventId = DEFAULT_EVENT_ID) {
       now.getTime()
     ),
     viewer,
+    photoBookOffer,
   };
 }
 
@@ -1287,16 +1296,9 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   }
 
   // Optional Photo Book offer — chain connection is already persisted above.
-  const photoBookOffer = {
-    chainId: chain.id,
-    connectionId: `${chain.id}:step-${active.position}:by-${viewer.userId}`,
-    stepPosition: active.position,
-    country: active.country || null,
-    city: active.requiredCity || active.assignedCity || null,
-    dailyChainNumber: chain.dailyChainNumber,
-    dayKey: chain.dayKey,
-    connectedAt: active.connectedAt,
-  };
+  // Final Voices receive their offer when they next load the chain / Photo Book.
+  const { buildPhotoBookOfferAfterConnect } = require('./world-chain-photo-book');
+  const photoBookOffer = buildPhotoBookOfferAfterConnect(chain, viewer, active);
 
   return {
     ok: true,

@@ -7,13 +7,14 @@ const WorldChainPage = (() => {
   const CHAIN_CACHE_PREFIX = 'wc_world_chain_one_v1:';
   const COMPLETED_CACHE_KEY = 'wc_world_chain_completed_v1';
   const PHOTO_BOOK_PENDING_KEY = 'wc_photo_book_pending_v1';
+  const PHOTO_BOOK_CACHE_PREFIX = 'wc_photo_book_list_v1:';
   const PHOTO_BOOK_MAX_CHARS = 80;
 
   let state = {
     loading: true,
     error: null,
     data: null,
-    view: 'landing', // landing | detail | completed | photo-book
+    view: 'landing', // landing | detail | completed | photo-book | photo-book-contribute
     activeChainId: null,
     detailReturnView: 'landing',
     busy: false,
@@ -26,6 +27,15 @@ const WorldChainPage = (() => {
       error: null,
       busy: false,
     },
+    photoBook: {
+      loading: false,
+      error: null,
+      chainId: null,
+      dailyChainNumber: null,
+      participants: [],
+      viewerOffer: null,
+    },
+    photoBookFocus: null,
     completed: null,
     completedLoading: false,
     completedError: null,
@@ -84,6 +94,16 @@ const WorldChainPage = (() => {
     return readJsonCache(COMPLETED_CACHE_KEY)?.chains || null;
   }
 
+  function cachePhotoBook(chainId, payload) {
+    if (!chainId || !payload) return;
+    writeJsonCache(PHOTO_BOOK_CACHE_PREFIX + chainId, { savedAt: Date.now(), payload });
+  }
+
+  function readCachedPhotoBook(chainId) {
+    if (!chainId) return null;
+    return readJsonCache(PHOTO_BOOK_CACHE_PREFIX + chainId)?.payload || null;
+  }
+
   function savePendingPhotoBook(offer) {
     if (!offer?.connectionId) return;
     writeJsonCache(PHOTO_BOOK_PENDING_KEY, { savedAt: Date.now(), offer });
@@ -111,31 +131,97 @@ const WorldChainPage = (() => {
   }
 
   function finishPhotoBookStep() {
+    const returnToBook = state.photoBookContributeFrom === 'photo-book';
     clearPendingPhotoBook();
     state.photoBookOffer = null;
+    state.photoBookContributeFrom = null;
     resetPhotoBookDraft();
     state.turnSheetOpen = false;
-    state.view = 'detail';
+    state.view = returnToBook ? 'photo-book' : 'detail';
     syncUrl({ replace: true });
     render();
     window.scrollTo(0, 0);
+    if (returnToBook && state.activeChainId) {
+      loadPhotoBook(state.activeChainId);
+    }
   }
 
-  function openPhotoBookContribute(offer) {
+  function openPhotoBookContribute(offer, opts = {}) {
     if (!offer?.chainId || !offer?.connectionId) {
       finishPhotoBookStep();
       return;
     }
+    state.photoBookContributeFrom = opts.from === 'photo-book' ? 'photo-book' : 'detail';
     state.photoBookOffer = offer;
     savePendingPhotoBook(offer);
     state.activeChainId = offer.chainId;
     state.turnSheetOpen = false;
     state.feedback = null;
+    state.photoBookFocus = null;
     resetPhotoBookDraft();
     state.view = 'photo-book-contribute';
     syncUrl({ replace: true });
     render();
     window.scrollTo(0, 0);
+  }
+
+  async function loadPhotoBook(chainId) {
+    const id = chainId || state.activeChainId;
+    if (!id) return;
+    const cached = readCachedPhotoBook(id);
+    if (cached?.participants) {
+      state.photoBook = {
+        loading: true,
+        error: null,
+        chainId: cached.chainId || id,
+        dailyChainNumber: cached.dailyChainNumber ?? null,
+        participants: cached.participants || [],
+        viewerOffer: cached.viewerOffer || null,
+      };
+    } else {
+      state.photoBook = {
+        loading: true,
+        error: null,
+        chainId: id,
+        dailyChainNumber: findChain(id)?.dailyChainNumber ?? null,
+        participants: [],
+        viewerOffer: null,
+      };
+    }
+    if (state.view === 'photo-book') render();
+
+    try {
+      await WorldChoirDB.ready?.();
+      const res = await fetch(
+        `/api/world-chain?deviceId=${encodeURIComponent(deviceId())}`
+          + `&eventId=${encodeURIComponent(eventId())}`
+          + `&view=photo-book&chainId=${encodeURIComponent(id)}`,
+        { cache: 'no-store' }
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error || 'Could not load Photo Book');
+      }
+      cachePhotoBook(id, body);
+      state.photoBook = {
+        loading: false,
+        error: null,
+        chainId: body.chainId || id,
+        dailyChainNumber: body.dailyChainNumber ?? null,
+        participants: Array.isArray(body.participants) ? body.participants : [],
+        viewerOffer: body.viewerOffer || null,
+      };
+      if (body.viewerOffer?.connectionId && !readPendingPhotoBook()) {
+        state.photoBookOffer = body.viewerOffer;
+      }
+    } catch (err) {
+      state.photoBook = {
+        ...state.photoBook,
+        loading: false,
+        error: err.message || 'Could not load Photo Book',
+      };
+    }
+    if (state.view === 'photo-book') render();
   }
 
   function compressSelfieFile(file, maxSide = 1280, quality = 0.82) {
@@ -709,21 +795,174 @@ const WorldChainPage = (() => {
   }
 
   function renderPhotoBook(chain) {
-    const backAttr = 'data-back-detail';
+    const book = state.photoBook || {};
+    const participants = Array.isArray(book.participants) ? book.participants : [];
+    const chainNum = book.dailyChainNumber != null
+      ? book.dailyChainNumber
+      : (chain?.dailyChainNumber ?? '');
+    const offer = book.viewerOffer || state.photoBookOffer || null;
+    const showContributeCta = !!(offer?.connectionId);
+
     return `
-      <div class="wc-viewer">
-        ${renderDetailTopbar(backAttr)}
-        <section class="wc-viewer-hero">
-          <h2 class="wc-viewer-hero__title">Photo Book</h2>
-          <p class="wc-viewer-hero__meta">World Chain #${esc(chain?.dailyChainNumber || '')}</p>
-          <p class="wc-viewer-hero__line">The human side of this chain.</p>
-        </section>
-        <div class="wc-photobook-empty">
-          <p class="wc-photobook-empty__title">Moments will appear here</p>
-          <p class="wc-photobook-empty__copy">
-            As Voices connect across this chain, their shared moments will gather in this Photo Book —
-            a lasting record of the people behind each step.
+      <div class="wc-photobook-page">
+        <header class="wc-chain-topbar">
+          <button type="button" class="wc-chain-back" data-back-detail aria-label="Back">←</button>
+          <h1 class="wc-chain-brand">World Chain</h1>
+          <span class="wc-chain-topbar__spacer" aria-hidden="true"></span>
+        </header>
+
+        <header class="wc-photobook-header">
+          <h2 class="wc-photobook-header__title">Photo Book</h2>
+          <p class="wc-photobook-header__sub">
+            Real people. Real moments.<br>
+            A more connected world.
           </p>
+        </header>
+
+        ${showContributeCta ? `
+          <div class="wc-photobook-cta-wrap">
+            <button type="button" class="wc-photobook-cta" data-open-photo-book-contribute>
+              Add your moment
+            </button>
+          </div>
+        ` : ''}
+
+        ${book.loading && !participants.length ? `
+          <div class="wc-photobook-grid wc-photobook-grid--skel" aria-busy="true" aria-hidden="true">
+            ${Array.from({ length: 6 }).map(() => `
+              <article class="wc-photobook-card wc-photobook-card--skel">
+                <div class="wc-photobook-card__photo"></div>
+                <div class="wc-photobook-card__meta">
+                  <div class="wc-chain-skel" style="height:10px;width:70%"></div>
+                  <div class="wc-chain-skel" style="height:10px;width:50%"></div>
+                </div>
+                <div class="wc-photobook-card__note"></div>
+              </article>
+            `).join('')}
+          </div>
+        ` : ''}
+
+        ${book.error && !participants.length ? `
+          <div class="wc-photobook-empty">
+            <p class="wc-photobook-empty__title">Could not open Photo Book</p>
+            <p class="wc-photobook-empty__copy">${esc(book.error)}</p>
+            <button type="button" class="wc-chain-primary" style="margin-top:14px" data-reload-photo-book>Try again</button>
+          </div>
+        ` : ''}
+
+        ${!book.loading && !book.error && !participants.length ? `
+          <div class="wc-photobook-empty">
+            <p class="wc-photobook-empty__title">Waiting for Voices</p>
+            <p class="wc-photobook-empty__copy">
+              As real Voices take their place in this chain, their pages will appear here.
+            </p>
+          </div>
+        ` : ''}
+
+        ${participants.length ? `
+          <div class="wc-photobook-grid" role="list">
+            ${participants.map((p, i) => renderPhotoBookCard(p, i)).join('')}
+          </div>
+        ` : ''}
+
+        <footer class="wc-photobook-close">
+          <img
+            class="wc-photobook-close__earth"
+            src="images/world-choir-logo.png?v=20270706"
+            alt=""
+            width="120"
+            height="120"
+            decoding="async"
+          >
+          <p class="wc-photobook-close__lines">
+            <span>DIFFERENT PLACES.</span>
+            <span>SAME HOPE.</span>
+          </p>
+          <p class="wc-photobook-close__headline">
+            A MORE<br>CONNECTED WORLD.
+          </p>
+          <blockquote class="wc-photobook-close__quote">
+            <p>“A chain of voices is a chain of hope.”</p>
+            <cite>— World Choir</cite>
+          </blockquote>
+          ${chainNum !== '' ? `
+            <p class="wc-photobook-close__chain">World Chain #${esc(chainNum)}</p>
+          ` : ''}
+        </footer>
+
+        ${state.photoBookFocus != null ? renderPhotoBookLightbox(participants[state.photoBookFocus]) : ''}
+      </div>
+    `;
+  }
+
+  function renderPhotoBookCard(p, index) {
+    const hasPhoto = !!(p?.photoUrl);
+    const note = p?.note ? String(p.note).trim() : '';
+    const city = p?.city ? String(p.city).trim() : '';
+    const country = p?.country ? String(p.country).trim() : '';
+    return `
+      <article
+        class="wc-photobook-card"
+        role="listitem"
+        tabindex="0"
+        data-open-photo-entry="${esc(index)}"
+        aria-label="${esc(country || 'Voice')}${city ? `, ${esc(city)}` : ''}"
+      >
+        <div class="wc-photobook-card__photo${hasPhoto ? '' : ' wc-photobook-card__photo--empty'}">
+          ${hasPhoto
+            ? `<img src="${esc(p.photoUrl)}" alt="" loading="lazy" decoding="async">`
+            : `<span class="wc-photobook-card__photo-fill" aria-hidden="true"></span>`}
+        </div>
+        <div class="wc-photobook-card__meta">
+          <p class="wc-photobook-card__country">
+            ${flagCircle(country, 'wc-photobook-card__flag')}
+            <span>${esc(country || '—')}</span>
+          </p>
+          ${city ? `
+            <p class="wc-photobook-card__city">
+              <span class="wc-photobook-card__pin" aria-hidden="true">⌖</span>
+              <span>${esc(city)}</span>
+            </p>
+          ` : `<p class="wc-photobook-card__city wc-photobook-card__city--empty" aria-hidden="true">&nbsp;</p>`}
+        </div>
+        <div class="wc-photobook-card__note">
+          ${note ? `<p class="wc-photobook-card__note-text">${esc(note)}</p>` : ''}
+        </div>
+      </article>
+    `;
+  }
+
+  function renderPhotoBookLightbox(p) {
+    if (!p) return '';
+    const hasPhoto = !!(p.photoUrl);
+    const note = p.note ? String(p.note).trim() : '';
+    const city = p.city ? String(p.city).trim() : '';
+    const country = p.country ? String(p.country).trim() : '';
+    const voice = p.voiceNumber != null ? formatVoiceNumber(p.voiceNumber) : '';
+    return `
+      <div class="wc-photobook-lightbox" role="dialog" aria-modal="true" aria-label="Photo Book page">
+        <button type="button" class="wc-photobook-lightbox__backdrop" data-close-photo-entry aria-label="Close"></button>
+        <div class="wc-photobook-lightbox__panel">
+          <button type="button" class="wc-photobook-lightbox__close" data-close-photo-entry aria-label="Close">←</button>
+          <div class="wc-photobook-lightbox__photo${hasPhoto ? '' : ' wc-photobook-lightbox__photo--empty'}">
+            ${hasPhoto
+              ? `<img src="${esc(p.photoUrl)}" alt="" decoding="async">`
+              : `<span class="wc-photobook-card__photo-fill" aria-hidden="true"></span>`}
+          </div>
+          <div class="wc-photobook-lightbox__body">
+            <p class="wc-photobook-card__country">
+              ${flagCircle(country, 'wc-photobook-card__flag')}
+              <span>${esc(country || '—')}</span>
+            </p>
+            ${city ? `
+              <p class="wc-photobook-card__city">
+                <span class="wc-photobook-card__pin" aria-hidden="true">⌖</span>
+                <span>${esc(city)}</span>
+              </p>
+            ` : ''}
+            ${voice ? `<p class="wc-photobook-lightbox__voice">Voice ${esc(voice)}</p>` : ''}
+            ${note ? `<p class="wc-photobook-lightbox__note">${esc(note)}</p>` : ''}
+          </div>
         </div>
       </div>
     `;
@@ -735,7 +974,8 @@ const WorldChainPage = (() => {
     const message = String(draft.message || '');
     const count = [...message].length;
     const hasSelfie = !!draft.dataUrl;
-    const canSubmit = hasSelfie && !draft.busy;
+    const hasNote = !!message.trim();
+    const canSubmit = (hasSelfie || hasNote) && !draft.busy;
     const chainNum = offer?.dailyChainNumber != null ? offer.dailyChainNumber : '';
 
     return `
@@ -747,9 +987,9 @@ const WorldChainPage = (() => {
         </header>
 
         <section class="wc-photobook-contribute__card">
-          <p class="wc-photobook-contribute__eyebrow">Share yourself</p>
+          <p class="wc-photobook-contribute__eyebrow">Optional</p>
           <h2 class="wc-photobook-contribute__title">
-            Take a selfie and leave a short message for the World Chain.
+            Add a selfie and a short note to this chain’s Photo Book.
           </h2>
 
           <div class="wc-photobook-info">
@@ -761,10 +1001,11 @@ const WorldChainPage = (() => {
             </span>
             <div class="wc-photobook-info__copy">
               <p class="wc-photobook-info__main">
-                Your selfie will be part of the
-                <span class="wc-photobook-info__accent">Photo Book of the Chain</span>.
+                Both are optional. Your page stays in the
+                <span class="wc-photobook-info__accent">Photo Book</span>
+                either way.
               </p>
-              <p class="wc-photobook-info__sub">A global collection of the people who connected the world.</p>
+              <p class="wc-photobook-info__sub">A quiet record of the people who carried this chain.</p>
             </div>
           </div>
 
@@ -784,12 +1025,12 @@ const WorldChainPage = (() => {
                 </svg>
               </span>
               <span class="wc-photobook-selfie__title">Take a Selfie</span>
-              <span class="wc-photobook-selfie__hint">Tap to open camera</span>
+              <span class="wc-photobook-selfie__hint">Optional · tap to open camera</span>
             </button>
           `}
 
           <div class="wc-photobook-message-head">
-            <label for="wc-photobook-message" class="wc-photobook-message-label">Your Message</label>
+            <label for="wc-photobook-message" class="wc-photobook-message-label">Your Note</label>
             <span class="wc-photobook-message-count" data-message-count>${esc(count)}/${PHOTO_BOOK_MAX_CHARS}</span>
           </div>
           <textarea
@@ -798,7 +1039,7 @@ const WorldChainPage = (() => {
             data-photo-book-message
             maxlength="${PHOTO_BOOK_MAX_CHARS}"
             rows="2"
-            placeholder="Write a message for the World Chain…"
+            placeholder="Optional — a few words from you…"
             ${draft.busy ? 'disabled' : ''}
           >${esc(message)}</textarea>
 
@@ -1228,6 +1469,11 @@ const WorldChainPage = (() => {
     const body = await res.json();
     if (!body.chain) return;
     mergeChainIntoState(body.chain);
+    if (body.photoBookOffer?.connectionId
+      && state.view !== 'photo-book-contribute'
+      && !readPendingPhotoBook()) {
+      state.photoBookOffer = body.photoBookOffer;
+    }
   }
 
   function shareHelp(chain) {
@@ -1429,9 +1675,41 @@ const WorldChainPage = (() => {
       btn.addEventListener('click', () => {
         state.activeChainId = btn.getAttribute('data-open-photo-book') || state.activeChainId;
         state.view = 'photo-book';
+        state.photoBookFocus = null;
         syncUrl();
         render();
         window.scrollTo(0, 0);
+        loadPhotoBook(state.activeChainId);
+      });
+    });
+    document.querySelectorAll('[data-reload-photo-book]').forEach((btn) => {
+      btn.addEventListener('click', () => loadPhotoBook(state.activeChainId));
+    });
+    document.querySelectorAll('[data-open-photo-book-contribute]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const offer = state.photoBook?.viewerOffer || state.photoBookOffer || readPendingPhotoBook();
+        if (offer) openPhotoBookContribute(offer, { from: 'photo-book' });
+      });
+    });
+    document.querySelectorAll('[data-open-photo-entry]').forEach((el) => {
+      const open = () => {
+        const idx = Number(el.getAttribute('data-open-photo-entry'));
+        if (!Number.isFinite(idx)) return;
+        state.photoBookFocus = idx;
+        render();
+      };
+      el.addEventListener('click', open);
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          open();
+        }
+      });
+    });
+    document.querySelectorAll('[data-close-photo-entry]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.photoBookFocus = null;
+        render();
       });
     });
     document.querySelectorAll('[data-share-chain]').forEach((btn) => {
@@ -1596,7 +1874,8 @@ const WorldChainPage = (() => {
       if (counter) counter.textContent = `${[...value].length}/${PHOTO_BOOK_MAX_CHARS}`;
       const submit = document.querySelector('[data-submit-photo-book]');
       if (submit) {
-        submit.disabled = !state.photoBookDraft.dataUrl || !!state.photoBookDraft.busy;
+        const hasContent = !!(state.photoBookDraft.dataUrl || String(state.photoBookDraft.message || '').trim());
+        submit.disabled = !hasContent || !!state.photoBookDraft.busy;
       }
     });
 
@@ -1606,7 +1885,9 @@ const WorldChainPage = (() => {
 
     document.querySelector('[data-submit-photo-book]')?.addEventListener('click', async () => {
       const offer = state.photoBookOffer || readPendingPhotoBook();
-      if (!offer?.chainId || !offer?.connectionId || !state.photoBookDraft.dataUrl) return;
+      const hasPhoto = !!state.photoBookDraft.dataUrl;
+      const hasNote = !!String(state.photoBookDraft.message || '').trim();
+      if (!offer?.chainId || !offer?.connectionId || (!hasPhoto && !hasNote)) return;
       if (state.photoBookDraft.busy) return;
       state.photoBookDraft = {
         ...state.photoBookDraft,
@@ -1624,9 +1905,9 @@ const WorldChainPage = (() => {
             eventId: eventId(),
             chainId: offer.chainId,
             connectionId: offer.connectionId,
-            dataUrl: state.photoBookDraft.dataUrl,
+            dataUrl: state.photoBookDraft.dataUrl || null,
             message: state.photoBookDraft.message || '',
-            fileName: 'selfie.jpg',
+            fileName: hasPhoto ? 'selfie.jpg' : '',
           }),
         });
         const body = await res.json().catch(() => ({}));
@@ -1688,6 +1969,9 @@ const WorldChainPage = (() => {
       }
     }
     render();
+    if (state.view === 'photo-book') {
+      await loadPhotoBook(state.activeChainId);
+    }
   }
 
   function hydrateFromCache() {
@@ -1709,6 +1993,19 @@ const WorldChainPage = (() => {
       if (single) {
         mergeChainIntoState(single);
         state.loading = false;
+      }
+      if (state.view === 'photo-book') {
+        const book = readCachedPhotoBook(state.activeChainId);
+        if (book) {
+          state.photoBook = {
+            loading: false,
+            error: null,
+            chainId: book.chainId || state.activeChainId,
+            dailyChainNumber: book.dailyChainNumber ?? null,
+            participants: book.participants || [],
+            viewerOffer: book.viewerOffer || null,
+          };
+        }
       }
     }
     const pending = readPendingPhotoBook();

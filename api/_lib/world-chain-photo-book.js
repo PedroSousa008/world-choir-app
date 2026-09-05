@@ -1,6 +1,7 @@
 /**
- * World Chain Photo Book — optional post-connection contributions.
+ * World Chain Photo Book — optional post-participation contributions.
  * Completely separate from Voice connect / chain progression.
+ * Entries are real participants only; photo and note are both optional.
  */
 const { randomUUID, createHash } = require('crypto');
 const {
@@ -57,12 +58,14 @@ function claimKeyFor(connectionId, userId) {
     .slice(0, 40);
 }
 
+/** Stable offer id per participant Voice on a chain (includes final Voice). */
+function participantConnectionId(chainId, userId) {
+  return `${String(chainId)}:participant:${String(userId)}`;
+}
+
 function parseDataUrl(dataUrl) {
   if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
-    const err = new Error('Take a selfie to add to the Photo Book.');
-    err.code = 'INVALID_IMAGE';
-    err.statusCode = 400;
-    throw err;
+    return null;
   }
   const match = /^data:([^;]+);base64,(.+)$/i.exec(dataUrl);
   if (!match) {
@@ -106,6 +109,113 @@ async function readStoredChain(eventId, chainId) {
   }
 }
 
+function connectedParticipantSteps(chain) {
+  const steps = Array.isArray(chain?.route) ? chain.route : [];
+  const lastIdx = steps.length - 1;
+  const out = [];
+  const seen = new Set();
+  for (const step of steps) {
+    if (!step || step.status !== 'connected') continue;
+    const userId = step.assignedVoiceId || null;
+    const voiceNumber = Number(step.assignedVoiceNumber);
+    const key = userId || (Number.isFinite(voiceNumber) ? `vn:${voiceNumber}` : null);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      userId,
+      voiceNumber: Number.isFinite(voiceNumber) ? voiceNumber : null,
+      country: step.country || null,
+      city: step.assignedCity || step.requiredCity || null,
+      chainPosition: Number.isFinite(step.position) ? step.position : out.length,
+      isFinalVoice: Number(step.position) === lastIdx,
+      completedAt: step.connectedAt || null,
+    });
+  }
+  return out;
+}
+
+function isPhotoBookParticipant(chain, userId) {
+  if (!chain || !userId) return false;
+  return connectedParticipantSteps(chain).some((p) => p.userId === userId);
+}
+
+async function hasExistingClaim(eventId, connectionId, userId) {
+  try {
+    const existing = await readBlobJson(claimPath(eventId, claimKeyFor(connectionId, userId)));
+    return !!(existing?.entryId);
+  } catch {
+    return false;
+  }
+}
+
+async function readEntryIndex(eventId, chainId) {
+  try {
+    return await readBlobJson(chainIndexPath(eventId, chainId));
+  } catch {
+    return { chainId, entryIds: [] };
+  }
+}
+
+async function loadEntriesByVoice(eventId, chainId) {
+  const index = await readEntryIndex(eventId, chainId);
+  const byUserId = new Map();
+  const byVoiceNumber = new Map();
+  for (const id of index.entryIds || []) {
+    try {
+      const row = await readBlobJson(entryPath(eventId, id));
+      if (!row || row.deletedAt) continue;
+      if (row.userId) byUserId.set(row.userId, row);
+      if (Number.isFinite(Number(row.voiceNumber))) {
+        byVoiceNumber.set(Number(row.voiceNumber), row);
+      }
+    } catch {
+      /* skip */
+    }
+  }
+  return { byUserId, byVoiceNumber };
+}
+
+/**
+ * Optional contribute offer for a viewer who already participated
+ * (including the final Voice) and has not submitted yet.
+ */
+async function resolveViewerPhotoBookOffer(chain, viewer, eventId = DEFAULT_EVENT_ID) {
+  if (!chain?.id || !viewer?.userId) return null;
+  if (!isPhotoBookParticipant(chain, viewer.userId)) return null;
+  const connectionId = participantConnectionId(chain.id, viewer.userId);
+  if (await hasExistingClaim(eventId, connectionId, viewer.userId)) return null;
+  // Also hide offer if they already have an entry (older claim ids).
+  const { byUserId } = await loadEntriesByVoice(eventId, chain.id);
+  if (byUserId.has(viewer.userId)) return null;
+  const step = connectedParticipantSteps(chain).find((p) => p.userId === viewer.userId);
+  return {
+    chainId: chain.id,
+    connectionId,
+    stepPosition: step?.chainPosition ?? null,
+    country: step?.country || null,
+    city: step?.city || null,
+    dailyChainNumber: chain.dailyChainNumber,
+    dayKey: chain.dayKey,
+    connectedAt: step?.completedAt || null,
+    isFinalVoice: !!step?.isFinalVoice,
+  };
+}
+
+function buildPhotoBookOfferAfterConnect(chain, viewer, activeStep) {
+  if (!chain?.id || !viewer?.userId) return null;
+  return {
+    chainId: chain.id,
+    connectionId: participantConnectionId(chain.id, viewer.userId),
+    stepPosition: activeStep?.position ?? null,
+    country: activeStep?.country || null,
+    city: activeStep?.requiredCity || activeStep?.assignedCity || null,
+    dailyChainNumber: chain.dailyChainNumber,
+    dayKey: chain.dayKey,
+    connectedAt: activeStep?.connectedAt || null,
+    isFinalVoice: false,
+  };
+}
+
 async function createChainPhotoBookEntry({
   deviceId,
   eventId = DEFAULT_EVENT_ID,
@@ -118,8 +228,8 @@ async function createChainPhotoBookEntry({
   assertBlobConfigured();
   const eid = String(eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
   const cid = String(chainId || '').trim();
-  const connId = String(connectionId || '').trim();
-  if (!deviceId || !cid || !connId) {
+  let connId = String(connectionId || '').trim();
+  if (!deviceId || !cid) {
     const err = new Error('Missing Photo Book details');
     err.statusCode = 400;
     throw err;
@@ -133,8 +243,11 @@ async function createChainPhotoBookEntry({
   }
 
   const pledge = await readPledge(eid, user.id).catch(() => null);
-  const claimKey = claimKeyFor(connId, user.id);
+  if (!connId) {
+    connId = participantConnectionId(cid, user.id);
+  }
 
+  const claimKey = claimKeyFor(connId, user.id);
   try {
     const existingClaim = await readBlobJson(claimPath(eid, claimKey));
     if (existingClaim?.entryId) {
@@ -155,37 +268,44 @@ async function createChainPhotoBookEntry({
     throw err;
   }
 
-  const voiceNum = Number(pledge?.voice_number);
-  const linked = (chain.route || []).some((s) => (
-    s.selectedByVoiceId === user.id
-    || (Number.isFinite(voiceNum) && Number(s.selectedByVoiceNumber) === voiceNum)
-  ));
-  if (!linked && chain.startingVoiceId !== user.id) {
+  if (!isPhotoBookParticipant(chain, user.id)) {
     const err = new Error('This Photo Book moment is not available for your account.');
     err.statusCode = 403;
     throw err;
   }
 
-  const { contentType, buffer } = parseDataUrl(dataUrl);
-  if (!IMAGE_MIME_RE.test(contentType)) {
-    const err = new Error('That file is not a supported image');
-    err.code = 'INVALID_IMAGE';
-    err.statusCode = 400;
-    throw err;
-  }
-  if (buffer.length > MAX_IMAGE_BYTES) {
-    const err = new Error('Image must be under 12 MB');
-    err.code = 'IMAGE_TOO_LARGE';
+  const cleanMessage = sanitizeMessage(message);
+  const parsedImage = dataUrl ? parseDataUrl(dataUrl) : null;
+  if (!parsedImage && !cleanMessage) {
+    const err = new Error('Add a selfie or a short note — or skip for now.');
+    err.code = 'EMPTY_CONTRIBUTION';
     err.statusCode = 400;
     throw err;
   }
 
-  const cleanMessage = sanitizeMessage(message);
+  let imagePath = null;
+  let imageUrl = null;
+  let contentType = null;
+
+  if (parsedImage) {
+    contentType = parsedImage.contentType;
+    if (!IMAGE_MIME_RE.test(contentType)) {
+      const err = new Error('That file is not a supported image');
+      err.code = 'INVALID_IMAGE';
+      err.statusCode = 400;
+      throw err;
+    }
+    if (parsedImage.buffer.length > MAX_IMAGE_BYTES) {
+      const err = new Error('Image must be under 12 MB');
+      err.code = 'IMAGE_TOO_LARGE';
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
+  const voiceNum = Number(pledge?.voice_number);
   const entryId = randomUUID();
   const createdAt = new Date().toISOString();
-  const subtype = contentType.replace(/^image\//, '');
-  const ext = IMAGE_EXT_MAP[subtype] || 'jpg';
-  const pathname = mediaFilePath(eid, user.id, entryId, ext);
 
   try {
     await writeJson(claimPath(eid, claimKey), {
@@ -205,8 +325,15 @@ async function createChainPhotoBookEntry({
     throw err;
   }
 
-  await putPrivateBinary(pathname, buffer, contentType, { overwrite: true });
-  const imageUrl = mediaProxyUrl(pathname);
+  if (parsedImage) {
+    const subtype = contentType.replace(/^image\//, '');
+    const ext = IMAGE_EXT_MAP[subtype] || 'jpg';
+    imagePath = mediaFilePath(eid, user.id, entryId, ext);
+    await putPrivateBinary(imagePath, parsedImage.buffer, contentType, { overwrite: true });
+    imageUrl = mediaProxyUrl(imagePath);
+  }
+
+  const participant = connectedParticipantSteps(chain).find((p) => p.userId === user.id);
 
   const entry = {
     id: entryId,
@@ -216,11 +343,11 @@ async function createChainPhotoBookEntry({
     dailyChainNumber: chain.dailyChainNumber || null,
     dayKey: chain.dayKey || dayKeyUTC(new Date()),
     userId: user.id,
-    voiceNumber: Number.isFinite(voiceNum) ? voiceNum : null,
-    city: pledge?.city || null,
-    country: pledge?.country || null,
+    voiceNumber: Number.isFinite(voiceNum) ? voiceNum : (participant?.voiceNumber ?? null),
+    city: pledge?.city || participant?.city || null,
+    country: pledge?.country || participant?.country || null,
     message: cleanMessage,
-    imagePath: pathname,
+    imagePath,
     imageUrl,
     fileName: String(fileName || '').slice(0, 120),
     createdAt,
@@ -259,36 +386,70 @@ async function createChainPhotoBookEntry({
   };
 }
 
-async function listChainPhotoBook(eventId, chainId) {
+/**
+ * Photo Book page payload: real participating Voices + optional selfie/note.
+ * Never invents photos, notes, or future-country placeholders.
+ */
+async function listChainPhotoBook(eventId, chainId, deviceId = '') {
   const eid = String(eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
   const cid = String(chainId || '').trim();
-  if (!cid) return { entries: [] };
-  let index = null;
-  try {
-    index = await readBlobJson(chainIndexPath(eid, cid));
-  } catch {
-    return { entries: [] };
+  if (!cid) {
+    return {
+      chainId: null,
+      dailyChainNumber: null,
+      participants: [],
+      viewerOffer: null,
+    };
   }
-  const entries = [];
-  for (const id of index.entryIds || []) {
-    try {
-      const row = await readBlobJson(entryPath(eid, id));
-      if (row && !row.deletedAt) {
-        entries.push({
-          id: row.id,
-          voiceNumber: row.voiceNumber,
-          city: row.city,
-          country: row.country,
-          message: row.message || '',
-          imageUrl: row.imageUrl,
-          createdAt: row.createdAt,
-        });
-      }
-    } catch {
-      /* skip */
+
+  const chain = await readStoredChain(eid, cid);
+  if (!chain) {
+    const err = new Error('World Chain not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const { byUserId, byVoiceNumber } = await loadEntriesByVoice(eid, cid);
+  const steps = connectedParticipantSteps(chain);
+  const participants = steps.map((p) => {
+    const entry = (p.userId && byUserId.get(p.userId))
+      || (Number.isFinite(p.voiceNumber) ? byVoiceNumber.get(p.voiceNumber) : null)
+      || null;
+    const note = entry?.message ? String(entry.message).trim() : '';
+    return {
+      voiceId: p.userId,
+      voiceNumber: p.voiceNumber,
+      country: p.country,
+      city: p.city,
+      photoUrl: entry?.imageUrl || null,
+      note: note || null,
+      chainPosition: p.chainPosition,
+      isFinalVoice: !!p.isFinalVoice,
+      completedAt: p.completedAt || entry?.createdAt || null,
+      entryId: entry?.id || null,
+    };
+  });
+
+  let viewerOffer = null;
+  if (deviceId) {
+    const user = await findUserByDevice(deviceId).catch(() => null);
+    if (user?.id) {
+      const pledge = await readPledge(eid, user.id).catch(() => null);
+      viewerOffer = await resolveViewerPhotoBookOffer(chain, {
+        userId: user.id,
+        voiceNumber: Number(pledge?.voice_number) || null,
+      }, eid);
     }
   }
-  return { entries };
+
+  return {
+    chainId: chain.id,
+    dailyChainNumber: chain.dailyChainNumber || null,
+    dayKey: chain.dayKey || null,
+    status: chain.status || null,
+    participants,
+    viewerOffer,
+  };
 }
 
 module.exports = {
@@ -296,4 +457,8 @@ module.exports = {
   createChainPhotoBookEntry,
   listChainPhotoBook,
   claimKeyFor,
+  participantConnectionId,
+  resolveViewerPhotoBookOffer,
+  buildPhotoBookOfferAfterConnect,
+  isPhotoBookParticipant,
 };

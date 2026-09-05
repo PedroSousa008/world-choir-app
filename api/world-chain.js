@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
       const view = String(req.query.view || '').trim().toLowerCase();
 
       if (view === 'photo-book' && chainId) {
-        const result = await listChainPhotoBook(eventId, chainId);
+        const result = await listChainPhotoBook(eventId, chainId, deviceId);
         return res.status(200).json(result);
       }
 
