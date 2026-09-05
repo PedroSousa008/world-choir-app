@@ -34,8 +34,10 @@ const WorldChainPage = (() => {
       dailyChainNumber: null,
       participants: [],
       viewerOffer: null,
+      viewerEditOffer: null,
     },
     photoBookFocus: null,
+    photoBookEditMode: false,
     completed: null,
     completedLoading: false,
     completedError: null,
@@ -124,6 +126,7 @@ const WorldChainPage = (() => {
   function resetPhotoBookDraft() {
     state.photoBookDraft = {
       dataUrl: null,
+      existingPhotoUrl: null,
       message: '',
       error: null,
       busy: false,
@@ -135,6 +138,7 @@ const WorldChainPage = (() => {
     clearPendingPhotoBook();
     state.photoBookOffer = null;
     state.photoBookContributeFrom = null;
+    state.photoBookEditMode = false;
     resetPhotoBookDraft();
     state.turnSheetOpen = false;
     state.view = returnToBook ? 'photo-book' : 'detail';
@@ -147,18 +151,36 @@ const WorldChainPage = (() => {
   }
 
   function openPhotoBookContribute(offer, opts = {}) {
-    if (!offer?.chainId || !offer?.connectionId) {
+    if (!offer?.chainId) {
+      finishPhotoBookStep();
+      return;
+    }
+    const isEdit = !!opts.edit;
+    if (!isEdit && !offer.connectionId) {
+      finishPhotoBookStep();
+      return;
+    }
+    if (isEdit && !offer.entryId) {
       finishPhotoBookStep();
       return;
     }
     state.photoBookContributeFrom = opts.from === 'photo-book' ? 'photo-book' : 'detail';
+    state.photoBookEditMode = isEdit;
     state.photoBookOffer = offer;
-    savePendingPhotoBook(offer);
+    if (!isEdit) savePendingPhotoBook(offer);
     state.activeChainId = offer.chainId;
     state.turnSheetOpen = false;
     state.feedback = null;
     state.photoBookFocus = null;
     resetPhotoBookDraft();
+    if (isEdit) {
+      state.photoBookDraft = {
+        ...state.photoBookDraft,
+        dataUrl: null,
+        existingPhotoUrl: offer.currentPhotoUrl || null,
+        message: offer.currentNote || '',
+      };
+    }
     state.view = 'photo-book-contribute';
     syncUrl({ replace: true });
     render();
@@ -177,6 +199,7 @@ const WorldChainPage = (() => {
         dailyChainNumber: cached.dailyChainNumber ?? null,
         participants: cached.participants || [],
         viewerOffer: cached.viewerOffer || null,
+        viewerEditOffer: cached.viewerEditOffer || null,
       };
     } else {
       state.photoBook = {
@@ -186,6 +209,7 @@ const WorldChainPage = (() => {
         dailyChainNumber: findChain(id)?.dailyChainNumber ?? null,
         participants: [],
         viewerOffer: null,
+        viewerEditOffer: null,
       };
     }
     if (state.view === 'photo-book') render();
@@ -210,6 +234,7 @@ const WorldChainPage = (() => {
         dailyChainNumber: body.dailyChainNumber ?? null,
         participants: Array.isArray(body.participants) ? body.participants : [],
         viewerOffer: body.viewerOffer || null,
+        viewerEditOffer: body.viewerEditOffer || null,
       };
       if (body.viewerOffer?.connectionId && !readPendingPhotoBook()) {
         state.photoBookOffer = body.viewerOffer;
@@ -801,7 +826,9 @@ const WorldChainPage = (() => {
       ? book.dailyChainNumber
       : (chain?.dailyChainNumber ?? '');
     const offer = book.viewerOffer || state.photoBookOffer || null;
+    const editOffer = book.viewerEditOffer || null;
     const showContributeCta = !!(offer?.connectionId);
+    const showEditCta = !!(editOffer?.entryId);
 
     return `
       <div class="wc-photobook-page">
@@ -819,7 +846,13 @@ const WorldChainPage = (() => {
           </p>
         </header>
 
-        ${showContributeCta ? `
+        ${showEditCta ? `
+          <div class="wc-photobook-cta-wrap">
+            <button type="button" class="wc-photobook-cta wc-photobook-cta--edit" data-open-photo-book-edit>
+              Edit your page
+            </button>
+          </div>
+        ` : showContributeCta ? `
           <div class="wc-photobook-cta-wrap">
             <button type="button" class="wc-photobook-cta" data-open-photo-book-contribute>
               Add your moment
@@ -971,9 +1004,12 @@ const WorldChainPage = (() => {
   function renderPhotoBookContribute() {
     const offer = state.photoBookOffer || readPendingPhotoBook();
     const draft = state.photoBookDraft || {};
+    const isEdit = !!state.photoBookEditMode;
     const message = String(draft.message || '');
     const count = [...message].length;
-    const hasSelfie = !!draft.dataUrl;
+    const hasNewSelfie = !!draft.dataUrl;
+    const previewUrl = draft.dataUrl || draft.existingPhotoUrl || null;
+    const hasSelfie = !!previewUrl;
     const hasNote = !!message.trim();
     const canSubmit = (hasSelfie || hasNote) && !draft.busy;
     const chainNum = offer?.dailyChainNumber != null ? offer.dailyChainNumber : '';
@@ -987,9 +1023,11 @@ const WorldChainPage = (() => {
         </header>
 
         <section class="wc-photobook-contribute__card">
-          <p class="wc-photobook-contribute__eyebrow">Optional</p>
+          <p class="wc-photobook-contribute__eyebrow">${isEdit ? 'One-time edit' : 'Optional'}</p>
           <h2 class="wc-photobook-contribute__title">
-            Add a selfie and a short note to this chain’s Photo Book.
+            ${isEdit
+              ? 'Update your selfie and note for this chain’s Photo Book.'
+              : 'Add a selfie and a short note to this chain’s Photo Book.'}
           </h2>
 
           <div class="wc-photobook-info">
@@ -1001,11 +1039,15 @@ const WorldChainPage = (() => {
             </span>
             <div class="wc-photobook-info__copy">
               <p class="wc-photobook-info__main">
-                Both are optional. Your page stays in the
-                <span class="wc-photobook-info__accent">Photo Book</span>
-                either way.
+                ${isEdit
+                  ? 'You can change this page <span class="wc-photobook-info__accent">once</span>. After you save, editing closes forever.'
+                  : 'Both are optional. Your page stays in the <span class="wc-photobook-info__accent">Photo Book</span> either way.'}
               </p>
-              <p class="wc-photobook-info__sub">A quiet record of the people who carried this chain.</p>
+              <p class="wc-photobook-info__sub">
+                ${isEdit
+                  ? 'Replace the photo, rewrite the note, or both — then save.'
+                  : 'A quiet record of the people who carried this chain.'}
+              </p>
             </div>
           </div>
 
@@ -1013,8 +1055,10 @@ const WorldChainPage = (() => {
 
           ${hasSelfie ? `
             <div class="wc-photobook-selfie wc-photobook-selfie--preview">
-              <img src="${esc(draft.dataUrl)}" alt="Your selfie preview">
-              <button type="button" class="wc-photobook-retake" data-retake-selfie ${draft.busy ? 'disabled' : ''}>Retake</button>
+              <img src="${esc(previewUrl)}" alt="Your selfie preview">
+              <button type="button" class="wc-photobook-retake" data-retake-selfie ${draft.busy ? 'disabled' : ''}>
+                ${hasNewSelfie || !isEdit ? 'Retake' : 'Replace photo'}
+              </button>
             </div>
           ` : `
             <button type="button" class="wc-photobook-selfie" data-open-selfie ${draft.busy ? 'disabled' : ''}>
@@ -1025,7 +1069,7 @@ const WorldChainPage = (() => {
                 </svg>
               </span>
               <span class="wc-photobook-selfie__title">Take a Selfie</span>
-              <span class="wc-photobook-selfie__hint">Optional · tap to open camera</span>
+              <span class="wc-photobook-selfie__hint">${isEdit ? 'Tap to replace photo' : 'Optional · tap to open camera'}</span>
             </button>
           `}
 
@@ -1039,7 +1083,7 @@ const WorldChainPage = (() => {
             data-photo-book-message
             maxlength="${PHOTO_BOOK_MAX_CHARS}"
             rows="2"
-            placeholder="Optional — a few words from you…"
+            placeholder="${isEdit ? 'Update your note…' : 'Optional — a few words from you…'}"
             ${draft.busy ? 'disabled' : ''}
           >${esc(message)}</textarea>
 
@@ -1053,11 +1097,11 @@ const WorldChainPage = (() => {
             data-submit-photo-book
             ${canSubmit ? '' : 'disabled'}
           >
-            ${draft.busy ? 'Adding…' : 'Add to Photo Book'}
+            ${draft.busy ? (isEdit ? 'Saving…' : 'Adding…') : (isEdit ? 'Save update' : 'Add to Photo Book')}
           </button>
 
           <button type="button" class="wc-photobook-skip" data-skip-photo-book ${draft.busy ? 'disabled' : ''}>
-            Skip for now
+            ${isEdit ? 'Cancel' : 'Skip for now'}
           </button>
 
           ${chainNum !== '' ? `
@@ -1691,6 +1735,12 @@ const WorldChainPage = (() => {
         if (offer) openPhotoBookContribute(offer, { from: 'photo-book' });
       });
     });
+    document.querySelectorAll('[data-open-photo-book-edit]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const offer = state.photoBook?.viewerEditOffer;
+        if (offer) openPhotoBookContribute(offer, { from: 'photo-book', edit: true });
+      });
+    });
     document.querySelectorAll('[data-open-photo-entry]').forEach((el) => {
       const open = () => {
         const idx = Number(el.getAttribute('data-open-photo-entry'));
@@ -1874,7 +1924,11 @@ const WorldChainPage = (() => {
       if (counter) counter.textContent = `${[...value].length}/${PHOTO_BOOK_MAX_CHARS}`;
       const submit = document.querySelector('[data-submit-photo-book]');
       if (submit) {
-        const hasContent = !!(state.photoBookDraft.dataUrl || String(state.photoBookDraft.message || '').trim());
+        const hasContent = !!(
+          state.photoBookDraft.dataUrl
+          || state.photoBookDraft.existingPhotoUrl
+          || String(state.photoBookDraft.message || '').trim()
+        );
         submit.disabled = !hasContent || !!state.photoBookDraft.busy;
       }
     });
@@ -1885,9 +1939,14 @@ const WorldChainPage = (() => {
 
     document.querySelector('[data-submit-photo-book]')?.addEventListener('click', async () => {
       const offer = state.photoBookOffer || readPendingPhotoBook();
+      const isEdit = !!state.photoBookEditMode;
       const hasPhoto = !!state.photoBookDraft.dataUrl;
+      const hasExistingPhoto = !!state.photoBookDraft.existingPhotoUrl;
       const hasNote = !!String(state.photoBookDraft.message || '').trim();
-      if (!offer?.chainId || !offer?.connectionId || (!hasPhoto && !hasNote)) return;
+      if (!offer?.chainId) return;
+      if (isEdit && !offer.entryId) return;
+      if (!isEdit && !offer.connectionId) return;
+      if (!hasPhoto && !hasNote && !(isEdit && hasExistingPhoto)) return;
       if (state.photoBookDraft.busy) return;
       state.photoBookDraft = {
         ...state.photoBookDraft,
@@ -1900,11 +1959,12 @@ const WorldChainPage = (() => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            action: 'add-photo-book',
+            action: isEdit ? 'update-photo-book' : 'add-photo-book',
             deviceId: deviceId(),
             eventId: eventId(),
             chainId: offer.chainId,
             connectionId: offer.connectionId,
+            entryId: offer.entryId || undefined,
             dataUrl: state.photoBookDraft.dataUrl || null,
             message: state.photoBookDraft.message || '',
             fileName: hasPhoto ? 'selfie.jpg' : '',
@@ -1912,14 +1972,21 @@ const WorldChainPage = (() => {
         });
         const body = await res.json().catch(() => ({}));
         if (!res.ok || !body.ok) {
-          throw new Error(body.error || 'Couldn’t add this to the Photo Book. Try again or skip for now.');
+          throw new Error(body.error || (isEdit
+            ? 'Couldn’t update this Photo Book page. Try again.'
+            : 'Couldn’t add this to the Photo Book. Try again or skip for now.'));
+        }
+        if (isEdit && state.photoBook) {
+          state.photoBook.viewerEditOffer = null;
         }
         finishPhotoBookStep();
       } catch (err) {
         state.photoBookDraft = {
           ...state.photoBookDraft,
           busy: false,
-          error: err.message || 'Couldn’t add this to the Photo Book. Try again or skip for now.',
+          error: err.message || (isEdit
+            ? 'Couldn’t update this Photo Book page. Try again.'
+            : 'Couldn’t add this to the Photo Book. Try again or skip for now.'),
         };
         render();
       }
@@ -2004,6 +2071,7 @@ const WorldChainPage = (() => {
             dailyChainNumber: book.dailyChainNumber ?? null,
             participants: book.participants || [],
             viewerOffer: book.viewerOffer || null,
+            viewerEditOffer: book.viewerEditOffer || null,
           };
         }
       }

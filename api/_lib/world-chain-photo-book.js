@@ -22,6 +22,8 @@ const {
 const ROOT = 'wc-data/world-chain/photo-book';
 const MAX_MESSAGE = 80;
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+/** One-time exception: Voice #5 may replace selfie/note once, then never again. */
+const ONE_TIME_EDIT_VOICE_NUMBER = 5;
 const IMAGE_MIME_RE = /^image\/(jpeg|jpg|png|webp|gif)$/i;
 const IMAGE_EXT_MAP = {
   jpeg: 'jpg',
@@ -198,6 +200,160 @@ async function resolveViewerPhotoBookOffer(chain, viewer, eventId = DEFAULT_EVEN
     dayKey: chain.dayKey,
     connectedAt: step?.completedAt || null,
     isFinalVoice: !!step?.isFinalVoice,
+  };
+}
+
+/** Voice #5 only — one replacement of selfie/note, then permanently locked. */
+function resolveViewerOneTimeEditOffer(chain, viewer, entry) {
+  if (!chain?.id || !viewer?.userId || !entry?.id) return null;
+  const voiceNum = Number(viewer.voiceNumber);
+  if (voiceNum !== ONE_TIME_EDIT_VOICE_NUMBER) return null;
+  if (Number(entry.voiceNumber) !== ONE_TIME_EDIT_VOICE_NUMBER
+    && entry.userId !== viewer.userId) {
+    return null;
+  }
+  if (entry.userId && entry.userId !== viewer.userId) return null;
+  if (entry.oneTimeEditCompleted) return null;
+  return {
+    chainId: chain.id,
+    entryId: entry.id,
+    connectionId: entry.connectionId || participantConnectionId(chain.id, viewer.userId),
+    dailyChainNumber: chain.dailyChainNumber,
+    currentNote: entry.message || '',
+    currentPhotoUrl: entry.imageUrl || null,
+    voiceNumber: ONE_TIME_EDIT_VOICE_NUMBER,
+  };
+}
+
+async function updateChainPhotoBookEntryOneTime({
+  deviceId,
+  eventId = DEFAULT_EVENT_ID,
+  chainId,
+  entryId,
+  dataUrl,
+  message = '',
+  fileName = '',
+}) {
+  assertBlobConfigured();
+  const eid = String(eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
+  const cid = String(chainId || '').trim();
+  const eidEntry = String(entryId || '').trim();
+  if (!deviceId || !cid || !eidEntry) {
+    const err = new Error('Missing Photo Book edit details');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const user = await findUserByDevice(deviceId);
+  if (!user?.id) {
+    const err = new Error('Join World Choir before editing the Photo Book.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const pledge = await readPledge(eid, user.id).catch(() => null);
+  const voiceNum = Number(pledge?.voice_number);
+  if (voiceNum !== ONE_TIME_EDIT_VOICE_NUMBER) {
+    const err = new Error('This one-time edit is not available for your Voice.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  let entry;
+  try {
+    entry = await readBlobJson(entryPath(eid, eidEntry));
+  } catch {
+    entry = null;
+  }
+  if (!entry || entry.deletedAt) {
+    const err = new Error('Photo Book page not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (entry.chainId !== cid) {
+    const err = new Error('Photo Book page not found on this chain');
+    err.statusCode = 404;
+    throw err;
+  }
+  if (entry.userId !== user.id) {
+    const err = new Error('You can only edit your own Photo Book page.');
+    err.statusCode = 403;
+    throw err;
+  }
+  if (entry.oneTimeEditCompleted) {
+    const err = new Error('This page was already updated and can no longer be changed.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const chain = await readStoredChain(eid, cid);
+  if (!chain || !isPhotoBookParticipant(chain, user.id)) {
+    const err = new Error('This Photo Book moment is not available for your account.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const cleanMessage = sanitizeMessage(message);
+  const parsedImage = dataUrl ? parseDataUrl(dataUrl) : null;
+  if (!parsedImage && !cleanMessage && !entry.imageUrl) {
+    const err = new Error('Add a selfie or a short note to update your page.');
+    err.code = 'EMPTY_CONTRIBUTION';
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const updatedAt = new Date().toISOString();
+  let imagePath = entry.imagePath || null;
+  let imageUrl = entry.imageUrl || null;
+
+  if (parsedImage) {
+    const contentType = parsedImage.contentType;
+    if (!IMAGE_MIME_RE.test(contentType)) {
+      const err = new Error('That file is not a supported image');
+      err.code = 'INVALID_IMAGE';
+      err.statusCode = 400;
+      throw err;
+    }
+    if (parsedImage.buffer.length > MAX_IMAGE_BYTES) {
+      const err = new Error('Image must be under 12 MB');
+      err.code = 'IMAGE_TOO_LARGE';
+      err.statusCode = 400;
+      throw err;
+    }
+    const subtype = contentType.replace(/^image\//, '');
+    const ext = IMAGE_EXT_MAP[subtype] || 'jpg';
+    // New path so browsers / CDN do not keep serving the old selfie.
+    imagePath = mediaFilePath(eid, user.id, `${entry.id}-edit1`, ext);
+    await putPrivateBinary(imagePath, parsedImage.buffer, contentType, { overwrite: true });
+    imageUrl = mediaProxyUrl(imagePath);
+  }
+
+  const next = {
+    ...entry,
+    message: cleanMessage,
+    imagePath,
+    imageUrl,
+    fileName: parsedImage ? String(fileName || '').slice(0, 120) : (entry.fileName || ''),
+    updatedAt,
+    oneTimeEditCompleted: true,
+    oneTimeEditCompletedAt: updatedAt,
+  };
+
+  await writeJson(entryPath(eid, entry.id), next, { overwrite: true });
+
+  return {
+    ok: true,
+    updated: true,
+    oneTimeEditCompleted: true,
+    entry: {
+      id: next.id,
+      chainId: next.chainId,
+      connectionId: next.connectionId,
+      message: next.message,
+      imageUrl: next.imageUrl,
+      createdAt: next.createdAt,
+      updatedAt: next.updatedAt,
+    },
   };
 }
 
@@ -431,14 +587,20 @@ async function listChainPhotoBook(eventId, chainId, deviceId = '') {
   });
 
   let viewerOffer = null;
+  let viewerEditOffer = null;
   if (deviceId) {
     const user = await findUserByDevice(deviceId).catch(() => null);
     if (user?.id) {
       const pledge = await readPledge(eid, user.id).catch(() => null);
-      viewerOffer = await resolveViewerPhotoBookOffer(chain, {
+      const viewer = {
         userId: user.id,
         voiceNumber: Number(pledge?.voice_number) || null,
-      }, eid);
+      };
+      viewerOffer = await resolveViewerPhotoBookOffer(chain, viewer, eid);
+      const ownEntry = byUserId.get(user.id)
+        || (Number.isFinite(viewer.voiceNumber) ? byVoiceNumber.get(viewer.voiceNumber) : null)
+        || null;
+      viewerEditOffer = resolveViewerOneTimeEditOffer(chain, viewer, ownEntry);
     }
   }
 
@@ -449,12 +611,15 @@ async function listChainPhotoBook(eventId, chainId, deviceId = '') {
     status: chain.status || null,
     participants,
     viewerOffer,
+    viewerEditOffer,
   };
 }
 
 module.exports = {
   MAX_MESSAGE,
+  ONE_TIME_EDIT_VOICE_NUMBER,
   createChainPhotoBookEntry,
+  updateChainPhotoBookEntryOneTime,
   listChainPhotoBook,
   claimKeyFor,
   participantConnectionId,

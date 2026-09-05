@@ -11,6 +11,7 @@ const {
 } = require('./_lib/world-chain');
 const {
   createChainPhotoBookEntry,
+  updateChainPhotoBookEntryOneTime,
   listChainPhotoBook,
 } = require('./_lib/world-chain-photo-book');
 const { jsonStorageError } = require('./_lib/store');
@@ -77,6 +78,22 @@ module.exports = async function handler(req, res) {
           eventId,
           chainId,
           connectionId: req.body?.connectionId,
+          dataUrl: req.body?.dataUrl,
+          message: req.body?.message,
+          fileName: req.body?.fileName,
+        });
+        return res.status(200).json(result);
+      }
+
+      if (action === 'update-photo-book') {
+        if (!chainId) {
+          return res.status(400).json({ error: 'chainId required' });
+        }
+        const result = await updateChainPhotoBookEntryOneTime({
+          deviceId,
+          eventId,
+          chainId,
+          entryId: req.body?.entryId,
           dataUrl: req.body?.dataUrl,
           message: req.body?.message,
           fileName: req.body?.fileName,
