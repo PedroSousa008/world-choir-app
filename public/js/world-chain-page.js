@@ -208,6 +208,7 @@ const WorldChainPage = (() => {
       || (route.length > 0 && route.every((s) => s.status === 'connected'));
     const activeIdx = route.findIndex((s) => s.status === 'active');
     const selectedIdx = route.findIndex((s) => s.status === 'selected');
+    const myVoice = Number(chain.viewer?.voiceNumber);
 
     let actorIdx = -1;
     if (!allDone) {
@@ -219,18 +220,26 @@ const WorldChainPage = (() => {
     const lastIdx = route.length - 1;
 
     return route.map((step, i) => {
+      const voiceNumber = step.assignedVoiceNumber || null;
+      const isMyCompletedStep = Number.isFinite(myVoice)
+        && myVoice > 0
+        && Number(voiceNumber) === myVoice;
+
       const base = {
         index: i + 1,
         country: step.country,
         requiredCity: step.requiredCity || null,
-        voiceNumber: step.assignedVoiceNumber || null,
+        voiceNumber,
         city: step.assignedCity || null,
         connectedAt: step.connectedAt || null,
+        isYou: false,
       };
 
       if (allDone || (step.status === 'connected' && i !== actorIdx)) {
         return {
           ...base,
+          // Highlight the viewer's own completed contribution ("Your Chain").
+          isYou: isMyCompletedStep,
           uiStatus: 'completed',
           statusLabel: 'Completed',
           statusDetail: formatRelativeAgo(step.connectedAt) || 'Connected',
@@ -238,9 +247,10 @@ const WorldChainPage = (() => {
       }
 
       if (i === actorIdx) {
+        const activeVoice = step.assignedVoiceNumber || chain.activeSelectedVoiceNumber || null;
         return {
           ...base,
-          voiceNumber: step.assignedVoiceNumber || chain.activeSelectedVoiceNumber || null,
+          voiceNumber: activeVoice,
           city: step.assignedCity || null,
           uiStatus: 'active',
           statusLabel: 'In Progress',
@@ -379,7 +389,7 @@ const WorldChainPage = (() => {
               <span role="columnheader">Status</span>
             </div>
             ${rows.map((row) => `
-              <div class="wc-viewer-table__row wc-viewer-table__row--${esc(row.uiStatus)}" role="row">
+              <div class="wc-viewer-table__row wc-viewer-table__row--${esc(row.uiStatus)}${row.isYou ? ' wc-viewer-table__row--you' : ''}" role="row">
                 <span class="wc-viewer-table__idx" role="cell">${esc(row.index)}</span>
                 <div class="wc-viewer-table__country" role="cell">
                   ${flagCircle(row.country, 'wc-viewer-table__flag')}
@@ -387,7 +397,7 @@ const WorldChainPage = (() => {
                 </div>
                 <div class="wc-viewer-table__voice" role="cell">
                   ${row.voiceNumber
-                    ? `<span class="wc-viewer-table__voice-num">${esc(formatVoiceNumber(row.voiceNumber))}</span>
+                    ? `<span class="wc-viewer-table__voice-num${row.isYou ? ' wc-viewer-table__voice-num--you' : ''}">${esc(formatVoiceNumber(row.voiceNumber))}</span>
                        <span class="wc-viewer-table__voice-city">${esc(row.city || '—')}</span>`
                     : `<span class="wc-viewer-table__voice-num wc-viewer-table__voice-num--empty">—</span>`}
                 </div>
