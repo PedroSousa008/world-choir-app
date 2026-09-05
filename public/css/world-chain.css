@@ -45,11 +45,12 @@
   flex: 1;
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.34em;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--accent-aurora);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .wc-chain-topbar__spacer {
