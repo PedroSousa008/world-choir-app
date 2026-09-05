@@ -61,6 +61,18 @@ function attemptsPath(eventId, day, chainId, voiceNumber) {
   return `${rootPath(eventId, day)}/attempts/${chainId}/v${voiceNumber}.json`;
 }
 
+function archiveRoot(eventId) {
+  return `wc-data/world-chain/archive/${encodeURIComponent(eventId)}`;
+}
+
+function archiveIndexPath(eventId) {
+  return `${archiveRoot(eventId)}/index.json`;
+}
+
+function archiveChainPath(eventId, chainId) {
+  return `${archiveRoot(eventId)}/chains/${encodeURIComponent(chainId)}.json`;
+}
+
 function normalizeCountry(value) {
   return String(value || '').trim();
 }
@@ -488,6 +500,47 @@ async function writeChain(eventId, day, chain) {
   return chain;
 }
 
+async function readArchiveIndex(eventId) {
+  try {
+    return await readBlobJson(archiveIndexPath(eventId));
+  } catch {
+    return null;
+  }
+}
+
+async function readArchivedChain(eventId, chainId) {
+  try {
+    return await readBlobJson(archiveChainPath(eventId, chainId));
+  } catch {
+    return null;
+  }
+}
+
+/** Persist completed chains forever (beyond daily storage versions). */
+async function archiveCompletedChain(chain) {
+  if (!chain?.id || !chain.eventId) return;
+  const status = chain.status === Status.COMPLETED || chain.completedAt
+    ? Status.COMPLETED
+    : null;
+  if (status !== Status.COMPLETED) return;
+
+  const snapshot = {
+    ...chain,
+    status: Status.COMPLETED,
+    completedAt: chain.completedAt || new Date().toISOString(),
+  };
+  await writeJson(archiveChainPath(chain.eventId, chain.id), snapshot, { overwrite: true });
+
+  const existing = await readArchiveIndex(chain.eventId);
+  const prevIds = Array.isArray(existing?.chainIds) ? existing.chainIds : [];
+  const chainIds = [chain.id, ...prevIds.filter((id) => id !== chain.id)].slice(0, 500);
+  await writeJson(archiveIndexPath(chain.eventId), {
+    eventId: chain.eventId,
+    chainIds,
+    updatedAt: new Date().toISOString(),
+  }, { overwrite: true });
+}
+
 async function generateDailyChains(eventId, day, now = new Date()) {
   assertBlobConfigured();
   const nowMs = now.getTime();
@@ -780,15 +833,62 @@ async function getTodayPayload(deviceId, eventId = DEFAULT_EVENT_ID) {
   };
 }
 
+async function getCompletedPayload(deviceId, eventId = DEFAULT_EVENT_ID) {
+  assertBlobConfigured();
+  const now = new Date();
+  const nowMs = now.getTime();
+  const viewer = await resolveViewer(deviceId, eventId);
+  const byId = new Map();
+
+  const index = await readArchiveIndex(eventId);
+  for (const id of index?.chainIds || []) {
+    const chain = await readArchivedChain(eventId, id);
+    if (chain) byId.set(chain.id, chain);
+  }
+
+  // Include / backfill any completed chains from today that aren't archived yet.
+  try {
+    const day = dayKeyUTC(now);
+    const { chains: todayChains } = await loadDayChains(eventId, day);
+    for (const chain of todayChains) {
+      if (deriveStatus(chain, nowMs) !== Status.COMPLETED) continue;
+      if (!byId.has(chain.id)) {
+        await archiveCompletedChain(chain);
+      }
+      byId.set(chain.id, chain);
+    }
+  } catch {
+    /* today load is best-effort for archive listing */
+  }
+
+  const chains = [...byId.values()]
+    .map((c) => publicChain(c, nowMs, viewer))
+    .sort((a, b) => {
+      const tb = new Date(b.completedAt || 0).getTime();
+      const ta = new Date(a.completedAt || 0).getTime();
+      return tb - ta;
+    });
+
+  return {
+    serverNow: now.toISOString(),
+    engine: CHAIN_ENGINE,
+    storageVersion: CHAIN_STORAGE_VERSION,
+    chains,
+    viewer,
+  };
+}
+
 async function getChainPayload(chainId, deviceId, eventId = DEFAULT_EVENT_ID) {
   const now = new Date();
   const day = dayKeyUTC(now);
   const viewer = await resolveViewer(deviceId, eventId);
   let chain = await readChain(eventId, day, chainId);
   if (!chain) {
-    // Search today's manifest only for v1 (same-day chains).
     const { chains } = await loadDayChains(eventId, day);
     chain = chains.find((c) => c.id === chainId) || null;
+  }
+  if (!chain) {
+    chain = await readArchivedChain(eventId, chainId);
   }
   if (!chain) {
     const err = new Error('Chain not found');
@@ -999,6 +1099,11 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   await writeChain(eventId, day, chain);
 
   const completed = chain.status === Status.COMPLETED;
+  if (completed) {
+    await archiveCompletedChain(chain).catch((err) => {
+      console.error('world-chain archive error:', err);
+    });
+  }
   return {
     ok: true,
     code: completed ? 'CHAIN_COMPLETE' : 'CONNECTION_MADE',
@@ -1036,6 +1141,7 @@ module.exports = {
   dayKeyUTC,
   ensureDailyChains,
   getTodayPayload,
+  getCompletedPayload,
   getChainPayload,
   acceptStart,
   connectVoice,

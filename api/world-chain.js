@@ -4,6 +4,7 @@ const {
   CHAIN_STORAGE_VERSION,
   ensureDailyChains,
   getTodayPayload,
+  getCompletedPayload,
   getChainPayload,
   acceptStart,
   connectVoice,
@@ -28,12 +29,20 @@ module.exports = async function handler(req, res) {
       }
       const eventId = String(req.query.eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
       const chainId = String(req.query.chainId || '').trim();
+      const view = String(req.query.view || '').trim().toLowerCase();
 
-      // Ensure today's chains exist (idempotent).
-      await ensureDailyChains(eventId);
+      // Ensure today's chains exist (idempotent) for live views.
+      if (view !== 'completed') {
+        await ensureDailyChains(eventId);
+      }
 
       if (chainId) {
         const result = await getChainPayload(chainId, deviceId, eventId);
+        return res.status(200).json(result);
+      }
+
+      if (view === 'completed') {
+        const result = await getCompletedPayload(deviceId, eventId);
         return res.status(200).json(result);
       }
 

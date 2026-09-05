@@ -94,48 +94,6 @@
   pointer-events: none;
 }
 
-.wc-chain-overview {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  width: 100%;
-  margin: 0 0 16px;
-  padding: 16px 10px;
-  border-radius: var(--radius-md);
-  background: rgba(6, 8, 14, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-}
-
-.wc-chain-overview__cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.wc-chain-overview__value {
-  font-family: var(--font-sans);
-  font-size: clamp(1.15rem, 4.5vw, 1.45rem);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  line-height: 1;
-}
-
-.wc-chain-overview__label {
-  font-family: var(--font-sans);
-  font-size: 0.52rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  line-height: 1.25;
-}
-
 .wc-chain-explore {
   display: flex;
   align-items: center;

@@ -7,10 +7,14 @@ const WorldChainPage = (() => {
     loading: true,
     error: null,
     data: null,
-    view: 'landing', // landing | detail
+    view: 'landing', // landing | detail | completed
     activeChainId: null,
+    detailReturnView: 'landing',
     busy: false,
     feedback: null,
+    completed: null,
+    completedLoading: false,
+    completedError: null,
   };
 
   function esc(value) {
@@ -106,29 +110,6 @@ const WorldChainPage = (() => {
     `;
   }
 
-  function renderOverview(overview = {}) {
-    return `
-      <div class="wc-chain-overview" aria-label="Today's World Chain overview">
-        <div class="wc-chain-overview__cell">
-          <span class="wc-chain-overview__value">${esc(overview.chainsToday ?? 0)}</span>
-          <span class="wc-chain-overview__label">Chains<br>Today</span>
-        </div>
-        <div class="wc-chain-overview__cell">
-          <span class="wc-chain-overview__value">${esc(overview.completed ?? 0)}</span>
-          <span class="wc-chain-overview__label">Completed</span>
-        </div>
-        <div class="wc-chain-overview__cell">
-          <span class="wc-chain-overview__value">${esc(overview.inProgress ?? 0)}</span>
-          <span class="wc-chain-overview__label">In Progress</span>
-        </div>
-        <div class="wc-chain-overview__cell">
-          <span class="wc-chain-overview__value">${esc(overview.stuck ?? 0)}</span>
-          <span class="wc-chain-overview__label">Stuck</span>
-        </div>
-      </div>
-    `;
-  }
-
   function renderCard(chain) {
     return `
       <article class="wc-chain-card" data-chain-id="${esc(chain.id)}">
@@ -168,10 +149,9 @@ const WorldChainPage = (() => {
 
     return `
       ${renderHero()}
-      ${renderOverview(data.overview)}
 
-      <button type="button" class="wc-chain-explore" data-scroll-chains>
-        EXPLORE TODAY'S CHAINS →
+      <button type="button" class="wc-chain-explore" data-open-completed>
+        COMPLETED CHAINS →
       </button>
 
       <h2 class="wc-chain-section-title" id="wc-chain-happening">Happening Now</h2>
@@ -192,8 +172,56 @@ const WorldChainPage = (() => {
     `;
   }
 
+  function renderCompletedList() {
+    if (state.completedLoading && !state.completed) {
+      return `
+        <div class="wc-chain-detail">
+          <button type="button" class="wc-chain-detail__back" data-back-landing>← World Chain</button>
+          <h2 class="wc-chain-section-title" style="text-align:left;margin-top:8px">Completed Chains</h2>
+          <div class="wc-chain-skel" aria-hidden="true"></div>
+          <div class="wc-chain-skel" aria-hidden="true"></div>
+        </div>
+      `;
+    }
+
+    if (state.completedError && !state.completed) {
+      return `
+        <div class="wc-chain-detail">
+          <button type="button" class="wc-chain-detail__back" data-back-landing>← World Chain</button>
+          <div class="wc-chain-empty">
+            <h3 class="wc-chain-empty__title">Could not load completed chains</h3>
+            <p class="wc-chain-empty__copy">${esc(state.completedError)}</p>
+            <button type="button" class="wc-chain-primary" style="margin-top:16px" data-open-completed>Try again</button>
+          </div>
+        </div>
+      `;
+    }
+
+    const chains = state.completed || [];
+    return `
+      <div class="wc-chain-detail">
+        <button type="button" class="wc-chain-detail__back" data-back-landing>← World Chain</button>
+        <h2 class="wc-chain-section-title" style="text-align:left;margin-top:8px">Completed Chains</h2>
+        ${chains.length === 0 ? `
+          <div class="wc-chain-empty">
+            <h3 class="wc-chain-empty__title">No completed chains yet</h3>
+            <p class="wc-chain-empty__copy">
+              When a World Chain reaches its final Voice, it will appear here — a lasting record of real connections across the world.
+            </p>
+          </div>
+        ` : `
+          <div class="wc-chain-list">
+            ${chains.map(renderCard).join('')}
+          </div>
+        `}
+      </div>
+    `;
+  }
+
   function findChain(id) {
-    return (state.data?.chains || []).find((c) => c.id === id) || null;
+    return (state.data?.chains || []).find((c) => c.id === id)
+      || (state.completed || []).find((c) => c.id === id)
+      || null;
   }
 
   function renderTurnPanel(chain) {
@@ -291,9 +319,11 @@ const WorldChainPage = (() => {
 
   function renderDetail() {
     const chain = findChain(state.activeChainId);
+    const backLabel = state.detailReturnView === 'completed' ? '← Completed Chains' : '← World Chain';
+    const backAttr = state.detailReturnView === 'completed' ? 'data-back-completed' : 'data-back-landing';
     if (!chain) {
       return `
-        <button type="button" class="wc-chain-detail__back" data-back-landing>← World Chain</button>
+        <button type="button" class="wc-chain-detail__back" ${backAttr}>${backLabel}</button>
         <div class="wc-chain-empty">
           <h3 class="wc-chain-empty__title">Chain unavailable</h3>
           <p class="wc-chain-empty__copy">This World Chain could not be loaded.</p>
@@ -303,7 +333,7 @@ const WorldChainPage = (() => {
 
     return `
       <div class="wc-chain-detail">
-        <button type="button" class="wc-chain-detail__back" data-back-landing>← World Chain</button>
+        <button type="button" class="wc-chain-detail__back" ${backAttr}>${backLabel}</button>
         <h2 class="wc-chain-card__title">WORLD CHAIN #${esc(chain.dailyChainNumber)}</h2>
         <p class="wc-chain-card__status" style="margin:8px 0 6px">
           <span class="wc-chain-card__dot ${statusDotClass(chain.status)}" aria-hidden="true"></span>
@@ -349,8 +379,39 @@ const WorldChainPage = (() => {
       return;
     }
 
-    root.innerHTML = state.view === 'detail' ? renderDetail() : renderLanding();
+    if (state.view === 'detail') root.innerHTML = renderDetail();
+    else if (state.view === 'completed') root.innerHTML = renderCompletedList();
+    else root.innerHTML = renderLanding();
     bind();
+  }
+
+  async function loadCompleted() {
+    state.view = 'completed';
+    state.activeChainId = null;
+    state.feedback = null;
+    state.completedLoading = true;
+    state.completedError = null;
+    render();
+    window.scrollTo(0, 0);
+    try {
+      await WorldChoirDB.ready?.();
+      const res = await fetch(
+        `/api/world-chain?deviceId=${encodeURIComponent(deviceId())}&eventId=${encodeURIComponent(eventId())}&view=completed`,
+        { cache: 'no-store' }
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Could not load completed chains');
+      }
+      const body = await res.json();
+      state.completed = body.chains || [];
+      state.completedLoading = false;
+      render();
+    } catch (err) {
+      state.completedLoading = false;
+      state.completedError = err.message || 'Could not load completed chains';
+      render();
+    }
   }
 
   async function load() {
@@ -408,14 +469,12 @@ const WorldChainPage = (() => {
 
   function bind() {
     document.querySelector('[data-retry]')?.addEventListener('click', () => load());
-    document.querySelector('[data-scroll-chains]')?.addEventListener('click', () => {
-      document.getElementById('wc-chain-happening')?.scrollIntoView({
-        behavior: window.matchMedia('(prefers-reduced-motion: reduce)')?.matches ? 'auto' : 'smooth',
-        block: 'start',
-      });
+    document.querySelectorAll('[data-open-completed]').forEach((btn) => {
+      btn.addEventListener('click', () => loadCompleted());
     });
     document.querySelectorAll('[data-open-chain]').forEach((btn) => {
       btn.addEventListener('click', () => {
+        state.detailReturnView = state.view === 'completed' ? 'completed' : 'landing';
         state.activeChainId = btn.getAttribute('data-open-chain');
         state.view = 'detail';
         state.feedback = null;
@@ -426,8 +485,16 @@ const WorldChainPage = (() => {
     document.querySelector('[data-back-landing]')?.addEventListener('click', () => {
       state.view = 'landing';
       state.activeChainId = null;
+      state.detailReturnView = 'landing';
       state.feedback = null;
       render();
+    });
+    document.querySelector('[data-back-completed]')?.addEventListener('click', () => {
+      state.view = 'completed';
+      state.activeChainId = null;
+      state.feedback = null;
+      render();
+      window.scrollTo(0, 0);
     });
     document.querySelectorAll('[data-accept-start]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -482,6 +549,9 @@ const WorldChainPage = (() => {
           if (body.chain) {
             const idx = state.data.chains.findIndex((c) => c.id === chainId);
             if (idx >= 0) state.data.chains[idx] = body.chain;
+            if (body.code === 'CHAIN_COMPLETE') {
+              state.completed = null;
+            }
           }
           state.feedback = {
             ok: !!body.ok,
