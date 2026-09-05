@@ -916,6 +916,31 @@ const WorldChainPage = (() => {
       || null;
   }
 
+  function isConnectOnCooldown(viewer) {
+    if (!viewer) return false;
+    if (viewer.connectOnCooldown) {
+      const until = viewer.connectCooldownUntil ? new Date(viewer.connectCooldownUntil).getTime() : 0;
+      if (Number.isFinite(until) && until > Date.now()) return true;
+      // Stale flag from cache — treat as expired.
+      if (!viewer.connectCooldownUntil) return true;
+      return false;
+    }
+    const until = viewer.connectCooldownUntil ? new Date(viewer.connectCooldownUntil).getTime() : 0;
+    return Number.isFinite(until) && until > Date.now();
+  }
+
+  function applyConnectCooldownToChain(chainId, body) {
+    if (!body?.cooldownUntil) return;
+    const chain = findChain(chainId);
+    if (!chain) return;
+    chain.viewer = chain.viewer || {};
+    chain.viewer.connectOnCooldown = true;
+    chain.viewer.connectCooldownUntil = body.cooldownUntil;
+    chain.viewer.connectCooldownMs = body.cooldownMs || 0;
+    chain.viewer.connectCooldownLabel = body.cooldownLabel || '';
+    cacheChain(chain);
+  }
+
   function renderTurnPanel(chain) {
     const viewer = chain.viewer || {};
     const route = chain.route || [];
@@ -941,6 +966,10 @@ const WorldChainPage = (() => {
     if (!viewer.isActiveTurn) return '';
 
     const isFinal = !!active.requiredCity;
+    const onCooldown = isConnectOnCooldown(viewer);
+    const cooldownLabel = viewer.connectCooldownLabel
+      || (state.feedback?.retryLabel ? String(state.feedback.retryLabel).replace(/^You can try again in:\s*/i, '') : '');
+    const locked = state.busy || onCooldown;
     return `
       <section class="wc-chain-turn">
         <p class="wc-chain-turn__eyebrow">It's your turn</p>
@@ -955,10 +984,16 @@ const WorldChainPage = (() => {
         </p>
         <form class="wc-chain-form" data-connect-form="${esc(chain.id)}">
           <label for="wc-chain-voice-input">Voice Number</label>
-          <input id="wc-chain-voice-input" name="voiceNumber" inputmode="numeric" autocomplete="off" placeholder="# __________" required>
-          <button type="submit" class="wc-chain-primary" ${state.busy ? 'disabled' : ''}>CONNECT VOICE</button>
+          <input id="wc-chain-voice-input" name="voiceNumber" inputmode="numeric" autocomplete="off" placeholder="# __________" required ${locked ? 'disabled' : ''}>
+          <button type="submit" class="wc-chain-primary" ${locked ? 'disabled' : ''}>CONNECT VOICE</button>
         </form>
-        ${state.feedback ? `
+        ${onCooldown ? `
+          <div class="wc-chain-feedback" role="status">
+            <strong>VOICE NOT FOUND</strong><br>
+            That Voice doesn't match this destination.<br>
+            You can try again in: ${esc(cooldownLabel || 'a few minutes')}
+          </div>
+        ` : state.feedback ? `
           <div class="wc-chain-feedback${state.feedback.ok ? ' wc-chain-feedback--ok' : ''}" role="status">
             <strong>${esc(state.feedback.title || '')}</strong><br>
             ${esc(state.feedback.message || '')}
@@ -1305,12 +1340,30 @@ const WorldChainPage = (() => {
       window.scrollTo(0, 0);
     });
     document.querySelectorAll('[data-open-turn-sheet]').forEach((el) => {
-      const open = () => {
+      const open = async () => {
         state.activeChainId = el.getAttribute('data-open-turn-sheet') || state.activeChainId;
         state.turnSheetOpen = true;
         state.feedback = null;
         render();
         window.scrollTo(0, 0);
+        // Re-fetch so a prior wrong attempt still locks input after leave/reopen.
+        try {
+          await refreshChain(state.activeChainId);
+          const chain = findChain(state.activeChainId);
+          if (isConnectOnCooldown(chain?.viewer)) {
+            state.feedback = {
+              ok: false,
+              title: 'VOICE NOT FOUND',
+              message: "That Voice doesn't match this destination.",
+              retryLabel: chain.viewer.connectCooldownLabel
+                ? `You can try again in: ${chain.viewer.connectCooldownLabel}`
+                : '',
+            };
+          }
+          render();
+        } catch {
+          /* keep cached chain */
+        }
       };
       el.addEventListener('click', open);
       el.addEventListener('keydown', (e) => {
@@ -1379,6 +1432,19 @@ const WorldChainPage = (() => {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const chainId = form.getAttribute('data-connect-form');
+        const chainNow = findChain(chainId);
+        if (isConnectOnCooldown(chainNow?.viewer)) {
+          state.feedback = {
+            ok: false,
+            title: 'VOICE NOT FOUND',
+            message: "That Voice doesn't match this destination.",
+            retryLabel: chainNow.viewer.connectCooldownLabel
+              ? `You can try again in: ${chainNow.viewer.connectCooldownLabel}`
+              : (state.feedback?.retryLabel || ''),
+          };
+          render();
+          return;
+        }
         const input = form.querySelector('input[name="voiceNumber"]');
         const voiceNumber = input?.value || '';
         state.busy = true;
@@ -1416,6 +1482,8 @@ const WorldChainPage = (() => {
               || (!body.chain.viewer?.isActiveTurn && !body.chain.viewer?.needsStart)) {
               state.turnSheetOpen = false;
             }
+          } else {
+            applyConnectCooldownToChain(chainId, body);
           }
           state.feedback = {
             ok: !!body.ok,

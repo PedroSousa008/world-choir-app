@@ -1,6 +1,6 @@
 /**
  * World Chain — trusted backend logic.
- * Exactly 5 daily chains; country/city routes; 48h account-age eligibility;
+ * Exactly 5 daily chains; country/city routes; 24h account-age eligibility;
  * attempt cooldowns; stuck after idle; never fabricates countries.
  */
 const { randomUUID } = require('crypto');
@@ -19,10 +19,8 @@ const DAILY_CHAIN_COUNT = 5;
 const MIN_CHAIN_LENGTH = 2;
 const CHAIN_DURATION_MS = 24 * 60 * 60 * 1000;
 const STUCK_AFTER_MS = 3 * 60 * 60 * 1000;
-const ACCOUNT_AGE_MS = 48 * 60 * 60 * 1000;
-/** Temporary test: no connect cooldowns (re-enable for production). */
-const COOLDOWNS_MS = [0, 0, 0];
-const TEST_DISABLE_CONNECT_COOLDOWN = true;
+const ACCOUNT_AGE_MS = 24 * 60 * 60 * 1000;
+const COOLDOWNS_MS = [10 * 60 * 1000, 30 * 60 * 1000, 60 * 60 * 1000];
 
 const Status = {
   IN_PROGRESS: 'IN_PROGRESS',
@@ -134,7 +132,7 @@ function isAccountEligible(user, pledge, nowMs = Date.now()) {
   return nowMs >= created + ACCOUNT_AGE_MS;
 }
 
-/** Test Chain #2 destination (Hvar) — allow connect even if Voice is under 48h. */
+/** Test Chain #2 destination (Hvar) — allow connect even if Voice is under 24h. */
 function isConnectTargetEligible(targetUser, target, active, nowMs) {
   if (
     TEST_FORCE_STARTER.enabled
@@ -931,7 +929,15 @@ async function getTodayPayload(deviceId, eventId = DEFAULT_EVENT_ID) {
   const viewer = await resolveViewer(deviceId, eventId);
   const { manifest, chains } = await loadDayChains(eventId, day);
 
-  const publicChains = chains.map((c) => publicChain(c, nowMs, viewer));
+  const publicChains = await Promise.all(
+    chains.map(async (c) => attachViewerConnectCooldown(
+      publicChain(c, nowMs, viewer),
+      eventId,
+      c.dayKey || day,
+      viewer,
+      nowMs
+    ))
+  );
   // Named chains (app-selected or user-connected) float to the top for this viewer.
   publicChains.sort((a, b) => {
     const an = a.viewer?.isNamed ? 1 : 0;
@@ -1039,7 +1045,13 @@ async function getChainPayload(chainId, deviceId, eventId = DEFAULT_EVENT_ID) {
 
   return {
     serverNow: now.toISOString(),
-    chain: publicChain(chain, now.getTime(), viewer),
+    chain: await attachViewerConnectCooldown(
+      publicChain(chain, now.getTime(), viewer),
+      eventId,
+      chain.dayKey || day,
+      viewer,
+      now.getTime()
+    ),
     viewer,
   };
 }
@@ -1054,6 +1066,26 @@ async function readAttempts(eventId, day, chainId, voiceNumber) {
 
 async function writeAttempts(eventId, day, chainId, voiceNumber, data) {
   await writeJson(attemptsPath(eventId, day, chainId, voiceNumber), data, { overwrite: true });
+}
+
+/** Attach live connect-cooldown state so reopening the turn UI stays locked. */
+async function attachViewerConnectCooldown(public, eventId, day, viewer, nowMs) {
+  if (!public?.viewer || !viewer?.voiceNumber || !public.viewer.isActiveTurn) return public;
+  const attempts = await readAttempts(eventId, day, public.id, viewer.voiceNumber);
+  const untilMs = attempts.cooldownUntil ? new Date(attempts.cooldownUntil).getTime() : 0;
+  if (!Number.isFinite(untilMs) || untilMs <= nowMs) {
+    public.viewer.connectOnCooldown = false;
+    public.viewer.connectCooldownUntil = null;
+    public.viewer.connectCooldownMs = 0;
+    public.viewer.connectCooldownLabel = '';
+    return public;
+  }
+  const waitMs = untilMs - nowMs;
+  public.viewer.connectOnCooldown = true;
+  public.viewer.connectCooldownUntil = attempts.cooldownUntil;
+  public.viewer.connectCooldownMs = waitMs;
+  public.viewer.connectCooldownLabel = formatDuration(waitMs);
+  return public;
 }
 
 function rejectionMessage() {
@@ -1155,25 +1187,25 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   }
 
   const attempts = await readAttempts(eventId, day, chainId, viewer.voiceNumber);
-  if (
-    !TEST_DISABLE_CONNECT_COOLDOWN
-    && attempts.cooldownUntil
-    && new Date(attempts.cooldownUntil).getTime() > nowMs
-  ) {
+  if (attempts.cooldownUntil && new Date(attempts.cooldownUntil).getTime() > nowMs) {
     const waitMs = new Date(attempts.cooldownUntil).getTime() - nowMs;
+    const public = publicChain(chain, nowMs, viewer);
+    await attachViewerConnectCooldown(public, eventId, day, viewer, nowMs);
     return {
       ...rejectionMessage(),
       cooldownMs: waitMs,
       cooldownLabel: formatDuration(waitMs),
+      cooldownUntil: attempts.cooldownUntil,
       title: 'VOICE NOT FOUND',
       message: "That Voice doesn't match this destination.",
       retryLabel: `You can try again in: ${formatDuration(waitMs)}`,
+      chain: public,
     };
   }
 
   const voiceNum = Number(String(submittedVoiceNumber || '').replace(/[^\d]/g, ''));
   if (!Number.isFinite(voiceNum) || voiceNum <= 0) {
-    return failAttempt(eventId, day, chainId, viewer, attempts, nowMs);
+    return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
   }
 
   const [pledges, users] = await Promise.all([
@@ -1200,7 +1232,7 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   }
 
   if (!valid) {
-    return failAttempt(eventId, day, chainId, viewer, attempts, nowMs);
+    return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
   }
 
   // Success — advance chain.
@@ -1275,26 +1307,29 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   };
 }
 
-async function failAttempt(eventId, day, chainId, viewer, attempts, nowMs) {
+async function failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain = null) {
   const streak = (attempts.incorrectStreak || 0) + 1;
-  const cooldownMs = TEST_DISABLE_CONNECT_COOLDOWN
-    ? 0
-    : COOLDOWNS_MS[Math.min(streak, COOLDOWNS_MS.length) - 1];
-  const cooldownUntil = cooldownMs > 0
-    ? new Date(nowMs + cooldownMs).toISOString()
-    : null;
+  const cooldownMs = COOLDOWNS_MS[Math.min(streak, COOLDOWNS_MS.length) - 1];
+  const cooldownUntil = new Date(nowMs + cooldownMs).toISOString();
   const next = {
     incorrectStreak: streak,
     cooldownUntil,
     history: [...(attempts.history || []), { at: new Date(nowMs).toISOString(), ok: false }].slice(-20),
   };
   await writeAttempts(eventId, day, chainId, viewer.voiceNumber, next);
-  return {
+  const payload = {
     ...rejectionMessage(),
     cooldownMs,
-    cooldownLabel: cooldownMs > 0 ? formatDuration(cooldownMs) : '',
-    retryLabel: cooldownMs > 0 ? `You can try again in: ${formatDuration(cooldownMs)}` : '',
+    cooldownLabel: formatDuration(cooldownMs),
+    cooldownUntil,
+    retryLabel: `You can try again in: ${formatDuration(cooldownMs)}`,
   };
+  if (chain) {
+    const public = publicChain(chain, nowMs, viewer);
+    await attachViewerConnectCooldown(public, eventId, day, viewer, nowMs);
+    payload.chain = public;
+  }
+  return payload;
 }
 
 module.exports = {
