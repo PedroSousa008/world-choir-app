@@ -16,6 +16,7 @@ const WorldChainPage = (() => {
     detailReturnView: 'landing',
     busy: false,
     feedback: null,
+    turnSheetOpen: false,
     completed: null,
     completedLoading: false,
     completedError: null,
@@ -324,7 +325,7 @@ const WorldChainPage = (() => {
   /**
    * Viewer progress rows:
    * - Completed: prior connected countries
-   * - In Progress: country of the active selected Voice (actor)
+   * - In Progress / Keep the Chain Alive: country of the active selected Voice (actor)
    * - Not Yet Connected: remaining destinations (including the one being sought)
    */
   function progressRows(chain) {
@@ -334,6 +335,11 @@ const WorldChainPage = (() => {
     const activeIdx = route.findIndex((s) => s.status === 'active');
     const selectedIdx = route.findIndex((s) => s.status === 'selected');
     const myVoice = Number(chain.viewer?.voiceNumber);
+    const isMyTurn = !!(
+      chain.viewer?.isCurrentUserSelectedVoice
+      || chain.viewer?.isActiveTurn
+      || chain.viewer?.needsStart
+    );
 
     let actorIdx = -1;
     if (!allDone) {
@@ -358,6 +364,7 @@ const WorldChainPage = (() => {
         city: step.assignedCity || null,
         connectedAt: step.connectedAt || null,
         isYou: false,
+        isKeepAlive: false,
       };
 
       if (allDone || (step.status === 'connected' && i !== actorIdx)) {
@@ -373,13 +380,17 @@ const WorldChainPage = (() => {
 
       if (i === actorIdx) {
         const activeVoice = step.assignedVoiceNumber || chain.activeSelectedVoiceNumber || null;
+        const keepAlive = isMyTurn;
         return {
           ...base,
           voiceNumber: activeVoice,
           city: step.assignedCity || null,
-          uiStatus: 'active',
-          statusLabel: 'In Progress',
-          statusDetail: 'Waiting for next connection...',
+          isKeepAlive: keepAlive,
+          uiStatus: keepAlive ? 'keep-alive' : 'active',
+          statusLabel: keepAlive ? 'Keep the Chain Alive' : 'In Progress',
+          statusDetail: keepAlive
+            ? 'Find someone from the next country to continue the chain.'
+            : 'Waiting for next connection...',
         };
       }
 
@@ -404,7 +415,7 @@ const WorldChainPage = (() => {
       if (row.uiStatus === 'completed') {
         nodeClass = 'is-done';
         lineClass = 'is-done';
-      } else if (row.uiStatus === 'active') {
+      } else if (row.uiStatus === 'active' || row.uiStatus === 'keep-alive') {
         nodeClass = 'is-live';
         lineClass = 'is-live';
       }
@@ -432,15 +443,16 @@ const WorldChainPage = (() => {
             </svg>
           </span>
           <div class="wc-viewer-status__text">
-            <span class="wc-viewer-status__label">Completed</span>
+            <span class="wc-viewer-status__label">${esc(row.statusLabel)}</span>
             <span class="wc-viewer-status__detail">${esc(row.statusDetail)}</span>
           </div>
         </div>
       `;
     }
-    if (row.uiStatus === 'active') {
+    if (row.uiStatus === 'keep-alive' || row.uiStatus === 'active') {
+      const tone = row.uiStatus === 'keep-alive' ? 'keep' : 'active';
       return `
-        <div class="wc-viewer-status wc-viewer-status--active">
+        <div class="wc-viewer-status wc-viewer-status--${tone}">
           <span class="wc-viewer-status__icon" aria-hidden="true">
             <svg viewBox="0 0 20 20" width="16" height="16" fill="none">
               <circle cx="10" cy="10" r="8.25" stroke="currentColor" stroke-width="1.5"/>
@@ -448,7 +460,7 @@ const WorldChainPage = (() => {
             </svg>
           </span>
           <div class="wc-viewer-status__text">
-            <span class="wc-viewer-status__label">In Progress</span>
+            <span class="wc-viewer-status__label">${esc(row.statusLabel)}</span>
             <span class="wc-viewer-status__detail">${esc(row.statusDetail)}</span>
           </div>
         </div>
@@ -462,7 +474,7 @@ const WorldChainPage = (() => {
           </svg>
         </span>
         <div class="wc-viewer-status__text">
-          <span class="wc-viewer-status__label">Not Yet Connected</span>
+          <span class="wc-viewer-status__label">${esc(row.statusLabel)}</span>
           <span class="wc-viewer-status__detail">${esc(row.statusDetail)}</span>
         </div>
       </div>
@@ -513,8 +525,19 @@ const WorldChainPage = (() => {
               <span role="columnheader">Voice</span>
               <span role="columnheader">Status</span>
             </div>
-            ${rows.map((row) => `
-              <div class="wc-viewer-table__row wc-viewer-table__row--${esc(row.uiStatus)}${row.isYou ? ' wc-viewer-table__row--you' : ''}" role="row">
+            ${rows.map((row) => {
+              const keepAlive = !!row.isKeepAlive;
+              const rowClass = [
+                'wc-viewer-table__row',
+                `wc-viewer-table__row--${row.uiStatus}`,
+                row.isYou ? 'wc-viewer-table__row--you' : '',
+                keepAlive ? 'wc-viewer-table__row--keep-alive' : '',
+              ].filter(Boolean).join(' ');
+              const openAttrs = keepAlive
+                ? ` role="button" tabindex="0" data-open-turn-sheet="${esc(chain.id)}" aria-label="Keep the Chain Alive"`
+                : ' role="row"';
+              return `
+              <div class="${rowClass}"${openAttrs}>
                 <span class="wc-viewer-table__idx" role="cell">${esc(row.index)}</span>
                 <div class="wc-viewer-table__country" role="cell">
                   ${flagCircle(row.country, 'wc-viewer-table__flag')}
@@ -522,7 +545,7 @@ const WorldChainPage = (() => {
                 </div>
                 <div class="wc-viewer-table__voice" role="cell">
                   ${row.voiceNumber
-                    ? `<span class="wc-viewer-table__voice-num${row.isYou ? ' wc-viewer-table__voice-num--you' : ''}">${esc(formatVoiceNumber(row.voiceNumber))}</span>
+                    ? `<span class="wc-viewer-table__voice-num${row.isYou || keepAlive ? ' wc-viewer-table__voice-num--you' : ''}">${esc(formatVoiceNumber(row.voiceNumber))}</span>
                        <span class="wc-viewer-table__voice-city">${esc(row.city || '—')}</span>`
                     : `<span class="wc-viewer-table__voice-num wc-viewer-table__voice-num--empty">—</span>`}
                 </div>
@@ -530,13 +553,24 @@ const WorldChainPage = (() => {
                   ${renderProgressStatusCell(row)}
                 </div>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </section>
 
         <button type="button" class="wc-viewer-share" data-share-chain="${esc(chain.id)}">
           Share This Chain →
         </button>
+
+        ${state.turnSheetOpen ? `
+          <div class="wc-turn-sheet" role="dialog" aria-modal="true" aria-label="Keep the Chain Alive">
+            <div class="wc-turn-sheet__backdrop" data-close-turn-sheet aria-hidden="true"></div>
+            <div class="wc-turn-sheet__panel">
+              <button type="button" class="wc-turn-sheet__close" data-close-turn-sheet aria-label="Close">←</button>
+              ${renderTurnPanel(chain)}
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -791,15 +825,7 @@ const WorldChainPage = (() => {
       `;
     }
 
-    const isSelectedVoice = !!(
-      chain.viewer?.isCurrentUserSelectedVoice
-      || chain.viewer?.isActiveTurn
-    );
-
-    if (isSelectedVoice && chain.status !== 'COMPLETED') {
-      return renderSelectedVoiceDetail(chain);
-    }
-
+    // Selected Voices see the same viewer table; turn flow opens from their row.
     return renderViewerDetail(chain);
   }
 
@@ -1041,6 +1067,7 @@ const WorldChainPage = (() => {
         state.activeChainId = btn.getAttribute('data-open-chain');
         state.view = 'detail';
         state.feedback = null;
+        state.turnSheetOpen = false;
         const existing = findChain(state.activeChainId);
         if (existing) cacheChain(existing);
         syncUrl();
@@ -1076,6 +1103,29 @@ const WorldChainPage = (() => {
       syncUrl();
       render();
       window.scrollTo(0, 0);
+    });
+    document.querySelectorAll('[data-open-turn-sheet]').forEach((el) => {
+      const open = () => {
+        state.activeChainId = el.getAttribute('data-open-turn-sheet') || state.activeChainId;
+        state.turnSheetOpen = true;
+        state.feedback = null;
+        render();
+        window.scrollTo(0, 0);
+      };
+      el.addEventListener('click', open);
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          open();
+        }
+      });
+    });
+    document.querySelectorAll('[data-close-turn-sheet]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.turnSheetOpen = false;
+        state.feedback = null;
+        render();
+      });
     });
     document.querySelectorAll('[data-open-photo-book]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1149,8 +1199,9 @@ const WorldChainPage = (() => {
           const body = await res.json();
           if (body.chain) {
             mergeChainIntoState(body.chain);
-            if (body.code === 'CHAIN_COMPLETE') {
-              state.completed = null;
+            if (body.code === 'CHAIN_COMPLETE'
+              || (!body.chain.viewer?.isActiveTurn && !body.chain.viewer?.needsStart)) {
+              state.turnSheetOpen = false;
             }
           }
           state.feedback = {
