@@ -3,6 +3,10 @@
  * Matches World Choir Home visual system; consumes /api/world-chain.
  */
 const WorldChainPage = (() => {
+  const TODAY_CACHE_KEY = 'wc_world_chain_today_v1';
+  const CHAIN_CACHE_PREFIX = 'wc_world_chain_one_v1:';
+  const COMPLETED_CACHE_KEY = 'wc_world_chain_completed_v1';
+
   let state = {
     loading: true,
     error: null,
@@ -23,6 +27,68 @@ const WorldChainPage = (() => {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function readJsonCache(key) {
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  function writeJsonCache(key, value) {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      /* quota / private mode */
+    }
+  }
+
+  function cacheTodayPayload(payload) {
+    if (!payload) return;
+    writeJsonCache(TODAY_CACHE_KEY, { savedAt: Date.now(), payload });
+  }
+
+  function readTodayPayload() {
+    return readJsonCache(TODAY_CACHE_KEY)?.payload || null;
+  }
+
+  function cacheChain(chain) {
+    if (!chain?.id) return;
+    writeJsonCache(CHAIN_CACHE_PREFIX + chain.id, { savedAt: Date.now(), chain });
+  }
+
+  function readCachedChain(chainId) {
+    if (!chainId) return null;
+    return readJsonCache(CHAIN_CACHE_PREFIX + chainId)?.chain || null;
+  }
+
+  function cacheCompleted(chains) {
+    writeJsonCache(COMPLETED_CACHE_KEY, { savedAt: Date.now(), chains: chains || [] });
+  }
+
+  function readCachedCompleted() {
+    return readJsonCache(COMPLETED_CACHE_KEY)?.chains || null;
+  }
+
+  function mergeChainIntoState(chain) {
+    if (!chain?.id) return;
+    cacheChain(chain);
+    if (!state.data) {
+      state.data = { chains: [chain], overview: {}, limited: false };
+      return;
+    }
+    if (!Array.isArray(state.data.chains)) state.data.chains = [];
+    const idx = state.data.chains.findIndex((c) => c.id === chain.id);
+    if (idx >= 0) state.data.chains[idx] = chain;
+    else state.data.chains.push(chain);
+    if (state.completed) {
+      const cidx = state.completed.findIndex((c) => c.id === chain.id);
+      if (cidx >= 0) state.completed[cidx] = chain;
+    }
   }
 
   function deviceId() {
@@ -162,6 +228,58 @@ const WorldChainPage = (() => {
         </button>
       </header>
     `;
+  }
+
+  function renderLandingSkeleton() {
+    return `
+      <div class="wc-chain-boot wc-chain-boot--landing" aria-busy="true">
+        <header class="wc-chain-topbar">
+          <a class="wc-chain-back" href="index.html" aria-label="Back to Home">←</a>
+          <h1 class="wc-chain-brand">World Chain</h1>
+          <span class="wc-chain-topbar__spacer" aria-hidden="true"></span>
+        </header>
+        <div class="wc-chain-hero wc-chain-hero--skel" aria-hidden="true"></div>
+        <div class="wc-chain-skel" aria-hidden="true"></div>
+        <div class="wc-chain-skel" aria-hidden="true"></div>
+        <div class="wc-chain-skel" aria-hidden="true"></div>
+      </div>
+    `;
+  }
+
+  function renderDetailSkeleton() {
+    const backAttr = state.detailReturnView === 'completed' ? 'data-back-completed' : 'data-back-landing';
+    return `
+      <div class="wc-viewer wc-chain-boot wc-chain-boot--detail" aria-busy="true">
+        ${renderDetailTopbar(backAttr)}
+        <div class="wc-viewer-skel-title" aria-hidden="true"></div>
+        <div class="wc-viewer-skel-route" aria-hidden="true"></div>
+        <div class="wc-viewer-skel-stats" aria-hidden="true"></div>
+        <div class="wc-chain-skel wc-chain-skel--strip" aria-hidden="true"></div>
+        <div class="wc-viewer-skel-card" aria-hidden="true">
+          <div class="wc-chain-skel" aria-hidden="true"></div>
+          <div class="wc-chain-skel" aria-hidden="true"></div>
+          <div class="wc-chain-skel" aria-hidden="true"></div>
+        </div>
+        <div class="wc-chain-skel wc-chain-skel--cta" aria-hidden="true"></div>
+      </div>
+    `;
+  }
+
+  function renderCompletedSkeleton() {
+    return `
+      <div class="wc-chain-boot wc-chain-boot--completed" aria-busy="true">
+        ${renderDetailTopbar('data-back-landing')}
+        <div class="wc-viewer-skel-title wc-viewer-skel-title--sm" aria-hidden="true"></div>
+        <div class="wc-chain-skel" aria-hidden="true"></div>
+        <div class="wc-chain-skel" aria-hidden="true"></div>
+      </div>
+    `;
+  }
+
+  function renderBootSkeleton() {
+    if (state.view === 'detail' || state.view === 'photo-book') return renderDetailSkeleton();
+    if (state.view === 'completed') return renderCompletedSkeleton();
+    return renderLandingSkeleton();
   }
 
   function formatVoiceNumber(n) {
@@ -698,24 +816,26 @@ const WorldChainPage = (() => {
     if (!root) return;
 
     if (state.loading && !state.data) {
-      root.innerHTML = `
-        ${renderHero()}
-        <div class="wc-chain-skel" aria-hidden="true"></div>
-        <div class="wc-chain-skel" aria-hidden="true"></div>
-        <div class="wc-chain-skel" aria-hidden="true"></div>
-      `;
+      root.innerHTML = renderBootSkeleton();
+      bind();
       return;
     }
 
     if (state.error && !state.data) {
       root.innerHTML = `
-        ${renderHero()}
+        ${renderLandingSkeleton()}
         <div class="wc-chain-empty">
           <h3 class="wc-chain-empty__title">Could not load World Chain</h3>
           <p class="wc-chain-empty__copy">${esc(state.error)}</p>
           <button type="button" class="wc-chain-primary" style="margin-top:16px" data-retry>Try again</button>
         </div>
       `;
+      bind();
+      return;
+    }
+
+    if ((state.view === 'detail' || state.view === 'photo-book') && !findChain(state.activeChainId)) {
+      root.innerHTML = renderDetailSkeleton();
       bind();
       return;
     }
@@ -740,10 +860,14 @@ const WorldChainPage = (() => {
       state.view = 'completed';
       state.activeChainId = null;
       state.feedback = null;
-    }
-    state.completedLoading = !keepDetail;
-    state.completedError = null;
-    if (!keepDetail) {
+      const cached = readCachedCompleted();
+      if (cached) {
+        state.completed = cached;
+        state.completedLoading = false;
+      } else {
+        state.completedLoading = true;
+      }
+      state.completedError = null;
       if (!skipUrl) syncUrl();
       render();
       window.scrollTo(0, 0);
@@ -760,6 +884,7 @@ const WorldChainPage = (() => {
       }
       const body = await res.json();
       state.completed = body.chains || [];
+      cacheCompleted(state.completed);
       state.completedLoading = false;
       if (!keepDetail) render();
     } catch (err) {
@@ -771,9 +896,11 @@ const WorldChainPage = (() => {
   }
 
   async function load() {
-    state.loading = true;
-    state.error = null;
-    render();
+    const hadCache = !!state.data;
+    if (!hadCache) {
+      state.loading = true;
+      render();
+    }
     try {
       await WorldChoirDB.ready?.();
       const id = deviceId();
@@ -786,13 +913,22 @@ const WorldChainPage = (() => {
         throw new Error(body.error || 'Could not load World Chain');
       }
       state.data = await res.json();
+      cacheTodayPayload(state.data);
+      (state.data.chains || []).forEach(cacheChain);
       state.loading = false;
+      state.error = null;
       applyUrlState();
+      if (state.activeChainId) {
+        const single = readCachedChain(state.activeChainId);
+        if (single) mergeChainIntoState(single);
+      }
       render();
     } catch (err) {
       state.loading = false;
-      state.error = err.message || 'Could not load World Chain';
-      render();
+      if (!state.data) {
+        state.error = err.message || 'Could not load World Chain';
+        render();
+      }
     }
   }
 
@@ -805,15 +941,7 @@ const WorldChainPage = (() => {
     if (!res.ok) return;
     const body = await res.json();
     if (!body.chain) return;
-    if (state.data) {
-      const idx = state.data.chains.findIndex((c) => c.id === chainId);
-      if (idx >= 0) state.data.chains[idx] = body.chain;
-      else state.data.chains.push(body.chain);
-    }
-    if (state.completed) {
-      const cidx = state.completed.findIndex((c) => c.id === chainId);
-      if (cidx >= 0) state.completed[cidx] = body.chain;
-    }
+    mergeChainIntoState(body.chain);
   }
 
   function shareHelp(chain) {
@@ -921,6 +1049,8 @@ const WorldChainPage = (() => {
         state.activeChainId = btn.getAttribute('data-open-chain');
         state.view = 'detail';
         state.feedback = null;
+        const existing = findChain(state.activeChainId);
+        if (existing) cacheChain(existing);
         syncUrl();
         render();
         window.scrollTo(0, 0);
@@ -994,8 +1124,7 @@ const WorldChainPage = (() => {
           });
           const body = await res.json();
           if (body.chain) {
-            const idx = state.data.chains.findIndex((c) => c.id === chainId);
-            if (idx >= 0) state.data.chains[idx] = body.chain;
+            mergeChainIntoState(body.chain);
           }
         } catch {
           /* keep UI */
@@ -1027,8 +1156,7 @@ const WorldChainPage = (() => {
           });
           const body = await res.json();
           if (body.chain) {
-            const idx = state.data.chains.findIndex((c) => c.id === chainId);
-            if (idx >= 0) state.data.chains[idx] = body.chain;
+            mergeChainIntoState(body.chain);
             if (body.code === 'CHAIN_COMPLETE') {
               state.completed = null;
             }
@@ -1089,6 +1217,29 @@ const WorldChainPage = (() => {
     render();
   }
 
+  function hydrateFromCache() {
+    applyUrlState();
+    const today = readTodayPayload();
+    if (today) {
+      state.data = today;
+      state.loading = false;
+    }
+    if (state.view === 'completed') {
+      const completed = readCachedCompleted();
+      if (completed) {
+        state.completed = completed;
+        state.completedLoading = false;
+      }
+    }
+    if (state.activeChainId) {
+      const single = readCachedChain(state.activeChainId);
+      if (single) {
+        mergeChainIntoState(single);
+        state.loading = false;
+      }
+    }
+  }
+
   function init() {
     if (typeof WorldChoirNav !== 'undefined') {
       WorldChoirNav.startWatcher('world-chain');
@@ -1096,8 +1247,11 @@ const WorldChainPage = (() => {
     window.addEventListener('popstate', () => {
       restoreFromUrl();
     });
-    // Apply URL before first network paint so refresh keeps the open chain.
-    applyUrlState();
+
+    // Instant paint from URL + session cache (never flash the wrong page).
+    hydrateFromCache();
+    render();
+
     load().then(async () => {
       if (state.view === 'completed') {
         await loadCompleted({ skipUrl: true });

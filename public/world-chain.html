@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260903p">
-  <link rel="stylesheet" href="css/world-chain.css?v=20260905u">
+  <link rel="stylesheet" href="css/world-chain.css?v=20260905w">
   <link rel="stylesheet" href="css/live-event.css?v=20260904as">
   <script src="js/world-choir-event-schedule.js?v=20260904bv"></script>
   <script src="js/live-event/live-event-config.js?v=20260904as"></script>
@@ -22,17 +22,74 @@
   <div class="ambient-bg"></div>
 
   <main class="page world-chain-page" id="world-chain-page">
-    <div id="world-chain-root" aria-live="polite"></div>
+    <!-- HTML-inline first paint: never empty. Inline boot swaps to detail/completed skeleton from URL. -->
+    <div id="world-chain-root" aria-live="polite" aria-busy="true">
+      <div class="wc-chain-boot wc-chain-boot--landing">
+        <header class="wc-chain-topbar">
+          <a class="wc-chain-back" href="index.html" aria-label="Back to Home">←</a>
+          <h1 class="wc-chain-brand">World Chain</h1>
+          <span class="wc-chain-topbar__spacer" aria-hidden="true"></span>
+        </header>
+        <div class="wc-chain-hero wc-chain-hero--skel" aria-hidden="true"></div>
+        <div class="wc-chain-skel" aria-hidden="true"></div>
+        <div class="wc-chain-skel" aria-hidden="true"></div>
+        <div class="wc-chain-skel" aria-hidden="true"></div>
+      </div>
+    </div>
   </main>
 
   <div id="nav-root"></div>
+
+  <script>
+    (function () {
+      var root = document.getElementById('world-chain-root');
+      if (!root) return;
+      var params = new URLSearchParams(window.location.search);
+      var chain = params.get('chain');
+      var view = params.get('view');
+      var topbar =
+        '<header class="wc-chain-topbar">' +
+          '<button type="button" class="wc-chain-back" aria-label="Back">←</button>' +
+          '<h1 class="wc-chain-brand">World Chain</h1>' +
+          '<span class="wc-chain-topbar__spacer" aria-hidden="true"></span>' +
+        '</header>';
+
+      if (chain) {
+        root.innerHTML =
+          '<div class="wc-viewer wc-chain-boot wc-chain-boot--detail" aria-busy="true">' +
+            topbar +
+            '<div class="wc-viewer-skel-title" aria-hidden="true"></div>' +
+            '<div class="wc-viewer-skel-route" aria-hidden="true"></div>' +
+            '<div class="wc-viewer-skel-stats" aria-hidden="true"></div>' +
+            '<div class="wc-chain-skel wc-chain-skel--strip" aria-hidden="true"></div>' +
+            '<div class="wc-viewer-skel-card" aria-hidden="true">' +
+              '<div class="wc-chain-skel" aria-hidden="true"></div>' +
+              '<div class="wc-chain-skel" aria-hidden="true"></div>' +
+              '<div class="wc-chain-skel" aria-hidden="true"></div>' +
+            '</div>' +
+            '<div class="wc-chain-skel wc-chain-skel--cta" aria-hidden="true"></div>' +
+          '</div>';
+        return;
+      }
+
+      if (view === 'completed') {
+        root.innerHTML =
+          '<div class="wc-chain-boot wc-chain-boot--completed" aria-busy="true">' +
+            topbar +
+            '<div class="wc-viewer-skel-title wc-viewer-skel-title--sm" aria-hidden="true"></div>' +
+            '<div class="wc-chain-skel" aria-hidden="true"></div>' +
+            '<div class="wc-chain-skel" aria-hidden="true"></div>' +
+          '</div>';
+      }
+    })();
+  </script>
 
   <script src="js/world-choir-config.js?v=20260904bl"></script>
   <script src="js/world-choir-db.js?v=20260904bx"></script>
   <script src="js/world-choir-a11y.js?v=20260903p"></script>
   <script src="js/world-choir-nav.js?v=20260904cc"></script>
   <script src="js/world-choir-flags.js?v=20260905s"></script>
-  <script src="js/world-chain-page.js?v=20260905v"></script>
+  <script src="js/world-chain-page.js?v=20260905w"></script>
   <script>WorldChainPage.init();</script>
 </body>
 </html>

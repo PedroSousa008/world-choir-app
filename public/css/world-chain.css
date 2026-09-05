@@ -618,6 +618,104 @@
   100% { background-position: -100% 0; }
 }
 
+/* First-paint / boot skeletons */
+.wc-chain-hero--skel {
+  position: relative;
+  width: calc(100% + 40px);
+  margin: 0 -20px 24px;
+  aspect-ratio: 1619 / 971;
+  border-radius: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: wcChainSkel 1.3s ease-in-out infinite;
+}
+
+.wc-viewer-skel-title {
+  width: 70%;
+  max-width: 260px;
+  height: 28px;
+  margin: 8px auto 12px;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.11) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: wcChainSkel 1.3s ease-in-out infinite;
+}
+
+.wc-viewer-skel-title--sm {
+  width: 55%;
+  height: 18px;
+  margin: 4px 0 16px;
+}
+
+.wc-viewer-skel-route {
+  width: 48%;
+  max-width: 180px;
+  height: 12px;
+  margin: 0 auto 16px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: wcChainSkel 1.3s ease-in-out infinite;
+}
+
+.wc-viewer-skel-stats {
+  height: 72px;
+  margin: 0 0 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(78, 197, 232, 0.16);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 200% 100%;
+  animation: wcChainSkel 1.3s ease-in-out infinite;
+}
+
+.wc-chain-skel--strip {
+  height: 52px;
+  margin-bottom: 14px;
+}
+
+.wc-viewer-skel-card {
+  margin: 0 0 16px;
+  padding: 16px 14px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(78, 197, 232, 0.18);
+  background: rgba(10, 14, 24, 0.85);
+}
+
+.wc-viewer-skel-card .wc-chain-skel {
+  height: 56px;
+  margin-bottom: 10px;
+}
+
+.wc-chain-skel--cta {
+  height: 54px;
+  border-radius: 999px;
+}
+
+.wc-chain-boot--detail,
+.wc-chain-boot--completed {
+  text-align: left;
+}
+
 /* ─── Chain detail viewer (non-selected Voice) ─── */
 
 .wc-viewer {
@@ -1184,6 +1282,10 @@
 @media (prefers-reduced-motion: reduce) {
   .wc-chain-earth,
   .wc-chain-skel,
+  .wc-chain-hero--skel,
+  .wc-viewer-skel-title,
+  .wc-viewer-skel-route,
+  .wc-viewer-skel-stats,
   .wc-viewer-strip__flag.is-live,
   .wc-viewer-status--active .wc-viewer-status__pulse {
     animation: none;
