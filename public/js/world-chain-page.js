@@ -153,10 +153,8 @@ const WorldChainPage = (() => {
       ${renderHero()}
 
       <button type="button" class="wc-chain-explore" data-open-completed>
-        COMPLETED CHAINS →
+        Completed Chains →
       </button>
-
-      <h2 class="wc-chain-section-title" id="wc-chain-happening">Happening Now</h2>
 
       ${limitedEmpty ? `
         <div class="wc-chain-empty">
