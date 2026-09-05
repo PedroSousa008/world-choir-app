@@ -6,6 +6,8 @@ const WorldChainPage = (() => {
   const TODAY_CACHE_KEY = 'wc_world_chain_today_v1';
   const CHAIN_CACHE_PREFIX = 'wc_world_chain_one_v1:';
   const COMPLETED_CACHE_KEY = 'wc_world_chain_completed_v1';
+  const PHOTO_BOOK_PENDING_KEY = 'wc_photo_book_pending_v1';
+  const PHOTO_BOOK_MAX_CHARS = 80;
 
   let state = {
     loading: true,
@@ -17,6 +19,13 @@ const WorldChainPage = (() => {
     busy: false,
     feedback: null,
     turnSheetOpen: false,
+    photoBookOffer: null,
+    photoBookDraft: {
+      dataUrl: null,
+      message: '',
+      error: null,
+      busy: false,
+    },
     completed: null,
     completedLoading: false,
     completedError: null,
@@ -73,6 +82,83 @@ const WorldChainPage = (() => {
 
   function readCachedCompleted() {
     return readJsonCache(COMPLETED_CACHE_KEY)?.chains || null;
+  }
+
+  function savePendingPhotoBook(offer) {
+    if (!offer?.connectionId) return;
+    writeJsonCache(PHOTO_BOOK_PENDING_KEY, { savedAt: Date.now(), offer });
+  }
+
+  function clearPendingPhotoBook() {
+    try {
+      sessionStorage.removeItem(PHOTO_BOOK_PENDING_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function readPendingPhotoBook() {
+    return readJsonCache(PHOTO_BOOK_PENDING_KEY)?.offer || null;
+  }
+
+  function resetPhotoBookDraft() {
+    state.photoBookDraft = {
+      dataUrl: null,
+      message: '',
+      error: null,
+      busy: false,
+    };
+  }
+
+  function finishPhotoBookStep() {
+    clearPendingPhotoBook();
+    state.photoBookOffer = null;
+    resetPhotoBookDraft();
+    state.turnSheetOpen = false;
+    state.view = 'detail';
+    syncUrl({ replace: true });
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function openPhotoBookContribute(offer) {
+    if (!offer?.chainId || !offer?.connectionId) {
+      finishPhotoBookStep();
+      return;
+    }
+    state.photoBookOffer = offer;
+    savePendingPhotoBook(offer);
+    state.activeChainId = offer.chainId;
+    state.turnSheetOpen = false;
+    state.feedback = null;
+    resetPhotoBookDraft();
+    state.view = 'photo-book-contribute';
+    syncUrl({ replace: true });
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function compressSelfieDataUrl(dataUrl, maxSide = 1280, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => reject(new Error('Could not read selfie'));
+      img.src = dataUrl;
+    });
   }
 
   function mergeChainIntoState(chain) {
@@ -285,7 +371,9 @@ const WorldChainPage = (() => {
   }
 
   function renderBootSkeleton() {
-    if (state.view === 'detail' || state.view === 'photo-book') return renderDetailSkeleton();
+    if (state.view === 'detail' || state.view === 'photo-book' || state.view === 'photo-book-contribute') {
+      return renderDetailSkeleton();
+    }
     if (state.view === 'completed') return renderCompletedSkeleton();
     return renderLandingSkeleton();
   }
@@ -596,6 +684,104 @@ const WorldChainPage = (() => {
     `;
   }
 
+  function renderPhotoBookContribute() {
+    const offer = state.photoBookOffer || readPendingPhotoBook();
+    const draft = state.photoBookDraft || {};
+    const message = String(draft.message || '');
+    const count = [...message].length;
+    const hasSelfie = !!draft.dataUrl;
+    const canSubmit = hasSelfie && !draft.busy;
+    const chainNum = offer?.dailyChainNumber != null ? offer.dailyChainNumber : '';
+
+    return `
+      <div class="wc-viewer wc-photobook-contribute">
+        <header class="wc-chain-topbar">
+          <button type="button" class="wc-chain-back" data-skip-photo-book aria-label="Back">←</button>
+          <h1 class="wc-chain-brand">World Chain</h1>
+          <span class="wc-chain-topbar__spacer" aria-hidden="true"></span>
+        </header>
+
+        <section class="wc-photobook-contribute__card">
+          <p class="wc-photobook-contribute__eyebrow">Share yourself</p>
+          <h2 class="wc-photobook-contribute__title">
+            Take a selfie and leave a short message for the World Chain.
+          </h2>
+
+          <div class="wc-photobook-info">
+            <span class="wc-photobook-info__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round">
+                <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h2l1.2-1.8A1.5 1.5 0 0 1 10.9 3.5h2.2a1.5 1.5 0 0 1 1.2.7L15.5 6H17.5A2.5 2.5 0 0 1 20 8.5v9A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-9Z"/>
+                <circle cx="12" cy="13" r="3.25"/>
+              </svg>
+            </span>
+            <div class="wc-photobook-info__copy">
+              <p class="wc-photobook-info__main">
+                Your selfie will be part of the
+                <span class="wc-photobook-info__accent">Photo Book of the Chain</span>.
+              </p>
+              <p class="wc-photobook-info__sub">A global collection of the people who connected the world.</p>
+            </div>
+          </div>
+
+          <input type="file" accept="image/*" capture="user" class="wc-photobook-file" data-selfie-input hidden>
+
+          ${hasSelfie ? `
+            <div class="wc-photobook-selfie wc-photobook-selfie--preview">
+              <img src="${esc(draft.dataUrl)}" alt="Your selfie preview">
+              <button type="button" class="wc-photobook-retake" data-retake-selfie ${draft.busy ? 'disabled' : ''}>Retake</button>
+            </div>
+          ` : `
+            <button type="button" class="wc-photobook-selfie" data-open-selfie ${draft.busy ? 'disabled' : ''}>
+              <span class="wc-photobook-selfie__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+                  <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h2l1.2-1.8A1.5 1.5 0 0 1 10.9 3.5h2.2a1.5 1.5 0 0 1 1.2.7L15.5 6H17.5A2.5 2.5 0 0 1 20 8.5v9A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-9Z"/>
+                  <circle cx="12" cy="13" r="3.25"/>
+                </svg>
+              </span>
+              <span class="wc-photobook-selfie__title">Take a Selfie</span>
+              <span class="wc-photobook-selfie__hint">Tap to open camera</span>
+            </button>
+          `}
+
+          <div class="wc-photobook-message-head">
+            <label for="wc-photobook-message" class="wc-photobook-message-label">Your Message</label>
+            <span class="wc-photobook-message-count" data-message-count>${esc(count)}/${PHOTO_BOOK_MAX_CHARS}</span>
+          </div>
+          <textarea
+            id="wc-photobook-message"
+            class="wc-photobook-message"
+            data-photo-book-message
+            maxlength="${PHOTO_BOOK_MAX_CHARS}"
+            rows="2"
+            placeholder="Write a message for the World Chain…"
+            ${draft.busy ? 'disabled' : ''}
+          >${esc(message)}</textarea>
+
+          ${draft.error ? `
+            <p class="wc-photobook-error" role="alert">${esc(draft.error)}</p>
+          ` : ''}
+
+          <button
+            type="button"
+            class="wc-chain-primary wc-photobook-submit"
+            data-submit-photo-book
+            ${canSubmit ? '' : 'disabled'}
+          >
+            ${draft.busy ? 'Adding…' : 'Add to Photo Book'}
+          </button>
+
+          <button type="button" class="wc-photobook-skip" data-skip-photo-book ${draft.busy ? 'disabled' : ''}>
+            Skip for now
+          </button>
+
+          ${chainNum !== '' ? `
+            <p class="wc-photobook-contribute__foot">World Chain #${esc(chainNum)}</p>
+          ` : ''}
+        </section>
+      </div>
+    `;
+  }
+
   function renderSelectedVoiceDetail(chain) {
     const backAttr = state.detailReturnView === 'completed' ? 'data-back-completed' : 'data-back-landing';
     /* Selected-Voice primary experience ships next; keep the existing turn flow for now. */
@@ -858,7 +1044,9 @@ const WorldChainPage = (() => {
       return;
     }
 
-    if (state.view === 'photo-book') {
+    if (state.view === 'photo-book-contribute') {
+      root.innerHTML = renderPhotoBookContribute();
+    } else if (state.view === 'photo-book') {
       root.innerHTML = renderPhotoBook(findChain(state.activeChainId));
     } else if (state.view === 'detail') {
       root.innerHTML = renderDetail();
@@ -1002,6 +1190,9 @@ const WorldChainPage = (() => {
       url.searchParams.set('chain', chainId);
       url.searchParams.set('view', 'photo-book');
       if (from === 'completed') url.searchParams.set('from', 'completed');
+    } else if (view === 'photo-book-contribute' && chainId) {
+      url.searchParams.set('chain', chainId);
+      url.searchParams.set('view', 'photo-book-contribute');
     } else if ((view === 'detail' || view === 'selected') && chainId) {
       url.searchParams.set('chain', chainId);
       if (from === 'completed') url.searchParams.set('from', 'completed');
@@ -1032,6 +1223,15 @@ const WorldChainPage = (() => {
     const view = params.get('view');
     const from = params.get('from');
 
+    if (view === 'photo-book-contribute' && chainId) {
+      state.view = 'photo-book-contribute';
+      state.activeChainId = chainId;
+      state.detailReturnView = 'landing';
+      if (!state.photoBookOffer) {
+        state.photoBookOffer = readPendingPhotoBook();
+      }
+      return 'photo-book-contribute';
+    }
     if (view === 'photo-book' && chainId) {
       state.view = 'photo-book';
       state.activeChainId = chainId;
@@ -1197,6 +1397,19 @@ const WorldChainPage = (() => {
             }),
           });
           const body = await res.json();
+          if (body.ok && body.chain) {
+            mergeChainIntoState(body.chain);
+            state.busy = false;
+            state.feedback = null;
+            // Connection already persisted — optional Photo Book step next.
+            if (body.photoBookOffer) {
+              openPhotoBookContribute(body.photoBookOffer);
+              return;
+            }
+            state.turnSheetOpen = false;
+            render();
+            return;
+          }
           if (body.chain) {
             mergeChainIntoState(body.chain);
             if (body.code === 'CHAIN_COMPLETE'
@@ -1227,6 +1440,102 @@ const WorldChainPage = (() => {
         if (chain) shareHelp(chain);
       });
     });
+
+    const selfieInput = document.querySelector('[data-selfie-input]');
+    document.querySelectorAll('[data-open-selfie], [data-retake-selfie]').forEach((btn) => {
+      btn.addEventListener('click', () => selfieInput?.click());
+    });
+    selfieInput?.addEventListener('change', async () => {
+      const file = selfieInput.files?.[0];
+      selfieInput.value = '';
+      if (!file) return;
+      try {
+        const raw = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(new Error('Could not read photo'));
+          reader.readAsDataURL(file);
+        });
+        const dataUrl = await compressSelfieDataUrl(raw);
+        state.photoBookDraft = {
+          ...state.photoBookDraft,
+          dataUrl,
+          error: null,
+        };
+        render();
+      } catch {
+        state.photoBookDraft = {
+          ...state.photoBookDraft,
+          error: 'Couldn’t use that photo. Try again or skip for now.',
+        };
+        render();
+      }
+    });
+
+    document.querySelector('[data-photo-book-message]')?.addEventListener('input', (e) => {
+      const el = e.target;
+      let value = String(el.value || '');
+      const chars = [...value];
+      if (chars.length > PHOTO_BOOK_MAX_CHARS) {
+        value = chars.slice(0, PHOTO_BOOK_MAX_CHARS).join('');
+        el.value = value;
+      }
+      state.photoBookDraft = {
+        ...state.photoBookDraft,
+        message: value,
+        error: null,
+      };
+      const counter = document.querySelector('[data-message-count]');
+      if (counter) counter.textContent = `${[...value].length}/${PHOTO_BOOK_MAX_CHARS}`;
+      const submit = document.querySelector('[data-submit-photo-book]');
+      if (submit) {
+        submit.disabled = !state.photoBookDraft.dataUrl || !!state.photoBookDraft.busy;
+      }
+    });
+
+    document.querySelectorAll('[data-skip-photo-book]').forEach((btn) => {
+      btn.addEventListener('click', () => finishPhotoBookStep());
+    });
+
+    document.querySelector('[data-submit-photo-book]')?.addEventListener('click', async () => {
+      const offer = state.photoBookOffer || readPendingPhotoBook();
+      if (!offer?.chainId || !offer?.connectionId || !state.photoBookDraft.dataUrl) return;
+      if (state.photoBookDraft.busy) return;
+      state.photoBookDraft = {
+        ...state.photoBookDraft,
+        busy: true,
+        error: null,
+      };
+      render();
+      try {
+        const res = await fetch('/api/world-chain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'add-photo-book',
+            deviceId: deviceId(),
+            eventId: eventId(),
+            chainId: offer.chainId,
+            connectionId: offer.connectionId,
+            dataUrl: state.photoBookDraft.dataUrl,
+            message: state.photoBookDraft.message || '',
+            fileName: 'selfie.jpg',
+          }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body.ok) {
+          throw new Error(body.error || 'Couldn’t add this to the Photo Book. Try again or skip for now.');
+        }
+        finishPhotoBookStep();
+      } catch (err) {
+        state.photoBookDraft = {
+          ...state.photoBookDraft,
+          busy: false,
+          error: err.message || 'Couldn’t add this to the Photo Book. Try again or skip for now.',
+        };
+        render();
+      }
+    });
   }
 
   async function restoreFromUrl() {
@@ -1238,6 +1547,20 @@ const WorldChainPage = (() => {
 
     if (restored === 'completed') {
       await loadCompleted({ skipUrl: true });
+      return;
+    }
+
+    if (restored === 'photo-book-contribute') {
+      if (!state.photoBookOffer) state.photoBookOffer = readPendingPhotoBook();
+      if (!state.photoBookOffer) {
+        state.view = 'detail';
+        syncUrl({ replace: true });
+      }
+      render();
+      if (state.activeChainId) {
+        try { await refreshChain(state.activeChainId); } catch { /* keep */ }
+        render();
+      }
       return;
     }
 
@@ -1278,6 +1601,15 @@ const WorldChainPage = (() => {
       const single = readCachedChain(state.activeChainId);
       if (single) {
         mergeChainIntoState(single);
+        state.loading = false;
+      }
+    }
+    const pending = readPendingPhotoBook();
+    if (pending?.chainId) {
+      if (!state.activeChainId || state.activeChainId === pending.chainId) {
+        state.photoBookOffer = pending;
+        state.activeChainId = pending.chainId;
+        state.view = 'photo-book-contribute';
         state.loading = false;
       }
     }

@@ -1234,11 +1234,25 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
       console.error('world-chain archive error:', err);
     });
   }
+
+  // Optional Photo Book offer — chain connection is already persisted above.
+  const photoBookOffer = {
+    chainId: chain.id,
+    connectionId: `${chain.id}:step-${active.position}:by-${viewer.userId}`,
+    stepPosition: active.position,
+    country: active.country || null,
+    city: active.requiredCity || active.assignedCity || null,
+    dailyChainNumber: chain.dailyChainNumber,
+    dayKey: chain.dayKey,
+    connectedAt: active.connectedAt,
+  };
+
   return {
     ok: true,
     code: completed ? 'CHAIN_COMPLETE' : 'CONNECTION_MADE',
     title: completed ? 'CONNECTION COMPLETE' : 'CONNECTION MADE',
     chain: publicChain(chain, nowMs, viewer),
+    photoBookOffer,
   };
 }
 

@@ -9,6 +9,10 @@ const {
   acceptStart,
   connectVoice,
 } = require('./_lib/world-chain');
+const {
+  createChainPhotoBookEntry,
+  listChainPhotoBook,
+} = require('./_lib/world-chain-photo-book');
 const { jsonStorageError } = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
@@ -30,6 +34,11 @@ module.exports = async function handler(req, res) {
       const eventId = String(req.query.eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
       const chainId = String(req.query.chainId || '').trim();
       const view = String(req.query.view || '').trim().toLowerCase();
+
+      if (view === 'photo-book' && chainId) {
+        const result = await listChainPhotoBook(eventId, chainId);
+        return res.status(200).json(result);
+      }
 
       // Ensure today's chains exist (idempotent) for live views.
       if (view !== 'completed') {
@@ -58,6 +67,22 @@ module.exports = async function handler(req, res) {
       const eventId = String(req.body?.eventId || DEFAULT_EVENT_ID).trim() || DEFAULT_EVENT_ID;
       const action = String(req.body?.action || '').trim();
       const chainId = String(req.body?.chainId || '').trim();
+
+      if (action === 'add-photo-book') {
+        if (!chainId) {
+          return res.status(400).json({ error: 'chainId required' });
+        }
+        const result = await createChainPhotoBookEntry({
+          deviceId,
+          eventId,
+          chainId,
+          connectionId: req.body?.connectionId,
+          dataUrl: req.body?.dataUrl,
+          message: req.body?.message,
+          fileName: req.body?.fileName,
+        });
+        return res.status(200).json(result);
+      }
 
       if (!chainId) {
         return res.status(400).json({ error: 'chainId required' });
