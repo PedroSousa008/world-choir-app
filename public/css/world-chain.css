@@ -249,7 +249,8 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 4px 0 10px;
+  /* Extra inset so flag outline glows aren't clipped on the first/last country */
+  padding: 6px 4px 12px;
   margin: 0 0 10px;
 }
 
