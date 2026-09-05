@@ -29,12 +29,21 @@ const Status = {
   EXPIRED: 'EXPIRED',
 };
 
+/** Temporary test: force chain #1 to start in Portugal with Voice #5. */
+const TEST_FORCE_STARTER = {
+  enabled: true,
+  chainIndex: 0,
+  startCountry: 'Portugal',
+  voiceNumber: 5,
+};
+
 function dayKeyUTC(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
 function rootPath(eventId, day) {
-  return `wc-data/world-chain/${encodeURIComponent(eventId)}/${day}`;
+  // v2: reset early test manifests that used fake numbering / pre-progressed routes
+  return `wc-data/world-chain/v2/${encodeURIComponent(eventId)}/${day}`;
 }
 
 function manifestPath(eventId, day) {
@@ -249,8 +258,10 @@ function buildRouteSteps(countries, citiesByCountry, startingPledge) {
       assignedCity: index === 0 ? (startingPledge?.city || null) : null,
       latitude,
       longitude,
-      connectedAt: index === 0 ? new Date().toISOString() : null,
-      status: index === 0 ? 'connected' : (index === 1 ? 'active' : 'future'),
+      // Fresh chain: starter is selected, but no connection has been made yet.
+      connectedAt: null,
+      activatedAt: null,
+      status: index === 0 ? 'selected' : 'future',
     };
   });
 }
@@ -261,8 +272,11 @@ function deriveStatus(chain, nowMs = Date.now()) {
   const expiresAt = new Date(chain.expiresAt).getTime();
   if (Number.isFinite(expiresAt) && nowMs >= expiresAt) return Status.EXPIRED;
 
+  // Do not mark stuck before the starting Voice has actually begun.
+  if (!chain.starterAccepted) return Status.IN_PROGRESS;
+
   const steps = chain.route || [];
-  const active = steps.find((s) => s.status === 'active') || steps.find((s) => !s.connectedAt);
+  const active = steps.find((s) => s.status === 'active');
   if (!active) return Status.IN_PROGRESS;
 
   const anchor = active.activatedAt || chain.lastProgressAt || chain.startsAt;
@@ -326,17 +340,9 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     && active.assignedVoiceId
     && active.assignedVoiceId === viewer.userId
   );
-  const viewerIsStarterPending = !!(
-    viewer?.userId
-    && chain.startingVoiceId === viewer.userId
-    && !chain.starterAccepted
-    && liveStatus === Status.IN_PROGRESS
-    && connected <= 1
-    && !active?.assignedVoiceId
-  );
+  const pendingDestination = (!chain.starterAccepted && steps[1]) ? steps[1] : null;
 
-  // Starter is already assigned on step 0; "selected" means they haven't accepted yet
-  // and step 1 is waiting for them to begin (current active is step 1 without prior connect from them as actor).
+  // Starter is selected on step 0; they must accept before any destination becomes active.
   const viewerNeedsStart = !!(
     viewer?.userId
     && chain.startingVoiceId === viewer.userId
@@ -374,8 +380,8 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
       : '',
     totalDistanceKm: chain.totalDistanceKm ?? routeDistanceKm(steps),
     route: steps.map(publicStep),
-    activeCountry: active?.country || null,
-    activeRequiredCity: active?.requiredCity || null,
+    activeCountry: active?.country || pendingDestination?.country || null,
+    activeRequiredCity: active?.requiredCity || pendingDestination?.requiredCity || null,
     cta: liveStatus === Status.COMPLETED
       ? 'VIEW COMPLETED CHAIN'
       : liveStatus === Status.STUCK
@@ -419,7 +425,7 @@ async function generateDailyChains(eventId, day, now = new Date()) {
     listAllUsers().catch(() => []),
   ]);
   const usersById = buildUserMaps(users);
-  const { byCountry, citiesByCountry } = buildPledgeIndexes(pledges, usersById, nowMs);
+  const { byVoice, byCountry, citiesByCountry } = buildPledgeIndexes(pledges, usersById, nowMs);
   const countries = representedCountries(byCountry);
   const maxAvailable = countries.length;
 
@@ -451,6 +457,22 @@ async function generateDailyChains(eventId, day, now = new Date()) {
       ...shuffledCountries.slice(0, i % shuffledCountries.length),
     ];
     const routeCountries = [];
+    let starter = null;
+
+    const forceTest = TEST_FORCE_STARTER.enabled && i === TEST_FORCE_STARTER.chainIndex;
+    if (forceTest) {
+      const forcedStart = normalizeCountry(TEST_FORCE_STARTER.startCountry);
+      routeCountries.push(forcedStart);
+      const forcedPledge = byVoice.get(Number(TEST_FORCE_STARTER.voiceNumber));
+      if (
+        forcedPledge
+        && !usedStartVoices.has(forcedPledge.user_id)
+        && isAccountEligible(usersById.get(forcedPledge.user_id), forcedPledge, nowMs)
+      ) {
+        starter = forcedPledge;
+      }
+    }
+
     for (const c of rotated) {
       if (routeCountries.length >= length) break;
       if (!routeCountries.some((x) => countriesEqual(x, c))) routeCountries.push(c);
@@ -461,9 +483,10 @@ async function generateDailyChains(eventId, day, now = new Date()) {
     const finalCity = pickFinalCity(finalCountry, citiesByCountry, usedStartVoices);
     if (!finalCity?.city) continue;
 
-    // Ensure final step carries the concrete city.
     const startCountry = routeCountries[0];
-    const starter = pickStartingVoice(startCountry, byCountry, usersById, usedStartVoices, nowMs);
+    if (!starter) {
+      starter = pickStartingVoice(startCountry, byCountry, usersById, usedStartVoices, nowMs);
+    }
     if (!starter) continue;
     usedStartVoices.add(starter.user_id);
 
@@ -471,15 +494,13 @@ async function generateDailyChains(eventId, day, now = new Date()) {
     route[route.length - 1].requiredCity = finalCity.city;
     route[route.length - 1].latitude = finalCity.latitude;
     route[route.length - 1].longitude = finalCity.longitude;
-    if (route[1]) {
-      route[1].activatedAt = now.toISOString();
-    }
+    // Fresh start: no activated destination / stuck clock until the starter accepts.
 
     const chain = {
       id: randomUUID(),
       eventId,
       dayKey: day,
-      dailyChainNumber: null, // assigned after sort
+      dailyChainNumber: null, // assigned after generation as #1..#N
       createdAt: now.toISOString(),
       startsAt: now.toISOString(),
       expiresAt: new Date(nowMs + CHAIN_DURATION_MS).toISOString(),
@@ -487,8 +508,8 @@ async function generateDailyChains(eventId, day, now = new Date()) {
       starterAccepted: false,
       startingVoiceId: starter.user_id,
       startingVoiceNumber: Number(starter.voice_number),
-      currentStep: 1,
-      lastProgressAt: now.toISOString(),
+      currentStep: 0,
+      lastProgressAt: null,
       completedAt: null,
       totalDistanceKm: null,
       route,
@@ -496,12 +517,9 @@ async function generateDailyChains(eventId, day, now = new Date()) {
     chains.push(chain);
   }
 
-  // Stable daily numbers 1..N for this day (not global forever — UI can show day-local).
-  // Spec examples use larger numbers; use day ordinal hash + index for uniqueness feel.
-  const daySeed = day.replace(/-/g, '');
-  const baseNum = (Number(daySeed.slice(-4)) % 80) + 10;
+  // Daily numbers are simply #1 … #N for today's chains (not a fake global counter).
   chains.forEach((chain, idx) => {
-    chain.dailyChainNumber = baseNum + idx;
+    chain.dailyChainNumber = idx + 1;
   });
 
   for (const chain of chains) {
@@ -682,13 +700,14 @@ async function acceptStart(deviceId, chainId, eventId = DEFAULT_EVENT_ID) {
   }
   chain.starterAccepted = true;
   chain.lastProgressAt = now.toISOString();
-  // Active turn remains the starting voice until they connect the next country —
-  // assign them as actor on the active (step 1) destination task.
-  const active = chain.route.find((s) => s.status === 'active');
-  if (active) {
-    active.assignedVoiceId = viewer.userId;
-    active.assignedVoiceNumber = viewer.voiceNumber;
-    active.activatedAt = now.toISOString();
+  chain.currentStep = 1;
+  // First destination becomes active only after the starter accepts.
+  const dest = chain.route[1];
+  if (dest && dest.status !== 'connected') {
+    dest.status = 'active';
+    dest.assignedVoiceId = viewer.userId;
+    dest.assignedVoiceNumber = viewer.voiceNumber;
+    dest.activatedAt = now.toISOString();
   }
   await writeChain(eventId, day, chain);
   return { ok: true, chain: publicChain(chain, now.getTime(), viewer) };
@@ -724,23 +743,17 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     throw err;
   }
 
+  if (!chain.starterAccepted) {
+    const err = new Error('This chain has not been started yet');
+    err.statusCode = 409;
+    throw err;
+  }
+
   const active = chain.route.find((s) => s.status === 'active');
   if (!active) {
     const err = new Error('No active destination on this chain');
     err.statusCode = 409;
     throw err;
-  }
-
-  if (!chain.starterAccepted) {
-    if (chain.startingVoiceId !== viewer.userId) {
-      const err = new Error('It is not your turn on this chain');
-      err.statusCode = 403;
-      throw err;
-    }
-    chain.starterAccepted = true;
-    active.assignedVoiceId = viewer.userId;
-    active.assignedVoiceNumber = viewer.voiceNumber;
-    active.activatedAt = active.activatedAt || now.toISOString();
   }
 
   if (active.assignedVoiceId !== viewer.userId) {
@@ -799,6 +812,14 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   attempts.cooldownUntil = null;
   attempts.history = [...(attempts.history || []), { at: now.toISOString(), ok: true }].slice(-20);
   await writeAttempts(eventId, day, chainId, viewer.voiceNumber, attempts);
+
+  // Mark the starter (or previous selected) node as connected on first real link.
+  chain.route.forEach((step) => {
+    if (step.status === 'selected') {
+      step.status = 'connected';
+      step.connectedAt = step.connectedAt || now.toISOString();
+    }
+  });
 
   active.status = 'connected';
   active.connectedAt = now.toISOString();

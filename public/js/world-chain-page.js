@@ -31,11 +31,25 @@ const WorldChainPage = (() => {
       : 'world-choir-2027';
   }
 
-  function flagFor(country) {
-    if (typeof WorldChoirFlags !== 'undefined' && WorldChoirFlags.flagEmoji) {
-      return WorldChoirFlags.flagEmoji(country) || '🌐';
+  function flagCircle(country, extraClass = '') {
+    const url = typeof WorldChoirFlags !== 'undefined'
+      ? WorldChoirFlags.flagCircleUrl(country)
+      : null;
+    const cls = `wc-chain-route__flag ${extraClass}`.trim();
+    if (!url) {
+      return `<span class="${cls} wc-chain-route__flag--empty" title="${esc(country)}" aria-hidden="true"></span>`;
     }
-    return '🌐';
+    return `<span class="${cls}" title="${esc(country)}"><img src="${esc(url)}" alt="" width="20" height="20" loading="lazy" decoding="async"></span>`;
+  }
+
+  function flagDest(country) {
+    const url = typeof WorldChoirFlags !== 'undefined'
+      ? WorldChoirFlags.flagCircleUrl(country)
+      : null;
+    if (!url) {
+      return `<span class="wc-chain-turn__dest-flag wc-chain-turn__dest-flag--empty" aria-hidden="true"></span>`;
+    }
+    return `<span class="wc-chain-turn__dest-flag" aria-hidden="true"><img src="${esc(url)}" alt="" width="44" height="44" loading="lazy" decoding="async"></span>`;
   }
 
   function statusDotClass(status) {
@@ -58,16 +72,12 @@ const WorldChainPage = (() => {
     route.forEach((step, i) => {
       const flagClass = step.status === 'connected'
         ? 'is-connected'
-        : step.status === 'active'
+        : (step.status === 'active' || step.status === 'selected')
           ? 'is-active'
           : '';
-      parts.push(`<span class="wc-chain-route__flag ${flagClass}" title="${esc(step.country)}">${flagFor(step.country)}</span>`);
+      parts.push(flagCircle(step.country, flagClass));
       if (i < route.length - 1) {
-        const lineClass = step.status === 'connected'
-          ? 'is-connected'
-          : step.status === 'active'
-            ? 'is-active'
-            : 'is-future';
+        const lineClass = step.status === 'connected' ? 'is-connected' : 'is-future';
         parts.push(`<span class="wc-chain-route__line ${lineClass}" aria-hidden="true"></span>`);
       }
     });
@@ -191,7 +201,9 @@ const WorldChainPage = (() => {
 
   function renderTurnPanel(chain) {
     const viewer = chain.viewer || {};
-    const active = (chain.route || []).find((s) => s.status === 'active');
+    const route = chain.route || [];
+    const active = route.find((s) => s.status === 'active')
+      || (viewer.needsStart ? route[1] : null);
     if (!active) return '';
 
     if (viewer.needsStart) {
@@ -200,7 +212,7 @@ const WorldChainPage = (() => {
           <p class="wc-chain-turn__eyebrow">You've been selected</p>
           <p class="wc-chain-turn__copy">You're starting one of today's World Chains.</p>
           <p class="wc-chain-turn__eyebrow">Your first destination is…</p>
-          <p class="wc-chain-turn__dest">${flagFor(active.country)}</p>
+          <p class="wc-chain-turn__dest">${flagDest(active.country)}</p>
           <p class="wc-chain-turn__country">${esc(active.country)}</p>
           <button type="button" class="wc-chain-primary" data-accept-start="${esc(chain.id)}" ${state.busy ? 'disabled' : ''}>
             START WORLD CHAIN
@@ -217,7 +229,7 @@ const WorldChainPage = (() => {
         <p class="wc-chain-turn__eyebrow">It's your turn</p>
         <p class="wc-chain-turn__copy">World Chain #${esc(chain.dailyChainNumber)} needs you.</p>
         <p class="wc-chain-turn__eyebrow">${isFinal ? 'Final connection' : 'Your next destination'}</p>
-        <p class="wc-chain-turn__dest">${flagFor(active.country)}</p>
+        <p class="wc-chain-turn__dest">${flagDest(active.country)}</p>
         <p class="wc-chain-turn__country">${esc(active.country)}</p>
         ${isFinal ? `<p class="wc-chain-turn__copy">📍 ${esc(active.requiredCity)}</p>` : ''}
         <p class="wc-chain-turn__copy">
@@ -271,7 +283,7 @@ const WorldChainPage = (() => {
       <section class="wc-chain-turn">
         <p class="wc-chain-turn__eyebrow">The world needs someone</p>
         <p class="wc-chain-turn__copy">World Chain #${esc(chain.dailyChainNumber)} needs a Voice in:</p>
-        <p class="wc-chain-turn__dest">${flagFor(active.country)}</p>
+        <p class="wc-chain-turn__dest">${flagDest(active.country)}</p>
         <p class="wc-chain-turn__country">${esc(active.country)}</p>
         ${active.requiredCity ? `<p class="wc-chain-turn__copy">📍 ${esc(active.requiredCity)}</p>` : ''}
         <p class="wc-chain-turn__copy">Do you know someone? Share the challenge — don't invent a directory of Voices.</p>
