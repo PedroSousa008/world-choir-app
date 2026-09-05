@@ -440,6 +440,24 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     && chain.starterAccepted
   );
 
+  // Named by the app (starter) or by another Voice (connected / current actor on this chain).
+  const viewerIsNamed = !!(
+    viewer?.userId
+    && (
+      chain.startingVoiceId === viewer.userId
+      || steps.some((s) => s.assignedVoiceId && s.assignedVoiceId === viewer.userId)
+    )
+  );
+
+  let cta = 'WATCH LIVE';
+  if (liveStatus === Status.COMPLETED) {
+    cta = 'VIEW COMPLETED CHAIN';
+  } else if (viewerIsNamed) {
+    cta = 'KEEP THE CHAIN ALIVE';
+  } else if (liveStatus === Status.STUCK) {
+    cta = 'HELP THIS CHAIN';
+  }
+
   return {
     id: chain.id,
     dailyChainNumber: chain.dailyChainNumber,
@@ -465,13 +483,10 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     route: steps.map(publicStep),
     activeCountry: active?.country || pendingDestination?.country || null,
     activeRequiredCity: active?.requiredCity || pendingDestination?.requiredCity || null,
-    cta: liveStatus === Status.COMPLETED
-      ? 'VIEW COMPLETED CHAIN'
-      : liveStatus === Status.STUCK
-        ? 'HELP THIS CHAIN'
-        : 'WATCH LIVE',
+    cta,
     viewer: viewer ? {
       isStarter: chain.startingVoiceId === viewer.userId,
+      isNamed: viewerIsNamed,
       needsStart: viewerNeedsStart,
       isActiveTurn: viewerIsCurrentActor || (viewerIsActive && chain.starterAccepted),
       voiceNumber: viewer.voiceNumber || null,
@@ -810,6 +825,13 @@ async function getTodayPayload(deviceId, eventId = DEFAULT_EVENT_ID) {
   const { manifest, chains } = await loadDayChains(eventId, day);
 
   const publicChains = chains.map((c) => publicChain(c, nowMs, viewer));
+  // Named chains (app-selected or user-connected) float to the top for this viewer.
+  publicChains.sort((a, b) => {
+    const an = a.viewer?.isNamed ? 1 : 0;
+    const bn = b.viewer?.isNamed ? 1 : 0;
+    if (bn !== an) return bn - an;
+    return (a.dailyChainNumber || 0) - (b.dailyChainNumber || 0);
+  });
   const overview = {
     chainsToday: publicChains.length,
     completed: publicChains.filter((c) => c.status === Status.COMPLETED).length,

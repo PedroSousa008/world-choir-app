@@ -98,10 +98,10 @@ const WorldChainPage = (() => {
       <div class="wc-chain-hero">
         <img
           class="wc-chain-hero__img"
-          src="images/chain-header.png?v=20260905e"
+          src="images/chain-header.png?v=20260905h"
           alt=""
-          width="1536"
-          height="1024"
+          width="1619"
+          height="971"
           decoding="async"
           fetchpriority="high"
         >
@@ -111,8 +111,9 @@ const WorldChainPage = (() => {
   }
 
   function renderCard(chain) {
+    const named = !!chain.viewer?.isNamed;
     return `
-      <article class="wc-chain-card" data-chain-id="${esc(chain.id)}">
+      <article class="wc-chain-card${named ? ' wc-chain-card--named' : ''}" data-chain-id="${esc(chain.id)}">
         <div class="wc-chain-card__head">
           <div>
             <h3 class="wc-chain-card__title">WORLD CHAIN #${esc(chain.dailyChainNumber)}</h3>
