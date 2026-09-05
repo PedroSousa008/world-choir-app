@@ -5,19 +5,34 @@
   z-index: 1;
   max-width: 480px;
   margin: 0 auto;
-  padding: max(20px, env(safe-area-inset-top, 0px)) 20px calc(var(--nav-height) + 28px);
+  padding: 0 20px calc(var(--nav-height) + 28px);
   text-align: center;
 }
 
-.wc-chain-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 28px;
-  min-height: 40px;
+.wc-chain-hero {
+  position: relative;
+  width: calc(100% + 40px);
+  margin: 0 -20px 20px;
+  aspect-ratio: 1881 / 836;
+  overflow: hidden;
+  background: #000;
+}
+
+.wc-chain-hero__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  pointer-events: none;
+  user-select: none;
 }
 
 .wc-chain-back {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  left: 12px;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -25,15 +40,17 @@
   height: 40px;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.45);
   color: var(--accent-aurora);
   font-size: 1.1rem;
   line-height: 1;
   text-decoration: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .wc-chain-back:focus-visible {
@@ -41,90 +58,22 @@
   outline-offset: 2px;
 }
 
-.wc-chain-brand {
-  flex: 1;
+.wc-chain-headline {
+  position: absolute;
+  top: max(18px, calc(env(safe-area-inset-top, 0px) + 8px));
+  left: 56px;
+  right: 16px;
+  z-index: 2;
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: var(--accent-aurora);
-}
-
-.wc-chain-topbar__spacer {
-  width: 40px;
-  flex-shrink: 0;
-}
-
-.wc-chain-headline {
-  margin: 0 0 14px;
-  font-family: var(--font-sans);
-  font-size: clamp(1.55rem, 5.4vw, 2.05rem);
+  font-size: clamp(1.2rem, 4.8vw, 1.7rem);
   font-weight: 600;
   letter-spacing: -0.025em;
   line-height: 1.2;
   color: var(--text-primary);
-}
-
-.wc-chain-sub {
-  margin: 0 auto 28px;
-  max-width: 22em;
-  font-family: var(--font-sans);
-  font-size: 0.95rem;
-  font-weight: 400;
-  line-height: 1.55;
-  color: var(--text-secondary);
-}
-
-.wc-chain-earth {
-  position: relative;
-  width: min(280px, 72vw);
-  aspect-ratio: 1;
-  margin: 0 auto 32px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 35% 30%, rgba(78, 197, 232, 0.22), transparent 42%),
-    radial-gradient(circle at 70% 65%, rgba(61, 124, 255, 0.16), transparent 48%),
-    radial-gradient(circle at 50% 50%, #0a121c 0%, #05070c 62%, #000 100%);
-  border: 1px solid rgba(78, 197, 232, 0.22);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
-    0 0 48px rgba(78, 197, 232, 0.12);
-  overflow: hidden;
-}
-
-.wc-chain-earth__arcs {
-  position: absolute;
-  inset: 8%;
-  width: 84%;
-  height: 84%;
-  opacity: 0.85;
-}
-
-.wc-chain-earth__node {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent-aurora);
-  box-shadow: 0 0 10px rgba(78, 197, 232, 0.65);
-}
-
-.wc-chain-earth__node--1 { top: 28%; left: 30%; }
-.wc-chain-earth__node--2 { top: 38%; left: 58%; }
-.wc-chain-earth__node--3 { top: 62%; left: 42%; }
-.wc-chain-earth__node--4 { top: 48%; left: 72%; }
-
-@media (prefers-reduced-motion: no-preference) {
-  .wc-chain-earth {
-    animation: wcChainEarthPulse 7s ease-in-out infinite;
-  }
-}
-
-@keyframes wcChainEarthPulse {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03) inset, 0 0 40px rgba(78, 197, 232, 0.1); }
-  50% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 56px rgba(78, 197, 232, 0.18); }
+  text-align: left;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
 }
 
 .wc-chain-overview {
@@ -409,6 +358,7 @@
 /* Detail / turn panels */
 .wc-chain-detail {
   text-align: left;
+  padding-top: max(20px, env(safe-area-inset-top, 0px));
 }
 
 .wc-chain-detail__back {

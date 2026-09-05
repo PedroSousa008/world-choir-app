@@ -84,19 +84,21 @@ const WorldChainPage = (() => {
     return `<div class="wc-chain-route" role="img" aria-label="World Chain route">${parts.join('')}</div>`;
   }
 
-  function renderEarth() {
+  function renderHero() {
     return `
-      <div class="wc-chain-earth" aria-hidden="true">
-        <svg class="wc-chain-earth__arcs" viewBox="0 0 100 100" fill="none">
-          <path d="M28 32 C 48 18, 62 22, 74 40" stroke="rgba(78,197,232,0.55)" stroke-width="1.2"/>
-          <path d="M32 36 C 40 55, 55 62, 68 58" stroke="rgba(78,197,232,0.4)" stroke-width="1.1"/>
-          <path d="M40 68 C 55 78, 70 70, 78 52" stroke="rgba(61,124,255,0.35)" stroke-width="1.1"/>
-        </svg>
-        <span class="wc-chain-earth__node wc-chain-earth__node--1"></span>
-        <span class="wc-chain-earth__node wc-chain-earth__node--2"></span>
-        <span class="wc-chain-earth__node wc-chain-earth__node--3"></span>
-        <span class="wc-chain-earth__node wc-chain-earth__node--4"></span>
-      </div>
+      <header class="wc-chain-hero">
+        <a class="wc-chain-back" href="index.html" aria-label="Back to Home">←</a>
+        <img
+          class="wc-chain-hero__img"
+          src="images/chain-header.png?v=20260905c"
+          alt=""
+          width="1881"
+          height="836"
+          decoding="async"
+          fetchpriority="high"
+        >
+        <h1 class="wc-chain-headline">A more connected world<br>is a kinder world.</h1>
+      </header>
     `;
   }
 
@@ -161,16 +163,7 @@ const WorldChainPage = (() => {
     const limitedEmpty = data.limited && chains.length === 0;
 
     return `
-      <header class="wc-chain-topbar">
-        <a class="wc-chain-back" href="index.html" aria-label="Back to Home">←</a>
-        <h1 class="wc-chain-brand">World Chain</h1>
-        <span class="wc-chain-topbar__spacer" aria-hidden="true"></span>
-      </header>
-
-      <h2 class="wc-chain-headline">A more connected world<br>is a kinder world.</h2>
-      <p class="wc-chain-sub">Real people. Real connections.<br>A global chain of voices.</p>
-
-      ${renderEarth()}
+      ${renderHero()}
       ${renderOverview(data.overview)}
 
       <button type="button" class="wc-chain-explore" data-scroll-chains>
@@ -331,11 +324,7 @@ const WorldChainPage = (() => {
 
     if (state.loading && !state.data) {
       root.innerHTML = `
-        <header class="wc-chain-topbar">
-          <a class="wc-chain-back" href="index.html" aria-label="Back to Home">←</a>
-          <h1 class="wc-chain-brand">World Chain</h1>
-          <span class="wc-chain-topbar__spacer" aria-hidden="true"></span>
-        </header>
+        ${renderHero()}
         <div class="wc-chain-skel" aria-hidden="true"></div>
         <div class="wc-chain-skel" aria-hidden="true"></div>
         <div class="wc-chain-skel" aria-hidden="true"></div>
@@ -345,11 +334,7 @@ const WorldChainPage = (() => {
 
     if (state.error && !state.data) {
       root.innerHTML = `
-        <header class="wc-chain-topbar">
-          <a class="wc-chain-back" href="index.html" aria-label="Back to Home">←</a>
-          <h1 class="wc-chain-brand">World Chain</h1>
-          <span class="wc-chain-topbar__spacer" aria-hidden="true"></span>
-        </header>
+        ${renderHero()}
         <div class="wc-chain-empty">
           <h3 class="wc-chain-empty__title">Could not load World Chain</h3>
           <p class="wc-chain-empty__copy">${esc(state.error)}</p>
