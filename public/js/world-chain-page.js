@@ -215,17 +215,23 @@ const WorldChainPage = (() => {
     `;
   }
 
-  function renderDetailTopbar(backAttr) {
+  function renderDetailTopbar(backAttr, opts = {}) {
+    const chainId = opts.photoBookChainId || null;
+    const rightAction = chainId
+      ? `<button type="button" class="wc-chain-help" data-open-photo-book="${esc(chainId)}" aria-label="Open Photo Book" title="Open Photo Book">
+          <svg class="wc-chain-help__icon" viewBox="0 0 24 24" width="18" height="18" focusable="false" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round">
+            <path d="M4 5.5C4 4.67 4.67 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/>
+            <path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z"/>
+            <path d="M12 4v16" stroke-linecap="round"/>
+          </svg>
+        </button>`
+      : `<span class="wc-chain-topbar__spacer" aria-hidden="true"></span>`;
+
     return `
       <header class="wc-chain-topbar">
         <button type="button" class="wc-chain-back" ${backAttr} aria-label="Back">←</button>
         <h1 class="wc-chain-brand">World Chain</h1>
-        <button type="button" class="wc-chain-help" data-wc-help aria-label="About World Chain" title="About World Chain">
-          <svg class="wc-chain-help__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7">
-            <circle cx="12" cy="12" r="9"/>
-            <path d="M12 10.5v5.5M12 7.75h.01"/>
-          </svg>
-        </button>
+        ${rightAction}
       </header>
     `;
   }
@@ -248,9 +254,10 @@ const WorldChainPage = (() => {
 
   function renderDetailSkeleton() {
     const backAttr = state.detailReturnView === 'completed' ? 'data-back-completed' : 'data-back-landing';
+    const chainId = state.activeChainId;
     return `
       <div class="wc-viewer wc-chain-boot wc-chain-boot--detail" aria-busy="true">
-        ${renderDetailTopbar(backAttr)}
+        ${renderDetailTopbar(backAttr, chainId ? { photoBookChainId: chainId } : {})}
         <div class="wc-viewer-skel-title" aria-hidden="true"></div>
         <div class="wc-viewer-skel-route" aria-hidden="true"></div>
         <div class="wc-viewer-skel-stats" aria-hidden="true"></div>
@@ -470,7 +477,7 @@ const WorldChainPage = (() => {
 
     return `
       <div class="wc-viewer">
-        ${renderDetailTopbar(backAttr)}
+        ${renderDetailTopbar(backAttr, { photoBookChainId: chain.id })}
 
         <section class="wc-viewer-hero">
           <h2 class="wc-viewer-hero__title">World Chain #${esc(chain.dailyChainNumber)}</h2>
@@ -525,21 +532,6 @@ const WorldChainPage = (() => {
               </div>
             `).join('')}
           </div>
-
-          <button type="button" class="wc-viewer-photobook" data-open-photo-book="${esc(chain.id)}">
-            <span class="wc-viewer-photobook__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6">
-                <path d="M5 4.5h11.5A2.5 2.5 0 0 1 19 7v12.5H7.5A2.5 2.5 0 0 0 5 22V4.5z"/>
-                <path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H19"/>
-                <path d="M9 10h6M9 14h4"/>
-              </svg>
-            </span>
-            <span class="wc-viewer-photobook__copy">
-              <span class="wc-viewer-photobook__title">Open Photo Book</span>
-              <span class="wc-viewer-photobook__sub">See the people behind this chain.</span>
-            </span>
-            <span class="wc-viewer-photobook__chevron" aria-hidden="true">›</span>
-          </button>
         </section>
 
         <button type="button" class="wc-viewer-share" data-share-chain="${esc(chain.id)}">
@@ -575,7 +567,7 @@ const WorldChainPage = (() => {
     /* Selected-Voice primary experience ships next; keep the existing turn flow for now. */
     return `
       <div class="wc-chain-detail wc-chain-detail--selected-voice">
-        ${renderDetailTopbar(backAttr)}
+        ${renderDetailTopbar(backAttr, { photoBookChainId: chain.id })}
         <div class="wc-chain-card__head wc-chain-card__head--detail">
           <h2 class="wc-chain-card__title">WORLD CHAIN #${esc(chain.dailyChainNumber)}</h2>
           <p class="wc-chain-card__status ${statusToneClass(chain.status)}">

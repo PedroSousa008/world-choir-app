@@ -55,9 +55,21 @@
         '</header>';
 
       if (chain) {
+        var bookIcon =
+          '<svg class="wc-chain-help__icon" viewBox="0 0 24 24" width="18" height="18" focusable="false" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round">' +
+            '<path d="M4 5.5C4 4.67 4.67 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5v-13Z"/>' +
+            '<path d="M20 5.5c0-.83-.67-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5v-13Z"/>' +
+            '<path d="M12 4v16" stroke-linecap="round"/>' +
+          '</svg>';
+        var detailTopbar =
+          '<header class="wc-chain-topbar">' +
+            '<button type="button" class="wc-chain-back" aria-label="Back">←</button>' +
+            '<h1 class="wc-chain-brand">World Chain</h1>' +
+            '<button type="button" class="wc-chain-help" aria-label="Open Photo Book" title="Open Photo Book">' + bookIcon + '</button>' +
+          '</header>';
         root.innerHTML =
           '<div class="wc-viewer wc-chain-boot wc-chain-boot--detail" aria-busy="true">' +
-            topbar +
+            detailTopbar +
             '<div class="wc-viewer-skel-title" aria-hidden="true"></div>' +
             '<div class="wc-viewer-skel-route" aria-hidden="true"></div>' +
             '<div class="wc-viewer-skel-stats" aria-hidden="true"></div>' +
@@ -89,7 +101,7 @@
   <script src="js/world-choir-a11y.js?v=20260903p"></script>
   <script src="js/world-choir-nav.js?v=20260904cc"></script>
   <script src="js/world-choir-flags.js?v=20260905s"></script>
-  <script src="js/world-chain-page.js?v=20260905w"></script>
+  <script src="js/world-chain-page.js?v=20260905x"></script>
   <script>WorldChainPage.init();</script>
 </body>
 </html>
