@@ -38,8 +38,8 @@ const TEST_FORCE_STARTER = {
 };
 
 /** Bump when generation rules change so the day regenerates. */
-const CHAIN_STORAGE_VERSION = 'v4';
-const CHAIN_ENGINE = 'starter-first-v4';
+const CHAIN_STORAGE_VERSION = 'v5';
+const CHAIN_ENGINE = 'starter-first-v5';
 
 function dayKeyUTC(date = new Date()) {
   return date.toISOString().slice(0, 10);
@@ -524,7 +524,8 @@ async function generateDailyChains(eventId, day, now = new Date()) {
   // --- Chain #1 test: app "selects" Voice #5 → route starts in their country (Portugal) ---
   const forcedStarter = resolveForcedStarter(byVoice);
   if (forcedStarter && lengths.length) {
-    const length = lengths[0];
+    // Give the test chain a full route (not the shortest slot).
+    const length = Math.max(...lengths);
     const startCountry = normalizeCountry(forcedStarter.country);
     // Make sure Portugal (starter country) is in the country pool for routing.
     const countryPool = countries.some((c) => countriesEqual(c, startCountry))
