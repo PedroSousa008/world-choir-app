@@ -732,14 +732,22 @@ const WorldChainPage = (() => {
     bind();
   }
 
-  async function loadCompleted() {
-    state.view = 'completed';
-    state.activeChainId = null;
-    state.feedback = null;
-    state.completedLoading = true;
+  async function loadCompleted(opts = {}) {
+    const skipUrl = !!opts.skipUrl;
+    const keepDetail = !!opts.keepDetail;
+
+    if (!keepDetail) {
+      state.view = 'completed';
+      state.activeChainId = null;
+      state.feedback = null;
+    }
+    state.completedLoading = !keepDetail;
     state.completedError = null;
-    render();
-    window.scrollTo(0, 0);
+    if (!keepDetail) {
+      if (!skipUrl) syncUrl();
+      render();
+      window.scrollTo(0, 0);
+    }
     try {
       await WorldChoirDB.ready?.();
       const res = await fetch(
@@ -753,11 +761,12 @@ const WorldChainPage = (() => {
       const body = await res.json();
       state.completed = body.chains || [];
       state.completedLoading = false;
-      render();
+      if (!keepDetail) render();
     } catch (err) {
       state.completedLoading = false;
       state.completedError = err.message || 'Could not load completed chains';
-      render();
+      if (!keepDetail) render();
+      if (keepDetail) throw err;
     }
   }
 
@@ -778,6 +787,7 @@ const WorldChainPage = (() => {
       }
       state.data = await res.json();
       state.loading = false;
+      applyUrlState();
       render();
     } catch (err) {
       state.loading = false;
@@ -830,6 +840,76 @@ const WorldChainPage = (() => {
     navigator.clipboard?.writeText(`${text}\n${url}`).catch(() => {});
   }
 
+  function currentLocationKey() {
+    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  }
+
+  function buildWorldChainUrl({ view = 'landing', chainId = null, from = null } = {}) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('chain');
+    url.searchParams.delete('view');
+    url.searchParams.delete('from');
+
+    if (view === 'completed') {
+      url.searchParams.set('view', 'completed');
+    } else if (view === 'photo-book' && chainId) {
+      url.searchParams.set('chain', chainId);
+      url.searchParams.set('view', 'photo-book');
+      if (from === 'completed') url.searchParams.set('from', 'completed');
+    } else if ((view === 'detail' || view === 'selected') && chainId) {
+      url.searchParams.set('chain', chainId);
+      if (from === 'completed') url.searchParams.set('from', 'completed');
+    }
+
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
+
+  function syncUrl({ replace = false } = {}) {
+    const next = buildWorldChainUrl({
+      view: state.view,
+      chainId: state.activeChainId,
+      from: state.detailReturnView === 'completed' ? 'completed' : null,
+    });
+    if (currentLocationKey() === next) return;
+    const payload = {
+      wcView: state.view,
+      chainId: state.activeChainId,
+      from: state.detailReturnView,
+    };
+    if (replace) history.replaceState(payload, '', next);
+    else history.pushState(payload, '', next);
+  }
+
+  function applyUrlState() {
+    const params = new URLSearchParams(window.location.search);
+    const chainId = params.get('chain');
+    const view = params.get('view');
+    const from = params.get('from');
+
+    if (view === 'photo-book' && chainId) {
+      state.view = 'photo-book';
+      state.activeChainId = chainId;
+      state.detailReturnView = from === 'completed' ? 'completed' : 'landing';
+      return 'photo-book';
+    }
+    if (chainId) {
+      state.view = 'detail';
+      state.activeChainId = chainId;
+      state.detailReturnView = from === 'completed' ? 'completed' : 'landing';
+      return 'detail';
+    }
+    if (view === 'completed') {
+      state.view = 'completed';
+      state.activeChainId = null;
+      state.detailReturnView = 'landing';
+      return 'completed';
+    }
+    state.view = 'landing';
+    state.activeChainId = null;
+    state.detailReturnView = 'landing';
+    return 'landing';
+  }
+
   function bind() {
     document.querySelector('[data-retry]')?.addEventListener('click', () => load());
     document.querySelectorAll('[data-open-completed]').forEach((btn) => {
@@ -841,6 +921,7 @@ const WorldChainPage = (() => {
         state.activeChainId = btn.getAttribute('data-open-chain');
         state.view = 'detail';
         state.feedback = null;
+        syncUrl();
         render();
         window.scrollTo(0, 0);
         try {
@@ -856,18 +937,21 @@ const WorldChainPage = (() => {
       state.activeChainId = null;
       state.detailReturnView = 'landing';
       state.feedback = null;
+      syncUrl();
       render();
     });
     document.querySelector('[data-back-completed]')?.addEventListener('click', () => {
       state.view = 'completed';
       state.activeChainId = null;
       state.feedback = null;
+      syncUrl();
       render();
       window.scrollTo(0, 0);
     });
     document.querySelector('[data-back-detail]')?.addEventListener('click', () => {
       state.view = 'detail';
       state.feedback = null;
+      syncUrl();
       render();
       window.scrollTo(0, 0);
     });
@@ -875,6 +959,7 @@ const WorldChainPage = (() => {
       btn.addEventListener('click', () => {
         state.activeChainId = btn.getAttribute('data-open-photo-book') || state.activeChainId;
         state.view = 'photo-book';
+        syncUrl();
         render();
         window.scrollTo(0, 0);
       });
@@ -973,19 +1058,65 @@ const WorldChainPage = (() => {
     });
   }
 
+  async function restoreFromUrl() {
+    const restored = applyUrlState();
+    if (restored === 'landing') {
+      render();
+      return;
+    }
+
+    if (restored === 'completed') {
+      await loadCompleted({ skipUrl: true });
+      return;
+    }
+
+    // detail / photo-book — stay on this chain after refresh
+    render();
+    if (!state.activeChainId) return;
+
+    try {
+      await refreshChain(state.activeChainId);
+    } catch {
+      /* keep cached */
+    }
+    if (!findChain(state.activeChainId)) {
+      try {
+        await loadCompleted({ skipUrl: true, keepDetail: true });
+      } catch {
+        /* ignore */
+      }
+    }
+    render();
+  }
+
   function init() {
     if (typeof WorldChoirNav !== 'undefined') {
       WorldChoirNav.startWatcher('world-chain');
     }
-    const params = new URLSearchParams(window.location.search);
-    const deepChain = params.get('chain');
-    load().then(() => {
-      if (deepChain) {
-        state.activeChainId = deepChain;
-        state.view = 'detail';
-        state.detailReturnView = 'landing';
+    window.addEventListener('popstate', () => {
+      restoreFromUrl();
+    });
+    // Apply URL before first network paint so refresh keeps the open chain.
+    applyUrlState();
+    load().then(async () => {
+      if (state.view === 'completed') {
+        await loadCompleted({ skipUrl: true });
+        return;
+      }
+      if ((state.view === 'detail' || state.view === 'photo-book') && state.activeChainId) {
+        try {
+          await refreshChain(state.activeChainId);
+        } catch {
+          /* keep cached */
+        }
+        if (!findChain(state.activeChainId)) {
+          try {
+            await loadCompleted({ skipUrl: true, keepDetail: true });
+          } catch {
+            /* ignore */
+          }
+        }
         render();
-        refreshChain(deepChain).then(() => render()).catch(() => {});
       }
     });
   }
