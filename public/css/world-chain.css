@@ -167,10 +167,11 @@
 .wc-chain-card__title {
   margin: 0 0 6px;
   font-family: var(--font-sans);
-  font-size: 0.98rem;
-  font-weight: 650;
+  font-size: 0.78rem;
+  font-weight: 500;
   letter-spacing: 0.02em;
-  color: var(--text-primary);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .wc-chain-card__status {
