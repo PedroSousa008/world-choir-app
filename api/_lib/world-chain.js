@@ -132,6 +132,19 @@ function isAccountEligible(user, pledge, nowMs = Date.now()) {
   return nowMs >= created + ACCOUNT_AGE_MS;
 }
 
+/** Test Chain #2 destination (Hvar) — allow connect even if Voice is under 48h. */
+function isConnectTargetEligible(targetUser, target, active, nowMs) {
+  if (
+    TEST_FORCE_STARTER.enabled
+    && active
+    && countriesEqual(active.country, TEST_FORCE_STARTER.destinationCountry)
+    && citiesEqual(active.requiredCity, TEST_FORCE_STARTER.destinationCity)
+  ) {
+    return true;
+  }
+  return isAccountEligible(targetUser, target, nowMs);
+}
+
 function buildUserMaps(users = []) {
   const byId = new Map();
   users.forEach((u) => {
@@ -1173,7 +1186,7 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   else if (active.requiredCity && !citiesEqual(target.city, active.requiredCity)) valid = false;
   else {
     const targetUser = usersById.get(target.user_id);
-    if (!isAccountEligible(targetUser, target, nowMs)) valid = false;
+    if (!isConnectTargetEligible(targetUser, target, active, nowMs)) valid = false;
   }
   // Already used in this chain?
   if (valid && chain.route.some((s) => s.assignedVoiceId === target.user_id)) {
