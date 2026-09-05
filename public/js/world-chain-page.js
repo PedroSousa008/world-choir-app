@@ -86,19 +86,23 @@ const WorldChainPage = (() => {
 
   function renderHero() {
     return `
-      <header class="wc-chain-hero">
+      <header class="wc-chain-topbar">
         <a class="wc-chain-back" href="index.html" aria-label="Back to Home">←</a>
+        <h1 class="wc-chain-brand">World Chain</h1>
+        <span class="wc-chain-topbar__spacer" aria-hidden="true"></span>
+      </header>
+      <div class="wc-chain-hero">
         <img
           class="wc-chain-hero__img"
-          src="images/chain-header.png?v=20260905d"
+          src="images/chain-header.png?v=20260905e"
           alt=""
           width="1536"
           height="1024"
           decoding="async"
           fetchpriority="high"
         >
-        <h1 class="wc-chain-headline">A more connected world<br>is a kinder world.</h1>
-      </header>
+        <h2 class="wc-chain-headline">A more connected world<br>is a kinder world.</h2>
+      </div>
     `;
   }
 

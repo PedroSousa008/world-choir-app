@@ -5,8 +5,56 @@
   z-index: 1;
   max-width: 480px;
   margin: 0 auto;
-  padding: 0 20px calc(var(--nav-height) + 28px);
+  padding: max(20px, env(safe-area-inset-top, 0px)) 20px calc(var(--nav-height) + 28px);
   text-align: center;
+}
+
+.wc-chain-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  min-height: 40px;
+}
+
+.wc-chain-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--accent-aurora);
+  font-size: 1.1rem;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wc-chain-back:focus-visible {
+  outline: 2px solid var(--accent-aurora);
+  outline-offset: 2px;
+}
+
+.wc-chain-brand {
+  flex: 1;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--accent-aurora);
+}
+
+.wc-chain-topbar__spacer {
+  width: 40px;
+  flex-shrink: 0;
 }
 
 .wc-chain-hero {
@@ -28,39 +76,9 @@
   user-select: none;
 }
 
-.wc-chain-back {
-  position: absolute;
-  top: max(12px, env(safe-area-inset-top, 0px));
-  left: 12px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  margin: 0;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.45);
-  color: var(--accent-aurora);
-  font-size: 1.1rem;
-  line-height: 1;
-  text-decoration: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.wc-chain-back:focus-visible {
-  outline: 2px solid var(--accent-aurora);
-  outline-offset: 2px;
-}
-
 .wc-chain-headline {
   position: absolute;
-  top: max(18px, calc(env(safe-area-inset-top, 0px) + 8px));
+  top: 0;
   left: 16px;
   right: 16px;
   z-index: 2;
