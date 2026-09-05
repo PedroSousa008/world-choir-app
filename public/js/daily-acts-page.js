@@ -840,19 +840,29 @@ const DailyActsPage = (() => {
       document.querySelector('#dap-sponsor-logo img')?.addEventListener('error', (ev) => {
         ev.currentTarget.style.display = 'none';
       });
-      apiFetch('/api/daily-peace', {
-        method: 'POST',
-        body: JSON.stringify({
-          deviceId: deviceId(),
-          date: localDateString(),
-          assignmentDate,
-          action: 'track-sponsor-impression',
-        }),
-      }).catch(() => {});
+      const analyticsOk = typeof WorldChoirPrivacy !== 'undefined'
+        && WorldChoirPrivacy.analyticsAllowed() === true;
+
+      // Sponsor logo still displays; impression/click measurement is optional.
+      if (analyticsOk) {
+        apiFetch('/api/daily-peace', {
+          method: 'POST',
+          body: JSON.stringify({
+            deviceId: deviceId(),
+            date: localDateString(),
+            assignmentDate,
+            action: 'track-sponsor-impression',
+          }),
+        }).catch(() => {});
+      }
 
       const logoEl = document.getElementById('dap-sponsor-logo');
       if (logoEl?.tagName === 'A' && logoEl.getAttribute('href')) {
         logoEl.addEventListener('click', () => {
+          if (typeof WorldChoirPrivacy !== 'undefined'
+              && WorldChoirPrivacy.analyticsAllowed() !== true) {
+            return;
+          }
           apiFetch('/api/daily-peace', {
             method: 'POST',
             keepalive: true,

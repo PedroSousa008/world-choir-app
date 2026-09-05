@@ -142,6 +142,15 @@ const ProfilePage = (() => {
     OwnerAccess.init();
     WorldChoirNav.startWatcher('profile');
 
+    document.getElementById('profile-privacy-prefs')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof WorldChoirPrivacy !== 'undefined' && WorldChoirPrivacy.openPreferences) {
+        WorldChoirPrivacy.openPreferences();
+      } else {
+        window.location.href = 'privacy-policy.html';
+      }
+    });
+
     const warm = typeof WorldChoirPledgeState !== 'undefined' && WorldChoirPledgeState.isLoaded();
     if (warm) {
       profileReady = true;

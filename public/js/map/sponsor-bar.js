@@ -180,7 +180,22 @@ const MapSponsorBar = (() => {
     bindSponsorImpressions(container);
   }
 
+  function rebindAnalyticsIfNeeded() {
+    if (!trackEl) return;
+    bindSponsorImpressions(trackEl);
+  }
+
+  function analyticsAllowed() {
+    return typeof WorldChoirPrivacy !== 'undefined'
+      && WorldChoirPrivacy.analyticsAllowed() === true;
+  }
+
+  /**
+   * Optional analytics visitor id — only when privacy consent allows analytics.
+   * Never create/read this id for Essential-only or undecided users.
+   */
   function getMapVisitorId() {
+    if (!analyticsAllowed()) return null;
     const KEY = 'wc_map_visitor_id';
     try {
       let id = localStorage.getItem(KEY);
@@ -192,7 +207,7 @@ const MapSponsorBar = (() => {
       }
       return id;
     } catch {
-      return `session_${Date.now()}`;
+      return null;
     }
   }
 
@@ -263,13 +278,20 @@ const MapSponsorBar = (() => {
 
   function trackSponsorEvent(sponsorId, eventType, extra = {}) {
     if (!sponsorId) return;
+    // Optional measurement only — sponsor logos still display without this.
+    if (!analyticsAllowed()) return;
+
+    const visitorId = getMapVisitorId();
+    if (!visitorId) return;
+
     const context = getAnalyticsContext();
 
     const send = (coords = {}) => {
+      if (!analyticsAllowed()) return;
       const payload = {
         sponsorId,
         eventType,
-        visitorId: getMapVisitorId(),
+        visitorId,
         country: context.country,
         eventId: context.eventId,
         destinationUrl: extra.destinationUrl || null,
@@ -319,6 +341,8 @@ const MapSponsorBar = (() => {
 
   function bindSponsorImpressions(container) {
     resetImpressionTracking();
+    if (!analyticsAllowed()) return;
+
     const slots = container.querySelectorAll('.map-sponsor__slot[data-sponsor-id]');
     if (!slots.length) return;
 
@@ -584,6 +608,10 @@ const MapSponsorBar = (() => {
     bindMotionPreference();
     bindWindowResize();
     bindBeltContinuity();
+
+    window.addEventListener('wc-privacy-consent', () => {
+      rebindAnalyticsIfNeeded();
+    });
   }
 
   function hasActiveSponsors() {
