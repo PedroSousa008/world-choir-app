@@ -154,7 +154,7 @@ const WorldChoirHome = (() => {
         <span class="pledged-actions__sep" aria-hidden="true"></span>
         <button type="button" class="pledged-actions__btn" id="share-btn" aria-label="Share Countdown">${actionIcon('share')}</button>
         <span class="pledged-actions__sep" aria-hidden="true"></span>
-        <button type="button" class="pledged-actions__btn" id="home-carousel-btn" aria-label="Carousel">${actionIcon('carousel')}</button>
+        <button type="button" class="pledged-actions__btn" id="home-carousel-btn" aria-label="World Chain">${actionIcon('carousel')}</button>
       </div>
     `;
   }
@@ -165,7 +165,7 @@ const WorldChoirHome = (() => {
     root.getElementById('share-btn')?.addEventListener('click', shareCountdown);
     root.getElementById('home-carousel-btn')?.addEventListener('click', (e) => {
       e.preventDefault();
-      // TODO: Future World Choir carousel feature
+      window.location.href = 'world-chain.html';
     });
   }
 
