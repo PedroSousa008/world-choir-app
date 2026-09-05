@@ -431,12 +431,7 @@ const WorldChainPage = (() => {
       <header class="wc-chain-topbar">
         <a class="wc-chain-back" href="index.html" aria-label="Back to Home">←</a>
         <h1 class="wc-chain-brand">World Chain</h1>
-        <button type="button" class="wc-chain-help" data-wc-help aria-label="About World Chain" title="About World Chain">
-          <svg class="wc-chain-help__icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7">
-            <circle cx="12" cy="12" r="9"/>
-            <path d="M12 10.5v5.5M12 7.75h.01"/>
-          </svg>
-        </button>
+        <span class="wc-chain-topbar__spacer" aria-hidden="true"></span>
       </header>
       <div class="wc-chain-hero">
         <img
@@ -1766,12 +1761,6 @@ const WorldChainPage = (() => {
       btn.addEventListener('click', () => {
         const chain = findChain(btn.getAttribute('data-share-chain'));
         if (chain) shareChain(chain);
-      });
-    });
-    document.querySelectorAll('[data-wc-help]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const msg = 'World Chain connects real Voices across countries — one person, one place, one connection at a time.';
-        if (typeof window.alert === 'function') window.alert(msg);
       });
     });
     document.querySelectorAll('[data-accept-start]').forEach((btn) => {
