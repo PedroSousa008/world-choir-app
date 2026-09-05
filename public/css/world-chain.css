@@ -1457,6 +1457,8 @@
   height: 260px;
   object-fit: cover;
   object-position: center;
+  /* Keep camera pixels as-taken; do not apply EXIF rotation on display. */
+  image-orientation: none;
 }
 
 .wc-photobook-retake {

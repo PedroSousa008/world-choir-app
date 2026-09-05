@@ -138,6 +138,51 @@ const WorldChainPage = (() => {
     window.scrollTo(0, 0);
   }
 
+  function compressSelfieFile(file, maxSide = 1280, quality = 0.82) {
+    // Prefer createImageBitmap with imageOrientation: 'none' so phone EXIF
+    // does not rotate/flip the selfie away from how it was taken.
+    const drawBitmap = (bitmap) => {
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      const w = Math.max(1, Math.round(bitmap.width * scale));
+      const h = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        bitmap.close?.();
+        return null;
+      }
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      bitmap.close?.();
+      return canvas.toDataURL('image/jpeg', quality);
+    };
+
+    if (typeof createImageBitmap === 'function') {
+      return createImageBitmap(file, { imageOrientation: 'none' })
+        .then((bitmap) => {
+          const out = drawBitmap(bitmap);
+          if (out) return out;
+          throw new Error('Could not compress selfie');
+        })
+        .catch(() => compressSelfieDataUrlFromFile(file, maxSide, quality));
+    }
+    return compressSelfieDataUrlFromFile(file, maxSide, quality);
+  }
+
+  function compressSelfieDataUrlFromFile(file, maxSide, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        compressSelfieDataUrl(String(reader.result || ''), maxSide, quality)
+          .then(resolve)
+          .catch(reject);
+      };
+      reader.onerror = () => reject(new Error('Could not read photo'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   function compressSelfieDataUrl(dataUrl, maxSide = 1280, quality = 0.82) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -1518,13 +1563,7 @@ const WorldChainPage = (() => {
       selfieInput.value = '';
       if (!file) return;
       try {
-        const raw = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result || ''));
-          reader.onerror = () => reject(new Error('Could not read photo'));
-          reader.readAsDataURL(file);
-        });
-        const dataUrl = await compressSelfieDataUrl(raw);
+        const dataUrl = await compressSelfieFile(file);
         state.photoBookDraft = {
           ...state.photoBookDraft,
           dataUrl,
