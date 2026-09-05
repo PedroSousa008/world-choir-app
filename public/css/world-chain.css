@@ -249,7 +249,7 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 6px 2px 12px;
+  padding: 4px 0 10px;
   margin: 0 0 10px;
 }
 
@@ -266,11 +266,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.32;
+  opacity: 1;
   background: rgba(255, 255, 255, 0.04);
-  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.12);
-  position: relative;
-  z-index: 1;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.28);
 }
 
 .wc-chain-route__flag img {
@@ -285,55 +283,52 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-.wc-chain-route__flag.is-done {
-  opacity: 1;
-  box-shadow:
-    0 0 0 2px #6dcf9b,
-    0 0 10px rgba(109, 207, 155, 0.35);
+.wc-chain-route__flag.is-pending {
+  box-shadow: 0 0 0 1.5px rgba(160, 168, 180, 0.7);
 }
 
 .wc-chain-route__flag.is-current {
-  opacity: 1;
   box-shadow:
-    0 0 0 2px var(--accent-aurora),
-    0 0 10px rgba(78, 197, 232, 0.4);
+    0 0 0 1.5px var(--accent-aurora),
+    0 0 10px rgba(78, 197, 232, 0.45);
 }
 
-.wc-chain-route__flag.is-next {
-  opacity: 1;
+.wc-chain-route__flag.is-done {
   box-shadow:
-    0 0 0 2px rgba(150, 154, 164, 0.95),
-    0 0 8px rgba(150, 154, 164, 0.25);
+    0 0 0 1.5px #6dcf9b,
+    0 0 10px rgba(109, 207, 155, 0.4);
 }
 
-.wc-chain-route__flag.is-future {
-  opacity: 0.32;
-}
-
+/* 26px line (was 18px + 4px + 4px margins) so ends touch flags at same country spacing */
 .wc-chain-route__line {
-  flex: 0 0 16px;
+  flex: 0 0 26px;
+  width: 26px;
   height: 2px;
   margin: 0;
-  border-radius: 0;
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: transparent;
 }
 
 .wc-chain-route__line.is-done {
   background: #6dcf9b;
-  box-shadow: 0 0 6px rgba(109, 207, 155, 0.35);
+  box-shadow: 0 0 8px rgba(109, 207, 155, 0.35);
 }
 
+.wc-chain-route__line.is-current,
 .wc-chain-route__line.is-pending {
   background: repeating-linear-gradient(
     90deg,
-    var(--accent-aurora) 0 3px,
+    rgba(160, 168, 180, 0.75) 0 3px,
     transparent 3px 6px
   );
-  box-shadow: none;
 }
 
-.wc-chain-route__line.is-future {
-  background: rgba(255, 255, 255, 0.1);
+.wc-chain-route__line.is-current {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(78, 197, 232, 0.85) 0 3px,
+    transparent 3px 6px
+  );
 }
 
 .wc-chain-card__footer {

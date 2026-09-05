@@ -71,46 +71,47 @@ const WorldChainPage = (() => {
     return 'wc-chain-card__status--progress';
   }
 
-  function renderRoute(route = [], chainStatus = '') {
-    if (!route.length) return '';
-    const allDone = chainStatus === 'COMPLETED'
-      || route.every((s) => s.status === 'connected');
+  /**
+   * Visual route states:
+   * - done (green): connection completed
+   * - current (blue): this Voice's turn
+   * - pending (grey): destination / not yet reached
+   */
+  function routeNodeStates(route = []) {
     const activeIdx = route.findIndex((s) => s.status === 'active');
     const selectedIdx = route.findIndex((s) => s.status === 'selected');
+    const allDone = route.length > 0 && route.every((s) => s.status === 'connected');
 
     let actorIdx = -1;
-    let nextIdx = -1;
     if (!allDone) {
-      if (activeIdx >= 0) {
-        // Current actor sits on the previous hop; destination is the active step.
-        actorIdx = Math.max(0, activeIdx - 1);
-        nextIdx = activeIdx;
-      } else if (selectedIdx >= 0) {
-        actorIdx = selectedIdx;
-        nextIdx = selectedIdx + 1 < route.length ? selectedIdx + 1 : -1;
-      }
+      if (activeIdx > 0) actorIdx = activeIdx - 1;
+      else if (activeIdx === 0) actorIdx = 0;
+      else if (selectedIdx >= 0) actorIdx = selectedIdx;
     }
 
+    return route.map((step, i) => {
+      let node = 'is-pending';
+      if (allDone || step.status === 'connected') node = 'is-done';
+      else if (i === actorIdx) node = 'is-current';
+
+      let line = null;
+      if (i < route.length - 1) {
+        if (allDone || step.status === 'connected') line = 'is-done';
+        else if (i === actorIdx) line = 'is-current';
+        else line = 'is-pending';
+      }
+      return { node, line };
+    });
+  }
+
+  function renderRoute(route = []) {
+    if (!route.length) return '';
+    const states = routeNodeStates(route);
     const parts = [];
     route.forEach((step, i) => {
-      let flagClass = 'is-future';
-      if (allDone || (actorIdx >= 0 && i < actorIdx)) {
-        flagClass = 'is-done';
-      } else if (i === actorIdx) {
-        flagClass = 'is-current';
-      } else if (i === nextIdx) {
-        flagClass = 'is-next';
-      }
-
-      parts.push(flagCircle(step.country, flagClass));
-      if (i < route.length - 1) {
-        let lineClass = 'is-future';
-        if (allDone || (actorIdx >= 0 && i < actorIdx)) {
-          lineClass = 'is-done';
-        } else if (i === actorIdx) {
-          lineClass = 'is-pending';
-        }
-        parts.push(`<span class="wc-chain-route__line ${lineClass}" aria-hidden="true"></span>`);
+      parts.push(flagCircle(step.country, states[i].node));
+      if (states[i].line) {
+        parts.push(`<span class="wc-chain-route__line ${states[i].line}" aria-hidden="true"></span>`);
       }
     });
     return `<div class="wc-chain-route" role="img" aria-label="World Chain route">${parts.join('')}</div>`;
@@ -155,7 +156,7 @@ const WorldChainPage = (() => {
           </p>
           <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
         </div>
-        ${renderRoute(chain.route, chain.status)}
+        ${renderRoute(chain.route)}
         <div class="wc-chain-card__footer">
           <p class="wc-chain-card__meta">
             ${esc(chain.countries)} countries · ${esc(chain.connections)} connections<br>
@@ -357,7 +358,7 @@ const WorldChainPage = (() => {
           </p>
           <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
         </div>
-        ${renderRoute(chain.route, chain.status)}
+        ${renderRoute(chain.route)}
         <p class="wc-chain-card__meta">
           ${esc(chain.progressLabel)}<br>
           ${esc(chain.routeSummary || '')}
