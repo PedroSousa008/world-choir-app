@@ -13,7 +13,7 @@
   position: relative;
   width: calc(100% + 40px);
   margin: 0 -20px 20px;
-  aspect-ratio: 1881 / 836;
+  aspect-ratio: 1536 / 1024;
   overflow: hidden;
   background: #000;
 }
@@ -61,7 +61,7 @@
 .wc-chain-headline {
   position: absolute;
   top: max(18px, calc(env(safe-area-inset-top, 0px) + 8px));
-  left: 56px;
+  left: 16px;
   right: 16px;
   z-index: 2;
   margin: 0;
@@ -71,7 +71,7 @@
   letter-spacing: -0.025em;
   line-height: 1.2;
   color: var(--text-primary);
-  text-align: left;
+  text-align: center;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
   pointer-events: none;
 }

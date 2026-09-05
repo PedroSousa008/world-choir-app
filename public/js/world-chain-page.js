@@ -90,10 +90,10 @@ const WorldChainPage = (() => {
         <a class="wc-chain-back" href="index.html" aria-label="Back to Home">←</a>
         <img
           class="wc-chain-hero__img"
-          src="images/chain-header.png?v=20260905c"
+          src="images/chain-header.png?v=20260905d"
           alt=""
-          width="1881"
-          height="836"
+          width="1536"
+          height="1024"
           decoding="async"
           fetchpriority="high"
         >
