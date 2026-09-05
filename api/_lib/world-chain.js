@@ -20,7 +20,9 @@ const MIN_CHAIN_LENGTH = 2;
 const CHAIN_DURATION_MS = 24 * 60 * 60 * 1000;
 const STUCK_AFTER_MS = 3 * 60 * 60 * 1000;
 const ACCOUNT_AGE_MS = 48 * 60 * 60 * 1000;
-const COOLDOWNS_MS = [10 * 60 * 1000, 30 * 60 * 1000, 60 * 60 * 1000];
+/** Temporary test: no connect cooldowns (re-enable for production). */
+const COOLDOWNS_MS = [0, 0, 0];
+const TEST_DISABLE_CONNECT_COOLDOWN = true;
 
 const Status = {
   IN_PROGRESS: 'IN_PROGRESS',
@@ -1153,7 +1155,11 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   }
 
   const attempts = await readAttempts(eventId, day, chainId, viewer.voiceNumber);
-  if (attempts.cooldownUntil && new Date(attempts.cooldownUntil).getTime() > nowMs) {
+  if (
+    !TEST_DISABLE_CONNECT_COOLDOWN
+    && attempts.cooldownUntil
+    && new Date(attempts.cooldownUntil).getTime() > nowMs
+  ) {
     const waitMs = new Date(attempts.cooldownUntil).getTime() - nowMs;
     return {
       ...rejectionMessage(),
@@ -1271,8 +1277,12 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
 
 async function failAttempt(eventId, day, chainId, viewer, attempts, nowMs) {
   const streak = (attempts.incorrectStreak || 0) + 1;
-  const cooldownMs = COOLDOWNS_MS[Math.min(streak, COOLDOWNS_MS.length) - 1];
-  const cooldownUntil = new Date(nowMs + cooldownMs).toISOString();
+  const cooldownMs = TEST_DISABLE_CONNECT_COOLDOWN
+    ? 0
+    : COOLDOWNS_MS[Math.min(streak, COOLDOWNS_MS.length) - 1];
+  const cooldownUntil = cooldownMs > 0
+    ? new Date(nowMs + cooldownMs).toISOString()
+    : null;
   const next = {
     incorrectStreak: streak,
     cooldownUntil,
@@ -1282,8 +1292,8 @@ async function failAttempt(eventId, day, chainId, viewer, attempts, nowMs) {
   return {
     ...rejectionMessage(),
     cooldownMs,
-    cooldownLabel: formatDuration(cooldownMs),
-    retryLabel: `You can try again in: ${formatDuration(cooldownMs)}`,
+    cooldownLabel: cooldownMs > 0 ? formatDuration(cooldownMs) : '',
+    retryLabel: cooldownMs > 0 ? `You can try again in: ${formatDuration(cooldownMs)}` : '',
   };
 }
 
