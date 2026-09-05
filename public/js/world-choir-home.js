@@ -86,6 +86,8 @@ const WorldChoirHome = (() => {
         '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
       share:
         '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.7 13.5l6.6 3.9M15.3 6.6L8.7 10.5"/></svg>',
+      carousel:
+        '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="14" height="14" rx="2"/><path d="M18 7.5v9"/><path d="M21 9v6"/></svg>',
     };
     return icons[type] || '';
   }
@@ -138,6 +140,35 @@ const WorldChoirHome = (() => {
     }
   }
 
+  function openDailyActsFromHome() {
+    if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.open({ tab: 'today' });
+    else window.location.href = 'daily-acts.html';
+  }
+
+  function renderPledgedActionBar() {
+    return `
+      <div class="pledged-actions" id="pledged-actions" role="toolbar" aria-label="World Choir actions">
+        <button type="button" class="pledged-actions__btn" id="daily-peace-btn" aria-label="Daily Acts of Peace">${actionIcon('peace')}</button>
+        <span class="pledged-actions__sep" aria-hidden="true"></span>
+        <button type="button" class="pledged-actions__btn" id="calendar-btn" aria-label="Add to Calendar">${actionIcon('calendar')}</button>
+        <span class="pledged-actions__sep" aria-hidden="true"></span>
+        <button type="button" class="pledged-actions__btn" id="share-btn" aria-label="Share Countdown">${actionIcon('share')}</button>
+        <span class="pledged-actions__sep" aria-hidden="true"></span>
+        <button type="button" class="pledged-actions__btn" id="home-carousel-btn" aria-label="Carousel">${actionIcon('carousel')}</button>
+      </div>
+    `;
+  }
+
+  function bindPledgedActions(root = document) {
+    root.getElementById('daily-peace-btn')?.addEventListener('click', openDailyActsFromHome);
+    root.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
+    root.getElementById('share-btn')?.addEventListener('click', shareCountdown);
+    root.getElementById('home-carousel-btn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      // TODO: Future World Choir carousel feature
+    });
+  }
+
   function renderPledgeButton() {
     const pledgeState = typeof WorldChoirPledgeState !== 'undefined'
       ? WorldChoirPledgeState.getState()
@@ -149,11 +180,7 @@ const WorldChoirHome = (() => {
     }
 
     if (pledgeState === 'pledged') {
-      return `
-        <button class="btn-hero btn-hero--pledged" id="pledge-btn" type="button" disabled aria-disabled="true">
-          <span class="btn-hero__text">You're Singing</span>
-        </button>
-      `;
+      return renderPledgedActionBar();
     }
 
     return `
@@ -176,6 +203,7 @@ const WorldChoirHome = (() => {
     if (!next) return;
 
     const current = document.getElementById('pledge-btn')
+      || document.getElementById('pledged-actions')
       || document.getElementById('home-pledge-slot')
       || document.querySelector('.btn-hero-skeleton');
 
@@ -183,21 +211,24 @@ const WorldChoirHome = (() => {
       if (
         current.id === next.id
         && current.className === next.className
-        && current.textContent.trim() === next.textContent.trim()
+        && (
+          next.id === 'pledged-actions'
+          || current.textContent.trim() === next.textContent.trim()
+        )
       ) {
         return;
       }
       current.replaceWith(next);
     } else {
-      const actions = document.querySelector('.secondary-actions');
       const song = document.querySelector('.home-song');
-      if (actions?.parentNode) actions.parentNode.insertBefore(next, actions);
-      else if (song?.parentNode) song.insertAdjacentElement('afterend', next);
+      if (song?.parentNode) song.insertAdjacentElement('afterend', next);
       else return;
     }
 
-    if (next.id === 'pledge-btn' && !next.disabled) {
+    if (next.id === 'pledge-btn') {
       next.addEventListener('click', () => WorldChoirParticipation.open());
+    } else if (next.id === 'pledged-actions') {
+      bindPledgedActions(document);
     }
   }
 
@@ -218,11 +249,6 @@ const WorldChoirHome = (() => {
         <div class="home-skel home-skel--meta"></div>
         <div class="home-skel home-skel--song"></div>
         <div class="home-skel home-skel--cta"></div>
-        <div class="home-skel-actions" aria-hidden="true">
-          <div class="home-skel home-skel--icon"></div>
-          <div class="home-skel home-skel--icon"></div>
-          <div class="home-skel home-skel--icon"></div>
-        </div>
       </div>
     `;
   }
@@ -249,12 +275,6 @@ const WorldChoirHome = (() => {
       <p class="home-song">${esc(e.songName)} — ${esc(e.artistName)}</p>
 
       ${renderPledgeButton()}
-
-      <div class="secondary-actions">
-        <button class="btn-icon" type="button" id="daily-peace-btn" aria-label="Daily Acts of Peace">${actionIcon('peace')}</button>
-        <button class="btn-icon" type="button" id="calendar-btn" aria-label="Add to Calendar">${actionIcon('calendar')}</button>
-        <button class="btn-icon" type="button" id="share-btn" aria-label="Share Countdown">${actionIcon('share')}</button>
-      </div>
     `;
   }
 
@@ -997,12 +1017,7 @@ const WorldChoirHome = (() => {
 
   function bindActions() {
     document.getElementById('pledge-btn')?.addEventListener('click', () => WorldChoirParticipation.open());
-    document.getElementById('calendar-btn')?.addEventListener('click', addToCalendar);
-    document.getElementById('daily-peace-btn')?.addEventListener('click', () => {
-      if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.open({ tab: 'today' });
-      else window.location.href = 'daily-acts.html';
-    });
-    document.getElementById('share-btn')?.addEventListener('click', shareCountdown);
+    bindPledgedActions(document);
     syncHomeGuideVisibility();
   }
 
