@@ -76,13 +76,18 @@
   user-select: none;
 }
 
-.wc-chain-headline {
+.wc-chain-hero__copy {
   position: absolute;
   top: 0;
   left: 16px;
   right: 16px;
   z-index: 2;
-  margin: 0;
+  pointer-events: none;
+  text-align: center;
+}
+
+.wc-chain-headline {
+  margin: 0 0 14px;
   font-family: var(--font-sans);
   font-size: clamp(1.2rem, 4.8vw, 1.7rem);
   font-weight: 600;
@@ -91,7 +96,17 @@
   color: var(--text-primary);
   text-align: center;
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.65);
-  pointer-events: none;
+}
+
+.wc-chain-sub {
+  margin: 0 auto;
+  max-width: 22em;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 .wc-chain-explore {

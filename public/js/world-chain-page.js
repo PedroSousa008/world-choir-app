@@ -106,7 +106,10 @@ const WorldChainPage = (() => {
           decoding="async"
           fetchpriority="high"
         >
-        <h2 class="wc-chain-headline">A more connected world<br>is a kinder world.</h2>
+        <div class="wc-chain-hero__copy">
+          <h2 class="wc-chain-headline">A more connected world<br>is a kinder world.</h2>
+          <p class="wc-chain-sub">Real people. Real connections.<br>A global chain of voices.</p>
+        </div>
       </div>
     `;
   }
