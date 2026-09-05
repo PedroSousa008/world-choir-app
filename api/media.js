@@ -10,6 +10,7 @@ const ALLOWED_PREFIXES = [
   'wc-data/daily-peace/partnerships/media/',
   'wc-data/map-sponsors/media/',
   'wc-data/memory/',
+  'wc-data/world-chain/photo-book/',
 ];
 
 module.exports = async function handler(req, res) {
