@@ -197,7 +197,10 @@ const WorldChoirMap = (() => {
     gatheringLayer.clearLayers();
 
     WorldChoirDB.getAggregatedCities().forEach((city) => {
-      const marker = L.marker([city.latitude, city.longitude], {
+      const lat = Number(city.latitude);
+      const lng = Number(city.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const marker = L.marker([lat, lng], {
         icon: createCityLightIcon(city),
         interactive: true,
         keyboard: false,
@@ -210,9 +213,11 @@ const WorldChoirMap = (() => {
     });
 
     WorldChoirDB.getGatheringPlaces().forEach((g) => {
-      if (g.latitude == null || g.longitude == null) return;
+      const lat = Number(g.latitude);
+      const lng = Number(g.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
       gatheringLayer.addLayer(
-        L.marker([g.latitude, g.longitude], {
+        L.marker([lat, lng], {
           icon: createGatheringIcon(),
           interactive: false,
           keyboard: false,
@@ -223,6 +228,14 @@ const WorldChoirMap = (() => {
 
   function initMap() {
     const view = getInitialMapView();
+    // MapLibre GL paints the basemap in a separate canvas from Leaflet markers.
+    // CSS zoom animations desync those two systems at extreme zoom-out and can
+    // leave city lights sitting on the wrong geography (e.g. Braga over Spain).
+    // Instant Leaflet zoom keeps markers and basemap on the same CRS always.
+    const useVectorBasemap = typeof WorldChoirMapTiles !== 'undefined'
+      && typeof WorldChoirMapTiles.canUseMapLibre === 'function'
+      && WorldChoirMapTiles.canUseMapLibre();
+
     map = L.map('world-map', {
       center: view.center,
       zoom: view.zoom,
@@ -233,14 +246,10 @@ const WorldChoirMap = (() => {
       worldCopyJump: false,
       maxBounds: [[-85, -180], [85, 180]],
       maxBoundsViscosity: 1.0,
-      // Prevent pinch/wheel from briefly overshooting minZoom then bouncing —
-      // that bounce makes city lights appear to dislocate for a moment.
-      bounceAtZoomLimits: false,
       fadeAnimation: false,
-      zoomAnimation: true,
-      // Keep markers on true lat/lng during zoom (MapLibre basemap + divIcons
-      // otherwise briefly drift, then snap on zoomend).
-      markerZoomAnimation: false,
+      zoomAnimation: !useVectorBasemap,
+      markerZoomAnimation: !useVectorBasemap,
+      bounceAtZoomLimits: true,
       inertia: true,
       inertiaDeceleration: 2800,
       wheelDebounceTime: 30,
@@ -255,17 +264,21 @@ const WorldChoirMap = (() => {
     gatheringLayer = L.layerGroup().addTo(map);
 
     map.on('click', hideCityCard);
-    // After any zoom/pan settle (esp. maxBounds clamp), force marker pane
-    // positions from current projection so lights never linger offset.
-    map.on('zoomend moveend', () => {
-      if (!map) return;
-      map.eachLayer((layer) => {
-        if (layer instanceof L.Marker) {
-          const latLng = layer.getLatLng();
-          if (latLng) layer.setLatLng(latLng);
-        }
+
+    const resyncBasemap = () => {
+      if (typeof WorldChoirMapTiles?.syncToMap === 'function') {
+        WorldChoirMapTiles.syncToMap(map);
+      }
+    };
+    map.on('zoomend', resyncBasemap);
+    map.on('moveend', resyncBasemap);
+    // Catch late GL transform frames after maxBounds clamp / pinch settle.
+    map.on('zoomend', () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(resyncBasemap);
       });
     });
+
     bindMapResizeHandlers();
     scheduleMapResize();
   }

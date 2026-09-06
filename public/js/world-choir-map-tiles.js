@@ -86,9 +86,9 @@ const WorldChoirMapTiles = (() => {
     return L.maplibreGL({
       style: CARTO_DARK_VECTOR_STYLE,
       interactive: false,
-      // Zero padding keeps the GL canvas aligned with Leaflet's CRS during
-      // extreme zoom-out — non-zero padding can briefly offset overlays.
-      padding: 0,
+      // App-tuned padding (library default is 0.1). Keep non-zero so the GL
+      // canvas stays aligned with Leaflet marker overlays.
+      padding: 0.04,
       antialias: !isMobileMap(),
       fadeDuration: 0,
       pixelRatio: getMapPixelRatio(),
@@ -170,6 +170,42 @@ const WorldChoirMapTiles = (() => {
     return 'raster';
   }
 
+  /**
+   * Hard-resync MapLibre GL to Leaflet's center/zoom.
+   * Fixes basemap drift that makes city lights look geographically wrong
+   * (e.g. Braga appearing over southern Spain) after extreme zoom-out.
+   */
+  function syncToMap(map) {
+    if (!map) return;
+    basemapLayers.forEach((layer) => {
+      if (!layer) return;
+      try {
+        // Clear sticky zooming flag that can block _update after interrupted zooms.
+        if (layer._zooming) layer._zooming = false;
+
+        const gl = typeof layer.getMaplibreMap === 'function' ? layer.getMaplibreMap() : null;
+        if (gl) {
+          const canvas = gl.getCanvas?.() || layer._glMap?._actualCanvas;
+          if (canvas) {
+            // Drop any leftover CSS zoom transform from maplibre-gl-leaflet.
+            L.DomUtil.setTransform(canvas, null, 1);
+          }
+          const center = map.getCenter();
+          gl.jumpTo({
+            center: [center.lng, center.lat],
+            zoom: map.getZoom() - 1,
+          });
+        }
+
+        if (typeof layer._update === 'function') {
+          layer._update();
+        }
+      } catch {
+        /* ignore sync failures */
+      }
+    });
+  }
+
   function warmBasemap() {
     try {
       fetch(CARTO_DARK_VECTOR_STYLE, { cache: 'force-cache', mode: 'cors' }).catch(() => {});
@@ -181,8 +217,10 @@ const WorldChoirMapTiles = (() => {
 
   return {
     detectMode,
+    canUseMapLibre,
     addBasemapLayers,
     addSingleBasemapLayer,
+    syncToMap,
     warmBasemap,
   };
 })();
