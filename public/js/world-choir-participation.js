@@ -75,6 +75,9 @@ const WorldChoirParticipation = (() => {
     onSuccessCallback = options.onSuccess || null;
     populateCountries();
 
+    if (init.bound) return;
+    init.bound = true;
+
     document.getElementById('participation-confirm')?.addEventListener('click', confirm);
     document.getElementById('participation-cancel')?.addEventListener('click', close);
     document.getElementById('participation-overlay')?.addEventListener('click', (e) => {

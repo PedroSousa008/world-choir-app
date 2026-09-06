@@ -534,8 +534,20 @@ const WorldChoirMap = (() => {
     startMap();
   }
 
+  function onTabShow() {
+    scheduleMapResize();
+  }
+
   async function startMap() {
-    document.body.classList.add('map-page');
+    if (startMap.started) {
+      scheduleMapResize();
+      return;
+    }
+    startMap.started = true;
+
+    if (!window.__WC_TAB_SILENT_INIT) {
+      document.body.classList.add('map-page');
+    }
     WorldChoirNav.startWatcher('map');
 
     const clearBootSkel = () => {
@@ -619,5 +631,5 @@ const WorldChoirMap = (() => {
     checkVoiceJoinedFromSession();
   }
 
-  return { init, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
+  return { init, onTabShow, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
 })();

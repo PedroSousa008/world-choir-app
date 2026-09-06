@@ -869,7 +869,9 @@ const WorldChoirMemory = (() => {
   }
 
   function init() {
+    if (init.started) return;
     if (typeof WorldChoirNav !== 'undefined' && !WorldChoirNav.guardMemoryRoute()) return;
+    init.started = true;
     if (typeof WorldChoirNav !== 'undefined') WorldChoirNav.startWatcher('memory');
     // Paint immediately — never wait on DB / network before first Memory UI.
     paintShell();
