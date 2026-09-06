@@ -135,6 +135,20 @@ const ProfilePage = (() => {
     }
   }
 
+  function paintFromLocalCache() {
+    if (typeof WorldChoirDB === 'undefined') return false;
+    if (typeof WorldChoirDB.primeLocalCaches === 'function') {
+      WorldChoirDB.primeLocalCaches();
+    }
+    if (!WorldChoirDB.isPledgeLoaded()) return false;
+    if (typeof WorldChoirPledgeState !== 'undefined') {
+      WorldChoirPledgeState.refresh();
+    }
+    profileReady = true;
+    render();
+    return true;
+  }
+
   function init() {
     ChangeLocationModal.init();
     PracticeMode.init();
@@ -151,21 +165,27 @@ const ProfilePage = (() => {
       }
     });
 
-    const warm = typeof WorldChoirPledgeState !== 'undefined' && WorldChoirPledgeState.isLoaded();
-    if (warm) {
-      profileReady = true;
-      render();
-    } else {
-      renderSkeleton();
+    // Instant paint from session (returning visits) — never hold the full skeleton for network.
+    const paintedWarm = paintFromLocalCache();
+    if (!paintedWarm) {
+      const warm = typeof WorldChoirPledgeState !== 'undefined' && WorldChoirPledgeState.isLoaded();
+      if (warm) {
+        profileReady = true;
+        render();
+      } else {
+        renderSkeleton();
+      }
     }
 
     window.addEventListener('wc-pledges-synced', updateVoicesCounter);
+    window.addEventListener('wc-map-aggregate-synced', updateVoicesCounter);
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
     window.addEventListener('wc-pledge-added', updateVoicesCounter);
     window.addEventListener('wc-voices-live-update', updateVoicesCounter);
     WorldChoirDB.startLiveSync({ intervalMs: 2000 });
 
-    const fallback = setTimeout(() => revealProfile(), 220);
+    // Very short safety net only — real reveal should come from readyProfile().
+    const fallback = setTimeout(() => revealProfile(), 90);
 
     WorldChoirPledgeState.init()
       .then(async () => {

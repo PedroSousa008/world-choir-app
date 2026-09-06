@@ -28,6 +28,9 @@ const WorldChoirDB = (() => {
 
   const LIVE_SYNC_INTERVAL_MS = 2000;
   const AGGREGATE_SESSION_KEY = 'wc_map_aggregate_v1';
+  const MY_PLEDGE_SESSION_KEY = 'wc_my_pledge_v1';
+
+  let identityPromise = null;
 
   function apiBase() {
     return '';
@@ -91,7 +94,63 @@ const WorldChoirDB = (() => {
       `/api/my-pledge?deviceId=${encodeURIComponent(getDeviceId())}&eventId=${encodeURIComponent(eventId)}`
     );
     myPledgeCache = data.pledge || null;
+    writeSessionMyPledge(eventId, myPledgeCache);
     return myPledgeCache;
+  }
+
+  function readSessionMyPledge(eventId) {
+    try {
+      const raw = sessionStorage.getItem(MY_PLEDGE_SESSION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.eventId !== eventId) return null;
+      if (parsed.deviceId && parsed.deviceId !== getDeviceId()) return null;
+      // pledge may be null (known not-pledged) — that still counts as loaded.
+      if (!('pledge' in parsed)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeSessionMyPledge(eventId, pledge) {
+    try {
+      sessionStorage.setItem(MY_PLEDGE_SESSION_KEY, JSON.stringify({
+        eventId,
+        deviceId: getDeviceId(),
+        pledge: pledge || null,
+        at: Date.now(),
+      }));
+    } catch {
+      /* ignore quota */
+    }
+  }
+
+  /** Instant warm paint for Profile/Home — restore session caches without network. */
+  function primeLocalCaches(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    getDeviceId();
+    let primed = false;
+
+    if (myPledgeCache === undefined) {
+      const warmPledge = readSessionMyPledge(eventId);
+      if (warmPledge) {
+        myPledgeCache = warmPledge.pledge || null;
+        primed = true;
+      }
+    }
+
+    if (cachedAggregate === undefined) {
+      const warmAgg = readSessionAggregate(eventId);
+      if (warmAgg) {
+        cachedAggregate = warmAgg;
+        lastMetaSignature = metaSignature(warmAgg.meta);
+        lastCitySnapshot = buildCitySnapshot(eventId);
+        lastVoiceCount = warmAgg.stats?.voices ?? null;
+        primed = true;
+      }
+    }
+
+    return primed;
   }
 
   function readSessionAggregate(eventId) {
@@ -317,22 +376,14 @@ const WorldChoirDB = (() => {
   async function bootstrap() {
     getDeviceId();
     const eventId = WorldChoirConfig.CURRENT_EVENT.id;
-    const warm = readSessionAggregate(eventId);
-    if (warm) {
-      cachedAggregate = warm;
-      lastMetaSignature = metaSignature(warm.meta);
-      lastCitySnapshot = buildCitySnapshot(eventId);
-      lastVoiceCount = warm.stats?.voices ?? null;
-      window.dispatchEvent(new CustomEvent('wc-map-aggregate-synced', { detail: warm }));
+    primeLocalCaches(eventId);
+    if (cachedAggregate) {
+      window.dispatchEvent(new CustomEvent('wc-map-aggregate-synced', { detail: cachedAggregate }));
       window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState(eventId) }));
     }
-    await ensureRemoteUser();
-    await Promise.all([
-      syncMyPledge(),
-      syncMapAggregates(),
-    ]);
-    seedLocalEvents();
-    syncActiveEventStatus();
+    // Identity + my pledge first so Profile/Home can paint without waiting on map aggregate.
+    await ensureIdentityReady();
+    await syncMapAggregates();
   }
 
   function ready() {
@@ -344,6 +395,34 @@ const WorldChoirDB = (() => {
       });
     }
     return bootstrapPromise;
+  }
+
+  /**
+   * User + my-pledge only — Profile/Home CTA must not wait on map aggregates.
+   * Starts full ready() in the background for voice counts / map data.
+   */
+  async function ensureIdentityReady() {
+    if (!identityPromise) {
+      identityPromise = (async () => {
+        getDeviceId();
+        primeLocalCaches();
+        await ensureRemoteUser();
+        await syncMyPledge();
+        seedLocalEvents();
+        syncActiveEventStatus();
+        return remoteUser;
+      })().catch((err) => {
+        identityPromise = null;
+        throw err;
+      });
+    }
+    return identityPromise;
+  }
+
+  async function readyProfile() {
+    // Kick full bootstrap (aggregate) without blocking Profile UI on it.
+    void ready().catch(() => {});
+    return ensureIdentityReady();
   }
 
   /** Device + remote user only — does not wait for map aggregate bootstrap. */
@@ -917,6 +996,9 @@ const WorldChoirDB = (() => {
   return {
     ready,
     readyIdentity,
+    readyProfile,
+    ensureIdentityReady,
+    primeLocalCaches,
     bootstrap,
     syncAllPledges,
     syncAllPledgesIfChanged,

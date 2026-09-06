@@ -56,6 +56,9 @@ const WorldChoirPledgeState = (() => {
       return syncFromDB();
     }
     try {
+      if (typeof WorldChoirDB.readyIdentity === 'function') {
+        await WorldChoirDB.readyIdentity();
+      }
       await WorldChoirDB.syncMyPledge();
     } catch (err) {
       console.error('WorldChoirPledgeState syncMyPledge failed:', err);
@@ -65,10 +68,14 @@ const WorldChoirPledgeState = (() => {
 
   function init() {
     if (!initPromise) {
-      initPromise = (typeof WorldChoirDB !== 'undefined'
-        ? WorldChoirDB.ready()
-        : Promise.resolve()
-      )
+      // Profile/Home must not wait on map aggregate — only identity + my-pledge.
+      const boot = typeof WorldChoirDB === 'undefined'
+        ? Promise.resolve()
+        : (typeof WorldChoirDB.readyProfile === 'function'
+          ? WorldChoirDB.readyProfile()
+          : WorldChoirDB.ready());
+
+      initPromise = boot
         .then(syncFromDB)
         .catch(async (err) => {
           console.error('WorldChoirPledgeState init failed:', err);
