@@ -173,12 +173,18 @@ const ProfilePage = (() => {
         revealProfile();
         WorldChoirPledgeState.subscribe(() => refresh());
         maybeOpenPracticeFromQuery();
+        if (typeof WorldChoirPracticeConfig !== 'undefined') {
+          WorldChoirPracticeConfig.scheduleWarmPracticeAudio?.();
+        }
       })
       .catch((err) => {
         clearTimeout(fallback);
         console.error('Failed to connect to World Choir database:', err);
         revealProfile();
         maybeOpenPracticeFromQuery();
+        if (typeof WorldChoirPracticeConfig !== 'undefined') {
+          WorldChoirPracticeConfig.scheduleWarmPracticeAudio?.();
+        }
       });
   }
 

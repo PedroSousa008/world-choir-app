@@ -6,7 +6,8 @@ const WorldChoirPracticeConfig = (() => {
   const PRACTICE_SONG = {
     title: 'Imagine',
     artist: 'John Lennon',
-    audioUrl: '/audio/imagine.mp3',
+    // Query bust for CDN/browser cache; file content unchanged.
+    audioUrl: '/audio/imagine.mp3?v=20260906a',
   };
 
   // Each line is active from its `time` until the next line's `time`.
@@ -39,5 +40,30 @@ const WorldChoirPracticeConfig = (() => {
     { time: 171, text: 'And the world will be as one' },
   ];
 
-  return { PRACTICE_SONG, PRACTICE_LYRICS };
+  /** Idle warm of Practice audio (HTTP cache only — does not start playback). */
+  let warmStarted = false;
+  function warmPracticeAudio() {
+    if (warmStarted) return;
+    warmStarted = true;
+    try {
+      const a = new Audio();
+      a.preload = 'auto';
+      a.src = PRACTICE_SONG.audioUrl;
+      // Hint the browser without playing.
+      if (typeof a.load === 'function') a.load();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function scheduleWarmPracticeAudio() {
+    const run = () => warmPracticeAudio();
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(run, { timeout: 4000 });
+    } else {
+      window.setTimeout(run, 1800);
+    }
+  }
+
+  return { PRACTICE_SONG, PRACTICE_LYRICS, warmPracticeAudio, scheduleWarmPracticeAudio };
 })();

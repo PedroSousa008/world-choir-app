@@ -127,7 +127,7 @@ const WorldChoirPrivacy = (() => {
     if (typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO?.url) {
       return WorldChoirConfig.LOGO.url;
     }
-    return 'images/world-choir-logo.png?v=20270706';
+    return 'images/world-choir-logo.png?v=20260906perf';
   }
 
   function logoAlt() {

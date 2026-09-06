@@ -92,7 +92,7 @@ const WorldChoirConfig = (() => {
 
   const LOGO = {
     src: 'images/world-choir-logo.png',
-    version: '20270706',
+    version: '20260906perf',
     alt: 'World Choir App',
     get url() {
       return `${this.src}?v=${this.version}`;
@@ -102,7 +102,7 @@ const WorldChoirConfig = (() => {
   /** Shared Passport bottom-right world map — replace public/images/passport/passport-world-map.png for all users */
   const PASSPORT_WORLD_MAP = {
     src: 'images/passport/passport-world-map.png',
-    version: '20260820b',
+    version: '20260906perf',
     alt: 'World Choir world map',
     get url() {
       return `${this.src}?v=${this.version}`;
@@ -116,7 +116,7 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_FEATURE_IMAGE = {
     src: 'images/passport/passport-feature.png',
-    version: '20260821b',
+    version: '20260906perf',
     alt: 'World Choir Passport feature',
     get url() {
       return `${this.src}?v=${this.version}`;
@@ -131,7 +131,7 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_INSIDE_BACKGROUND = {
     src: 'images/passport/passport-inside-bg.png',
-    version: '20260827c',
+    version: '20260906perf',
     alt: 'World Choir Passport inside page',
     get url() {
       return `${this.src}?v=${this.version}`;
@@ -145,7 +145,7 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_INSIDE_LOGO = {
     src: 'images/passport/passport-inside-logo.png',
-    version: '20260827b',
+    version: '20260906perf',
     alt: 'World Choir',
     get url() {
       return `${this.src}?v=${this.version}`;

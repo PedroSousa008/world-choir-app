@@ -896,7 +896,7 @@ const WorldChainPage = (() => {
         <footer class="wc-photobook-close">
           <img
             class="wc-photobook-close__earth"
-            src="images/world-choir-logo.png?v=20270706"
+            src="images/world-choir-logo.png?v=20260906perf"
             alt=""
             width="120"
             height="120"

@@ -49,7 +49,7 @@ const FoundationControl = (() => {
       description: 'Protecting the living world we share.',
     },
   };
-  const WORLD_CHOIR_LOGO = 'images/world-choir-logo.png?v=20270706';
+  const WORLD_CHOIR_LOGO = 'images/world-choir-logo.png?v=20260906perf';
   // This is the global Foundation Overview hero background used for every Foundation Control Center.
   // Replace public/images/foundation/foundation-overview-hero-background.png to update every Overview.
   const OVERVIEW_HERO_BACKGROUND = 'images/foundation/foundation-overview-hero-background.png?v=20260819b';

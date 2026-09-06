@@ -47,7 +47,7 @@ const WorldChoirPassport = (() => {
   function featureImageSrc() {
     const cfg = typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig.PASSPORT_FEATURE_IMAGE : null;
     return {
-      src: cfg?.url || 'images/passport/passport-feature.png?v=20260821b',
+      src: cfg?.url || 'images/passport/passport-feature.png?v=20260906perf',
       alt: cfg?.alt || 'World Choir Passport feature',
     };
   }
@@ -98,10 +98,10 @@ const WorldChoirPassport = (() => {
   function renderCoverPage(data, { loading = false, interactive = true, hidden = false } = {}) {
     const logo = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO
       ? WorldChoirConfig.LOGO.url
-      : 'images/world-choir-logo.png?v=20270706';
+      : 'images/world-choir-logo.png?v=20260906perf';
     const mapImg = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_WORLD_MAP
       ? WorldChoirConfig.PASSPORT_WORLD_MAP.url
-      : 'images/passport/passport-world-map.png?v=20260820b';
+      : 'images/passport/passport-world-map.png?v=20260906perf';
     const mapAlt = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_WORLD_MAP
       ? WorldChoirConfig.PASSPORT_WORLD_MAP.alt
       : 'World Choir world map';
@@ -159,7 +159,7 @@ const WorldChoirPassport = (() => {
   /** Inside page — shared background + History header; cover page keeps its own finish. */
   function renderInsidePage(data = {}, { loading = false, hidden = true } = {}) {
     const cfg = typeof WorldChoirConfig !== 'undefined' ? WorldChoirConfig.PASSPORT_INSIDE_BACKGROUND : null;
-    const src = cfg?.url || 'images/passport/passport-inside-bg.png?v=20260827c';
+    const src = cfg?.url || 'images/passport/passport-inside-bg.png?v=20260906perf';
     const alt = cfg?.alt || 'World Choir Passport inside page';
 
     const voiceRaw = loading

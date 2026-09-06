@@ -64,7 +64,7 @@ const LyricsDisplay = (() => {
         <header class="pm-header" aria-label="World Choir">
           <img
             class="pm-logo"
-            src="images/world-choir-logo.png?v=20270706"
+            src="images/world-choir-logo.png?v=20260906perf"
             alt="World Choir App"
             width="1024"
             height="1024"
@@ -198,7 +198,7 @@ const LyricsDisplay = (() => {
       <div class="practice-playing practice-playing--live" id="practice-playing">
         <div class="pm-bg" aria-hidden="true"><div class="pm-bg__overlay"></div></div>
         <header class="pm-header" aria-label="World Choir">
-          <img class="pm-logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir App" width="1024" height="1024" decoding="async">
+          <img class="pm-logo" src="images/world-choir-logo.png?v=20260906perf" alt="World Choir App" width="1024" height="1024" decoding="async">
           <button type="button" class="wc-live-sound-toggle" id="wc-live-sound-toggle" aria-label="Sound off" aria-pressed="false" title="Sound">
             <svg class="wc-live-sound-toggle__icon wc-live-sound-toggle__icon--off" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
               <path d="M11 5 6 9H3v6h3l5 4V5z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/>

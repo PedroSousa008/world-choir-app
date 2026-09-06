@@ -578,7 +578,7 @@ const WorldChoirHome = (() => {
             <img class="home-after-hero__planet" src="${POST_EVENT_IMAGES.hero}" alt="" decoding="async" fetchpriority="high" width="800" height="400">
             ${showConfetti ? '<div class="home-after-hero__confetti" id="home-after-confetti" aria-hidden="true"></div>' : ''}
             <div class="home-after-hero__content">
-              <img class="home-after-hero__logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir" width="1024" height="1024" decoding="async">
+              <img class="home-after-hero__logo" src="images/world-choir-logo.png?v=20260906perf" alt="World Choir" width="1024" height="1024" decoding="async">
               <h1 class="home-after-hero__title" id="home-after-thank-you">${esc(heroCopy.thankYou)}</h1>
               <p class="home-after-hero__message" id="home-after-thank-you-message">${esc(heroCopy.message)}</p>
             </div>

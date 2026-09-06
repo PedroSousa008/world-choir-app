@@ -60,7 +60,7 @@ const WorldChoirOnboarding = (() => {
     if (typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO?.src) {
       return WorldChoirConfig.LOGO.src;
     }
-    return 'images/world-choir-logo.png?v=20270706';
+    return 'images/world-choir-logo.png?v=20260906perf';
   }
 
   function ensureShell() {

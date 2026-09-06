@@ -13,6 +13,11 @@ if [[ -f "$ROOT/scripts/check-a11y-basics.js" ]] && command -v node >/dev/null 2
   node "$ROOT/scripts/check-a11y-basics.js"
 fi
 
+# Soft check: nav TAB_ASSETS versions vs real HTML (warn only)
+if [[ -f "$ROOT/scripts/verify-tab-assets.js" ]] && command -v node >/dev/null 2>&1; then
+  node "$ROOT/scripts/verify-tab-assets.js" || true
+fi
+
 if [[ -z "$(git status --porcelain)" ]]; then
   echo "No changes to deploy."
   exit 0

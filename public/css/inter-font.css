@@ -1,0 +1,30 @@
+/* Self-hosted Inter (weights used by World Choir: 400, 500, 600, 700).
+   font-display: swap matches prior Google Fonts behavior. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/inter/Inter-Regular.woff2?v=4.1') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/inter/Inter-Medium.woff2?v=4.1') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/inter/Inter-SemiBold.woff2?v=4.1') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/inter/Inter-Bold.woff2?v=4.1') format('woff2');
+}

@@ -41,3 +41,6 @@ yarn-error.*
 
 # Large source masters (deploy the optimized public/video/pre-event.mp4 only)
 public/video/pre-event-source.mp4
+
+# Pre-compression image originals (local backup only)
+assets/originals-pre-perf-phase2a/
