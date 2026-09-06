@@ -27,11 +27,15 @@ const WorldChoirDB = (() => {
   let lastVoiceCount = null;
   let cachedWorldStats = null;
   let worldStatsInFlight = null;
+  let worldStatsMetaInFlight = null;
   let statsRefreshTimer = null;
   let statsRefreshStarted = false;
+  let lastWorldStatsMetaSignature = null;
+  let statsVisibilityBound = false;
 
   const LIVE_SYNC_INTERVAL_MS = 2000;
-  const STATS_REFRESH_INTERVAL_MS = 5000;
+  /** Lightweight meta poll cadence (Home/Profile Voice count). Full /api/stats only on change. */
+  const STATS_META_POLL_INTERVAL_MS = 2000;
   const PRESENTATION_STATS_KEY = 'wc_presentation_world_stats_v1';
 
   function apiBase() {
@@ -340,23 +344,82 @@ const WorldChoirDB = (() => {
     return worldStatsInFlight;
   }
 
-  /** Lightweight Voice-count refresh for pages that do not load full pledges. */
-  function startWorldStatsRefresh(options = {}) {
-    const intervalMs = options.intervalMs ?? STATS_REFRESH_INTERVAL_MS;
-    if (statsRefreshStarted) {
-      void fetchWorldStats().catch(() => {});
-      return;
+  /**
+   * Home/Profile Voice-count refresh:
+   * initial /api/stats → poll /api/pledges?meta=1 → /api/stats only when meta signature changes.
+   * Uses a separate meta signature from Map live sync so the two systems never interfere.
+   * Skips work while the tab is hidden; revalidates on visibility.
+   */
+  async function refreshWorldStatsIfChanged(eventId = WorldChoirConfig.CURRENT_EVENT.id, options = {}) {
+    const force = options.force === true;
+    if (force) {
+      const data = await fetchWorldStats(eventId);
+      try {
+        const meta = await fetchPledgesMeta(eventId);
+        lastWorldStatsMetaSignature = metaSignature(meta);
+      } catch {
+        /* keep serving stats even if meta fails */
+      }
+      return { changed: true, stats: data };
     }
-    statsRefreshStarted = true;
+
+    if (worldStatsMetaInFlight) return worldStatsMetaInFlight;
+
+    worldStatsMetaInFlight = (async () => {
+      const meta = await fetchPledgesMeta(eventId);
+      const sig = metaSignature(meta);
+      if (sig && sig === lastWorldStatsMetaSignature && cachedWorldStats) {
+        return { changed: false, stats: cachedWorldStats };
+      }
+      lastWorldStatsMetaSignature = sig || lastWorldStatsMetaSignature;
+      const data = await fetchWorldStats(eventId);
+      return { changed: true, stats: data };
+    })().finally(() => {
+      worldStatsMetaInFlight = null;
+    });
+
+    return worldStatsMetaInFlight;
+  }
+
+  function startWorldStatsRefresh(options = {}) {
+    const intervalMs = options.intervalMs ?? STATS_META_POLL_INTERVAL_MS;
+
     const tick = () => {
       if (document.hidden) return;
-      void fetchWorldStats().catch(() => {});
+      // First paint / no cache: load stats. Later: meta-first.
+      if (!cachedWorldStats && !worldStatsInFlight) {
+        void fetchWorldStats()
+          .then(async () => {
+            try {
+              const meta = await fetchPledgesMeta();
+              lastWorldStatsMetaSignature = metaSignature(meta);
+            } catch {
+              /* ignore */
+            }
+          })
+          .catch(() => {});
+        return;
+      }
+      void refreshWorldStatsIfChanged().catch(() => {});
     };
-    tick();
-    statsRefreshTimer = setInterval(tick, intervalMs);
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) tick();
-    });
+
+    if (!statsRefreshStarted) {
+      statsRefreshStarted = true;
+      tick();
+      statsRefreshTimer = setInterval(tick, intervalMs);
+    } else {
+      // Another caller (e.g. Profile after Home): force a prompt revalidate, no second interval.
+      void refreshWorldStatsIfChanged(undefined, { force: !cachedWorldStats }).catch(() => {});
+    }
+
+    if (!statsVisibilityBound) {
+      statsVisibilityBound = true;
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && statsRefreshStarted) {
+          void refreshWorldStatsIfChanged().catch(() => {});
+        }
+      });
+    }
   }
 
   function purgeLegacyDemoData() {
@@ -894,6 +957,7 @@ const WorldChoirDB = (() => {
     startLiveSync,
     stopLiveSync,
     fetchWorldStats,
+    refreshWorldStatsIfChanged,
     getPresentationVoiceCount,
     startWorldStatsRefresh,
     syncMyPledge,

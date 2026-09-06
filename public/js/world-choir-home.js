@@ -1201,13 +1201,15 @@ const WorldChoirHome = (() => {
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
     window.addEventListener('wc-pledge-added', () => {
       updateVoicesCounter();
-      void WorldChoirDB.fetchWorldStats?.().catch(() => {});
+      void WorldChoirDB.refreshWorldStatsIfChanged?.(undefined, { force: true }).catch(() => {
+        void WorldChoirDB.fetchWorldStats?.().catch(() => {});
+      });
     });
     window.addEventListener('wc-voices-live-update', updateVoicesCounter);
 
-    // Home Voice count via /api/stats — do not pull full /api/pledges on this page.
+    // Home Voice count: meta-first refresh (full /api/stats only when pledges meta changes).
     if (typeof WorldChoirDB.startWorldStatsRefresh === 'function') {
-      WorldChoirDB.startWorldStatsRefresh({ intervalMs: 5000 });
+      WorldChoirDB.startWorldStatsRefresh();
     } else {
       void WorldChoirDB.fetchWorldStats?.().then(() => updateVoicesCounter()).catch(() => {});
     }
