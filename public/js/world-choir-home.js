@@ -1069,8 +1069,6 @@ const WorldChoirHome = (() => {
   }
 
   function init() {
-    if (init.started) return;
-    init.started = true;
     homeReady = false;
 
     // Instant warm paint from session (same path as Profile) — countdown/CTA without map aggregate.

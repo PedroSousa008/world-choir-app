@@ -9,7 +9,7 @@ const WorldChoirNav = (() => {
   let prefetchStarted = false;
   const prefetched = new Set();
 
-  /** Instagram-style shared tab indicator — keep in sync with page navigation. */
+  /** Instagram-style shared tab indicator — arrives when the destination tab opens. */
   const NAV_TRANSITION_MS = 200;
   const INDICATOR_WIDTH = 24;
   const NAV_TRANSITION_KEY = 'wc_nav_transition_v1';
@@ -21,6 +21,8 @@ const WorldChoirNav = (() => {
   let indicatorX = 0;
   let indicatorReady = false;
   let resizeObserver = null;
+  let arrivalTimer = null;
+  let handoffActive = false;
 
   function prefersReducedMotion() {
     try {
@@ -42,17 +44,31 @@ const WorldChoirNav = (() => {
     pendingHref = null;
   }
 
-  function readStoredTransition() {
+  function clearArrivalTimer() {
+    if (arrivalTimer) {
+      clearTimeout(arrivalTimer);
+      arrivalTimer = null;
+    }
+  }
+
+  function peekStoredTransition() {
     try {
       const raw = sessionStorage.getItem(NAV_TRANSITION_KEY);
       if (!raw) return null;
-      sessionStorage.removeItem(NAV_TRANSITION_KEY);
       const data = JSON.parse(raw);
       if (!data || typeof data.to !== 'string') return null;
-      if (Date.now() - (data.at || 0) > 1200) return null;
+      if (Date.now() - (data.at || 0) > 1500) return null;
       return data;
     } catch {
       return null;
+    }
+  }
+
+  function clearStoredTransition() {
+    try {
+      sessionStorage.removeItem(NAV_TRANSITION_KEY);
+    } catch {
+      /* ignore */
     }
   }
 
@@ -60,11 +76,18 @@ const WorldChoirNav = (() => {
     try {
       sessionStorage.setItem(
         NAV_TRANSITION_KEY,
-        JSON.stringify({ from, to, at: Date.now(), duration: transitionDurationMs() })
+        JSON.stringify({ from, to, at: Date.now() })
       );
+      document.documentElement.classList.add('wc-nav-handoff');
     } catch {
       /* ignore */
     }
+  }
+
+  function setNavDuration(ms) {
+    if (!navEl) return;
+    const value = `${Math.max(0, ms)}ms`;
+    navEl.style.setProperty('--nav-indicator-duration', value);
   }
 
   function measureIndicatorX(item) {
@@ -135,33 +158,102 @@ const WorldChoirNav = (() => {
     });
   }
 
-  function navigateTo(href) {
+  function releaseNavGate() {
+    handoffActive = false;
+    document.documentElement.classList.remove('wc-nav-handoff');
+    if (typeof WorldChoirBoot !== 'undefined') {
+      WorldChoirBoot.setNavGate?.(false);
+    }
+  }
+
+  function completeArrival(toPage) {
+    clearArrivalTimer();
+    clearStoredTransition();
+    const toItem = getNavItem(toPage);
+    currentActivePage = toPage;
+    setActiveClasses(toPage);
+    if (toItem) placeIndicatorOnItem(toItem, { animate: false, visible: true });
+    setNavDuration(NAV_TRANSITION_MS);
+    releaseNavGate();
+  }
+
+  /**
+   * Indicator stays on the previous tab until the destination page is ready,
+   * then finishes the slide so arrival and “tab open” land together.
+   */
+  function beginHandoffArrival(activePage, transition) {
+    const fromItem = getNavItem(transition.from);
+    const toItem = getNavItem(transition.to || activePage);
+    if (!toItem) {
+      clearStoredTransition();
+      releaseNavGate();
+      return;
+    }
+
+    handoffActive = true;
+    document.documentElement.classList.add('wc-nav-handoff');
+    if (typeof WorldChoirBoot !== 'undefined') {
+      WorldChoirBoot.setNavGate?.(true);
+    }
+
+    // Park on the previous tab until the new page content is ready.
+    if (fromItem) {
+      setActiveClasses(transition.from);
+      placeIndicatorOnItem(fromItem, { animate: false, visible: true });
+    } else {
+      setActiveClasses(activePage);
+      placeIndicatorOnItem(toItem, { animate: false, visible: true });
+    }
+    currentActivePage = activePage;
+
+    const startAt = transition.at || Date.now();
+
+    const runArrival = () => {
+      if (!handoffActive) return;
+      const now = Date.now();
+      const elapsed = now - startAt;
+      let duration = 0;
+      if (!prefersReducedMotion()) {
+        if (elapsed >= transitionDurationMs()) {
+          // Page took longer than the min window — still slide so arrival matches the reveal.
+          duration = Math.min(NAV_TRANSITION_MS, 160);
+        } else {
+          // Page ready early — use the remaining time so tap→open ≈ 200ms.
+          duration = transitionDurationMs() - elapsed;
+        }
+      }
+
+      if (duration <= 0) {
+        completeArrival(activePage);
+        return;
+      }
+
+      setNavDuration(duration);
+      setActiveClasses(activePage);
+      placeIndicatorOnItem(toItem, { animate: true, visible: true });
+      clearArrivalTimer();
+      arrivalTimer = setTimeout(() => completeArrival(activePage), duration + 16);
+    };
+
+    if (typeof WorldChoirBoot !== 'undefined' && WorldChoirBoot.whenContentReady) {
+      WorldChoirBoot.whenContentReady(runArrival);
+    } else {
+      runArrival();
+    }
+  }
+
+  function navigateSoon(href) {
     clearPendingNavigation();
     pendingHref = href;
-    const delay = transitionDurationMs();
     const go = () => {
       pendingNavTimer = null;
       pendingHref = null;
       window.location.href = href;
     };
-    if (delay <= 0) {
-      go();
-      return;
-    }
-    pendingNavTimer = setTimeout(go, delay);
-  }
-
-  function setActivePage(pageId, { animate } = { animate: false }) {
-    if (!pageId) return;
-    currentActivePage = pageId;
-    if (!navEl || !document.contains(navEl)) {
-      mount(pageId);
-      return;
-    }
-    setActiveClasses(pageId);
-    const target = getNavItem(pageId);
-    if (target) placeIndicatorOnItem(target, { animate: !!animate && indicatorReady, visible: true });
-    else if (indicatorEl) indicatorEl.classList.remove('is-visible');
+    // Allow one paint of the outgoing indicator motion, then open the tab immediately.
+    pendingNavTimer = setTimeout(() => {
+      requestAnimationFrame(go);
+    }, 0);
   }
 
   function activateTab(pageId, href, { navigate } = { navigate: true }) {
@@ -178,50 +270,46 @@ const WorldChoirNav = (() => {
       clearPendingNavigation();
     }
 
-    const fromPage = currentActivePage;
-    const fromItem = getNavItem(fromPage);
-    const soft =
-      navigate &&
-      typeof WorldChoirTabs !== 'undefined' &&
-      WorldChoirTabs.isPrimary?.(pageId) &&
-      (WorldChoirTabs.isHosted?.() ||
-        WorldChoirTabs.isPrimary?.(fromPage) ||
-        WorldChoirTabs.isPrimary?.(currentActivePage));
+    if (handoffActive && pageId !== currentActivePage) {
+      clearArrivalTimer();
+      releaseNavGate();
+    }
 
+    const fromPage = handoffActive
+      ? (peekStoredTransition()?.from || currentActivePage)
+      : currentActivePage;
+    const fromItem = getNavItem(fromPage);
     const shouldAnimate =
       indicatorReady &&
       !prefersReducedMotion() &&
       fromPage !== pageId &&
       (!!fromItem || redirecting || indicatorEl?.classList.contains('is-visible'));
 
-    // Immediate chrome feedback — never wait on page load.
     currentActivePage = pageId;
-    setActiveClasses(pageId);
-    placeIndicatorOnItem(target, {
-      animate: shouldAnimate,
-      visible: true,
-    });
 
-    if (!navigate || !href) return;
-
-    // Primary tabs: keep-alive soft switch (no document reload / no black boot).
-    if (soft) {
-      clearPendingNavigation();
-      void WorldChoirTabs.switchTo(pageId, { updateHistory: true }).then((ok) => {
-        if (ok === false && pageId !== WorldChoirTabs.getActive?.()) {
-          /* switchTo falls back to location.href itself on hard failure */
-        }
-      });
+    if (!navigate || !href) {
+      setNavDuration(NAV_TRANSITION_MS);
+      setActiveClasses(pageId);
+      placeIndicatorOnItem(target, { animate: shouldAnimate, visible: true });
       return;
     }
 
     if (!shouldAnimate) {
+      clearStoredTransition();
+      setActiveClasses(pageId);
+      placeIndicatorOnItem(target, { animate: false, visible: true });
       window.location.href = href;
       return;
     }
 
+    // Keep the indicator on the current tab; it finishes on the destination page when that tab opens.
+    setNavDuration(NAV_TRANSITION_MS);
+    if (fromItem) {
+      setActiveClasses(fromPage);
+      placeIndicatorOnItem(fromItem, { animate: false, visible: true });
+    }
     storeTransition(fromPage, pageId);
-    navigateTo(href);
+    navigateSoon(href);
   }
 
   function onNavClick(event) {
@@ -245,7 +333,7 @@ const WorldChoirNav = (() => {
     event.preventDefault();
 
     // Already on this tab and not mid-transition elsewhere.
-    if (pageId === currentActivePage && !pendingHref) return;
+    if (pageId === currentActivePage && !pendingHref && !handoffActive) return;
 
     // Same destination already pending — keep current animation/timer.
     if (pendingHref === href) return;
@@ -254,6 +342,7 @@ const WorldChoirNav = (() => {
   }
 
   function syncIndicatorLayout({ animate } = { animate: false }) {
+    if (handoffActive) return;
     const active = getNavItem(currentActivePage) || navEl?.querySelector('.nav-item.active');
     if (!active) {
       if (indicatorEl) indicatorEl.classList.remove('is-visible');
@@ -262,7 +351,7 @@ const WorldChoirNav = (() => {
     placeIndicatorOnItem(active, { animate: !!animate, visible: true });
   }
 
-  function bindIndicatorChrome(nav, activePage) {
+  function bindIndicatorChrome(nav, activePage, handoff) {
     navEl = nav;
     currentActivePage = activePage;
 
@@ -277,6 +366,11 @@ const WorldChoirNav = (() => {
 
     const finishLayout = () => {
       indicatorReady = true;
+      if (handoff && handoff.to === activePage && !prefersReducedMotion()) {
+        beginHandoffArrival(activePage, handoff);
+        return;
+      }
+      clearStoredTransition();
       const active = getNavItem(activePage);
       if (active) {
         placeIndicatorOnItem(active, { animate: false, visible: true });
@@ -328,7 +422,7 @@ const WorldChoirNav = (() => {
     home: [
       'index.html',
       'css/home.css?v=20260905b',
-      'js/world-choir-home.js?v=20260906tabs',
+      'js/world-choir-home.js?v=20260906black',
       'js/world-choir-db.js?v=20260906perf2',
     ],
     map: [
@@ -339,7 +433,7 @@ const WorldChoirNav = (() => {
       'js/map/sponsor-bar.js?v=20260905a',
       '/api/map-sponsors',
       'js/world-choir-map-tiles.js?v=20260906mapfix2',
-      'js/world-choir-map.js?v=20260906tabs',
+      'js/world-choir-map.js?v=20260906black',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
@@ -354,14 +448,14 @@ const WorldChoirNav = (() => {
       'js/donate/creator-foundations-store.js?v=20260906donate',
       'js/donate/donation-flow.js?v=20260831a',
       'js/foundation-public-card.js?v=20260904cb',
-      'js/donate/donate-page.js?v=20260906tabs',
+      'js/donate/donate-page.js?v=20260906donate',
       '/api/creator-foundations',
       '/api/donations?action=config',
     ],
     profile: [
       'profile.html',
       'css/profile.css?v=20260906boot',
-      'js/profile/profile-page.js?v=20260906tabs',
+      'js/profile/profile-page.js?v=20260906black',
       'js/profile/daily-acts-peace.js?v=20260906perf',
       'js/profile/daily-acts-button.js?v=20260810i',
       'js/world-choir-onboarding.js?v=20260816a',
@@ -390,7 +484,7 @@ const WorldChoirNav = (() => {
       'css/memory-page.css?v=20260904bt',
       'js/memory/memory-data.js?v=20260904bt',
       'js/memory/memory-feed.js?v=20260904bt',
-      'js/memory/memory-page.js?v=20260906tabs',
+      'js/memory/memory-page.js?v=20260906black',
       'js/profile/passport-stamps.js?v=20260902a',
       'js/profile/world-choir-passport.js?v=20260902q',
     ],
@@ -476,7 +570,7 @@ const WorldChoirNav = (() => {
     (TAB_ASSETS[page.id] || [href]).forEach(prefetchUrl);
   }
 
-  function renderWorldChoirNav(activePage) {
+  function renderWorldChoirNav(activePage, handoff) {
     const nav = document.createElement('nav');
     nav.className = 'bottom-nav';
     nav.setAttribute('aria-label', 'Main navigation');
@@ -484,9 +578,13 @@ const WorldChoirNav = (() => {
     getVisiblePages().forEach((page) => {
       const link = document.createElement('a');
       link.href = page.href;
-      link.className = 'nav-item' + (activePage === page.id ? ' active' : '');
+      // During handoff, keep the previous tab visually active until arrival runs.
+      const initialActive = handoff && handoff.from
+        ? page.id === handoff.from
+        : activePage === page.id;
+      link.className = 'nav-item' + (initialActive ? ' active' : '');
       link.setAttribute('data-nav-page', page.id);
-      if (activePage === page.id) link.setAttribute('aria-current', 'page');
+      if (initialActive) link.setAttribute('aria-current', 'page');
       link.innerHTML = `${renderNavIcon(page)}<span>${page.label}</span>`;
       const warm = () => prefetchOnIntent(page.href);
       link.addEventListener('pointerdown', warm, { passive: true });
@@ -495,7 +593,7 @@ const WorldChoirNav = (() => {
       nav.appendChild(link);
     });
 
-    bindIndicatorChrome(nav, activePage);
+    bindIndicatorChrome(nav, activePage, handoff);
     return nav;
   }
 
@@ -506,44 +604,25 @@ const WorldChoirNav = (() => {
     const root = document.getElementById('nav-root');
     if (!root) return;
     clearPendingNavigation();
+    clearArrivalTimer();
     indicatorReady = false;
+    handoffActive = false;
+    const handoff = peekStoredTransition();
+    if (handoff && handoff.to === activePage) {
+      document.documentElement.classList.add('wc-nav-handoff');
+    } else if (handoff) {
+      clearStoredTransition();
+    }
     root.innerHTML = '';
-    root.appendChild(renderWorldChoirNav(activePage));
-    // Animation already played on the previous page before navigation.
-    readStoredTransition();
+    root.appendChild(renderWorldChoirNav(activePage, handoff && handoff.to === activePage ? handoff : null));
   }
 
   function startWatcher(activePage) {
-    // Soft tab host: attach once from the entry page; ignore background inits for chrome.
-    if (typeof WorldChoirTabs !== 'undefined' && WorldChoirTabs.isPrimary?.(activePage)) {
-      if (!WorldChoirTabs.isHosted()) {
-        WorldChoirTabs.attach(activePage);
-      } else if (!WorldChoirTabs.isActive(activePage) || window.__WC_TAB_SILENT_INIT) {
-        if (!navEl || !document.contains(navEl)) {
-          mount(WorldChoirTabs.getActive() || activePage);
-        }
-        prefetchTabs(WorldChoirTabs.getActive() || activePage);
-        ensureMemoryWatcher(WorldChoirTabs.getActive() || activePage);
-        return;
-      }
-    }
-
-    if (navEl && document.contains(navEl) && typeof WorldChoirTabs !== 'undefined' && WorldChoirTabs.isHosted()) {
-      setActivePage(activePage, { animate: false });
-      prefetchTabs(activePage);
-      ensureMemoryWatcher(activePage);
-      return;
-    }
-
+    let wasUnlocked = WorldChoirConfig.isMemoryUnlocked();
     mount(activePage);
     prefetchTabs(activePage);
-    ensureMemoryWatcher(activePage);
-  }
 
-  function ensureMemoryWatcher(activePage) {
-    let page = activePage;
     if (watchInterval) clearInterval(watchInterval);
-    let wasUnlocked = WorldChoirConfig.isMemoryUnlocked();
     watchInterval = setInterval(() => {
       if (typeof WorldChoirDB !== 'undefined') {
         WorldChoirDB.syncActiveEventStatus?.();
@@ -551,22 +630,13 @@ const WorldChoirNav = (() => {
       const unlocked = WorldChoirConfig.isMemoryUnlocked();
       if (unlocked !== wasUnlocked) {
         wasUnlocked = unlocked;
-        page = (typeof WorldChoirTabs !== 'undefined' && WorldChoirTabs.getActive?.()) || page;
-        mount(page);
-        if (unlocked && typeof WorldChoirTabs !== 'undefined') {
-          WorldChoirTabs.preload?.(page);
-        }
+        mount(activePage);
       }
     }, 1000);
   }
 
   function guardMemoryRoute() {
     if (!WorldChoirConfig.isMemoryUnlocked()) {
-      if (typeof WorldChoirTabs !== 'undefined' && WorldChoirTabs.isHosted()) {
-        void WorldChoirTabs.switchTo('home', { updateHistory: true });
-        setActivePage('home', { animate: false });
-        return false;
-      }
       window.location.replace('index.html');
       return false;
     }
@@ -577,7 +647,6 @@ const WorldChoirNav = (() => {
     renderWorldChoirNav,
     mount,
     startWatcher,
-    setActivePage,
     guardMemoryRoute,
     getVisiblePages,
     prefetchTabs,

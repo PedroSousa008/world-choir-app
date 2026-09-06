@@ -2133,8 +2133,6 @@ const WorldChoirDonate = (() => {
   }
 
   async function init() {
-    if (init.started) return;
-    init.started = true;
     WorldChoirNav.startWatcher('donate');
     ensureModal();
     document.addEventListener('keydown', (e) => {

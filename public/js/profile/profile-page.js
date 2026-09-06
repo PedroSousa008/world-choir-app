@@ -160,8 +160,6 @@ const ProfilePage = (() => {
   }
 
   function init() {
-    if (init.started) return;
-    init.started = true;
     ChangeLocationModal.init();
     PracticeMode.init();
     DailyActsPeace.init();

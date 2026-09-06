@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#000000">
   <style id="wc-boot-critical">
     html.wc-booting:not(.wc-boot-skeletons)::before{content:"";position:fixed;inset:0;z-index:2147483000;background:#000;pointer-events:none}
+    html.wc-booting.wc-nav-handoff:not(.wc-boot-skeletons)::before{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
     html.wc-booting:not(.wc-boot-skeletons),html.wc-booting:not(.wc-boot-skeletons) body{background:#000!important}
   </style>
   <script>
@@ -13,6 +14,15 @@
     window.WC_SHOW_SKELETONS = false;
     document.documentElement.classList.add('wc-booting');
     if (window.WC_SHOW_SKELETONS) document.documentElement.classList.add('wc-boot-skeletons');
+    try {
+      var _wcNavT = sessionStorage.getItem('wc_nav_transition_v1');
+      if (_wcNavT) {
+        var _wcNavD = JSON.parse(_wcNavT);
+        if (_wcNavD && _wcNavD.to && (Date.now() - (_wcNavD.at || 0) < 1500)) {
+          document.documentElement.classList.add('wc-nav-handoff');
+        }
+      }
+    } catch (e) {}
   </script>
 
   <meta name="description" content="The World Sang — memories, passport, and the Pass the World journey from World Choir.">
@@ -22,7 +32,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260906tabs">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260906nav2">
   <link rel="stylesheet" href="css/donate.css?v=20260904cd">
   <link rel="stylesheet" href="css/passport.css?v=20260903o">
   <link rel="stylesheet" href="css/profile.css?v=20270706b">
@@ -61,15 +71,14 @@
 
   <div id="nav-root"></div>
 
-  <script src="js/world-choir-boot.js?v=20260906black"></script>
+  <script src="js/world-choir-boot.js?v=20260906nav2"></script>
   <script src="js/world-choir-config.js?v=20260906perf"></script>
   <script src="js/world-choir-privacy.js?v=20260905a"></script>
   <script src="js/world-choir-countries.js?v=20260831a"></script>
   <script src="js/world-choir-db.js?v=20260906perf2"></script>
   <script src="js/world-choir-participation.js"></script>
   <script src="js/world-choir-a11y.js?v=20260903p"></script>
-  <script src="js/world-choir-tabs.js?v=20260906tabs"></script>
-  <script src="js/world-choir-nav.js?v=20260906tabs"></script>
+  <script src="js/world-choir-nav.js?v=20260906nav2"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260906perf"></script>
   <script src="js/profile/passport-stamps.js?v=20260902a"></script>
   <script src="js/profile/world-choir-passport.js?v=20260902q"></script>
@@ -79,7 +88,7 @@
   <script src="js/world-choir-global-live-bootstrap.js?v=20260904an"></script>
   <script src="js/memory/memory-data.js?v=20260904bt"></script>
   <script src="js/memory/memory-feed.js?v=20260904bt"></script>
-  <script src="js/memory/memory-page.js?v=20260906tabs"></script>
+  <script src="js/memory/memory-page.js?v=20260906black"></script>
   <script>WorldChoirMemory.init();</script>
 </body>
 </html>

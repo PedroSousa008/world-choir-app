@@ -470,50 +470,6 @@ body {
   }
 }
 
-/* Keep-alive tab host — permanent shell, no blank frames between tabs */
-.wc-tab-host {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  background: #000;
-  overflow: hidden;
-}
-
-.wc-tab-panel {
-  position: absolute;
-  inset: 0;
-  overflow: auto;
-  overflow-x: hidden;
-  background: #000;
-  -webkit-overflow-scrolling: touch;
-  visibility: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.wc-tab-panel.is-active {
-  visibility: visible;
-  pointer-events: auto;
-  z-index: 1;
-}
-
-/* Map panel must not scroll; the map owns the viewport */
-.wc-tab-panel[data-wc-tab="map"] {
-  overflow: hidden;
-}
-
-body.wc-tab-shell {
-  background: #000;
-}
-
-html.wc-tab-shell #nav-root {
-  position: relative;
-  z-index: 100;
-}
-
 .nav-icon {
   display: inline-flex;
   align-items: center;
@@ -806,6 +762,11 @@ html.wc-booting:not(.wc-boot-skeletons)::before {
   z-index: 2147483000;
   background: #000;
   pointer-events: none;
+}
+
+/* During tab handoff, keep the bottom nav visible so the indicator can finish with the open. */
+html.wc-booting.wc-nav-handoff:not(.wc-boot-skeletons)::before {
+  bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
 }
 
 html.wc-booting:not(.wc-boot-skeletons),
