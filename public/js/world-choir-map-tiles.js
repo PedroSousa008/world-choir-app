@@ -86,7 +86,9 @@ const WorldChoirMapTiles = (() => {
     return L.maplibreGL({
       style: CARTO_DARK_VECTOR_STYLE,
       interactive: false,
-      padding: 0.04,
+      // Zero padding keeps the GL canvas aligned with Leaflet's CRS during
+      // extreme zoom-out — non-zero padding can briefly offset overlays.
+      padding: 0,
       antialias: !isMobileMap(),
       fadeDuration: 0,
       pixelRatio: getMapPixelRatio(),

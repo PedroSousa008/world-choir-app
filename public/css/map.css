@@ -153,6 +153,16 @@ body.map-page {
 .gathering-icon {
   background: transparent !important;
   border: none !important;
+  /* Do not let CSS transforms fight Leaflet's marker positioning. */
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* While the map zooms, keep icon panes on GPU-friendly compositing without
+   inheriting intermediate transform drift from nested scale animations. */
+.leaflet-marker-pane .leaflet-marker-icon.city-light-icon,
+.leaflet-marker-pane .leaflet-marker-icon.gathering-icon {
+  will-change: auto;
 }
 
 .city-light {

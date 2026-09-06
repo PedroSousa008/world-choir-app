@@ -233,8 +233,14 @@ const WorldChoirMap = (() => {
       worldCopyJump: false,
       maxBounds: [[-85, -180], [85, 180]],
       maxBoundsViscosity: 1.0,
+      // Prevent pinch/wheel from briefly overshooting minZoom then bouncing —
+      // that bounce makes city lights appear to dislocate for a moment.
+      bounceAtZoomLimits: false,
       fadeAnimation: false,
       zoomAnimation: true,
+      // Keep markers on true lat/lng during zoom (MapLibre basemap + divIcons
+      // otherwise briefly drift, then snap on zoomend).
+      markerZoomAnimation: false,
       inertia: true,
       inertiaDeceleration: 2800,
       wheelDebounceTime: 30,
@@ -249,6 +255,17 @@ const WorldChoirMap = (() => {
     gatheringLayer = L.layerGroup().addTo(map);
 
     map.on('click', hideCityCard);
+    // After any zoom/pan settle (esp. maxBounds clamp), force marker pane
+    // positions from current projection so lights never linger offset.
+    map.on('zoomend moveend', () => {
+      if (!map) return;
+      map.eachLayer((layer) => {
+        if (layer instanceof L.Marker) {
+          const latLng = layer.getLatLng();
+          if (latLng) layer.setLatLng(latLng);
+        }
+      });
+    });
     bindMapResizeHandlers();
     scheduleMapResize();
   }
