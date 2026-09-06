@@ -113,6 +113,13 @@ const ProfilePage = (() => {
     render();
   }
 
+  function clearBootingState() {
+    document.querySelector('.profile-page')?.classList.remove('profile-page--booting');
+    Object.values(SECTIONS).forEach((id) => {
+      document.getElementById(id)?.removeAttribute('aria-busy');
+    });
+  }
+
   function revealProfile() {
     if (profileReady) {
       refresh();
@@ -120,6 +127,7 @@ const ProfilePage = (() => {
     }
     profileReady = true;
     render();
+    clearBootingState();
   }
 
   function maybeOpenPracticeFromQuery() {
@@ -146,6 +154,7 @@ const ProfilePage = (() => {
     }
     profileReady = true;
     render();
+    clearBootingState();
     return true;
   }
 
@@ -172,8 +181,10 @@ const ProfilePage = (() => {
       if (warm) {
         profileReady = true;
         render();
+        clearBootingState();
       } else {
-        renderSkeleton();
+        // HTML already has inline skeletons — keep them; do not wipe/rebuild.
+        updateVoicesCounter();
       }
     }
 

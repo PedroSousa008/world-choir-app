@@ -8,6 +8,13 @@
   overflow-x: clip;
 }
 
+/* Hide legal footer until Profile content paints — avoids a flash of
+   Privacy / Terms / Contact on an otherwise empty black page. */
+.profile-page--booting .profile-legal-footer {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .profile-brand {
   text-align: center;
   margin-bottom: 28px;

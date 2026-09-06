@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260903p">
-  <link rel="stylesheet" href="css/profile.css?v=20260906a">
+  <link rel="stylesheet" href="css/profile.css?v=20260906boot">
   <link rel="stylesheet" href="css/privacy-consent.css?v=20260905a">
   <link rel="stylesheet" href="css/world-choir-onboarding.css?v=20260816a">
     <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
@@ -25,18 +25,57 @@
 <body>
   <div class="ambient-bg"></div>
 
-  <main class="page profile-page">
+  <main class="page profile-page profile-page--booting">
     <div class="profile-brand">
       <img class="profile-logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir App" width="1024" height="1024" decoding="async">
       <p class="profile-voices-counter wc-skel wc-skel--voices" id="profile-voices-counter" aria-live="polite" aria-hidden="true"></p>
     </div>
 
-    <div id="profile-identity-root"></div>
-    <div id="profile-participation-root"></div>
-    <div id="profile-practice-root"></div>
-    <div id="profile-history-root"></div>
-    <div id="profile-invite-root"></div>
-    <div id="profile-daily-acts-root"></div>
+    <!-- HTML-inline skeletons: first paint before any Profile JS runs -->
+    <div id="profile-identity-root" aria-busy="true">
+      <div class="wc-skel-card wc-skel-card--row" aria-hidden="true">
+        <span class="wc-skel wc-skel--avatar"></span>
+        <span style="flex:1;min-width:0">
+          <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+          <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+        </span>
+      </div>
+    </div>
+    <div id="profile-participation-root" aria-busy="true">
+      <div class="wc-skel-card" aria-hidden="true">
+        <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+        <span class="wc-skel wc-skel--line"></span>
+        <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+      </div>
+    </div>
+    <div id="profile-practice-root" aria-busy="true">
+      <div class="wc-skel-card" aria-hidden="true">
+        <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+        <span class="wc-skel wc-skel--line"></span>
+        <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+      </div>
+    </div>
+    <div id="profile-history-root" aria-busy="true">
+      <div class="wc-skel-card" aria-hidden="true">
+        <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+        <span class="wc-skel wc-skel--line"></span>
+        <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+      </div>
+    </div>
+    <div id="profile-invite-root" aria-busy="true">
+      <div class="wc-skel-card" aria-hidden="true">
+        <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+        <span class="wc-skel wc-skel--line"></span>
+        <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+      </div>
+    </div>
+    <div id="profile-daily-acts-root" aria-busy="true">
+      <div class="wc-skel-card" aria-hidden="true">
+        <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
+        <span class="wc-skel wc-skel--line"></span>
+        <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
+      </div>
+    </div>
 
     <footer class="profile-legal-footer" aria-label="Legal">
       <div class="profile-legal-footer__row">
@@ -110,7 +149,7 @@
   <script src="js/profile/daily-acts-peace.js?v=20260906perf"></script>
   <script src="js/profile/daily-acts-button.js?v=20260810i"></script>
   <script src="js/profile/owner-access.js?v=20270810c"></script>
-  <script src="js/profile/profile-page.js?v=20260906perf2"></script>
+  <script src="js/profile/profile-page.js?v=20260906boot"></script>
   <script>
     // Paint Profile immediately — do not wait on live-event scripts.
     ProfilePage.init();
