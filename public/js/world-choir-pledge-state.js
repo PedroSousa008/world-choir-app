@@ -1,11 +1,15 @@
 /**
  * World Choir — shared current-user pledge state (loading | pledged | not_pledged)
+ *
+ * init({ mode: 'full' })     — default; awaits WorldChoirDB.ready() (full pledges)
+ * init({ mode: 'myPledge' }) — Home/Profile; awaits readyMyPledge() only
  */
 const WorldChoirPledgeState = (() => {
   /** @type {'loading' | 'pledged' | 'not_pledged'} */
   let state = 'loading';
   const listeners = new Set();
   let initPromise = null;
+  let initMode = null;
 
   function notify() {
     listeners.forEach((fn) => {
@@ -63,12 +67,39 @@ const WorldChoirPledgeState = (() => {
     return syncFromDB();
   }
 
-  function init() {
+  function resolveBootstrap(mode) {
+    if (typeof WorldChoirDB === 'undefined') return Promise.resolve();
+    if (mode === 'myPledge' && typeof WorldChoirDB.readyMyPledge === 'function') {
+      return WorldChoirDB.readyMyPledge();
+    }
+    return WorldChoirDB.ready();
+  }
+
+  /**
+   * @param {{ mode?: 'full' | 'myPledge' }} [options]
+   * Default mode is 'full' so Map / Passport / legacy callers keep loading pledges.
+   */
+  function init(options = {}) {
+    const mode = options.mode === 'myPledge' ? 'myPledge' : 'full';
+
+    // If a lighter init already ran and a full consumer needs pledges, escalate once.
+    if (initPromise && initMode === 'myPledge' && mode === 'full') {
+      initPromise = resolveBootstrap('full')
+        .then(syncFromDB)
+        .catch(async (err) => {
+          console.error('WorldChoirPledgeState escalate-to-full failed:', err);
+          await resolveFromMyPledge();
+          if (state === 'loading' && typeof WorldChoirDB !== 'undefined' && WorldChoirDB.isPledgeLoaded()) {
+            syncFromDB();
+          }
+        });
+      initMode = 'full';
+      return initPromise;
+    }
+
     if (!initPromise) {
-      initPromise = (typeof WorldChoirDB !== 'undefined'
-        ? WorldChoirDB.ready()
-        : Promise.resolve()
-      )
+      initMode = mode;
+      initPromise = resolveBootstrap(mode)
         .then(syncFromDB)
         .catch(async (err) => {
           console.error('WorldChoirPledgeState init failed:', err);

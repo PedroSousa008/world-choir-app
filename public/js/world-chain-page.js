@@ -215,7 +215,9 @@ const WorldChainPage = (() => {
     if (state.view === 'photo-book') render();
 
     try {
-      await WorldChoirDB.ready?.();
+      await (typeof WorldChoirDB.readyIdentity === 'function'
+        ? WorldChoirDB.readyIdentity()
+        : WorldChoirDB.ready?.());
       const res = await fetch(
         `/api/world-chain?deviceId=${encodeURIComponent(deviceId())}`
           + `&eventId=${encodeURIComponent(eventId())}`
@@ -1439,7 +1441,9 @@ const WorldChainPage = (() => {
       window.scrollTo(0, 0);
     }
     try {
-      await WorldChoirDB.ready?.();
+      await (typeof WorldChoirDB.readyIdentity === 'function'
+        ? WorldChoirDB.readyIdentity()
+        : WorldChoirDB.ready?.());
       const res = await fetch(
         `/api/world-chain?deviceId=${encodeURIComponent(deviceId())}&eventId=${encodeURIComponent(eventId())}&view=completed`,
         { cache: 'no-store' }
@@ -1468,7 +1472,9 @@ const WorldChainPage = (() => {
       render();
     }
     try {
-      await WorldChoirDB.ready?.();
+      await (typeof WorldChoirDB.readyIdentity === 'function'
+        ? WorldChoirDB.readyIdentity()
+        : WorldChoirDB.ready?.());
       const id = deviceId();
       const res = await fetch(
         `/api/world-chain?deviceId=${encodeURIComponent(id)}&eventId=${encodeURIComponent(eventId())}`,

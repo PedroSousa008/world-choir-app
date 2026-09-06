@@ -71,7 +71,7 @@ const DailyActsPeace = (() => {
   }
 
   async function fetchToday() {
-    await WorldChoirDB.ready();
+    await WorldChoirDB.readyIdentity();
     const date = localDateString();
     const data = await apiFetch(
       `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&date=${encodeURIComponent(date)}`
@@ -160,7 +160,7 @@ const DailyActsPeace = (() => {
     applyLocalDismissToState(date);
     setBannerVisible(false);
     try {
-      await WorldChoirDB.ready();
+      await WorldChoirDB.readyIdentity();
       const data = await apiFetch('/api/daily-peace', {
         method: 'POST',
         body: JSON.stringify({
@@ -227,7 +227,7 @@ const DailyActsPeace = (() => {
     pruneOldBannerDismissKeys();
 
     try {
-      await WorldChoirDB.ready();
+      await WorldChoirDB.readyIdentity();
       await refreshBanner();
     } catch (err) {
       console.warn('Daily Acts of Peace init skipped:', err);

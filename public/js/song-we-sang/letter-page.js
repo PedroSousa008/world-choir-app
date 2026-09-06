@@ -130,7 +130,7 @@
     window.addEventListener('beforeunload', cleanup);
 
     try {
-      await WorldChoirDB.ready();
+      await WorldChoirDB.readyIdentity();
     } catch (err) {
       console.warn('Song We Sang: DB ready failed', err);
     }

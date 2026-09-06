@@ -16,6 +16,8 @@ const WorldChoirDB = (() => {
   let myPledgeCache = undefined;
   let cachedPledges = undefined;
   let pledgesLoadError = null;
+  let identityPromise = null;
+  let myPledgeReadyPromise = null;
   let bootstrapPromise = null;
   let liveSyncTimer = null;
   let liveSyncStarted = false;
@@ -23,8 +25,14 @@ const WorldChoirDB = (() => {
   let lastMetaSignature = null;
   let lastCitySnapshot = null;
   let lastVoiceCount = null;
+  let cachedWorldStats = null;
+  let worldStatsInFlight = null;
+  let statsRefreshTimer = null;
+  let statsRefreshStarted = false;
 
   const LIVE_SYNC_INTERVAL_MS = 2000;
+  const STATS_REFRESH_INTERVAL_MS = 5000;
+  const PRESENTATION_STATS_KEY = 'wc_presentation_world_stats_v1';
 
   function apiBase() {
     return '';
@@ -213,9 +221,52 @@ const WorldChoirDB = (() => {
     liveSyncInFlight = false;
   }
 
+  /**
+   * A — device + remote user only (no pledge list).
+   * Safe for Daily Acts / World Chain / Song We Sang identity bootstrap.
+   */
+  function readyIdentity() {
+    if (!identityPromise) {
+      identityPromise = (async () => {
+        getDeviceId();
+        await ensureRemoteUser();
+        return remoteUser;
+      })().catch((err) => {
+        console.error('WorldChoirDB readyIdentity failed:', err);
+        identityPromise = null;
+        throw err;
+      });
+    }
+    return identityPromise;
+  }
+
+  /**
+   * B — identity + authoritative /api/my-pledge (no full /api/pledges).
+   * Safe for Home/Profile pledge CTA + identity when Map/full data is not needed.
+   */
+  function readyMyPledge() {
+    if (!myPledgeReadyPromise) {
+      myPledgeReadyPromise = (async () => {
+        await readyIdentity();
+        await syncMyPledge();
+        seedLocalEvents();
+        syncActiveEventStatus();
+        return myPledgeCache;
+      })().catch((err) => {
+        console.error('WorldChoirDB readyMyPledge failed:', err);
+        myPledgeReadyPromise = null;
+        throw err;
+      });
+    }
+    return myPledgeReadyPromise;
+  }
+
+  /**
+   * C — legacy full bootstrap: identity + my-pledge + FULL /api/pledges.
+   * Unchanged semantics for Map / Passport / Memory / any unmigrated caller.
+   */
   async function bootstrap() {
-    getDeviceId();
-    await ensureRemoteUser();
+    await readyIdentity();
     await Promise.all([
       syncMyPledge(),
       syncAllPledges(),
@@ -233,6 +284,79 @@ const WorldChoirDB = (() => {
       });
     }
     return bootstrapPromise;
+  }
+
+  function readPresentationWorldStats() {
+    try {
+      const raw = sessionStorage.getItem(PRESENTATION_STATS_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+      if (parsed.eventId && parsed.eventId !== WorldChoirConfig.CURRENT_EVENT.id) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function writePresentationWorldStats(stats) {
+    try {
+      sessionStorage.setItem(PRESENTATION_STATS_KEY, JSON.stringify({
+        eventId: WorldChoirConfig.CURRENT_EVENT.id,
+        voices: stats?.voices ?? null,
+        cities: stats?.cities ?? null,
+        countries: stats?.countries ?? null,
+        updatedAt: stats?.updatedAt || new Date().toISOString(),
+      }));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function getPresentationVoiceCount() {
+    if (cachedWorldStats && cachedWorldStats.voices != null) {
+      return Number(cachedWorldStats.voices);
+    }
+    if (isPledgesLoaded()) {
+      const map = getMapStats();
+      if (map?.voices != null) return Number(map.voices);
+    }
+    const cached = readPresentationWorldStats();
+    if (cached?.voices != null) return Number(cached.voices);
+    return null;
+  }
+
+  async function fetchWorldStats(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    if (worldStatsInFlight) return worldStatsInFlight;
+    worldStatsInFlight = (async () => {
+      const data = await apiFetch(`/api/stats?eventId=${encodeURIComponent(eventId)}`);
+      cachedWorldStats = data;
+      writePresentationWorldStats(data);
+      window.dispatchEvent(new CustomEvent('wc-world-stats', { detail: data }));
+      return data;
+    })().finally(() => {
+      worldStatsInFlight = null;
+    });
+    return worldStatsInFlight;
+  }
+
+  /** Lightweight Voice-count refresh for pages that do not load full pledges. */
+  function startWorldStatsRefresh(options = {}) {
+    const intervalMs = options.intervalMs ?? STATS_REFRESH_INTERVAL_MS;
+    if (statsRefreshStarted) {
+      void fetchWorldStats().catch(() => {});
+      return;
+    }
+    statsRefreshStarted = true;
+    const tick = () => {
+      if (document.hidden) return;
+      void fetchWorldStats().catch(() => {});
+    };
+    tick();
+    statsRefreshTimer = setInterval(tick, intervalMs);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) tick();
+    });
   }
 
   function purgeLegacyDemoData() {
@@ -762,11 +886,16 @@ const WorldChoirDB = (() => {
 
   return {
     ready,
+    readyIdentity,
+    readyMyPledge,
     bootstrap,
     syncAllPledges,
     syncAllPledgesIfChanged,
     startLiveSync,
     stopLiveSync,
+    fetchWorldStats,
+    getPresentationVoiceCount,
+    startWorldStatsRefresh,
     syncMyPledge,
     getDeviceId,
     getOrCreateUser,

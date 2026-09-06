@@ -14,14 +14,19 @@ const ProfilePage = (() => {
   let profileReady = false;
 
   function getVoicesCounterContent() {
-    if (typeof WorldChoirDB === 'undefined' || !WorldChoirDB.isPledgesLoaded()) {
+    const count = typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getPresentationVoiceCount
+      ? WorldChoirDB.getPresentationVoiceCount()
+      : (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.isPledgesLoaded()
+        ? WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id)?.voices
+        : null);
+
+    if (count == null || Number.isNaN(Number(count))) {
       return { text: '', loading: true };
     }
 
-    const stats = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
-    const count = stats?.voices ?? 0;
-    const formatted = count.toLocaleString('en-US');
-    const text = count === 1 ? '1 VOICE' : `${formatted} VOICES`;
+    const n = Number(count);
+    const formatted = n.toLocaleString('en-US');
+    const text = n === 1 ? '1 VOICE' : `${formatted} VOICES`;
     return { text, loading: false };
   }
 
@@ -159,15 +164,25 @@ const ProfilePage = (() => {
       renderSkeleton();
     }
 
+    window.addEventListener('wc-world-stats', updateVoicesCounter);
     window.addEventListener('wc-pledges-synced', updateVoicesCounter);
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
-    window.addEventListener('wc-pledge-added', updateVoicesCounter);
+    window.addEventListener('wc-pledge-added', () => {
+      updateVoicesCounter();
+      void WorldChoirDB.fetchWorldStats?.().catch(() => {});
+    });
     window.addEventListener('wc-voices-live-update', updateVoicesCounter);
-    WorldChoirDB.startLiveSync({ intervalMs: 2000 });
+
+    // Profile Voice counter via /api/stats — skip full pledge live sync on this page.
+    if (typeof WorldChoirDB.startWorldStatsRefresh === 'function') {
+      WorldChoirDB.startWorldStatsRefresh({ intervalMs: 5000 });
+    } else {
+      void WorldChoirDB.fetchWorldStats?.().then(() => updateVoicesCounter()).catch(() => {});
+    }
 
     const fallback = setTimeout(() => revealProfile(), 220);
 
-    WorldChoirPledgeState.init()
+    WorldChoirPledgeState.init({ mode: 'myPledge' })
       .then(async () => {
         clearTimeout(fallback);
         revealProfile();

@@ -28,13 +28,14 @@ const LyricsDisplay = (() => {
   }
 
   function getVoiceCount() {
-    if (
-      typeof WorldChoirDB === 'undefined' ||
-      typeof WorldChoirConfig === 'undefined' ||
-      !WorldChoirDB.isPledgesLoaded()
-    ) {
+    if (typeof WorldChoirDB === 'undefined' || typeof WorldChoirConfig === 'undefined') {
       return null;
     }
+    if (typeof WorldChoirDB.getPresentationVoiceCount === 'function') {
+      const n = WorldChoirDB.getPresentationVoiceCount();
+      if (n != null && !Number.isNaN(Number(n))) return Number(n);
+    }
+    if (!WorldChoirDB.isPledgesLoaded()) return null;
     const stats = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
     return stats?.voices ?? null;
   }

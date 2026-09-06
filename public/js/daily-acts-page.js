@@ -1029,7 +1029,7 @@ const DailyActsPage = (() => {
     root().innerHTML = renderLoadingSkeleton();
 
     try {
-      await WorldChoirDB.ready();
+      await WorldChoirDB.readyIdentity();
       if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.start?.();
       await loadJourney();
       applyDailyActsRoute();

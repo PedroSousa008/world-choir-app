@@ -120,14 +120,19 @@ const WorldChoirHome = (() => {
   }
 
   function getVoicesCounterContent() {
-    if (!WorldChoirDB.isPledgesLoaded()) {
+    const count = typeof WorldChoirDB.getPresentationVoiceCount === 'function'
+      ? WorldChoirDB.getPresentationVoiceCount()
+      : (WorldChoirDB.isPledgesLoaded()
+        ? WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id)?.voices
+        : null);
+
+    if (count == null || Number.isNaN(Number(count))) {
       return { text: 'LOADING VOICES', loading: true };
     }
 
-    const stats = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
-    const count = stats?.voices ?? 0;
-    const formatted = count.toLocaleString('en-US');
-    const text = count === 1 ? '1 VOICE' : `${formatted} VOICES`;
+    const n = Number(count);
+    const formatted = n.toLocaleString('en-US');
+    const text = n === 1 ? '1 VOICE' : `${formatted} VOICES`;
     return { text, loading: false };
   }
 
@@ -1097,7 +1102,7 @@ const WorldChoirHome = (() => {
       }
     }, 200);
 
-    WorldChoirPledgeState.init()
+    WorldChoirPledgeState.init({ mode: 'myPledge' })
       .then(() => {
         clearTimeout(fallback);
         WorldChoirPledgeState.refresh();
@@ -1183,6 +1188,7 @@ const WorldChoirHome = (() => {
       }
     });
 
+    window.addEventListener('wc-world-stats', updateVoicesCounter);
     window.addEventListener('wc-pledges-synced', () => {
       updateVoicesCounter();
       if (homeView === 'post-event' || homeView === 'post-event-complete') {
@@ -1193,10 +1199,18 @@ const WorldChoirHome = (() => {
     window.addEventListener('wc-pledges-synced', updatePostEventHeroCopy);
     window.addEventListener('wc-pledge-updated', updatePostEventHeroCopy);
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
-    window.addEventListener('wc-pledge-added', updateVoicesCounter);
+    window.addEventListener('wc-pledge-added', () => {
+      updateVoicesCounter();
+      void WorldChoirDB.fetchWorldStats?.().catch(() => {});
+    });
     window.addEventListener('wc-voices-live-update', updateVoicesCounter);
 
-    WorldChoirDB.startLiveSync({ intervalMs: 2000 });
+    // Home Voice count via /api/stats — do not pull full /api/pledges on this page.
+    if (typeof WorldChoirDB.startWorldStatsRefresh === 'function') {
+      WorldChoirDB.startWorldStatsRefresh({ intervalMs: 5000 });
+    } else {
+      void WorldChoirDB.fetchWorldStats?.().then(() => updateVoicesCounter()).catch(() => {});
+    }
 
     LiveEventMode.init();
     render();
