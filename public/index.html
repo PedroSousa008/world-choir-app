@@ -4,6 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
+  <style id="wc-boot-critical">
+    html.wc-booting:not(.wc-boot-skeletons)::before{content:"";position:fixed;inset:0;z-index:2147483000;background:#000;pointer-events:none}
+    html.wc-booting:not(.wc-boot-skeletons),html.wc-booting:not(.wc-boot-skeletons) body{background:#000!important}
+  </style>
+  <script>
+    /* TEST REVERT: set true to show skeletons again instead of a black boot screen */
+    window.WC_SHOW_SKELETONS = false;
+    document.documentElement.classList.add('wc-booting');
+    if (window.WC_SHOW_SKELETONS) document.documentElement.classList.add('wc-boot-skeletons');
+  </script>
+
   <meta name="description" content="Once a year, the entire world sings the same song at the exact same time.">
   <title>World Choir</title>
   <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
@@ -11,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260906black">
   <link rel="stylesheet" href="css/home.css?v=20260905b">
   <link rel="stylesheet" href="css/privacy-consent.css?v=20260905a">
   <link rel="preload" as="image" href="images/after-event.png?v=20260903p">
@@ -335,6 +346,7 @@
 
   <div id="nav-root"></div>
 
+  <script src="js/world-choir-boot.js?v=20260906black"></script>
   <script src="js/world-choir-config.js?v=20260906perf2"></script>
   <script src="js/world-choir-privacy.js?v=20260905a"></script>
   <script src="js/world-choir-thank-you.js?v=20260904e"></script>
@@ -351,7 +363,7 @@
   <script src="js/world-choir-practice-config.js"></script>
   <script src="js/world-choir-live-event.js?v=20260904an"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260906perf"></script>
-  <script src="js/world-choir-home.js?v=20260906home"></script>
+  <script src="js/world-choir-home.js?v=20260906black"></script>
   <script>
     (function bootWorldChoirHome() {
       try {

@@ -83,6 +83,7 @@ const PassportJourneyPage = (() => {
       document.getElementById('journey-back')?.addEventListener('click', () => {
         window.location.href = 'passport.html';
       });
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
     } catch (err) {
       console.error(err);
       root.innerHTML = `
@@ -97,6 +98,7 @@ const PassportJourneyPage = (() => {
       document.getElementById('journey-back')?.addEventListener('click', () => {
         window.location.href = 'passport.html';
       });
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
     }
   }
 

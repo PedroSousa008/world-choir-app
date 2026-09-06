@@ -719,6 +719,27 @@ a:focus-visible {
 }
 
 /* ── Shared skeleton loaders (app-wide, brief first paint) ── */
+
+/*
+ * Black-boot test mode (default):
+ * html.wc-booting covers the page in black until WorldChoirBoot.ready().
+ * Restore skeletons: set window.WC_SHOW_SKELETONS = true in the page <head>
+ * (adds html.wc-boot-skeletons and disables the black overlay).
+ */
+html.wc-booting:not(.wc-boot-skeletons)::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  background: #000;
+  pointer-events: none;
+}
+
+html.wc-booting:not(.wc-boot-skeletons),
+html.wc-booting:not(.wc-boot-skeletons) body {
+  background: #000 !important;
+}
+
 .wc-skel {
   display: block;
   border-radius: 8px;

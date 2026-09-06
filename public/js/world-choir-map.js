@@ -544,6 +544,7 @@ const WorldChoirMap = (() => {
       skel.classList.add('is-done');
       skel.setAttribute('aria-busy', 'false');
       setTimeout(() => skel.remove(), 220);
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
     };
     // Keep map boot skeleton extremely short.
     setTimeout(clearBootSkel, 200);

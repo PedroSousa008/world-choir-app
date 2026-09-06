@@ -873,6 +873,7 @@ const WorldChoirMemory = (() => {
     if (typeof WorldChoirNav !== 'undefined') WorldChoirNav.startWatcher('memory');
     // Paint immediately — never wait on DB / network before first Memory UI.
     paintShell();
+    if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
     void hydrate();
     // Warm DB in parallel without blocking first paint.
     void (typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.ready() : Promise.resolve());

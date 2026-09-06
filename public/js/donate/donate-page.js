@@ -2149,12 +2149,14 @@ const WorldChoirDonate = (() => {
       if (!resumed && !applyDeepLinkFoundation()) {
         renderHome();
       }
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
     } catch (err) {
       console.error('Creator Foundations init failed:', err);
       const offline = typeof navigator !== 'undefined' && !navigator.onLine;
       renderError(offline
         ? 'You appear to be offline. Please reconnect and try again.'
         : (err.message || 'Could not load Creator Foundations.'));
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
     }
   }
 

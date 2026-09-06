@@ -632,6 +632,7 @@ const DailyActsPage = (() => {
     if (view.mode === 'complete-moment') {
       el.innerHTML = renderMain() + renderCompleteMoment();
       bindGrid();
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
       window.setTimeout(() => {
         if (view.mode === 'complete-moment' && view.item) {
           view = { mode: 'reflect', item: view.item };
@@ -645,6 +646,7 @@ const DailyActsPage = (() => {
       el.innerHTML = renderMain() + renderReflect(view.item);
       bindGrid();
       bindReflect();
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
       return;
     }
 
@@ -652,6 +654,7 @@ const DailyActsPage = (() => {
       el.innerHTML = renderMain() + renderActDetail(view.item, { editingReflection: !!view.editingReflection });
       bindGrid();
       bindDetail();
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
       return;
     }
 
@@ -659,6 +662,7 @@ const DailyActsPage = (() => {
       el.innerHTML = renderMain() + renderFutureSheet();
       bindGrid();
       bindSheetClose();
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
       return;
     }
 
@@ -666,6 +670,7 @@ const DailyActsPage = (() => {
       el.innerHTML = renderCalendar();
       bindGrid();
       bindCalendar();
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
       return;
     }
 
@@ -673,6 +678,7 @@ const DailyActsPage = (() => {
     bindGrid();
     markTodayViewed();
     maybeDailyActsWalkthrough();
+    if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
   }
 
   function maybeDailyActsWalkthrough() {
@@ -1049,6 +1055,7 @@ const DailyActsPage = (() => {
           : 'Could not load Daily Acts of Peace.')}</p>
         ${extra}
       `;
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
     }
   }
 

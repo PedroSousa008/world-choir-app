@@ -4,6 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
+  <style id="wc-boot-critical">
+    html.wc-booting:not(.wc-boot-skeletons)::before{content:"";position:fixed;inset:0;z-index:2147483000;background:#000;pointer-events:none}
+    html.wc-booting:not(.wc-boot-skeletons),html.wc-booting:not(.wc-boot-skeletons) body{background:#000!important}
+  </style>
+  <script>
+    /* TEST REVERT: set true to show skeletons again instead of a black boot screen */
+    window.WC_SHOW_SKELETONS = false;
+    document.documentElement.classList.add('wc-booting');
+    if (window.WC_SHOW_SKELETONS) document.documentElement.classList.add('wc-boot-skeletons');
+  </script>
+
   <meta name="description" content="Your World Choir identity — who you are, where you sing, and how you prepare.">
   <title>World Choir — Profile</title>
   <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
@@ -11,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260903p">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260906black">
   <link rel="stylesheet" href="css/profile.css?v=20260906boot">
   <link rel="stylesheet" href="css/privacy-consent.css?v=20260905a">
   <link rel="stylesheet" href="css/world-choir-onboarding.css?v=20260816a">
@@ -125,7 +136,8 @@
 
   <div id="nav-root"></div>
 
-    <script src="js/world-choir-config.js?v=20260906perf2"></script>
+    <script src="js/world-choir-boot.js?v=20260906black"></script>
+  <script src="js/world-choir-config.js?v=20260906perf2"></script>
   <script src="js/world-choir-privacy.js?v=20260905a"></script>
   <script src="js/world-choir-countries.js?v=20260831a"></script>
   <script src="js/world-choir-db.js?v=20260906perf2"></script>
@@ -149,7 +161,7 @@
   <script src="js/profile/daily-acts-peace.js?v=20260906perf"></script>
   <script src="js/profile/daily-acts-button.js?v=20260810i"></script>
   <script src="js/profile/owner-access.js?v=20270810c"></script>
-  <script src="js/profile/profile-page.js?v=20260906boot"></script>
+  <script src="js/profile/profile-page.js?v=20260906black"></script>
   <script>
     // Paint Profile immediately — do not wait on live-event scripts.
     ProfilePage.init();

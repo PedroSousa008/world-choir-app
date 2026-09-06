@@ -36,7 +36,7 @@ const WorldChoirNav = (() => {
     home: [
       'index.html',
       'css/home.css?v=20260905b',
-      'js/world-choir-home.js?v=20260906home',
+      'js/world-choir-home.js?v=20260906black',
       'js/world-choir-db.js?v=20260906perf2',
     ],
     map: [
@@ -47,7 +47,7 @@ const WorldChoirNav = (() => {
       'js/map/sponsor-bar.js?v=20260905a',
       '/api/map-sponsors',
       'js/world-choir-map-tiles.js?v=20260906mapfix2',
-      'js/world-choir-map.js?v=20260906mapfix2',
+      'js/world-choir-map.js?v=20260906black',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
@@ -62,14 +62,14 @@ const WorldChoirNav = (() => {
       'js/donate/creator-foundations-store.js?v=20260904bu',
       'js/donate/donation-flow.js?v=20260831a',
       'js/foundation-public-card.js?v=20260904cb',
-      'js/donate/donate-page.js?v=20260904ce',
+      'js/donate/donate-page.js?v=20260906black',
       '/api/creator-foundations',
       '/api/donations?action=config',
     ],
     profile: [
       'profile.html',
       'css/profile.css?v=20260906boot',
-      'js/profile/profile-page.js?v=20260906boot',
+      'js/profile/profile-page.js?v=20260906black',
       'js/profile/daily-acts-peace.js?v=20260906perf',
       'js/profile/daily-acts-button.js?v=20260810i',
       'js/world-choir-onboarding.js?v=20260816a',
@@ -98,14 +98,14 @@ const WorldChoirNav = (() => {
       'css/memory-page.css?v=20260904bt',
       'js/memory/memory-data.js?v=20260904bt',
       'js/memory/memory-feed.js?v=20260904bt',
-      'js/memory/memory-page.js?v=20260904bt',
+      'js/memory/memory-page.js?v=20260906black',
       'js/profile/passport-stamps.js?v=20260902a',
       'js/profile/world-choir-passport.js?v=20260902q',
     ],
     'daily-acts': [
       'daily-acts.html',
       'css/daily-acts-page.css?v=20260902z',
-      'js/daily-acts-page.js?v=20260902z',
+      'js/daily-acts-page.js?v=20260906black',
     ],
   };
 

@@ -118,6 +118,7 @@ const ProfilePage = (() => {
     Object.values(SECTIONS).forEach((id) => {
       document.getElementById(id)?.removeAttribute('aria-busy');
     });
+    if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
   }
 
   function revealProfile() {

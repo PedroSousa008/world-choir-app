@@ -741,6 +741,7 @@ const WorldChoirHome = (() => {
     if (!isHomeDataReady()) return;
     homeReady = true;
     render();
+    if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
   }
 
   let homeView = 'unknown';
@@ -1098,12 +1099,14 @@ const WorldChoirHome = (() => {
     if (warmFromPledge || warmFromPostEventCache) homeReady = true;
 
     startHome();
+    if (homeReady && typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
 
     // Short safety net — show real countdown (CTA may still be a mini-skeleton).
     const fallback = setTimeout(() => {
       if (!homeReady) {
         homeReady = true;
         render();
+        if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
       }
     }, 90);
 
@@ -1112,7 +1115,10 @@ const WorldChoirHome = (() => {
         clearTimeout(fallback);
         WorldChoirPledgeState.refresh();
         if (!homeReady) revealHome();
-        else render();
+        else {
+          render();
+          if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
+        }
         maybeLaunchHomeExtras();
       })
       .catch(async (err) => {
@@ -1125,6 +1131,7 @@ const WorldChoirHome = (() => {
         }
         homeReady = true;
         render();
+        if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
         maybeLaunchHomeExtras();
       });
 

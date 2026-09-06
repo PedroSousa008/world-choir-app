@@ -1416,6 +1416,7 @@ const WorldChainPage = (() => {
       root.innerHTML = renderLanding();
     }
     bind();
+    if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
   }
 
   async function loadCompleted(opts = {}) {
