@@ -9,6 +9,266 @@ const WorldChoirNav = (() => {
   let prefetchStarted = false;
   const prefetched = new Set();
 
+  /** Instagram-style shared tab indicator — keep in sync with page navigation. */
+  const NAV_TRANSITION_MS = 200;
+  const INDICATOR_WIDTH = 24;
+  const NAV_TRANSITION_KEY = 'wc_nav_transition_v1';
+  let navEl = null;
+  let indicatorEl = null;
+  let currentActivePage = null;
+  let pendingNavTimer = null;
+  let pendingHref = null;
+  let indicatorX = 0;
+  let indicatorReady = false;
+  let resizeObserver = null;
+
+  function prefersReducedMotion() {
+    try {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {
+      return false;
+    }
+  }
+
+  function transitionDurationMs() {
+    return prefersReducedMotion() ? 0 : NAV_TRANSITION_MS;
+  }
+
+  function clearPendingNavigation() {
+    if (pendingNavTimer) {
+      clearTimeout(pendingNavTimer);
+      pendingNavTimer = null;
+    }
+    pendingHref = null;
+  }
+
+  function readStoredTransition() {
+    try {
+      const raw = sessionStorage.getItem(NAV_TRANSITION_KEY);
+      if (!raw) return null;
+      sessionStorage.removeItem(NAV_TRANSITION_KEY);
+      const data = JSON.parse(raw);
+      if (!data || typeof data.to !== 'string') return null;
+      if (Date.now() - (data.at || 0) > 1200) return null;
+      return data;
+    } catch {
+      return null;
+    }
+  }
+
+  function storeTransition(from, to) {
+    try {
+      sessionStorage.setItem(
+        NAV_TRANSITION_KEY,
+        JSON.stringify({ from, to, at: Date.now(), duration: transitionDurationMs() })
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function measureIndicatorX(item) {
+    if (!navEl || !item) return 0;
+    const navRect = navEl.getBoundingClientRect();
+    const icon = item.querySelector('.nav-icon');
+    const anchor = icon || item;
+    const anchorRect = anchor.getBoundingClientRect();
+    return anchorRect.left + anchorRect.width / 2 - navRect.left - INDICATOR_WIDTH / 2;
+  }
+
+  function measureIndicatorTop(item) {
+    if (!navEl || !item) return 0;
+    const navRect = navEl.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    // Match previous per-tab ::after { top: -1px } relative to the item.
+    return itemRect.top - navRect.top - 1;
+  }
+
+  function setIndicatorTransform(x, { animate } = { animate: false }) {
+    if (!indicatorEl) return;
+    if (animate && indicatorEl.classList.contains('is-animated')) {
+      // Freeze at the current visual X so a mid-flight retarget continues smoothly.
+      try {
+        const matrix = new DOMMatrixReadOnly(getComputedStyle(indicatorEl).transform);
+        indicatorEl.classList.remove('is-animated');
+        indicatorEl.style.transform = `translate3d(${matrix.m41}px, 0, 0)`;
+        void indicatorEl.offsetWidth;
+      } catch {
+        /* ignore */
+      }
+    }
+    indicatorX = x;
+    if (!animate) {
+      indicatorEl.classList.remove('is-animated');
+      indicatorEl.style.transform = `translate3d(${x}px, 0, 0)`;
+      void indicatorEl.offsetWidth;
+      return;
+    }
+    indicatorEl.classList.add('is-animated');
+    indicatorEl.style.transform = `translate3d(${x}px, 0, 0)`;
+  }
+
+  function placeIndicatorOnItem(item, { animate, visible } = { animate: false, visible: true }) {
+    if (!indicatorEl || !item) {
+      if (indicatorEl) indicatorEl.classList.remove('is-visible');
+      return;
+    }
+    const x = measureIndicatorX(item);
+    const top = measureIndicatorTop(item);
+    indicatorEl.style.top = `${top}px`;
+    setIndicatorTransform(x, { animate: !!animate && indicatorReady });
+    if (visible !== false) indicatorEl.classList.add('is-visible');
+  }
+
+  function getNavItem(pageId) {
+    if (!navEl || !pageId) return null;
+    return navEl.querySelector(`.nav-item[data-nav-page="${pageId}"]`);
+  }
+
+  function setActiveClasses(pageId) {
+    if (!navEl) return;
+    navEl.querySelectorAll('.nav-item').forEach((item) => {
+      const isActive = item.getAttribute('data-nav-page') === pageId;
+      item.classList.toggle('active', isActive);
+      if (isActive) item.setAttribute('aria-current', 'page');
+      else item.removeAttribute('aria-current');
+    });
+  }
+
+  function navigateTo(href) {
+    clearPendingNavigation();
+    pendingHref = href;
+    const delay = transitionDurationMs();
+    const go = () => {
+      pendingNavTimer = null;
+      pendingHref = null;
+      window.location.href = href;
+    };
+    if (delay <= 0) {
+      go();
+      return;
+    }
+    pendingNavTimer = setTimeout(go, delay);
+  }
+
+  function activateTab(pageId, href, { navigate } = { navigate: true }) {
+    if (!pageId) return;
+    const target = getNavItem(pageId);
+    if (!target) {
+      if (navigate && href) window.location.href = href;
+      return;
+    }
+
+    // Fast re-tap while moving: retarget from current visual position.
+    const redirecting = !!(pendingHref && pendingHref !== href);
+    if (redirecting) {
+      clearPendingNavigation();
+    }
+
+    const fromPage = currentActivePage;
+    const fromItem = getNavItem(fromPage);
+    // Animate when leaving a real tab, or when redirecting mid-flight (indicator already moving).
+    const shouldAnimate =
+      indicatorReady &&
+      !prefersReducedMotion() &&
+      fromPage !== pageId &&
+      (!!fromItem || redirecting || indicatorEl?.classList.contains('is-visible'));
+
+    currentActivePage = pageId;
+    setActiveClasses(pageId);
+    placeIndicatorOnItem(target, {
+      animate: shouldAnimate,
+      visible: true,
+    });
+
+    if (!navigate || !href) return;
+
+    if (!shouldAnimate) {
+      window.location.href = href;
+      return;
+    }
+
+    storeTransition(fromPage, pageId);
+    navigateTo(href);
+  }
+
+  function onNavClick(event) {
+    const link = event.currentTarget;
+    const pageId = link.getAttribute('data-nav-page');
+    const href = link.getAttribute('href');
+    if (!pageId || !href) return;
+
+    // Allow modified clicks to behave like normal links.
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    // Already on this tab and not mid-transition elsewhere.
+    if (pageId === currentActivePage && !pendingHref) return;
+
+    // Same destination already pending — keep current animation/timer.
+    if (pendingHref === href) return;
+
+    activateTab(pageId, href, { navigate: true });
+  }
+
+  function syncIndicatorLayout({ animate } = { animate: false }) {
+    const active = getNavItem(currentActivePage) || navEl?.querySelector('.nav-item.active');
+    if (!active) {
+      if (indicatorEl) indicatorEl.classList.remove('is-visible');
+      return;
+    }
+    placeIndicatorOnItem(active, { animate: !!animate, visible: true });
+  }
+
+  function bindIndicatorChrome(nav, activePage) {
+    navEl = nav;
+    currentActivePage = activePage;
+
+    indicatorEl = document.createElement('div');
+    indicatorEl.className = 'bottom-nav__indicator';
+    indicatorEl.setAttribute('aria-hidden', 'true');
+    nav.insertBefore(indicatorEl, nav.firstChild);
+
+    nav.querySelectorAll('.nav-item').forEach((link) => {
+      link.addEventListener('click', onNavClick);
+    });
+
+    const finishLayout = () => {
+      indicatorReady = true;
+      const active = getNavItem(activePage);
+      if (active) {
+        placeIndicatorOnItem(active, { animate: false, visible: true });
+      } else if (indicatorEl) {
+        indicatorEl.classList.remove('is-visible');
+      }
+    };
+
+    // Position after layout so icon centers are accurate across widths.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(finishLayout);
+    });
+
+    if (typeof ResizeObserver === 'function') {
+      if (resizeObserver) resizeObserver.disconnect();
+      resizeObserver = new ResizeObserver(() => {
+        syncIndicatorLayout({ animate: false });
+      });
+      resizeObserver.observe(nav);
+    } else {
+      window.addEventListener('resize', () => syncIndicatorLayout({ animate: false }));
+    }
+  }
+
   const NAV_ICON_SVGS = {
     home: `<svg class="nav-icon__svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><path d="M4 10.75 12 4l8 6.75V19a1.25 1.25 0 0 1-1.25 1.25H15v-5.5H9v5.5H5.25A1.25 1.25 0 0 1 4 19v-8.25Z" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"/></svg>`,
     map: `<svg class="nav-icon__svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.75"/><path d="M3 12h18M12 3c2.75 2.75 4.5 6.25 4.5 9s-1.75 6.25-4.5 9M12 3c-2.75 2.75-4.5 6.25-4.5 9s1.75 6.25 4.5 9" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>`,
@@ -193,6 +453,7 @@ const WorldChoirNav = (() => {
       const link = document.createElement('a');
       link.href = page.href;
       link.className = 'nav-item' + (activePage === page.id ? ' active' : '');
+      link.setAttribute('data-nav-page', page.id);
       if (activePage === page.id) link.setAttribute('aria-current', 'page');
       link.innerHTML = `${renderNavIcon(page)}<span>${page.label}</span>`;
       const warm = () => prefetchOnIntent(page.href);
@@ -202,6 +463,7 @@ const WorldChoirNav = (() => {
       nav.appendChild(link);
     });
 
+    bindIndicatorChrome(nav, activePage);
     return nav;
   }
 
@@ -211,8 +473,12 @@ const WorldChoirNav = (() => {
     }
     const root = document.getElementById('nav-root');
     if (!root) return;
+    clearPendingNavigation();
+    indicatorReady = false;
     root.innerHTML = '';
     root.appendChild(renderWorldChoirNav(activePage));
+    // Animation already played on the previous page before navigation.
+    readStoredTransition();
   }
 
   function startWatcher(activePage) {
