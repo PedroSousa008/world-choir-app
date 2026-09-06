@@ -14,6 +14,7 @@ const CreatorFoundationsStore = (() => {
   const FALLBACK_URL = 'data/creator-foundations.json';
   const DEMO_URL = 'data/creator-foundations.demo.json';
   const PAGE_SIZE = 24;
+  const SESSION_KEY = 'wc_cf_catalog_v1';
   const FOUNDATION_CAUSES = [
     'Food & Hunger',
     'Health',
@@ -57,6 +58,58 @@ const CreatorFoundationsStore = (() => {
   let loadError = null;
   let isDemoCatalog = false;
 
+  function readSessionCatalog() {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.foundations)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeSessionCatalog(data) {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        version: data.version,
+        platform: data.platform,
+        currency: data.currency,
+        supportedCurrencies: data.supportedCurrencies,
+        suggestedAmounts: data.suggestedAmounts,
+        foundations: data.foundations,
+        donations: data.donations,
+        demo: isDemoCatalog,
+        at: Date.now(),
+      }));
+    } catch {
+      /* ignore quota */
+    }
+  }
+
+  /** Instant Donate paint — restore last session catalog without waiting on network. */
+  function primeFromSession() {
+    if (catalog || isDemoMode()) return !!catalog;
+    const warm = readSessionCatalog();
+    if (!warm) return false;
+    catalog = {
+      version: warm.version || 3,
+      platform: warm.platform || { feePercent: 10 },
+      currency: warm.currency || 'EUR',
+      supportedCurrencies: warm.supportedCurrencies || ['EUR'],
+      suggestedAmounts: warm.suggestedAmounts || [5, 10, 25, 50, 100],
+      foundations: warm.foundations || [],
+      donations: Array.isArray(warm.donations) ? warm.donations : [],
+    };
+    isDemoCatalog = !!warm.demo;
+    return true;
+  }
+
+  function isReady() {
+    return !!catalog;
+  }
+
   function normalizeCause(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -81,18 +134,49 @@ const CreatorFoundationsStore = (() => {
     if (catalog) return catalog;
     if (loadPromise) return loadPromise;
 
+    // Serve warm session catalog immediately while network revalidates.
+    if (primeFromSession() && catalog) {
+      loadPromise = (async () => {
+        try {
+          const useDemo = isDemoMode();
+          if (useDemo) return catalog;
+          const res = await fetch(PRODUCTION_URL, { cache: 'default', credentials: 'omit' });
+          if (!res.ok) return catalog;
+          const data = await res.json();
+          if (data?.dataPolicy?.demo === true) return catalog;
+          catalog = {
+            version: data.version || 3,
+            platform: data.platform || { feePercent: 10 },
+            currency: data.currency || 'EUR',
+            supportedCurrencies: data.supportedCurrencies || ['EUR'],
+            suggestedAmounts: data.suggestedAmounts || [5, 10, 25, 50, 100],
+            foundations: Array.isArray(data.foundations) ? data.foundations : [],
+            donations: Array.isArray(data.donations) ? data.donations : [],
+          };
+          isDemoCatalog = false;
+          writeSessionCatalog(catalog);
+          return catalog;
+        } catch {
+          return catalog;
+        } finally {
+          loadPromise = null;
+        }
+      })();
+      return catalog;
+    }
+
     const useDemo = isDemoMode();
 
     loadPromise = (async () => {
       let data = null;
 
       if (useDemo) {
-        const res = await fetch(DEMO_URL, { cache: 'no-store' });
+        const res = await fetch(DEMO_URL, { cache: 'force-cache' });
         if (!res.ok) throw new Error('Could not load Creator Foundations.');
         data = await res.json();
       } else {
         try {
-          const res = await fetch(PRODUCTION_URL, { cache: 'no-store', credentials: 'omit' });
+          const res = await fetch(PRODUCTION_URL, { cache: 'default', credentials: 'omit' });
           if (res.ok) {
             data = await res.json();
           } else if (res.status === 503) {
@@ -107,7 +191,7 @@ const CreatorFoundationsStore = (() => {
         }
 
         if (!data) {
-          const res = await fetch(FALLBACK_URL, { cache: 'no-store' });
+          const res = await fetch(FALLBACK_URL, { cache: 'force-cache' });
           if (!res.ok) throw new Error('Could not load Creator Foundations.');
           data = await res.json();
         }
@@ -128,6 +212,7 @@ const CreatorFoundationsStore = (() => {
       };
       isDemoCatalog = useDemo || data?.dataPolicy?.demo === true;
       loadError = null;
+      if (!useDemo) writeSessionCatalog(catalog);
       return catalog;
     })().catch((err) => {
       loadError = err;
@@ -580,6 +665,8 @@ const CreatorFoundationsStore = (() => {
     refresh,
     load,
     isLoaded,
+    isReady,
+    primeFromSession,
     getLoadError,
     usingDemoCatalog,
     getPlatform,

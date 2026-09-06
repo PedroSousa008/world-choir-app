@@ -314,7 +314,7 @@ const WorldChoirDonate = (() => {
     }
 
     return `
-      <div class="df-topbar df-rise">
+      <div class="df-topbar">
         <a class="df-topbar__logo" href="index.html" aria-label="World Choir home">
           <img
             src="images/world-choir-logo-donate.png?v=20260813v"
@@ -333,7 +333,7 @@ const WorldChoirDonate = (() => {
 
   function renderIntro() {
     return `
-      <header class="df-intro df-intro--globe df-rise df-rise-delay-1">
+      <header class="df-intro df-intro--globe">
         <div class="df-intro__globe" aria-hidden="true">
           <div id="df-donate-earth-container" class="df-donate-earth" aria-hidden="true"></div>
         </div>
@@ -936,7 +936,7 @@ const WorldChoirDonate = (() => {
       : 0;
 
     return `
-      <section class="df-total-donated df-rise df-rise-delay-2" aria-label="Total donated to charities">
+      <section class="df-total-donated" aria-label="Total donated to charities">
         <p class="df-total-donated__label">Total Donated to Charities</p>
         <p class="df-total-donated__amount">${esc(formatMoney(total, currency))}</p>
       </section>
@@ -949,7 +949,7 @@ const WorldChoirDonate = (() => {
 
   function renderDiscoveryChrome() {
     return `
-      <section class="df-explore df-rise df-rise-delay-2" aria-labelledby="df-explore-label">
+      <section class="df-explore" aria-labelledby="df-explore-label">
         <p class="df-section-label" id="df-explore-label">Explore by cause</p>
         ${renderCauseFilters()}
       </section>
@@ -2139,12 +2139,30 @@ const WorldChoirDonate = (() => {
       if (e.key === 'Escape' && searchOpen) closeSearch();
     });
     applyDeepLinkCause();
-    renderHomeShell();
+
+    // Instant paint from session (same path as Home/Profile).
+    const warmed = typeof CreatorFoundationsStore !== 'undefined'
+      && CreatorFoundationsStore.primeFromSession?.();
+    if (warmed || CreatorFoundationsStore?.isReady?.()) {
+      renderHome();
+      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
+    } else {
+      renderHomeShell();
+    }
 
     try {
       await CreatorFoundationsStore.ready();
       applyDeepLinkCause();
-      const resumed = typeof WorldChoirDonationFlow !== 'undefined'
+      const hasResumeQuery = (() => {
+        try {
+          const p = new URLSearchParams(window.location.search || '');
+          return !!(p.get('donation') || p.get('payment_intent') || p.get('redirect_status'));
+        } catch {
+          return false;
+        }
+      })();
+      const resumed = hasResumeQuery
+        && typeof WorldChoirDonationFlow !== 'undefined'
         && await WorldChoirDonationFlow.resumeFromQuery?.();
       if (!resumed && !applyDeepLinkFoundation()) {
         renderHome();

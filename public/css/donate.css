@@ -28,27 +28,22 @@
 }
 
 /* ─── Motion ─── */
-
-@keyframes df-rise {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+/* Page-open rise animations removed — Donate must paint instantly with no motion. */
 
 @keyframes df-fade {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-.df-rise {
-  animation: df-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+/* Kept as no-ops so any leftover markup classes do not animate on open. */
+.df-rise,
+.df-rise-delay-1,
+.df-rise-delay-2,
+.df-rise-delay-3 {
+  animation: none !important;
 }
 
-.df-rise-delay-1 { animation-delay: 0.06s; }
-.df-rise-delay-2 { animation-delay: 0.12s; }
-.df-rise-delay-3 { animation-delay: 0.18s; }
-
 @media (prefers-reduced-motion: reduce) {
-  .df-rise,
   .df-search-inline,
   .df-cause,
   .df-fcard,
