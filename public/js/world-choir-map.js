@@ -171,7 +171,7 @@ const WorldChoirMap = (() => {
   }
 
   function getMarkersSignature() {
-    if (!WorldChoirDB.isPledgesLoaded()) return '';
+    if (!WorldChoirDB.isMapDataReady?.() && !WorldChoirDB.isPledgesLoaded()) return '';
 
     const cities = WorldChoirDB.getAggregatedCities();
     const gatherings = WorldChoirDB.getGatheringPlaces();
@@ -187,7 +187,7 @@ const WorldChoirMap = (() => {
 
   function rebuildMarkers() {
     if (!cityLightsLayer || !gatheringLayer) return;
-    if (!WorldChoirDB.isPledgesLoaded()) return;
+    if (!WorldChoirDB.isMapDataReady?.() && !WorldChoirDB.isPledgesLoaded()) return;
 
     const signature = getMarkersSignature();
     if (signature && signature === lastMarkersSignature) return;
@@ -537,7 +537,7 @@ const WorldChoirMap = (() => {
     updateCountdown();
     setInterval(updateCountdown, 1000);
 
-    WorldChoirDB.startLiveSync({ intervalMs: 2000 });
+    WorldChoirDB.startMapAggregateSync({ intervalMs: 2000 });
 
     WorldChoirParticipation.init({
       onSuccess: onParticipationSuccess,
@@ -553,14 +553,17 @@ const WorldChoirMap = (() => {
       if (e.detail?.latitude != null && e.detail?.longitude != null) {
         cacheUserMapHome(e.detail.latitude, e.detail.longitude);
       }
+      void WorldChoirDB.syncMapAggregates?.().catch(() => {});
     });
     window.addEventListener('wc-pledge-updated', (e) => {
       refreshMapData();
       if (e.detail?.latitude != null && e.detail?.longitude != null) {
         applyUserHomeCenter({ force: true, animate: true });
       }
+      void WorldChoirDB.syncMapAggregates?.().catch(() => {});
     });
     window.addEventListener('wc-pledges-synced', refreshMapData);
+    window.addEventListener('wc-map-aggregate-synced', refreshMapData);
     window.addEventListener('wc-map-data-state', refreshMapData);
     window.addEventListener('wc-voices-live-update', (e) => {
       const key = pickPulseCity(e.detail);
@@ -568,7 +571,7 @@ const WorldChoirMap = (() => {
       else refreshMapData();
     });
 
-    WorldChoirPledgeState.init().then(() => {
+    WorldChoirPledgeState.init({ mode: 'myPledge' }).then(() => {
       refreshMapData();
       updateEmptyState();
       if (!hasVoiceJoinedSession) {

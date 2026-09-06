@@ -1,4 +1,10 @@
-const { listPledges, getPledgesMeta, mapPledgeRow, jsonStorageError } = require('./_lib/store');
+const {
+  listPledges,
+  getPledgesMeta,
+  getMapAggregate,
+  mapPledgeRow,
+  jsonStorageError,
+} = require('./_lib/store');
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,6 +21,12 @@ module.exports = async function handler(req, res) {
     if (req.query.meta === '1') {
       const meta = await getPledgesMeta(eventId);
       return res.status(200).json(meta);
+    }
+
+    // Map aggregate — mirrors client getMapStats/getAggregatedCities over /api/pledges.
+    if (req.query.aggregate === '1') {
+      const aggregate = await getMapAggregate(eventId);
+      return res.status(200).json(aggregate);
     }
 
     const pledges = await listPledges(eventId);

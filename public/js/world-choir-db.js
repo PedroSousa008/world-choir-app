@@ -32,11 +32,19 @@ const WorldChoirDB = (() => {
   let statsRefreshStarted = false;
   let lastWorldStatsMetaSignature = null;
   let statsVisibilityBound = false;
+  let cachedMapAggregate = undefined;
+  let mapAggregateLoadError = null;
+  let mapAggregateInFlight = null;
+  let mapAggregateSyncTimer = null;
+  let mapAggregateSyncStarted = false;
+  let mapAggregateSyncInFlight = false;
+  let lastMapAggregateMetaSignature = null;
 
   const LIVE_SYNC_INTERVAL_MS = 2000;
   /** Lightweight meta poll cadence (Home/Profile Voice count). Full /api/stats only on change. */
   const STATS_META_POLL_INTERVAL_MS = 2000;
   const PRESENTATION_STATS_KEY = 'wc_presentation_world_stats_v1';
+  const PRESENTATION_MAP_AGG_KEY = 'wc_presentation_map_aggregate_v1';
 
   function apiBase() {
     return '';
@@ -124,7 +132,7 @@ const WorldChoirDB = (() => {
 
   function buildCitySnapshot(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
     const map = new Map();
-    if (!isPledgesLoaded()) return map;
+    if (!isMapDataReady()) return map;
     getAggregatedCities(eventId).forEach((c) => {
       map.set(`${c.city}|${c.country}`, c.count);
     });
@@ -223,6 +231,156 @@ const WorldChoirDB = (() => {
     liveSyncTimer = null;
     liveSyncStarted = false;
     liveSyncInFlight = false;
+  }
+
+  function readPresentationMapAggregate() {
+    try {
+      const raw = sessionStorage.getItem(PRESENTATION_MAP_AGG_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.eventId !== WorldChoirConfig.CURRENT_EVENT.id) return null;
+      if (!parsed.stats || !Array.isArray(parsed.cities)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function writePresentationMapAggregate(aggregate) {
+    try {
+      sessionStorage.setItem(PRESENTATION_MAP_AGG_KEY, JSON.stringify({
+        eventId: WorldChoirConfig.CURRENT_EVENT.id,
+        stats: aggregate.stats,
+        cities: aggregate.cities,
+        meta: aggregate.meta || null,
+        at: Date.now(),
+      }));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function applyMapAggregate(data, eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    cachedMapAggregate = {
+      eventId,
+      stats: data.stats || { voices: 0, cities: 0, countries: 0 },
+      cities: Array.isArray(data.cities) ? data.cities : [],
+      meta: data.meta || null,
+    };
+    mapAggregateLoadError = null;
+    if (data.meta) {
+      lastMapAggregateMetaSignature = metaSignature(data.meta);
+    }
+    lastCitySnapshot = buildCitySnapshot(eventId);
+    lastVoiceCount = cachedMapAggregate.stats.voices ?? null;
+    writePresentationWorldStats(cachedMapAggregate.stats);
+    writePresentationMapAggregate(cachedMapAggregate);
+  }
+
+  async function syncMapAggregates(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    if (mapAggregateInFlight) return mapAggregateInFlight;
+    mapAggregateInFlight = (async () => {
+      try {
+        const data = await apiFetch(
+          `/api/pledges?eventId=${encodeURIComponent(eventId)}&aggregate=1`
+        );
+        const prevSnapshot = lastCitySnapshot ? new Map(lastCitySnapshot) : null;
+        const prevVoiceCount = lastVoiceCount;
+        applyMapAggregate(data, eventId);
+        window.dispatchEvent(new CustomEvent('wc-map-aggregate-synced', { detail: cachedMapAggregate }));
+        window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
+        // Keep legacy Map listeners working without shipping full pledges.
+        window.dispatchEvent(new CustomEvent('wc-pledges-synced', { detail: null }));
+        dispatchLiveUpdate(prevSnapshot, lastCitySnapshot, eventId, prevVoiceCount);
+        return cachedMapAggregate;
+      } catch (err) {
+        mapAggregateLoadError = err;
+        if (cachedMapAggregate === undefined) {
+          window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
+        }
+        throw err;
+      }
+    })().finally(() => {
+      mapAggregateInFlight = null;
+    });
+    return mapAggregateInFlight;
+  }
+
+  async function syncMapAggregatesIfChanged(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const meta = await fetchPledgesMeta(eventId);
+    const sig = metaSignature(meta);
+    if (sig === lastMapAggregateMetaSignature && isMapAggregateLoaded()) {
+      return { changed: false };
+    }
+    lastMapAggregateMetaSignature = sig;
+    await syncMapAggregates(eventId);
+    return { changed: true };
+  }
+
+  function warmMapAggregateFromPresentation() {
+    if (cachedMapAggregate !== undefined) return false;
+    const cached = readPresentationMapAggregate();
+    if (!cached) return false;
+    cachedMapAggregate = {
+      eventId: cached.eventId,
+      stats: cached.stats,
+      cities: cached.cities,
+      meta: cached.meta || null,
+    };
+    if (cached.meta) lastMapAggregateMetaSignature = metaSignature(cached.meta);
+    lastCitySnapshot = buildCitySnapshot();
+    lastVoiceCount = cached.stats?.voices ?? null;
+    return true;
+  }
+
+  /**
+   * Map live path: my-pledge stays separate; city lights come from /api/pledges?aggregate=1.
+   * Full /api/pledges remains available via ready()/startLiveSync for rollback.
+   */
+  function startMapAggregateSync(options = {}) {
+    const intervalMs = options.intervalMs ?? LIVE_SYNC_INTERVAL_MS;
+    if (mapAggregateSyncStarted) {
+      void syncMapAggregatesIfChanged().catch(() => {});
+      return;
+    }
+    mapAggregateSyncStarted = true;
+
+    const tick = () => {
+      if (document.hidden || mapAggregateSyncInFlight) return;
+      mapAggregateSyncInFlight = true;
+      syncMapAggregatesIfChanged()
+        .catch(() => {})
+        .finally(() => { mapAggregateSyncInFlight = false; });
+    };
+
+    const arm = () => {
+      tick();
+      mapAggregateSyncTimer = setInterval(tick, intervalMs);
+    };
+
+    warmMapAggregateFromPresentation();
+    if (cachedMapAggregate !== undefined) {
+      window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
+    }
+
+    readyMyPledge()
+      .catch(() => {})
+      .then(() => syncMapAggregates())
+      .then(() => {
+        arm();
+      })
+      .catch(arm);
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) tick();
+    });
+  }
+
+  function stopMapAggregateSync() {
+    if (mapAggregateSyncTimer) clearInterval(mapAggregateSyncTimer);
+    mapAggregateSyncTimer = null;
+    mapAggregateSyncStarted = false;
+    mapAggregateSyncInFlight = false;
   }
 
   /**
@@ -692,6 +850,9 @@ const WorldChoirDB = (() => {
 
     myPledgeCache = data.pledge;
     await syncAllPledges();
+    if (typeof syncMapAggregates === 'function') {
+      try { await syncMapAggregates(); } catch { /* Map aggregate refresh is best-effort */ }
+    }
 
     if (hadPledge) {
       window.dispatchEvent(new CustomEvent('wc-pledge-updated', { detail: myPledgeCache }));
@@ -724,6 +885,9 @@ const WorldChoirDB = (() => {
       });
       myPledgeCache = data.pledge;
       await syncAllPledges();
+      if (typeof syncMapAggregates === 'function') {
+        try { await syncMapAggregates(); } catch { /* ignore */ }
+      }
       window.dispatchEvent(new CustomEvent('wc-pledge-updated', { detail: myPledgeCache }));
     } else {
       updateUser({ city, country, latitude: coords.latitude, longitude: coords.longitude });
@@ -767,9 +931,19 @@ const WorldChoirDB = (() => {
     return cachedPledges !== undefined;
   }
 
+  function isMapAggregateLoaded() {
+    return cachedMapAggregate !== undefined;
+  }
+
+  /** Map may be ready from full pledges (legacy) OR aggregate endpoint. */
+  function isMapDataReady() {
+    return isPledgesLoaded() || isMapAggregateLoaded();
+  }
+
   function getMapDataState(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    if (!isPledgesLoaded()) {
-      return pledgesLoadError ? 'error' : 'loading';
+    if (!isMapDataReady()) {
+      if (pledgesLoadError || mapAggregateLoadError) return 'error';
+      return 'loading';
     }
 
     const stats = getMapStats(eventId);
@@ -863,40 +1037,56 @@ const WorldChoirDB = (() => {
   }
 
   function getMapStats(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    if (!isPledgesLoaded()) return null;
+    if (isPledgesLoaded()) {
+      const pledges = getUniquePledgesForEvent(eventId);
+      const withLocation = pledges.filter((p) => p.city && p.country);
+      const cities = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
+      const countries = new Set(withLocation.map((p) => p.country));
+      return {
+        voices: pledges.length,
+        cities: cities.size,
+        countries: countries.size,
+      };
+    }
 
-    const pledges = getUniquePledgesForEvent(eventId);
-    const withLocation = pledges.filter((p) => p.city && p.country);
-    const cities = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
-    const countries = new Set(withLocation.map((p) => p.country));
-    return {
-      voices: pledges.length,
-      cities: cities.size,
-      countries: countries.size,
-    };
+    if (isMapAggregateLoaded()) {
+      return {
+        voices: cachedMapAggregate.stats?.voices ?? 0,
+        cities: cachedMapAggregate.stats?.cities ?? 0,
+        countries: cachedMapAggregate.stats?.countries ?? 0,
+      };
+    }
+
+    return null;
   }
 
   function getAggregatedCities(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    if (!isPledgesLoaded()) return [];
+    if (isPledgesLoaded()) {
+      const pledges = getUniquePledgesForEvent(eventId).filter(
+        (p) => p.latitude != null && p.longitude != null && p.city && p.country
+      );
+      const map = {};
+      pledges.forEach((p) => {
+        const key = `${p.city}|${p.country}`;
+        if (!map[key]) {
+          map[key] = {
+            city: p.city,
+            country: p.country,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            count: 0,
+          };
+        }
+        map[key].count += 1;
+      });
+      return Object.values(map);
+    }
 
-    const pledges = getUniquePledgesForEvent(eventId).filter(
-      (p) => p.latitude != null && p.longitude != null && p.city && p.country
-    );
-    const map = {};
-    pledges.forEach((p) => {
-      const key = `${p.city}|${p.country}`;
-      if (!map[key]) {
-        map[key] = {
-          city: p.city,
-          country: p.country,
-          latitude: p.latitude,
-          longitude: p.longitude,
-          count: 0,
-        };
-      }
-      map[key].count += 1;
-    });
-    return Object.values(map);
+    if (isMapAggregateLoaded()) {
+      return Array.isArray(cachedMapAggregate.cities) ? cachedMapAggregate.cities : [];
+    }
+
+    return [];
   }
 
   function hasGatheringNear(city, country, maxKm = 50) {
@@ -956,6 +1146,11 @@ const WorldChoirDB = (() => {
     syncAllPledgesIfChanged,
     startLiveSync,
     stopLiveSync,
+    syncMapAggregates,
+    syncMapAggregatesIfChanged,
+    startMapAggregateSync,
+    stopMapAggregateSync,
+    warmMapAggregateFromPresentation,
     fetchWorldStats,
     refreshWorldStatsIfChanged,
     getPresentationVoiceCount,
@@ -980,6 +1175,8 @@ const WorldChoirDB = (() => {
     hasPledged,
     getPledgesForEvent,
     isPledgesLoaded,
+    isMapAggregateLoaded,
+    isMapDataReady,
     getMapDataState,
     createPromise,
     hasSubmittedPromise,

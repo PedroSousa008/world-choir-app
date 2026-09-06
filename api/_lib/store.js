@@ -621,6 +621,85 @@ async function getPledgesMeta(eventId) {
   };
 }
 
+/**
+ * Map aggregate — MUST mirror public/js/world-choir-db.js:
+ * getUniquePledgesForEvent → getMapStats / getAggregatedCities
+ * (dedupe by first user_id occurrence; city key `${city}|${country}`; first coords win).
+ */
+function computeMapAggregateFromMappedPledges(mappedPledges, eventId) {
+  const trimmedEvent = String(eventId || '').trim();
+  const eventPledges = (mappedPledges || []).filter(
+    (p) => p && (p.event_id === trimmedEvent || p.eventId === trimmedEvent)
+  );
+
+  const seenUsers = new Set();
+  const unique = [];
+  for (const p of eventPledges) {
+    if (!p.user_id || seenUsers.has(p.user_id)) continue;
+    seenUsers.add(p.user_id);
+    unique.push(p);
+  }
+
+  const withLocation = unique.filter((p) => p.city && p.country);
+  const cityKeySet = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
+  const countrySet = new Set(withLocation.map((p) => p.country));
+
+  const stats = {
+    voices: unique.length,
+    cities: cityKeySet.size,
+    countries: countrySet.size,
+  };
+
+  const cityMap = {};
+  for (const p of unique) {
+    if (p.latitude == null || p.longitude == null || !p.city || !p.country) continue;
+    const key = `${p.city}|${p.country}`;
+    if (!cityMap[key]) {
+      cityMap[key] = {
+        city: p.city,
+        country: p.country,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        count: 0,
+      };
+    }
+    cityMap[key].count += 1;
+  }
+
+  return {
+    stats,
+    cities: Object.values(cityMap),
+  };
+}
+
+/** Client-side parity helper: same algorithm over /api/pledges mapped rows. */
+function computeMapAggregateFromRawPledges(rawPledges, eventId) {
+  return computeMapAggregateFromMappedPledges(
+    (rawPledges || []).map(mapPledgeRow).filter(Boolean),
+    eventId
+  );
+}
+
+async function getMapAggregate(eventId) {
+  assertBlobConfigured();
+  const trimmedEvent = String(eventId || 'world-choir-2027').trim();
+  const [rawPledges, meta] = await Promise.all([
+    listPledges(trimmedEvent),
+    getPledgesMeta(trimmedEvent),
+  ]);
+  const mapped = rawPledges.map(mapPledgeRow).filter(Boolean);
+  const { stats, cities } = computeMapAggregateFromMappedPledges(mapped, trimmedEvent);
+  return {
+    eventId: trimmedEvent,
+    meta: {
+      count: meta.count,
+      updated_at: meta.updated_at || null,
+    },
+    stats,
+    cities,
+  };
+}
+
 async function listAllUsers() {
   assertBlobConfigured();
   const blobs = await listBlobs(`${ROOT}/users-by-device/`);
@@ -990,6 +1069,9 @@ module.exports = {
   updatePledgeLocation,
   listPledges,
   getPledgesMeta,
+  getMapAggregate,
+  computeMapAggregateFromMappedPledges,
+  computeMapAggregateFromRawPledges,
   findUserByDevice,
   readPledge,
   savePromise,
