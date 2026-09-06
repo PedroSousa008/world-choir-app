@@ -123,6 +123,25 @@
   <div class="ambient-bg" id="ambient-bg"></div>
 
   <main class="home-page home-page--centered" id="home-page">
+    <!-- Content first so the skeleton paints before the guide markup is parsed -->
+    <div id="home-content">
+      <div class="home-skeleton" aria-busy="true" aria-live="polite">
+        <span class="sr-only">Loading World Choir…</span>
+        <div class="home-skel home-skel--voices"></div>
+        <div class="home-skel home-skel--logo"></div>
+        <div class="home-skel home-skel--headline"></div>
+        <div class="home-skel-countdown" aria-hidden="true">
+          <div class="home-skel home-skel--unit"></div>
+          <div class="home-skel home-skel--unit"></div>
+          <div class="home-skel home-skel--unit"></div>
+          <div class="home-skel home-skel--unit"></div>
+        </div>
+        <div class="home-skel home-skel--meta"></div>
+        <div class="home-skel home-skel--song"></div>
+        <div class="home-skel home-skel--cta"></div>
+      </div>
+    </div>
+
     <button
       type="button"
       class="home-guide-btn"
@@ -234,66 +253,44 @@
         </div>
       </div>
     </div>
-    <div id="home-content"></div>
   </main>
   <script>
     (function wcHomeFirstPaintSkeleton() {
       var el = document.getElementById('home-content');
       var page = document.getElementById('home-page');
-      if (!el || el.querySelector('.home-skeleton, .home-after--skeleton, .home-after, .countdown-hero')) return;
+      if (!el) return;
       var postEvent = false;
       try {
         postEvent = Date.now() >= (WorldChoirLiveConfig.getEventStartMs() + WorldChoirLiveConfig.getSongDurationMs());
       } catch (e) {}
-      if (postEvent) {
-        document.documentElement.classList.remove('wc-live-gate');
-        if (page) {
-          page.classList.remove('home-page--centered');
-          page.classList.add('home-page--post-event');
-        }
-        var earth = document.getElementById('earth-canvas');
-        var ambient = document.getElementById('ambient-bg');
-        if (earth) earth.setAttribute('hidden', '');
-        if (ambient) ambient.setAttribute('hidden', '');
-        el.innerHTML = ''
-          + '<div class="home-after home-after--skeleton" aria-busy="true">'
-          + '<span class="sr-only">Loading World Choir…</span>'
-          + '<div class="home-after__hero"><div class="home-after__planet-wrap">'
-          + '<div class="home-skel home-skel--planet"></div></div>'
-          + '<div class="home-after__intro">'
-          + '<div class="home-skel home-skel--after-logo"></div>'
-          + '<div class="home-skel home-skel--after-title"></div>'
-          + '<div class="home-skel home-skel--after-msg"></div>'
-          + '</div></div>'
-          + '<div class="home-skel home-skel--after-stats"></div>'
-          + '<div class="wc-skel-card"><div class="wc-skel wc-skel--line wc-skel--line-short"></div>'
-          + '<div class="wc-skel wc-skel--line wc-skel--line-mid"></div></div>'
-          + '<div class="wc-skel-card"><div class="wc-skel wc-skel--line wc-skel--line-short"></div>'
-          + '<div class="wc-skel wc-skel--line"></div></div>'
-          + '<div class="home-skel home-skel--after-memory"></div>'
-          + '</div>';
-      } else {
-        if (page) {
-          page.classList.add('home-page--centered');
-          page.classList.remove('home-page--post-event');
-        }
-        el.innerHTML = ''
-          + '<div class="home-skeleton" aria-busy="true" aria-live="polite">'
-          + '<span class="sr-only">Loading World Choir…</span>'
-          + '<div class="home-skel home-skel--voices"></div>'
-          + '<div class="home-skel home-skel--logo"></div>'
-          + '<div class="home-skel home-skel--headline"></div>'
-          + '<div class="home-skel-countdown" aria-hidden="true">'
-          + '<div class="home-skel home-skel--unit"></div>'
-          + '<div class="home-skel home-skel--unit"></div>'
-          + '<div class="home-skel home-skel--unit"></div>'
-          + '<div class="home-skel home-skel--unit"></div>'
-          + '</div>'
-          + '<div class="home-skel home-skel--meta"></div>'
-          + '<div class="home-skel home-skel--song"></div>'
-          + '<div class="home-skel home-skel--cta"></div>'
-          + '</div>';
+      if (!postEvent) return;
+      document.documentElement.classList.remove('wc-live-gate');
+      if (page) {
+        page.classList.remove('home-page--centered');
+        page.classList.add('home-page--post-event');
       }
+      var earth = document.getElementById('earth-canvas');
+      var ambient = document.getElementById('ambient-bg');
+      if (earth) earth.setAttribute('hidden', '');
+      if (ambient) ambient.setAttribute('hidden', '');
+      if (el.querySelector('.home-after--skeleton, .home-after')) return;
+      el.innerHTML = ''
+        + '<div class="home-after home-after--skeleton" aria-busy="true">'
+        + '<span class="sr-only">Loading World Choir…</span>'
+        + '<div class="home-after__hero"><div class="home-after__planet-wrap">'
+        + '<div class="home-skel home-skel--planet"></div></div>'
+        + '<div class="home-after__intro">'
+        + '<div class="home-skel home-skel--after-logo"></div>'
+        + '<div class="home-skel home-skel--after-title"></div>'
+        + '<div class="home-skel home-skel--after-msg"></div>'
+        + '</div></div>'
+        + '<div class="home-skel home-skel--after-stats"></div>'
+        + '<div class="wc-skel-card"><div class="wc-skel wc-skel--line wc-skel--line-short"></div>'
+        + '<div class="wc-skel wc-skel--line wc-skel--line-mid"></div></div>'
+        + '<div class="wc-skel-card"><div class="wc-skel wc-skel--line wc-skel--line-short"></div>'
+        + '<div class="wc-skel wc-skel--line"></div></div>'
+        + '<div class="home-skel home-skel--after-memory"></div>'
+        + '</div>';
     })();
   </script>
 
@@ -338,7 +335,7 @@
 
   <div id="nav-root"></div>
 
-  <script src="js/world-choir-config.js?v=20260906perf"></script>
+  <script src="js/world-choir-config.js?v=20260906perf2"></script>
   <script src="js/world-choir-privacy.js?v=20260905a"></script>
   <script src="js/world-choir-thank-you.js?v=20260904e"></script>
   <script src="js/world-choir-calendar.js?v=20260902u"></script>
@@ -352,35 +349,29 @@
   <script src="js/world-choir-nav.js?v=20260906perf"></script>
   <script src="js/world-choir-participation.js"></script>
   <script src="js/world-choir-practice-config.js"></script>
+  <script src="js/world-choir-live-event.js?v=20260904an"></script>
+  <script src="js/profile/daily-acts-peace.js?v=20260906perf"></script>
+  <script src="js/world-choir-home.js?v=20260906home"></script>
+  <script>
+    (function bootWorldChoirHome() {
+      try {
+        var ended = Date.now() >= (WorldChoirLiveConfig.getEventStartMs() + WorldChoirLiveConfig.getSongDurationMs());
+        if (ended) document.documentElement.classList.remove('wc-live-gate');
+      } catch (e) {}
+      // Paint Home immediately — do not wait on GlobalLiveEvent parse/init.
+      if (typeof WorldChoirHome !== 'undefined') WorldChoirHome.init();
+    })();
+  </script>
+  <!-- Heavy live-event stack after Home first paint (same behavior, later parse). -->
   <script src="js/profile/lyrics-display.js?v=20260906perf"></script>
   <script src="js/live-event/server-time-sync.js?v=20260904an"></script>
   <script src="js/live-event/global-live-event.js?v=20260904as"></script>
-  <script src="js/world-choir-live-event.js?v=20260904an"></script>
-  <script src="js/profile/daily-acts-peace.js?v=20260906perf"></script>
-  <script src="js/world-choir-home.js?v=20260905c"></script>
   <script>
-    (function bootWorldChoirHome() {
-      function startHome() {
-        if (typeof WorldChoirHome !== 'undefined') WorldChoirHome.init();
-      }
-      function boot() {
-        // Never block first Home paint on live-event init (skeleton already in DOM).
-        try {
-          var ended = Date.now() >= (WorldChoirLiveConfig.getEventStartMs() + WorldChoirLiveConfig.getSongDurationMs());
-          if (ended) document.documentElement.classList.remove('wc-live-gate');
-        } catch (e) {}
-        startHome();
-        if (typeof GlobalLiveEvent !== 'undefined') {
-          GlobalLiveEvent.init().catch(function (err) {
-            console.warn('Global live event init failed:', err);
-          });
-        }
-      }
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', boot);
-      } else {
-        boot();
-      }
+    (function bootGlobalLive() {
+      if (typeof GlobalLiveEvent === 'undefined') return;
+      GlobalLiveEvent.init().catch(function (err) {
+        console.warn('Global live event init failed:', err);
+      });
     })();
   </script>
 </body>

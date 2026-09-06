@@ -1069,6 +1069,16 @@ const WorldChoirHome = (() => {
 
   function init() {
     homeReady = false;
+
+    // Instant warm paint from session (same path as Profile) — countdown/CTA without map aggregate.
+    if (typeof WorldChoirDB !== 'undefined' && typeof WorldChoirDB.primeLocalCaches === 'function') {
+      WorldChoirDB.primeLocalCaches();
+    }
+    if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.isPledgeLoaded()
+      && typeof WorldChoirPledgeState !== 'undefined') {
+      WorldChoirPledgeState.refresh();
+    }
+
     if (isPostEvent()) {
       clearStaleLiveUi();
       fetchPostEventStats();
@@ -1089,13 +1099,13 @@ const WorldChoirHome = (() => {
 
     startHome();
 
-    // Always resolve pledge state so the CTA never stays a blank skeleton.
+    // Short safety net — show real countdown (CTA may still be a mini-skeleton).
     const fallback = setTimeout(() => {
       if (!homeReady) {
         homeReady = true;
         render();
       }
-    }, 200);
+    }, 90);
 
     WorldChoirPledgeState.init()
       .then(() => {
@@ -1190,6 +1200,7 @@ const WorldChoirHome = (() => {
         if (map?.voices != null) updatePostEventStatsUI({ voices: map.voices });
       }
     });
+    window.addEventListener('wc-map-aggregate-synced', updateVoicesCounter);
     window.addEventListener('wc-pledges-synced', updatePostEventHeroCopy);
     window.addEventListener('wc-pledge-updated', updatePostEventHeroCopy);
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
