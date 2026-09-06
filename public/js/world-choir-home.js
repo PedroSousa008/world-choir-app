@@ -120,19 +120,14 @@ const WorldChoirHome = (() => {
   }
 
   function getVoicesCounterContent() {
-    const count = typeof WorldChoirDB.getPresentationVoiceCount === 'function'
-      ? WorldChoirDB.getPresentationVoiceCount()
-      : (WorldChoirDB.isPledgesLoaded()
-        ? WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id)?.voices
-        : null);
-
-    if (count == null || Number.isNaN(Number(count))) {
+    if (!WorldChoirDB.isPledgesLoaded()) {
       return { text: 'LOADING VOICES', loading: true };
     }
 
-    const n = Number(count);
-    const formatted = n.toLocaleString('en-US');
-    const text = n === 1 ? '1 VOICE' : `${formatted} VOICES`;
+    const stats = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
+    const count = stats?.voices ?? 0;
+    const formatted = count.toLocaleString('en-US');
+    const text = count === 1 ? '1 VOICE' : `${formatted} VOICES`;
     return { text, loading: false };
   }
 
@@ -583,7 +578,7 @@ const WorldChoirHome = (() => {
             <img class="home-after-hero__planet" src="${POST_EVENT_IMAGES.hero}" alt="" decoding="async" fetchpriority="high" width="800" height="400">
             ${showConfetti ? '<div class="home-after-hero__confetti" id="home-after-confetti" aria-hidden="true"></div>' : ''}
             <div class="home-after-hero__content">
-              <img class="home-after-hero__logo" src="images/world-choir-logo.png?v=20260906perf" alt="World Choir" width="1024" height="1024" decoding="async">
+              <img class="home-after-hero__logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir" width="1024" height="1024" decoding="async">
               <h1 class="home-after-hero__title" id="home-after-thank-you">${esc(heroCopy.thankYou)}</h1>
               <p class="home-after-hero__message" id="home-after-thank-you-message">${esc(heroCopy.message)}</p>
             </div>
@@ -1102,7 +1097,7 @@ const WorldChoirHome = (() => {
       }
     }, 200);
 
-    WorldChoirPledgeState.init({ mode: 'myPledge' })
+    WorldChoirPledgeState.init()
       .then(() => {
         clearTimeout(fallback);
         WorldChoirPledgeState.refresh();
@@ -1188,7 +1183,6 @@ const WorldChoirHome = (() => {
       }
     });
 
-    window.addEventListener('wc-world-stats', updateVoicesCounter);
     window.addEventListener('wc-pledges-synced', () => {
       updateVoicesCounter();
       if (homeView === 'post-event' || homeView === 'post-event-complete') {
@@ -1199,20 +1193,10 @@ const WorldChoirHome = (() => {
     window.addEventListener('wc-pledges-synced', updatePostEventHeroCopy);
     window.addEventListener('wc-pledge-updated', updatePostEventHeroCopy);
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
-    window.addEventListener('wc-pledge-added', () => {
-      updateVoicesCounter();
-      void WorldChoirDB.refreshWorldStatsIfChanged?.(undefined, { force: true }).catch(() => {
-        void WorldChoirDB.fetchWorldStats?.().catch(() => {});
-      });
-    });
+    window.addEventListener('wc-pledge-added', updateVoicesCounter);
     window.addEventListener('wc-voices-live-update', updateVoicesCounter);
 
-    // Home Voice count: meta-first refresh (full /api/stats only when pledges meta changes).
-    if (typeof WorldChoirDB.startWorldStatsRefresh === 'function') {
-      WorldChoirDB.startWorldStatsRefresh();
-    } else {
-      void WorldChoirDB.fetchWorldStats?.().then(() => updateVoicesCounter()).catch(() => {});
-    }
+    WorldChoirDB.startLiveSync({ intervalMs: 2000 });
 
     LiveEventMode.init();
     render();

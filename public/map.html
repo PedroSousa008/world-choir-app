@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
   <title>World Choir — The Earth Breathes</title>
-  <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20260906perf">
-  <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20260906perf">
-  <link rel="stylesheet" href="css/inter-font.css?v=20260906perf">
+  <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
+  <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20270706">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://basemaps.cartocdn.com">
   <link rel="preconnect" href="https://tiles.basemaps.cartocdn.com">
   <link rel="dns-prefetch" href="https://unpkg.com">
@@ -143,35 +145,29 @@
 
   <div id="nav-root"></div>
 
-  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script defer src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script defer src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
-  <script defer src="js/world-choir-config.js?v=20260906perf"></script>
-  <script defer src="js/world-choir-privacy.js?v=20260906perf"></script>
-  <script defer src="js/world-choir-countries.js?v=20260831a"></script>
-  <script defer src="js/world-choir-db.js?v=20260906p2h"></script>
-  <script defer src="js/world-choir-pledge-state.js?v=20260906p2h"></script>
-  <script defer src="js/world-choir-a11y.js?v=20260903p"></script>
-  <script defer src="js/world-choir-nav.js?v=20260906p2h"></script>
-  <script defer src="js/world-choir-participation.js?v=20270707g"></script>
-  <script defer src="js/profile/daily-acts-peace.js?v=20260906p2b"></script>
-  <script defer src="js/world-choir-map-tiles.js?v=20260826h"></script>
-  <script defer src="js/map/sponsor-constants.js?v=20260902k"></script>
-  <script defer src="js/map/sponsor-data.js?v=20260902a"></script>
-  <script defer src="js/map/sponsor-bar.js?v=20260905a"></script>
-  <script defer src="js/world-choir-practice-config.js?v=20260906perf"></script>
-  <script defer src="js/profile/lyrics-display.js?v=20260906p2b"></script>
-  <script defer src="js/live-event/server-time-sync.js?v=20260904an"></script>
-  <script defer src="js/live-event/global-live-event.js?v=20260904as"></script>
-  <script defer src="js/world-choir-live-event.js?v=20260904an"></script>
-  <script defer src="js/world-choir-global-live-bootstrap.js?v=20260904an"></script>
-  <script defer src="js/world-choir-map.js?v=20260906p2h"></script>
-  <script>
-    (function () {
-      function boot() { if (typeof WorldChoirMap !== 'undefined') WorldChoirMap.init(); }
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-      else boot();
-    })();
-  </script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
+    <script src="js/world-choir-config.js?v=20260906perf"></script>
+  <script src="js/world-choir-privacy.js?v=20260905a"></script>
+  <script src="js/world-choir-countries.js?v=20260831a"></script>
+  <script src="js/world-choir-db.js?v=20260906perf"></script>
+  <script src="js/world-choir-pledge-state.js?v=20260904bx"></script>
+  <script src="js/world-choir-a11y.js?v=20260903p"></script>
+  <script src="js/world-choir-nav.js?v=20260906perf"></script>
+  <script src="js/world-choir-participation.js?v=20270707g"></script>
+  <script src="js/profile/daily-acts-peace.js?v=20260906perf"></script>
+  <script src="js/world-choir-map-tiles.js?v=20260826h"></script>
+  <script src="js/map/sponsor-constants.js?v=20260902k"></script>
+  <script src="js/map/sponsor-data.js?v=20260902a"></script>
+  <script src="js/map/sponsor-bar.js?v=20260905a"></script>
+  <script src="js/world-choir-practice-config.js"></script>
+  <script src="js/profile/lyrics-display.js?v=20260906perf"></script>
+    <script src="js/live-event/server-time-sync.js?v=20260904an"></script>
+  <script src="js/live-event/global-live-event.js?v=20260904as"></script>
+  <script src="js/world-choir-live-event.js?v=20260904an"></script>
+  <script src="js/world-choir-global-live-bootstrap.js?v=20260904an"></script>
+  <script src="js/world-choir-map.js?v=20260903p"></script>
+  <script>WorldChoirMap.init();</script>
 </body>
 </html>

@@ -6,6 +6,7 @@ const DailyActsPeace = (() => {
   let bannerVisible = false;
   let started = false;
   const BANNER_DISMISS_PREFIX = 'wc_daily_peace_banner_dismiss_';
+  const DAILY_SESSION_KEY = 'wc_daily_peace_session_v1';
 
   function localDateString() {
     const d = new Date();
@@ -13,6 +14,26 @@ const DailyActsPeace = (() => {
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
+  }
+
+  function readDailySession(date) {
+    try {
+      const raw = sessionStorage.getItem(DAILY_SESSION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.date !== date || !parsed.payload) return null;
+      return parsed.payload;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeDailySession(date, payload) {
+    try {
+      sessionStorage.setItem(DAILY_SESSION_KEY, JSON.stringify({ date, payload }));
+    } catch {
+      /* ignore */
+    }
   }
 
   function deviceId() {
@@ -73,10 +94,16 @@ const DailyActsPeace = (() => {
   async function fetchToday() {
     await WorldChoirDB.readyIdentity();
     const date = localDateString();
+    const warm = readDailySession(date);
+    if (warm && !state) {
+      state = warm;
+      applyLocalDismissToState(date);
+    }
     const data = await apiFetch(
       `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&date=${encodeURIComponent(date)}`
     );
     state = data;
+    writeDailySession(date, data);
     if (data?.userDailyAct?.notificationDismissed) {
       persistBannerDismissed(data.userDailyAct.date || date);
     }

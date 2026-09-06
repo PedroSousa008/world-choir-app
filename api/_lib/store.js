@@ -555,6 +555,8 @@ async function writePledgesIndex(eventId, pledges) {
   const sorted = sortPledges(pledges);
   memCache.delete(`pledges:${eventId}`);
   memCache.delete('pledges:all');
+  memCache.delete(`map-aggregate:${eventId}`);
+  memCache.delete(`pledges-meta:${eventId}`);
   await writeJson(pledgesIndexPath(eventId), {
     updated_at: new Date().toISOString(),
     count: sorted.length,
@@ -597,28 +599,32 @@ async function listPledges(eventId) {
 async function getPledgesMeta(eventId) {
   assertBlobConfigured();
   const trimmedEvent = String(eventId).trim();
+  const cacheKey = `pledges-meta:${trimmedEvent}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+
   try {
     const index = await readBlobJson(pledgesIndexPath(trimmedEvent));
     if (index && typeof index.count === 'number') {
-      return {
+      return cacheSet(cacheKey, {
         count: index.count,
         updated_at: index.updated_at || null,
-      };
+      }, 1500);
     }
     if (Array.isArray(index?.pledges)) {
-      return {
+      return cacheSet(cacheKey, {
         count: index.pledges.length,
         updated_at: index.updated_at || null,
-      };
+      }, 1500);
     }
   } catch (err) {
     if (isBlobUnavailable(err)) throw wrapBlobError(err);
   }
   const pledges = await listPledges(trimmedEvent);
-  return {
+  return cacheSet(cacheKey, {
     count: pledges.length,
     updated_at: new Date().toISOString(),
-  };
+  }, 1500);
 }
 
 /**
@@ -683,13 +689,17 @@ function computeMapAggregateFromRawPledges(rawPledges, eventId) {
 async function getMapAggregate(eventId) {
   assertBlobConfigured();
   const trimmedEvent = String(eventId || 'world-choir-2027').trim();
+  const cacheKey = `map-aggregate:${trimmedEvent}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+
   const [rawPledges, meta] = await Promise.all([
     listPledges(trimmedEvent),
     getPledgesMeta(trimmedEvent),
   ]);
   const mapped = rawPledges.map(mapPledgeRow).filter(Boolean);
   const { stats, cities } = computeMapAggregateFromMappedPledges(mapped, trimmedEvent);
-  return {
+  return cacheSet(cacheKey, {
     eventId: trimmedEvent,
     meta: {
       count: meta.count,
@@ -697,7 +707,7 @@ async function getMapAggregate(eventId) {
     },
     stats,
     cities,
-  };
+  }, 2000);
 }
 
 async function listAllUsers() {

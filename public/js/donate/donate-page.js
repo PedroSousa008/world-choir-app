@@ -1049,7 +1049,7 @@ const WorldChoirDonate = (() => {
       <div id="df-foundations-mount">${renderFoundationsMountHtml()}</div>
       ${renderHappeningNow()}
     `;
-    scheduleMountDonateEarth3D();
+    mountDonateEarth3D();
     bindHomeEvents(opts);
   }
 
@@ -2070,44 +2070,6 @@ const WorldChoirDonate = (() => {
     donateDisposeEarth3D();
   }
 
-  function scheduleMountDonateEarth3D() {
-    const container = document.getElementById('df-donate-earth-container');
-    if (!container) return;
-
-    const start = () => {
-      mountDonateEarth3D().catch((err) => {
-        console.warn('Donate earth failed to mount:', err);
-      });
-    };
-
-    // Already in (or near) view — load Three.js only when needed.
-    if (typeof IntersectionObserver === 'undefined') {
-      start();
-      return;
-    }
-
-    let started = false;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (started) return;
-        if (!entries.some((e) => e.isIntersecting)) return;
-        started = true;
-        io.disconnect();
-        start();
-      },
-      { root: null, rootMargin: '240px 0px', threshold: 0.01 }
-    );
-    io.observe(container);
-
-    // Fallback if IO never fires (rare layout quirks).
-    window.setTimeout(() => {
-      if (started) return;
-      started = true;
-      try { io.disconnect(); } catch { /* ignore */ }
-      start();
-    }, 2500);
-  }
-
   /** Paint the Donate chrome instantly — never show a loading message. */
   function renderHomeShell() {
     const root = document.getElementById('donate-content');
@@ -2120,7 +2082,7 @@ const WorldChoirDonate = (() => {
       <div id="df-foundations-mount">${renderPendingFoundations()}</div>
     `;
     bindHomeEvents();
-    scheduleMountDonateEarth3D();
+    mountDonateEarth3D();
   }
 
   function renderError(message) {

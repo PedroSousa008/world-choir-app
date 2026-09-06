@@ -92,7 +92,7 @@ const WorldChoirConfig = (() => {
 
   const LOGO = {
     src: 'images/world-choir-logo.png',
-    version: '20260906perf',
+    version: '20270706',
     alt: 'World Choir App',
     get url() {
       return `${this.src}?v=${this.version}`;
@@ -102,7 +102,7 @@ const WorldChoirConfig = (() => {
   /** Shared Passport bottom-right world map — replace public/images/passport/passport-world-map.png for all users */
   const PASSPORT_WORLD_MAP = {
     src: 'images/passport/passport-world-map.png',
-    version: '20260906perf',
+    version: '20260820b',
     alt: 'World Choir world map',
     get url() {
       return `${this.src}?v=${this.version}`;
@@ -116,7 +116,7 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_FEATURE_IMAGE = {
     src: 'images/passport/passport-feature.png',
-    version: '20260906perf',
+    version: '20260821b',
     alt: 'World Choir Passport feature',
     get url() {
       return `${this.src}?v=${this.version}`;
@@ -131,7 +131,7 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_INSIDE_BACKGROUND = {
     src: 'images/passport/passport-inside-bg.png',
-    version: '20260906perf',
+    version: '20260827c',
     alt: 'World Choir Passport inside page',
     get url() {
       return `${this.src}?v=${this.version}`;
@@ -145,7 +145,7 @@ const WorldChoirConfig = (() => {
    */
   const PASSPORT_INSIDE_LOGO = {
     src: 'images/passport/passport-inside-logo.png',
-    version: '20260906perf',
+    version: '20260827b',
     alt: 'World Choir',
     get url() {
       return `${this.src}?v=${this.version}`;
@@ -813,20 +813,25 @@ const WorldChoirConfig = (() => {
 
   /** Real movement stats from pledges only — never fake production numbers */
   function getMovementStats() {
-    const pledges = typeof WorldChoirDB !== 'undefined'
-      ? WorldChoirDB.getPledgesForEvent(ACTIVE_EVENT.id)
-      : [];
+    const stats = typeof WorldChoirDB !== 'undefined'
+      ? WorldChoirDB.getMapStats(ACTIVE_EVENT.id)
+      : null;
 
-    const voices = pledges.length;
-    const countries = new Set(pledges.map((p) => p.country).filter(Boolean)).size;
-    const cities = new Set(pledges.map((p) => `${p.city}|${p.country}`).filter((k) => !k.startsWith('|'))).size;
+    if (stats) {
+      return {
+        voices: stats.voices || 0,
+        countries: stats.countries || 0,
+        cities: stats.cities || 0,
+        hasData: (stats.voices || 0) > 0,
+        demo: { voices: 0, countries: 0, cities: 0 },
+      };
+    }
 
     return {
-      voices,
-      countries,
-      cities,
-      hasData: voices > 0,
-      // DEV: demo placeholders — never shown as real production counts in UI
+      voices: 0,
+      countries: 0,
+      cities: 0,
+      hasData: false,
       demo: { voices: 0, countries: 0, cities: 0 },
     };
   }

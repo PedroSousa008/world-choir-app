@@ -15,9 +15,9 @@ const WorldChoirDB = (() => {
   let remoteUser = null;
   let myPledgeCache = undefined;
   let cachedPledges = undefined;
+  /** Server map aggregate — preferred for voices/cities UI (avoids full pledges download). */
+  let cachedAggregate = undefined; // { eventId, stats, cities, meta }
   let pledgesLoadError = null;
-  let identityPromise = null;
-  let myPledgeReadyPromise = null;
   let bootstrapPromise = null;
   let liveSyncTimer = null;
   let liveSyncStarted = false;
@@ -25,26 +25,9 @@ const WorldChoirDB = (() => {
   let lastMetaSignature = null;
   let lastCitySnapshot = null;
   let lastVoiceCount = null;
-  let cachedWorldStats = null;
-  let worldStatsInFlight = null;
-  let worldStatsMetaInFlight = null;
-  let statsRefreshTimer = null;
-  let statsRefreshStarted = false;
-  let lastWorldStatsMetaSignature = null;
-  let statsVisibilityBound = false;
-  let cachedMapAggregate = undefined;
-  let mapAggregateLoadError = null;
-  let mapAggregateInFlight = null;
-  let mapAggregateSyncTimer = null;
-  let mapAggregateSyncStarted = false;
-  let mapAggregateSyncInFlight = false;
-  let lastMapAggregateMetaSignature = null;
 
   const LIVE_SYNC_INTERVAL_MS = 2000;
-  /** Lightweight meta poll cadence (Home/Profile Voice count). Full /api/stats only on change. */
-  const STATS_META_POLL_INTERVAL_MS = 2000;
-  const PRESENTATION_STATS_KEY = 'wc_presentation_world_stats_v1';
-  const PRESENTATION_MAP_AGG_KEY = 'wc_presentation_map_aggregate_v1';
+  const AGGREGATE_SESSION_KEY = 'wc_map_aggregate_v1';
 
   function apiBase() {
     return '';
@@ -111,19 +94,108 @@ const WorldChoirDB = (() => {
     return myPledgeCache;
   }
 
+  function readSessionAggregate(eventId) {
+    try {
+      const raw = sessionStorage.getItem(AGGREGATE_SESSION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.eventId !== eventId || !parsed.stats) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeSessionAggregate(payload) {
+    try {
+      sessionStorage.setItem(AGGREGATE_SESSION_KEY, JSON.stringify(payload));
+    } catch {
+      /* ignore quota */
+    }
+  }
+
+  function applyAggregate(data, eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const eid = data.eventId || eventId;
+    cachedAggregate = {
+      eventId: eid,
+      stats: data.stats || { voices: 0, cities: 0, countries: 0 },
+      cities: Array.isArray(data.cities) ? data.cities : [],
+      meta: data.meta || null,
+    };
+    pledgesLoadError = null;
+    if (data.meta) lastMetaSignature = metaSignature(data.meta);
+    lastCitySnapshot = buildCitySnapshot(eid);
+    lastVoiceCount = cachedAggregate.stats.voices ?? null;
+    writeSessionAggregate(cachedAggregate);
+    window.dispatchEvent(new CustomEvent('wc-map-aggregate-synced', { detail: cachedAggregate }));
+    window.dispatchEvent(new CustomEvent('wc-pledges-synced', { detail: cachedPledges || [] }));
+    window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState(eid) }));
+    return cachedAggregate;
+  }
+
+  /** Compact map payload — same stats/cities as full pledges, far less bandwidth. */
+  async function syncMapAggregates(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    try {
+      const data = await apiFetch(
+        `/api/pledges?eventId=${encodeURIComponent(eventId)}&aggregate=1`
+      );
+      return applyAggregate(data, eventId);
+    } catch (err) {
+      pledgesLoadError = err;
+      if (!isPledgesLoaded()) {
+        window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
+      }
+      throw err;
+    }
+  }
+
+  function buildAggregateFromCachedPledges(eventId) {
+    const unique = getUniquePledgesForEvent(eventId);
+    const withCoords = unique.filter(
+      (p) => p.latitude != null && p.longitude != null && p.city && p.country
+    );
+    const cityMap = {};
+    withCoords.forEach((p) => {
+      const key = `${p.city}|${p.country}`;
+      if (!cityMap[key]) {
+        cityMap[key] = {
+          city: p.city,
+          country: p.country,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          count: 0,
+        };
+      }
+      cityMap[key].count += 1;
+    });
+    const withLocation = unique.filter((p) => p.city && p.country);
+    const cityKeys = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
+    const countries = new Set(withLocation.map((p) => p.country));
+    return {
+      eventId,
+      stats: {
+        voices: unique.length,
+        cities: cityKeys.size,
+        countries: countries.size,
+      },
+      cities: Object.values(cityMap),
+      meta: {
+        count: unique.length,
+        updated_at: new Date().toISOString(),
+      },
+    };
+  }
+
   async function syncAllPledges(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
     try {
       const data = await apiFetch(`/api/pledges?eventId=${encodeURIComponent(eventId)}`);
       cachedPledges = data.pledges || [];
       pledgesLoadError = null;
-      lastCitySnapshot = buildCitySnapshot(eventId);
-      lastVoiceCount = getMapStats(eventId)?.voices ?? cachedPledges.length;
-      window.dispatchEvent(new CustomEvent('wc-pledges-synced', { detail: cachedPledges }));
-      window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
+      applyAggregate(buildAggregateFromCachedPledges(eventId), eventId);
       return cachedPledges;
     } catch (err) {
       pledgesLoadError = err;
-      if (cachedPledges === undefined) {
+      if (!isPledgesLoaded()) {
         window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
       }
       throw err;
@@ -132,7 +204,7 @@ const WorldChoirDB = (() => {
 
   function buildCitySnapshot(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
     const map = new Map();
-    if (!isMapDataReady()) return map;
+    if (!isPledgesLoaded()) return map;
     getAggregatedCities(eventId).forEach((c) => {
       map.set(`${c.city}|${c.country}`, c.count);
     });
@@ -174,19 +246,23 @@ const WorldChoirDB = (() => {
     }));
   }
 
-  async function syncAllPledgesIfChanged(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+  async function syncMapAggregatesIfChanged(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
     const meta = await fetchPledgesMeta(eventId);
     const sig = metaSignature(meta);
     if (sig === lastMetaSignature && isPledgesLoaded()) {
       return { changed: false };
     }
-
     const prevSnapshot = lastCitySnapshot ? new Map(lastCitySnapshot) : null;
     const prevVoiceCount = lastVoiceCount;
     lastMetaSignature = sig;
-    await syncAllPledges(eventId);
+    await syncMapAggregates(eventId);
     dispatchLiveUpdate(prevSnapshot, lastCitySnapshot, eventId, prevVoiceCount);
     return { changed: true };
+  }
+
+  async function syncAllPledgesIfChanged(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    // Prefer aggregate for live polling — identical map/home counters, less payload.
+    return syncMapAggregatesIfChanged(eventId);
   }
 
   function startLiveSync(options = {}) {
@@ -197,7 +273,7 @@ const WorldChoirDB = (() => {
     const tick = () => {
       if (document.hidden || liveSyncInFlight) return;
       liveSyncInFlight = true;
-      syncAllPledgesIfChanged()
+      syncMapAggregatesIfChanged()
         .catch(() => {})
         .finally(() => { liveSyncInFlight = false; });
     };
@@ -213,7 +289,7 @@ const WorldChoirDB = (() => {
           const meta = await fetchPledgesMeta();
           lastMetaSignature = metaSignature(meta);
         } catch {
-          /* first full sync will establish signature */
+          /* first sync will establish signature */
         }
         lastCitySnapshot = buildCitySnapshot();
         lastVoiceCount = getMapStats()?.voices ?? null;
@@ -226,6 +302,11 @@ const WorldChoirDB = (() => {
     });
   }
 
+  /** Map page alias — same aggregate live sync (no full pledge dumps). */
+  function startMapAggregateSync(options = {}) {
+    return startLiveSync(options);
+  }
+
   function stopLiveSync() {
     if (liveSyncTimer) clearInterval(liveSyncTimer);
     liveSyncTimer = null;
@@ -233,205 +314,22 @@ const WorldChoirDB = (() => {
     liveSyncInFlight = false;
   }
 
-  function readPresentationMapAggregate() {
-    try {
-      const raw = sessionStorage.getItem(PRESENTATION_MAP_AGG_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed || parsed.eventId !== WorldChoirConfig.CURRENT_EVENT.id) return null;
-      if (!parsed.stats || !Array.isArray(parsed.cities)) return null;
-      return parsed;
-    } catch {
-      return null;
-    }
-  }
-
-  function writePresentationMapAggregate(aggregate) {
-    try {
-      sessionStorage.setItem(PRESENTATION_MAP_AGG_KEY, JSON.stringify({
-        eventId: WorldChoirConfig.CURRENT_EVENT.id,
-        stats: aggregate.stats,
-        cities: aggregate.cities,
-        meta: aggregate.meta || null,
-        at: Date.now(),
-      }));
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function applyMapAggregate(data, eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    cachedMapAggregate = {
-      eventId,
-      stats: data.stats || { voices: 0, cities: 0, countries: 0 },
-      cities: Array.isArray(data.cities) ? data.cities : [],
-      meta: data.meta || null,
-    };
-    mapAggregateLoadError = null;
-    if (data.meta) {
-      lastMapAggregateMetaSignature = metaSignature(data.meta);
-    }
-    lastCitySnapshot = buildCitySnapshot(eventId);
-    lastVoiceCount = cachedMapAggregate.stats.voices ?? null;
-    writePresentationWorldStats(cachedMapAggregate.stats);
-    writePresentationMapAggregate(cachedMapAggregate);
-  }
-
-  async function syncMapAggregates(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    if (mapAggregateInFlight) return mapAggregateInFlight;
-    mapAggregateInFlight = (async () => {
-      try {
-        const data = await apiFetch(
-          `/api/pledges?eventId=${encodeURIComponent(eventId)}&aggregate=1`
-        );
-        const prevSnapshot = lastCitySnapshot ? new Map(lastCitySnapshot) : null;
-        const prevVoiceCount = lastVoiceCount;
-        applyMapAggregate(data, eventId);
-        window.dispatchEvent(new CustomEvent('wc-map-aggregate-synced', { detail: cachedMapAggregate }));
-        window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
-        // Keep legacy Map listeners working without shipping full pledges.
-        window.dispatchEvent(new CustomEvent('wc-pledges-synced', { detail: null }));
-        dispatchLiveUpdate(prevSnapshot, lastCitySnapshot, eventId, prevVoiceCount);
-        return cachedMapAggregate;
-      } catch (err) {
-        mapAggregateLoadError = err;
-        if (cachedMapAggregate === undefined) {
-          window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
-        }
-        throw err;
-      }
-    })().finally(() => {
-      mapAggregateInFlight = null;
-    });
-    return mapAggregateInFlight;
-  }
-
-  async function syncMapAggregatesIfChanged(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    const meta = await fetchPledgesMeta(eventId);
-    const sig = metaSignature(meta);
-    if (sig === lastMapAggregateMetaSignature && isMapAggregateLoaded()) {
-      return { changed: false };
-    }
-    lastMapAggregateMetaSignature = sig;
-    await syncMapAggregates(eventId);
-    return { changed: true };
-  }
-
-  function warmMapAggregateFromPresentation() {
-    if (cachedMapAggregate !== undefined) return false;
-    const cached = readPresentationMapAggregate();
-    if (!cached) return false;
-    cachedMapAggregate = {
-      eventId: cached.eventId,
-      stats: cached.stats,
-      cities: cached.cities,
-      meta: cached.meta || null,
-    };
-    if (cached.meta) lastMapAggregateMetaSignature = metaSignature(cached.meta);
-    lastCitySnapshot = buildCitySnapshot();
-    lastVoiceCount = cached.stats?.voices ?? null;
-    return true;
-  }
-
-  /**
-   * Map live path: my-pledge stays separate; city lights come from /api/pledges?aggregate=1.
-   * Full /api/pledges remains available via ready()/startLiveSync for rollback.
-   */
-  function startMapAggregateSync(options = {}) {
-    const intervalMs = options.intervalMs ?? LIVE_SYNC_INTERVAL_MS;
-    if (mapAggregateSyncStarted) {
-      void syncMapAggregatesIfChanged().catch(() => {});
-      return;
-    }
-    mapAggregateSyncStarted = true;
-
-    const tick = () => {
-      if (document.hidden || mapAggregateSyncInFlight) return;
-      mapAggregateSyncInFlight = true;
-      syncMapAggregatesIfChanged()
-        .catch(() => {})
-        .finally(() => { mapAggregateSyncInFlight = false; });
-    };
-
-    const arm = () => {
-      tick();
-      mapAggregateSyncTimer = setInterval(tick, intervalMs);
-    };
-
-    warmMapAggregateFromPresentation();
-    if (cachedMapAggregate !== undefined) {
-      window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState() }));
-    }
-
-    readyMyPledge()
-      .catch(() => {})
-      .then(() => syncMapAggregates())
-      .then(() => {
-        arm();
-      })
-      .catch(arm);
-
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) tick();
-    });
-  }
-
-  function stopMapAggregateSync() {
-    if (mapAggregateSyncTimer) clearInterval(mapAggregateSyncTimer);
-    mapAggregateSyncTimer = null;
-    mapAggregateSyncStarted = false;
-    mapAggregateSyncInFlight = false;
-  }
-
-  /**
-   * A — device + remote user only (no pledge list).
-   * Safe for Daily Acts / World Chain / Song We Sang identity bootstrap.
-   */
-  function readyIdentity() {
-    if (!identityPromise) {
-      identityPromise = (async () => {
-        getDeviceId();
-        await ensureRemoteUser();
-        return remoteUser;
-      })().catch((err) => {
-        console.error('WorldChoirDB readyIdentity failed:', err);
-        identityPromise = null;
-        throw err;
-      });
-    }
-    return identityPromise;
-  }
-
-  /**
-   * B — identity + authoritative /api/my-pledge (no full /api/pledges).
-   * Safe for Home/Profile pledge CTA + identity when Map/full data is not needed.
-   */
-  function readyMyPledge() {
-    if (!myPledgeReadyPromise) {
-      myPledgeReadyPromise = (async () => {
-        await readyIdentity();
-        await syncMyPledge();
-        seedLocalEvents();
-        syncActiveEventStatus();
-        return myPledgeCache;
-      })().catch((err) => {
-        console.error('WorldChoirDB readyMyPledge failed:', err);
-        myPledgeReadyPromise = null;
-        throw err;
-      });
-    }
-    return myPledgeReadyPromise;
-  }
-
-  /**
-   * C — legacy full bootstrap: identity + my-pledge + FULL /api/pledges.
-   * Unchanged semantics for Map / Passport / Memory / any unmigrated caller.
-   */
   async function bootstrap() {
-    await readyIdentity();
+    getDeviceId();
+    const eventId = WorldChoirConfig.CURRENT_EVENT.id;
+    const warm = readSessionAggregate(eventId);
+    if (warm) {
+      cachedAggregate = warm;
+      lastMetaSignature = metaSignature(warm.meta);
+      lastCitySnapshot = buildCitySnapshot(eventId);
+      lastVoiceCount = warm.stats?.voices ?? null;
+      window.dispatchEvent(new CustomEvent('wc-map-aggregate-synced', { detail: warm }));
+      window.dispatchEvent(new CustomEvent('wc-map-data-state', { detail: getMapDataState(eventId) }));
+    }
+    await ensureRemoteUser();
     await Promise.all([
       syncMyPledge(),
-      syncAllPledges(),
+      syncMapAggregates(),
     ]);
     seedLocalEvents();
     syncActiveEventStatus();
@@ -448,136 +346,11 @@ const WorldChoirDB = (() => {
     return bootstrapPromise;
   }
 
-  function readPresentationWorldStats() {
-    try {
-      const raw = sessionStorage.getItem(PRESENTATION_STATS_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object') return null;
-      if (parsed.eventId && parsed.eventId !== WorldChoirConfig.CURRENT_EVENT.id) return null;
-      return parsed;
-    } catch {
-      return null;
-    }
-  }
-
-  function writePresentationWorldStats(stats) {
-    try {
-      sessionStorage.setItem(PRESENTATION_STATS_KEY, JSON.stringify({
-        eventId: WorldChoirConfig.CURRENT_EVENT.id,
-        voices: stats?.voices ?? null,
-        cities: stats?.cities ?? null,
-        countries: stats?.countries ?? null,
-        updatedAt: stats?.updatedAt || new Date().toISOString(),
-      }));
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function getPresentationVoiceCount() {
-    if (cachedWorldStats && cachedWorldStats.voices != null) {
-      return Number(cachedWorldStats.voices);
-    }
-    if (isPledgesLoaded()) {
-      const map = getMapStats();
-      if (map?.voices != null) return Number(map.voices);
-    }
-    const cached = readPresentationWorldStats();
-    if (cached?.voices != null) return Number(cached.voices);
-    return null;
-  }
-
-  async function fetchWorldStats(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    if (worldStatsInFlight) return worldStatsInFlight;
-    worldStatsInFlight = (async () => {
-      const data = await apiFetch(`/api/stats?eventId=${encodeURIComponent(eventId)}`);
-      cachedWorldStats = data;
-      writePresentationWorldStats(data);
-      window.dispatchEvent(new CustomEvent('wc-world-stats', { detail: data }));
-      return data;
-    })().finally(() => {
-      worldStatsInFlight = null;
-    });
-    return worldStatsInFlight;
-  }
-
-  /**
-   * Home/Profile Voice-count refresh:
-   * initial /api/stats → poll /api/pledges?meta=1 → /api/stats only when meta signature changes.
-   * Uses a separate meta signature from Map live sync so the two systems never interfere.
-   * Skips work while the tab is hidden; revalidates on visibility.
-   */
-  async function refreshWorldStatsIfChanged(eventId = WorldChoirConfig.CURRENT_EVENT.id, options = {}) {
-    const force = options.force === true;
-    if (force) {
-      const data = await fetchWorldStats(eventId);
-      try {
-        const meta = await fetchPledgesMeta(eventId);
-        lastWorldStatsMetaSignature = metaSignature(meta);
-      } catch {
-        /* keep serving stats even if meta fails */
-      }
-      return { changed: true, stats: data };
-    }
-
-    if (worldStatsMetaInFlight) return worldStatsMetaInFlight;
-
-    worldStatsMetaInFlight = (async () => {
-      const meta = await fetchPledgesMeta(eventId);
-      const sig = metaSignature(meta);
-      if (sig && sig === lastWorldStatsMetaSignature && cachedWorldStats) {
-        return { changed: false, stats: cachedWorldStats };
-      }
-      lastWorldStatsMetaSignature = sig || lastWorldStatsMetaSignature;
-      const data = await fetchWorldStats(eventId);
-      return { changed: true, stats: data };
-    })().finally(() => {
-      worldStatsMetaInFlight = null;
-    });
-
-    return worldStatsMetaInFlight;
-  }
-
-  function startWorldStatsRefresh(options = {}) {
-    const intervalMs = options.intervalMs ?? STATS_META_POLL_INTERVAL_MS;
-
-    const tick = () => {
-      if (document.hidden) return;
-      // First paint / no cache: load stats. Later: meta-first.
-      if (!cachedWorldStats && !worldStatsInFlight) {
-        void fetchWorldStats()
-          .then(async () => {
-            try {
-              const meta = await fetchPledgesMeta();
-              lastWorldStatsMetaSignature = metaSignature(meta);
-            } catch {
-              /* ignore */
-            }
-          })
-          .catch(() => {});
-        return;
-      }
-      void refreshWorldStatsIfChanged().catch(() => {});
-    };
-
-    if (!statsRefreshStarted) {
-      statsRefreshStarted = true;
-      tick();
-      statsRefreshTimer = setInterval(tick, intervalMs);
-    } else {
-      // Another caller (e.g. Profile after Home): force a prompt revalidate, no second interval.
-      void refreshWorldStatsIfChanged(undefined, { force: !cachedWorldStats }).catch(() => {});
-    }
-
-    if (!statsVisibilityBound) {
-      statsVisibilityBound = true;
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && statsRefreshStarted) {
-          void refreshWorldStatsIfChanged().catch(() => {});
-        }
-      });
-    }
+  /** Device + remote user only — does not wait for map aggregate bootstrap. */
+  async function readyIdentity() {
+    getDeviceId();
+    if (remoteUser) return remoteUser;
+    return ensureRemoteUser();
   }
 
   function purgeLegacyDemoData() {
@@ -849,10 +622,7 @@ const WorldChoirDB = (() => {
     });
 
     myPledgeCache = data.pledge;
-    await syncAllPledges();
-    if (typeof syncMapAggregates === 'function') {
-      try { await syncMapAggregates(); } catch { /* Map aggregate refresh is best-effort */ }
-    }
+    await syncMapAggregates();
 
     if (hadPledge) {
       window.dispatchEvent(new CustomEvent('wc-pledge-updated', { detail: myPledgeCache }));
@@ -884,10 +654,7 @@ const WorldChoirDB = (() => {
         }),
       });
       myPledgeCache = data.pledge;
-      await syncAllPledges();
-      if (typeof syncMapAggregates === 'function') {
-        try { await syncMapAggregates(); } catch { /* ignore */ }
-      }
+      await syncMapAggregates();
       window.dispatchEvent(new CustomEvent('wc-pledge-updated', { detail: myPledgeCache }));
     } else {
       updateUser({ city, country, latitude: coords.latitude, longitude: coords.longitude });
@@ -928,22 +695,16 @@ const WorldChoirDB = (() => {
   }
 
   function isPledgesLoaded() {
-    return cachedPledges !== undefined;
+    return cachedAggregate !== undefined || cachedPledges !== undefined;
   }
 
-  function isMapAggregateLoaded() {
-    return cachedMapAggregate !== undefined;
-  }
-
-  /** Map may be ready from full pledges (legacy) OR aggregate endpoint. */
   function isMapDataReady() {
-    return isPledgesLoaded() || isMapAggregateLoaded();
+    return isPledgesLoaded();
   }
 
   function getMapDataState(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    if (!isMapDataReady()) {
-      if (pledgesLoadError || mapAggregateLoadError) return 'error';
-      return 'loading';
+    if (!isPledgesLoaded()) {
+      return pledgesLoadError ? 'error' : 'loading';
     }
 
     const stats = getMapStats(eventId);
@@ -951,8 +712,13 @@ const WorldChoirDB = (() => {
   }
 
   function getPledgesForEvent(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    if (!isPledgesLoaded()) return [];
+    if (cachedPledges === undefined) return [];
     return cachedPledges.filter((p) => p.event_id === eventId);
+  }
+
+  function getPresentationVoiceCount(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const stats = getMapStats(eventId);
+    return stats && typeof stats.voices === 'number' ? stats.voices : null;
   }
 
   function getVoiceNameForUser(userId = remoteUser?.id, eventId = WorldChoirConfig.CURRENT_EVENT.id) {
@@ -1037,56 +803,64 @@ const WorldChoirDB = (() => {
   }
 
   function getMapStats(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    if (isPledgesLoaded()) {
-      const pledges = getUniquePledgesForEvent(eventId);
-      const withLocation = pledges.filter((p) => p.city && p.country);
-      const cities = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
-      const countries = new Set(withLocation.map((p) => p.country));
+    if (!isPledgesLoaded()) return null;
+
+    if (
+      cachedAggregate &&
+      cachedAggregate.eventId === eventId &&
+      cachedAggregate.stats
+    ) {
       return {
-        voices: pledges.length,
-        cities: cities.size,
-        countries: countries.size,
+        voices: cachedAggregate.stats.voices || 0,
+        cities: cachedAggregate.stats.cities || 0,
+        countries: cachedAggregate.stats.countries || 0,
       };
     }
 
-    if (isMapAggregateLoaded()) {
-      return {
-        voices: cachedMapAggregate.stats?.voices ?? 0,
-        cities: cachedMapAggregate.stats?.cities ?? 0,
-        countries: cachedMapAggregate.stats?.countries ?? 0,
-      };
-    }
+    if (cachedPledges === undefined) return null;
 
-    return null;
+    const pledges = getUniquePledgesForEvent(eventId);
+    const withLocation = pledges.filter((p) => p.city && p.country);
+    const cities = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
+    const countries = new Set(withLocation.map((p) => p.country));
+    return {
+      voices: pledges.length,
+      cities: cities.size,
+      countries: countries.size,
+    };
   }
 
   function getAggregatedCities(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
-    if (isPledgesLoaded()) {
-      const pledges = getUniquePledgesForEvent(eventId).filter(
-        (p) => p.latitude != null && p.longitude != null && p.city && p.country
-      );
-      const map = {};
-      pledges.forEach((p) => {
-        const key = `${p.city}|${p.country}`;
-        if (!map[key]) {
-          map[key] = {
-            city: p.city,
-            country: p.country,
-            latitude: p.latitude,
-            longitude: p.longitude,
-            count: 0,
-          };
-        }
-        map[key].count += 1;
-      });
-      return Object.values(map);
+    if (!isPledgesLoaded()) return [];
+
+    if (
+      cachedAggregate &&
+      cachedAggregate.eventId === eventId &&
+      Array.isArray(cachedAggregate.cities)
+    ) {
+      return cachedAggregate.cities.slice();
     }
 
-    if (isMapAggregateLoaded()) {
-      return Array.isArray(cachedMapAggregate.cities) ? cachedMapAggregate.cities : [];
-    }
+    if (cachedPledges === undefined) return [];
 
-    return [];
+    const pledges = getUniquePledgesForEvent(eventId).filter(
+      (p) => p.latitude != null && p.longitude != null && p.city && p.country
+    );
+    const map = {};
+    pledges.forEach((p) => {
+      const key = `${p.city}|${p.country}`;
+      if (!map[key]) {
+        map[key] = {
+          city: p.city,
+          country: p.country,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          count: 0,
+        };
+      }
+      map[key].count += 1;
+    });
+    return Object.values(map);
   }
 
   function hasGatheringNear(city, country, maxKm = 50) {
@@ -1113,7 +887,10 @@ const WorldChoirDB = (() => {
 
   function getParticipationHistory() {
     const user = getCurrentUser();
-    const pledges = (cachedPledges || []).filter((p) => p.user_id === user.id);
+    let pledges = (cachedPledges || []).filter((p) => p.user_id === user.id);
+    if (!pledges.length && myPledgeCache) {
+      pledges = [myPledgeCache];
+    }
     const promises = read(KEYS.promises).filter((p) => p.user_id === user.id);
     const events = read(KEYS.events);
 
@@ -1140,21 +917,14 @@ const WorldChoirDB = (() => {
   return {
     ready,
     readyIdentity,
-    readyMyPledge,
     bootstrap,
     syncAllPledges,
     syncAllPledgesIfChanged,
-    startLiveSync,
-    stopLiveSync,
     syncMapAggregates,
     syncMapAggregatesIfChanged,
+    startLiveSync,
     startMapAggregateSync,
-    stopMapAggregateSync,
-    warmMapAggregateFromPresentation,
-    fetchWorldStats,
-    refreshWorldStatsIfChanged,
-    getPresentationVoiceCount,
-    startWorldStatsRefresh,
+    stopLiveSync,
     syncMyPledge,
     getDeviceId,
     getOrCreateUser,
@@ -1175,7 +945,6 @@ const WorldChoirDB = (() => {
     hasPledged,
     getPledgesForEvent,
     isPledgesLoaded,
-    isMapAggregateLoaded,
     isMapDataReady,
     getMapDataState,
     createPromise,
@@ -1185,6 +954,7 @@ const WorldChoirDB = (() => {
     getGatheringPlaces,
     getMapStats,
     getAggregatedCities,
+    getPresentationVoiceCount,
     hasGatheringNear,
     getParticipationHistory,
     getVoiceNameForUser,

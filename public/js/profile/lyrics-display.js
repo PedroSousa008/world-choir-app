@@ -12,12 +12,21 @@ const LyricsDisplay = (() => {
 
   /** Active line = last entry whose start time has been reached. */
   function getLyricIndex(currentTime, lyrics) {
-    for (let i = lyrics.length - 1; i >= 0; i--) {
-      if (currentTime >= lyrics[i].time) {
-        return i;
+    if (!lyrics || !lyrics.length) return -1;
+    // Lyrics are ordered by time — binary search instead of reverse scan each tick.
+    let lo = 0;
+    let hi = lyrics.length - 1;
+    let best = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (currentTime >= lyrics[mid].time) {
+        best = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
       }
     }
-    return -1;
+    return best;
   }
 
   function formatTime(seconds) {

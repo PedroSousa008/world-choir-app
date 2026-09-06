@@ -215,9 +215,7 @@ const WorldChainPage = (() => {
     if (state.view === 'photo-book') render();
 
     try {
-      await (typeof WorldChoirDB.readyIdentity === 'function'
-        ? WorldChoirDB.readyIdentity()
-        : WorldChoirDB.ready?.());
+      await WorldChoirDB.ready?.();
       const res = await fetch(
         `/api/world-chain?deviceId=${encodeURIComponent(deviceId())}`
           + `&eventId=${encodeURIComponent(eventId())}`
@@ -898,7 +896,7 @@ const WorldChainPage = (() => {
         <footer class="wc-photobook-close">
           <img
             class="wc-photobook-close__earth"
-            src="images/world-choir-logo.png?v=20260906perf"
+            src="images/world-choir-logo.png?v=20270706"
             alt=""
             width="120"
             height="120"
@@ -1441,9 +1439,7 @@ const WorldChainPage = (() => {
       window.scrollTo(0, 0);
     }
     try {
-      await (typeof WorldChoirDB.readyIdentity === 'function'
-        ? WorldChoirDB.readyIdentity()
-        : WorldChoirDB.ready?.());
+      await WorldChoirDB.ready?.();
       const res = await fetch(
         `/api/world-chain?deviceId=${encodeURIComponent(deviceId())}&eventId=${encodeURIComponent(eventId())}&view=completed`,
         { cache: 'no-store' }
@@ -1472,9 +1468,7 @@ const WorldChainPage = (() => {
       render();
     }
     try {
-      await (typeof WorldChoirDB.readyIdentity === 'function'
-        ? WorldChoirDB.readyIdentity()
-        : WorldChoirDB.ready?.());
+      await WorldChoirDB.ready?.();
       const id = deviceId();
       const res = await fetch(
         `/api/world-chain?deviceId=${encodeURIComponent(id)}&eventId=${encodeURIComponent(eventId())}`,

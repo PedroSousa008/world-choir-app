@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#000000">
   <meta name="description" content="Once a year, the entire world sings the same song at the exact same time.">
   <title>World Choir</title>
-  <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20260906perf">
-  <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20260906perf">
-  <link rel="stylesheet" href="css/inter-font.css?v=20260906perf">
-  <link rel="preload" as="font" href="/fonts/inter/Inter-Regular.woff2?v=4.1" type="font/woff2" crossorigin>
-  <link rel="preload" as="font" href="/fonts/inter/Inter-SemiBold.woff2?v=4.1" type="font/woff2" crossorigin>
+  <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
+  <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20270706">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/world-choir-theme.css?v=20260904e">
   <link rel="stylesheet" href="css/home.css?v=20260905b">
   <link rel="stylesheet" href="css/privacy-consent.css?v=20260905a">
@@ -76,7 +76,7 @@
             id="wc-global-live-video"
             playsinline
             webkit-playsinline
-            preload="auto"
+            preload="none"
             muted
             autoplay
             controlslist="nodownload nofullscreen noremoteplayback"
@@ -118,7 +118,7 @@
       <div id="wc-global-live-song-content"></div>
     </section>
   </div>
-  <audio id="wc-live-song-audio" preload="auto" playsinline webkit-playsinline></audio>
+  <audio id="wc-live-song-audio" preload="none" playsinline webkit-playsinline></audio>
   <canvas id="earth-canvas" aria-hidden="true"></canvas>
   <div class="ambient-bg" id="ambient-bg"></div>
 
@@ -338,26 +338,26 @@
 
   <div id="nav-root"></div>
 
-  <script defer src="js/world-choir-config.js?v=20260906perf"></script>
-  <script defer src="js/world-choir-privacy.js?v=20260906perf"></script>
-  <script defer src="js/world-choir-thank-you.js?v=20260904e"></script>
-  <script defer src="js/world-choir-calendar.js?v=20260902u"></script>
-  <script defer src="js/reminders/reminders.web.js?v=20260902u"></script>
-  <script defer src="js/reminders/reminders.native.js"></script>
-  <script defer src="js/world-choir-reminders.js"></script>
-  <script defer src="js/world-choir-countries.js?v=20260831a"></script>
-  <script defer src="js/world-choir-db.js?v=20260906p2h"></script>
-  <script defer src="js/world-choir-pledge-state.js?v=20260906p2h"></script>
-  <script defer src="js/world-choir-a11y.js?v=20260904e"></script>
-  <script defer src="js/world-choir-nav.js?v=20260906p2h"></script>
-  <script defer src="js/world-choir-participation.js"></script>
-  <script defer src="js/world-choir-practice-config.js?v=20260906perf"></script>
-  <script defer src="js/profile/lyrics-display.js?v=20260906p2b"></script>
-  <script defer src="js/live-event/server-time-sync.js?v=20260904an"></script>
-  <script defer src="js/live-event/global-live-event.js?v=20260904as"></script>
-  <script defer src="js/world-choir-live-event.js?v=20260904an"></script>
-  <script defer src="js/profile/daily-acts-peace.js?v=20260906p2b"></script>
-  <script defer src="js/world-choir-home.js?v=20260906p2g"></script>
+  <script src="js/world-choir-config.js?v=20260906perf"></script>
+  <script src="js/world-choir-privacy.js?v=20260905a"></script>
+  <script src="js/world-choir-thank-you.js?v=20260904e"></script>
+  <script src="js/world-choir-calendar.js?v=20260902u"></script>
+  <script src="js/reminders/reminders.web.js?v=20260902u"></script>
+  <script src="js/reminders/reminders.native.js"></script>
+  <script src="js/world-choir-reminders.js"></script>
+  <script src="js/world-choir-countries.js?v=20260831a"></script>
+  <script src="js/world-choir-db.js?v=20260906perf"></script>
+  <script src="js/world-choir-pledge-state.js?v=20260904bx"></script>
+  <script src="js/world-choir-a11y.js?v=20260904e"></script>
+  <script src="js/world-choir-nav.js?v=20260906perf"></script>
+  <script src="js/world-choir-participation.js"></script>
+  <script src="js/world-choir-practice-config.js"></script>
+  <script src="js/profile/lyrics-display.js?v=20260906perf"></script>
+  <script src="js/live-event/server-time-sync.js?v=20260904an"></script>
+  <script src="js/live-event/global-live-event.js?v=20260904as"></script>
+  <script src="js/world-choir-live-event.js?v=20260904an"></script>
+  <script src="js/profile/daily-acts-peace.js?v=20260906perf"></script>
+  <script src="js/world-choir-home.js?v=20260905c"></script>
   <script>
     (function bootWorldChoirHome() {
       function startHome() {

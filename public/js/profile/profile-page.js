@@ -14,19 +14,14 @@ const ProfilePage = (() => {
   let profileReady = false;
 
   function getVoicesCounterContent() {
-    const count = typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getPresentationVoiceCount
-      ? WorldChoirDB.getPresentationVoiceCount()
-      : (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.isPledgesLoaded()
-        ? WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id)?.voices
-        : null);
-
-    if (count == null || Number.isNaN(Number(count))) {
+    if (typeof WorldChoirDB === 'undefined' || !WorldChoirDB.isPledgesLoaded()) {
       return { text: '', loading: true };
     }
 
-    const n = Number(count);
-    const formatted = n.toLocaleString('en-US');
-    const text = n === 1 ? '1 VOICE' : `${formatted} VOICES`;
+    const stats = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
+    const count = stats?.voices ?? 0;
+    const formatted = count.toLocaleString('en-US');
+    const text = count === 1 ? '1 VOICE' : `${formatted} VOICES`;
     return { text, loading: false };
   }
 
@@ -164,44 +159,26 @@ const ProfilePage = (() => {
       renderSkeleton();
     }
 
-    window.addEventListener('wc-world-stats', updateVoicesCounter);
     window.addEventListener('wc-pledges-synced', updateVoicesCounter);
     window.addEventListener('wc-map-data-state', updateVoicesCounter);
-    window.addEventListener('wc-pledge-added', () => {
-      updateVoicesCounter();
-      void WorldChoirDB.refreshWorldStatsIfChanged?.(undefined, { force: true }).catch(() => {
-        void WorldChoirDB.fetchWorldStats?.().catch(() => {});
-      });
-    });
+    window.addEventListener('wc-pledge-added', updateVoicesCounter);
     window.addEventListener('wc-voices-live-update', updateVoicesCounter);
-
-    // Profile Voice counter: meta-first (full /api/stats only when pledges meta changes).
-    if (typeof WorldChoirDB.startWorldStatsRefresh === 'function') {
-      WorldChoirDB.startWorldStatsRefresh();
-    } else {
-      void WorldChoirDB.fetchWorldStats?.().then(() => updateVoicesCounter()).catch(() => {});
-    }
+    WorldChoirDB.startLiveSync({ intervalMs: 2000 });
 
     const fallback = setTimeout(() => revealProfile(), 220);
 
-    WorldChoirPledgeState.init({ mode: 'myPledge' })
+    WorldChoirPledgeState.init()
       .then(async () => {
         clearTimeout(fallback);
         revealProfile();
         WorldChoirPledgeState.subscribe(() => refresh());
         maybeOpenPracticeFromQuery();
-        if (typeof WorldChoirPracticeConfig !== 'undefined') {
-          WorldChoirPracticeConfig.scheduleWarmPracticeAudio?.();
-        }
       })
       .catch((err) => {
         clearTimeout(fallback);
         console.error('Failed to connect to World Choir database:', err);
         revealProfile();
         maybeOpenPracticeFromQuery();
-        if (typeof WorldChoirPracticeConfig !== 'undefined') {
-          WorldChoirPracticeConfig.scheduleWarmPracticeAudio?.();
-        }
       });
   }
 
