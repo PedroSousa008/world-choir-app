@@ -539,33 +539,52 @@ const WorldChoirMap = (() => {
   }
 
   let mapBootstrapped = false;
+  let mapStartPromise = null;
 
   function onTabShow() {
     document.body.classList.add('map-page');
-    if (map) {
-      requestAnimationFrame(() => {
-        map.invalidateSize({ animate: false, pan: false });
-        setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 60);
-        setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 200);
-      });
+    if (!mapBootstrapped || !map) {
+      return ensureMapStarted();
     }
+    requestAnimationFrame(() => {
+      map.invalidateSize({ animate: false, pan: false });
+      setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 60);
+      setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 200);
+    });
     void checkVoiceJoinedFromSession();
+    return Promise.resolve();
   }
 
   function init() {
-    if (mapBootstrapped) {
+    if (mapBootstrapped || mapStartPromise) {
       if (!window.__WC_TAB_SILENT_INIT) onTabShow();
-      return;
+      return mapStartPromise || Promise.resolve();
     }
-    mapBootstrapped = true;
-    WorldChoirMapTiles.warmBasemap?.();
-    startMap();
+    // Hidden soft-tab preload: mount shell only. Leaflet needs a visible sized
+    // container — full map start runs on first real reveal via onTabShow.
+    if (window.__WC_TAB_SILENT_INIT) {
+      return Promise.resolve();
+    }
+    return ensureMapStarted();
+  }
+
+  function ensureMapStarted() {
+    if (mapBootstrapped) return Promise.resolve();
+    if (mapStartPromise) return mapStartPromise;
+    mapStartPromise = (async () => {
+      mapBootstrapped = true;
+      WorldChoirMapTiles.warmBasemap?.();
+      await startMap();
+    })().catch((err) => {
+      mapBootstrapped = false;
+      mapStartPromise = null;
+      throw err;
+    });
+    return mapStartPromise;
   }
 
   async function startMap() {
-    if (!window.__WC_TAB_SILENT_INIT) {
-      document.body.classList.add('map-page');
-    }
+    document.body.classList.add('map-page');
     WorldChoirNav.startWatcher('map');
 
     const clearBootSkel = () => {
