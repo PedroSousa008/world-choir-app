@@ -1684,40 +1684,6 @@ const OwnerControl = (() => {
         <p class="owner-muted">Founded by ${esc(f.creator)} · ${esc(f.status)} · ${esc(f.country || 'Country not set')}</p>
         ${f.mission ? `<p style="margin-top:12px;line-height:1.6">${esc(f.mission)}</p>` : ''}
 
-        <div class="owner-group" style="margin-top:22px">
-          <p class="owner-group__title">Members login</p>
-          <p class="owner-muted" style="margin-bottom:14px">
-            Login email for <strong>/members</strong>. Passwords chosen by the Creator are never shown here.
-          </p>
-          <form class="owner-form" id="owner-foundation-credentials" style="max-width:560px">
-            <input type="hidden" name="id" value="${esc(f.id)}">
-            <div class="owner-field">
-              <label>Login email</label>
-              <input name="email" type="email" value="${esc(f.email || '')}" required autocomplete="off">
-            </div>
-            <button class="owner-btn" type="submit">Save login email</button>
-          </form>
-          <form class="owner-form" id="owner-foundation-reset-password" style="max-width:560px;margin-top:18px">
-            <div class="owner-field">
-              <label>New temporary password</label>
-              <div class="owner-password-row">
-                <input
-                  id="owner-foundation-reset-password-input"
-                  name="newPassword"
-                  type="text"
-                  minlength="8"
-                  required
-                  autocomplete="off"
-                  spellcheck="false"
-                  placeholder="Set a new password to share with them"
-                >
-                <button type="button" class="owner-btn-ghost" id="owner-foundation-reset-copy" title="Copy email and password">Copy</button>
-              </div>
-            </div>
-            <button class="owner-btn" type="submit">Reset password for this Creator</button>
-          </form>
-        </div>
-
         <div class="owner-groups" style="margin-top:18px">
           <div class="owner-group">
             <p class="owner-group__title">Financial</p>
@@ -1753,8 +1719,45 @@ const OwnerControl = (() => {
           </div>
           <div class="owner-field"><label>Mission</label><textarea name="mission">${esc(f.mission || '')}</textarea></div>
           <div class="owner-field"><label>Biography</label><textarea name="biography">${esc(f.biography || '')}</textarea></div>
-          <button class="owner-btn" type="submit">Save profile</button>
         </form>
+
+        <div class="owner-group" style="margin-top:22px;max-width:560px">
+          <p class="owner-group__title">Members login</p>
+          <p class="owner-muted" style="margin-bottom:14px">
+            Login email for <strong>/members</strong>. Passwords chosen by the Creator are never shown here.
+          </p>
+          <form class="owner-form" id="owner-foundation-credentials">
+            <input type="hidden" name="id" value="${esc(f.id)}">
+            <div class="owner-field">
+              <label>Login email</label>
+              <input name="email" type="email" value="${esc(f.email || '')}" required autocomplete="off">
+            </div>
+            <button class="owner-btn" type="submit">Save login email</button>
+          </form>
+          <form class="owner-form" id="owner-foundation-reset-password" style="margin-top:18px">
+            <div class="owner-field">
+              <label>New temporary password</label>
+              <div class="owner-password-row">
+                <input
+                  id="owner-foundation-reset-password-input"
+                  name="newPassword"
+                  type="text"
+                  minlength="8"
+                  required
+                  autocomplete="off"
+                  spellcheck="false"
+                  placeholder="Set a new password to share with them"
+                >
+                <button type="button" class="owner-btn-ghost" id="owner-foundation-reset-copy" title="Copy email and password">Copy</button>
+              </div>
+            </div>
+            <button class="owner-btn" type="submit">Reset password for this Creator</button>
+          </form>
+        </div>
+
+        <div style="margin-top:22px;max-width:560px">
+          <button class="owner-btn" type="submit" form="owner-foundation-edit">Save profile</button>
+        </div>
           </div>
         </div>
       </div>
