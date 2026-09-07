@@ -331,12 +331,15 @@ const WorldChoirMemory = (() => {
     `;
   }
 
-  function renderItinerary(stops) {
+  function renderItinerary(stops, options = {}) {
+    const hostId = options.hostId || 'mem-route-host';
+    const labelId = options.labelId || 'mem-route-label';
+
     if (!stops.length) {
       return `
-        <section class="mem-section" id="mem-route-host">
+        <section class="mem-section" id="${esc(hostId)}">
           <div class="mem-section-row">
-            <h2 class="df-section-label mem-section-row__label" id="mem-route-label">Pass the World – Itinerary</h2>
+            <h2 class="df-section-label mem-section-row__label" id="${esc(labelId)}">Pass the World – Itinerary</h2>
           </div>
           <p class="mem-empty">The Pass the World route will appear here.</p>
         </section>
@@ -354,9 +357,9 @@ const WorldChoirMemory = (() => {
     `).join('');
 
     return `
-      <section class="mem-section" id="mem-route-host" aria-labelledby="mem-route-label">
+      <section class="mem-section" id="${esc(hostId)}" aria-labelledby="${esc(labelId)}">
         <div class="mem-section-row">
-          <h2 class="df-section-label mem-section-row__label" id="mem-route-label">Pass the World – Itinerary</h2>
+          <h2 class="df-section-label mem-section-row__label" id="${esc(labelId)}">Pass the World – Itinerary</h2>
           <a class="mem-link" href="passport.html?page=story">View full route</a>
         </div>
         <div class="mem-card mem-route-card">
@@ -823,6 +826,7 @@ const WorldChoirMemory = (() => {
       ${renderEventCard(event)}
       ${renderStampsAchieved([])}
       ${renderItinerary([])}
+      ${renderItinerary([], { hostId: 'mem-route-host-2', labelId: 'mem-route-label-2' })}
       ${renderFab()}
       ${renderComposer()}
     `;
@@ -848,6 +852,10 @@ const WorldChoirMemory = (() => {
     const routeTask = typeof WorldChoirMemoryData !== 'undefined'
       ? WorldChoirMemoryData.loadPassTheWorldRoute().then((route) => {
         replaceHost('mem-route-host', renderItinerary(route));
+        replaceHost(
+          'mem-route-host-2',
+          renderItinerary(route, { hostId: 'mem-route-host-2', labelId: 'mem-route-label-2' })
+        );
       }).catch(() => {})
       : Promise.resolve();
 

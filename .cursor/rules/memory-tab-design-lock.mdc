@@ -10,7 +10,7 @@ The Memory tab design is **finished and locked**. Do not redesign, restyle, or r
 
 ## Keep intact
 
-- Layout order: topbar (logo only) → intro → photo carousel → About the Event → Stamps Achieved → Pass the World Itinerary → FAB / composer
+- Layout order: topbar (logo only) → intro → photo carousel → About the Event → Stamps Achieved → Pass the World Itinerary → Pass the World Itinerary (duplicate placeholder at bottom; same design for now) → FAB / composer
 - Stamps Achieved: max **4** most recently unlocked real passport stamps, no dates, empty slots stay empty, passport-inside background fill
 - No My Passport miniature; no “More Memories” footer; no top-right search
 - “View full route” → `passport.html?page=story`

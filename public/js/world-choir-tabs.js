@@ -158,7 +158,7 @@ const WorldChoirTabs = (() => {
         'js/profile/world-choir-passport.js?v=20260902q',
         'js/memory/memory-data.js?v=20260907peoplesang',
         'js/memory/memory-feed.js?v=20260904bt',
-        'js/memory/memory-page.js?v=20260906tabs',
+        'js/memory/memory-page.js?v=20260907dupitin',
       ],
       selectors: ['.ambient-bg', '#memory-page'],
       init: () => window.WorldChoirMemory?.init?.(),
