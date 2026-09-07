@@ -406,12 +406,27 @@ body.wc-tab-shell {
   min-height: 100%;
 }
 
+/* Laid out under the active tab — Map/Leaflet can measure before we reveal. */
+.wc-tab-panel.is-preparing {
+  display: block;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .wc-tab-panel.is-active {
   display: block;
+  position: relative;
+  z-index: 1;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 body.wc-tab-shell.map-page #wc-tab-host.wc-tab-host,
-body.wc-tab-shell.map-page .wc-tab-panel.is-active {
+body.wc-tab-shell.map-page .wc-tab-panel.is-active,
+body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
   height: 100%;
   min-height: 100%;
 }

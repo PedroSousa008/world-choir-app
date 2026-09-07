@@ -166,11 +166,14 @@ const ProfilePage = (() => {
 
   function onTabShow() {
     updateVoicesCounter();
-    if (!profileReady) {
-      try { revealProfile(); } catch { /* ignore */ }
-    } else {
-      try { refresh(); } catch { /* ignore */ }
+    try {
+      if (!profileReady) revealProfile();
+      else refresh();
+    } catch (err) {
+      console.warn('[Profile] onTabShow failed', err);
     }
+    // Guarantee booting chrome never sticks on soft switches.
+    clearBootingState();
     return Promise.resolve();
   }
 
