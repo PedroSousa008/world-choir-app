@@ -231,7 +231,7 @@ html.sws-page body {
 
 /* 5. "With love and gratitude," — Caveat 20px */
 .sws-letter__closing {
-  margin: 0.85em 0 0.4em;
+  margin: 0.85em 0 0.95em;
   padding: 0;
   font-family: 'Caveat', cursive;
   font-size: 10px;
@@ -242,7 +242,7 @@ html.sws-page body {
 
 /* 6. "The World We Live In" — Brittany Signature 30px */
 .sws-letter__signature {
-  margin: 0.25em 0 0;
+  margin: 0.7em 0 0;
   padding: 0;
   font-family: 'Brittany Signature', cursive;
   font-size: 20px;
@@ -276,19 +276,19 @@ html.sws-page body {
 .sws-letter__underline,
 .sws-letter__heart {
   fill: none;
-  stroke: #1a110a;
+  stroke: #2a1f0e;
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 1;
 }
 
 .sws-letter__underline {
-  /* Strong enough to read on parchment after SVG scale */
-  stroke-width: 2.4;
+  /* Subtle hand-ink stroke (SVG user units, scales with viewBox) */
+  stroke-width: 0.75;
 }
 
 .sws-letter__heart {
-  stroke-width: 2.1;
+  stroke-width: 0.7;
 }
 
 /* ── Stamp (bottom-right of paper) ── */
