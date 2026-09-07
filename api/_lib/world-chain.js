@@ -18,6 +18,8 @@ const DEFAULT_EVENT_ID = 'world-choir-2027';
 const DAILY_CHAIN_COUNT = 5;
 const MIN_CHAIN_LENGTH = 2;
 const CHAIN_DURATION_MS = 24 * 60 * 60 * 1000;
+/** Daily cycle rolls at 14:00 UTC — all 5 chains share this exact 24h window. */
+const CYCLE_HOUR_UTC = 14;
 const STUCK_AFTER_MS = 3 * 60 * 60 * 1000;
 const ACCOUNT_AGE_MS = 24 * 60 * 60 * 1000;
 const COOLDOWNS_MS = [10 * 60 * 1000, 30 * 60 * 1000, 60 * 60 * 1000];
@@ -42,11 +44,39 @@ const TEST_FORCE_STARTER = {
 };
 
 /** Bump when generation rules change so the day regenerates. */
-const CHAIN_STORAGE_VERSION = 'v6';
-const CHAIN_ENGINE = 'starter-first-v6';
+const CHAIN_STORAGE_VERSION = 'v7';
+const CHAIN_ENGINE = 'cycle-14utc-v7';
+
+/**
+ * World Chain day: [14:00 UTC, next 14:00 UTC).
+ * dayKey is the UTC date of the cycle start (the 14:00 that opened this window).
+ */
+function cycleBoundsUTC(date = new Date()) {
+  const nowMs = date.getTime();
+  let startMs = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    CYCLE_HOUR_UTC,
+    0,
+    0,
+    0
+  );
+  if (nowMs < startMs) {
+    startMs -= CHAIN_DURATION_MS;
+  }
+  const endMs = startMs + CHAIN_DURATION_MS;
+  return {
+    startMs,
+    endMs,
+    dayKey: new Date(startMs).toISOString().slice(0, 10),
+    startsAt: new Date(startMs).toISOString(),
+    expiresAt: new Date(endMs).toISOString(),
+  };
+}
 
 function dayKeyUTC(date = new Date()) {
-  return date.toISOString().slice(0, 10);
+  return cycleBoundsUTC(date).dayKey;
 }
 
 function rootPath(eventId, day) {
@@ -330,7 +360,7 @@ function resolveForcedStarter(byVoice) {
 }
 
 /** Short design chain: starter country → fixed final city (one connection to complete). */
-function buildForcedDesignChain(forcedStarter, eventId, day, now, nowMs) {
+function buildForcedDesignChain(forcedStarter, eventId, day, now, bounds) {
   const startCountry = normalizeCountry(forcedStarter.country)
     || normalizeCountry(TEST_FORCE_STARTER.startCountry);
   const destCountry = normalizeCountry(TEST_FORCE_STARTER.destinationCountry);
@@ -372,8 +402,8 @@ function buildForcedDesignChain(forcedStarter, eventId, day, now, nowMs) {
     dayKey: day,
     dailyChainNumber: Number(TEST_FORCE_STARTER.dailyChainNumber) || 2,
     createdAt: now.toISOString(),
-    startsAt: now.toISOString(),
-    expiresAt: new Date(nowMs + CHAIN_DURATION_MS).toISOString(),
+    startsAt: bounds.startsAt,
+    expiresAt: bounds.expiresAt,
     status: Status.IN_PROGRESS,
     starterAccepted: false,
     startingVoiceId: forcedStarter.user_id,
@@ -518,6 +548,8 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     timerLabel = 'Expired';
   } else {
     timerMs = Math.max(0, new Date(chain.expiresAt).getTime() - nowMs);
+    // Hard cap: a live chain never advertises more than the 24h cycle.
+    timerMs = Math.min(timerMs, CHAIN_DURATION_MS);
     timerLabel = `${formatDuration(timerMs)} left`;
   }
 
@@ -699,6 +731,7 @@ async function archiveCompletedChain(chain) {
 async function generateDailyChains(eventId, day, now = new Date()) {
   assertBlobConfigured();
   const nowMs = now.getTime();
+  const bounds = cycleBoundsUTC(now);
   const [pledges, users] = await Promise.all([
     listPledges(eventId),
     listAllUsers().catch(() => []),
@@ -717,6 +750,8 @@ async function generateDailyChains(eventId, day, now = new Date()) {
       chainIds: [],
       limited: true,
       reason: 'not_enough_countries',
+      cycleStartsAt: bounds.startsAt,
+      cycleExpiresAt: bounds.expiresAt,
     };
     await writeJson(manifestPath(eventId, day), empty, { overwrite: false }).catch(async () => {
       /* if already exists, leave it */
@@ -733,7 +768,7 @@ async function generateDailyChains(eventId, day, now = new Date()) {
   const forcedStarter = resolveForcedStarter(byVoice);
   let designChain = null;
   if (forcedStarter) {
-    designChain = buildForcedDesignChain(forcedStarter, eventId, day, now, nowMs);
+    designChain = buildForcedDesignChain(forcedStarter, eventId, day, now, bounds);
     if (designChain) {
       usedStartVoices.add(forcedStarter.user_id);
       usedStartCountries.add(normalizeCountry(forcedStarter.country).toLowerCase());
@@ -793,8 +828,8 @@ async function generateDailyChains(eventId, day, now = new Date()) {
       dayKey: day,
       dailyChainNumber: slot + 1,
       createdAt: now.toISOString(),
-      startsAt: now.toISOString(),
-      expiresAt: new Date(nowMs + CHAIN_DURATION_MS).toISOString(),
+      startsAt: bounds.startsAt,
+      expiresAt: bounds.expiresAt,
       status: Status.IN_PROGRESS,
       starterAccepted: false,
       startingVoiceId: starter.user_id,
@@ -830,6 +865,8 @@ async function generateDailyChains(eventId, day, now = new Date()) {
     reason: chains.length
       ? (chains.length < DAILY_CHAIN_COUNT ? 'partial_day' : null)
       : 'could_not_build_valid_routes',
+    cycleStartsAt: bounds.startsAt,
+    cycleExpiresAt: bounds.expiresAt,
   };
 
   try {
@@ -844,10 +881,24 @@ async function generateDailyChains(eventId, day, now = new Date()) {
   return manifest;
 }
 
-function isValidTestDay(manifest, chains) {
+function chainsAlignToCycle(chains, bounds) {
+  if (!Array.isArray(chains) || !chains.length || !bounds) return false;
+  return chains.every((c) => {
+    const start = new Date(c.startsAt).getTime();
+    const exp = new Date(c.expiresAt).getTime();
+    return Number.isFinite(start)
+      && Number.isFinite(exp)
+      && Math.abs(start - bounds.startMs) < 2000
+      && Math.abs(exp - bounds.endMs) < 2000
+      && Math.abs(exp - start - CHAIN_DURATION_MS) < 2000;
+  });
+}
+
+function isValidTestDay(manifest, chains, bounds) {
   if (!manifest || !Array.isArray(manifest.chainIds)) return false;
   if (manifest.engine !== CHAIN_ENGINE) return false;
   if (chains.length < DAILY_CHAIN_COUNT) return false;
+  if (bounds && !chainsAlignToCycle(chains, bounds)) return false;
   if (!TEST_FORCE_STARTER.enabled) return true;
   const targetNum = Number(TEST_FORCE_STARTER.dailyChainNumber) || 2;
   const design = [...chains].find((c) => Number(c.dailyChainNumber) === targetNum);
@@ -864,7 +915,8 @@ function isValidTestDay(manifest, chains) {
 
 async function ensureDailyChains(eventId = DEFAULT_EVENT_ID, now = new Date()) {
   assertBlobConfigured();
-  const day = dayKeyUTC(now);
+  const bounds = cycleBoundsUTC(now);
+  const day = bounds.dayKey;
   const existing = await readManifest(eventId, day);
   if (existing?.chainIds?.length) {
     const chains = [];
@@ -872,8 +924,8 @@ async function ensureDailyChains(eventId = DEFAULT_EVENT_ID, now = new Date()) {
       const chain = await readChain(eventId, day, id);
       if (chain) chains.push(chain);
     }
-    if (isValidTestDay(existing, chains)) return existing;
-    // Stale / incomplete day (e.g. only 3 chains, or #1 not Voice 5) — rebuild.
+    if (isValidTestDay(existing, chains, bounds)) return existing;
+    // Stale / incomplete / wrong window — rebuild under the current engine.
   }
   try {
     return await generateDailyChains(eventId, day, now);
@@ -885,7 +937,9 @@ async function ensureDailyChains(eventId = DEFAULT_EVENT_ID, now = new Date()) {
 }
 
 async function loadDayChains(eventId, day) {
-  const manifest = await ensureDailyChains(eventId, new Date(`${day}T12:00:00.000Z`));
+  // Anchor inside the cycle that dayKey represents (starts at 14:00 UTC that date).
+  const at = new Date(`${day}T14:00:00.000Z`);
+  const manifest = await ensureDailyChains(eventId, at);
   const chains = [];
   for (const id of manifest.chainIds || []) {
     const chain = await readChain(eventId, day, id);
@@ -957,6 +1011,8 @@ async function getTodayPayload(deviceId, eventId = DEFAULT_EVENT_ID) {
   return {
     dayKey: day,
     serverNow: now.toISOString(),
+    cycleStartsAt: cycleBoundsUTC(now).startsAt,
+    cycleExpiresAt: cycleBoundsUTC(now).expiresAt,
     engine: CHAIN_ENGINE,
     storageVersion: CHAIN_STORAGE_VERSION,
     maxAvailableCountries: manifest.maxAvailableCountries ?? 0,
@@ -1376,9 +1432,12 @@ module.exports = {
   DAILY_CHAIN_COUNT,
   ACCOUNT_AGE_MS,
   STUCK_AFTER_MS,
+  CHAIN_DURATION_MS,
+  CYCLE_HOUR_UTC,
   CHAIN_ENGINE,
   CHAIN_STORAGE_VERSION,
   dayKeyUTC,
+  cycleBoundsUTC,
   ensureDailyChains,
   getTodayPayload,
   getCompletedPayload,

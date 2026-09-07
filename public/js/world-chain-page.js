@@ -3,12 +3,13 @@
  * Matches World Choir Home visual system; consumes /api/world-chain.
  */
 const WorldChainPage = (() => {
-  const TODAY_CACHE_KEY = 'wc_world_chain_today_v1';
-  const CHAIN_CACHE_PREFIX = 'wc_world_chain_one_v1:';
-  const COMPLETED_CACHE_KEY = 'wc_world_chain_completed_v1';
+  const TODAY_CACHE_KEY = 'wc_world_chain_today_v2';
+  const CHAIN_CACHE_PREFIX = 'wc_world_chain_one_v2:';
+  const COMPLETED_CACHE_KEY = 'wc_world_chain_completed_v2';
   const PHOTO_BOOK_PENDING_KEY = 'wc_photo_book_pending_v1';
   const PHOTO_BOOK_CACHE_PREFIX = 'wc_photo_book_list_v1:';
   const PHOTO_BOOK_MAX_CHARS = 80;
+  const CHAIN_DURATION_MS = 24 * 60 * 60 * 1000;
 
   let state = {
     loading: true,
@@ -41,7 +42,11 @@ const WorldChainPage = (() => {
     completed: null,
     completedLoading: false,
     completedError: null,
+    serverSkewMs: 0,
   };
+
+  let liveTimerInterval = null;
+  let liveTimerReloadArmed = false;
 
   function esc(value) {
     return String(value ?? '')
@@ -49,6 +54,91 @@ const WorldChainPage = (() => {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function nowMs() {
+    return Date.now() + (Number(state.serverSkewMs) || 0);
+  }
+
+  function formatDurationLeft(ms) {
+    if (!Number.isFinite(ms) || ms < 0) ms = 0;
+    ms = Math.min(ms, CHAIN_DURATION_MS);
+    const totalMin = Math.floor(ms / 60000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (h <= 0) return `${m}m`;
+    return `${h}h ${String(m).padStart(2, '0')}m`;
+  }
+
+  function applyServerNow(iso) {
+    const server = Date.parse(iso);
+    if (Number.isFinite(server)) {
+      state.serverSkewMs = server - Date.now();
+    }
+  }
+
+  function refreshChainTimerFields(chain, at = nowMs()) {
+    if (!chain) return chain;
+    if (chain.status === 'COMPLETED') return chain;
+    if (chain.status === 'EXPIRED') {
+      chain.timerMs = 0;
+      chain.timerLabel = 'Expired';
+      chain.timeLeftLabel = 'Ended';
+      return chain;
+    }
+    const exp = Date.parse(chain.expiresAt);
+    if (!Number.isFinite(exp)) return chain;
+    let left = Math.max(0, exp - at);
+    left = Math.min(left, CHAIN_DURATION_MS);
+    chain.timerMs = left;
+    if (left <= 0) {
+      chain.status = 'EXPIRED';
+      chain.timerLabel = 'Expired';
+      chain.timeLeftLabel = 'Ended';
+    } else {
+      chain.timerLabel = `${formatDurationLeft(left)} left`;
+      chain.timeLeftLabel = formatDurationLeft(left);
+    }
+    return chain;
+  }
+
+  function paintLiveTimers() {
+    const at = nowMs();
+    let expired = false;
+    const bump = (chain) => {
+      if (!chain) return;
+      const before = chain.status;
+      refreshChainTimerFields(chain, at);
+      if (before !== 'EXPIRED' && chain.status === 'EXPIRED') expired = true;
+    };
+    (state.data?.chains || []).forEach(bump);
+    (state.completed || []).forEach(bump);
+    if (state.activeChainId) bump(findChain(state.activeChainId));
+
+    document.querySelectorAll('[data-wc-timer]').forEach((el) => {
+      const chain = findChain(el.getAttribute('data-wc-timer'));
+      if (!chain) return;
+      el.textContent = chain.timerLabel || '';
+    });
+    document.querySelectorAll('[data-wc-time-left]').forEach((el) => {
+      const chain = findChain(el.getAttribute('data-wc-time-left'));
+      if (!chain) return;
+      el.textContent = chain.timeLeftLabel
+        || String(chain.timerLabel || '—').replace(/\s*left$/i, '').trim()
+        || '—';
+    });
+
+    if (expired && !liveTimerReloadArmed) {
+      liveTimerReloadArmed = true;
+      load().finally(() => {
+        liveTimerReloadArmed = false;
+      });
+    }
+  }
+
+  function startLiveTimers() {
+    if (liveTimerInterval) return;
+    liveTimerInterval = setInterval(paintLiveTimers, 1000);
   }
 
   function readJsonCache(key) {
@@ -319,6 +409,7 @@ const WorldChainPage = (() => {
 
   function mergeChainIntoState(chain) {
     if (!chain?.id) return;
+    refreshChainTimerFields(chain);
     cacheChain(chain);
     if (!state.data) {
       state.data = { chains: [chain], overview: {}, limited: false };
@@ -745,7 +836,7 @@ const WorldChainPage = (() => {
             <span class="wc-viewer-stats__label">Connections</span>
           </div>
           <div class="wc-viewer-stats__cell">
-            <span class="wc-viewer-stats__num">${esc(chain.timeLeftLabel || String(chain.timerLabel || '—').replace(/\s*left$/i, '').trim() || '—')}</span>
+            <span class="wc-viewer-stats__num" data-wc-time-left="${esc(chain.id)}">${esc(chain.timeLeftLabel || String(chain.timerLabel || '—').replace(/\s*left$/i, '').trim() || '—')}</span>
             <span class="wc-viewer-stats__label">Left</span>
           </div>
           <div class="wc-viewer-stats__cell">
@@ -1119,7 +1210,7 @@ const WorldChainPage = (() => {
             <span class="wc-chain-card__dot ${statusDotClass(chain.status)}" aria-hidden="true"></span>
             ${esc(statusLabel(chain.status))}
           </p>
-          <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
+          <p class="wc-chain-card__timer" data-wc-timer="${esc(chain.id)}">${esc(chain.timerLabel || '')}</p>
         </div>
         ${renderRoute(chain.route)}
         <p class="wc-chain-card__meta">
@@ -1142,7 +1233,7 @@ const WorldChainPage = (() => {
             <span class="wc-chain-card__dot ${statusDotClass(chain.status)}" aria-hidden="true"></span>
             ${esc(statusLabel(chain.status))}
           </p>
-          <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
+          <p class="wc-chain-card__timer" data-wc-timer="${esc(chain.id)}">${esc(chain.timerLabel || '')}</p>
         </div>
         ${renderRoute(chain.route)}
         <div class="wc-chain-card__footer">
@@ -1416,6 +1507,8 @@ const WorldChainPage = (() => {
       root.innerHTML = renderLanding();
     }
     bind();
+    paintLiveTimers();
+    startLiveTimers();
     if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
   }
 
@@ -1450,6 +1543,7 @@ const WorldChainPage = (() => {
         throw new Error(body.error || 'Could not load completed chains');
       }
       const body = await res.json();
+      applyServerNow(body.serverNow);
       state.completed = body.chains || [];
       cacheCompleted(state.completed);
       state.completedLoading = false;
@@ -1480,6 +1574,8 @@ const WorldChainPage = (() => {
         throw new Error(body.error || 'Could not load World Chain');
       }
       state.data = await res.json();
+      applyServerNow(state.data.serverNow);
+      (state.data.chains || []).forEach((c) => refreshChainTimerFields(c));
       cacheTodayPayload(state.data);
       (state.data.chains || []).forEach(cacheChain);
       state.loading = false;
@@ -1508,6 +1604,7 @@ const WorldChainPage = (() => {
     if (!res.ok) return;
     const body = await res.json();
     if (!body.chain) return;
+    applyServerNow(body.serverNow);
     mergeChainIntoState(body.chain);
     if (body.photoBookOffer?.connectionId
       && state.view !== 'photo-book-contribute'
@@ -2035,6 +2132,8 @@ const WorldChainPage = (() => {
     applyUrlState();
     const today = readTodayPayload();
     if (today) {
+      applyServerNow(today.serverNow);
+      (today.chains || []).forEach((c) => refreshChainTimerFields(c));
       state.data = today;
       state.loading = false;
     }
@@ -2088,6 +2187,7 @@ const WorldChainPage = (() => {
     // Instant paint from URL + session cache (never flash the wrong page).
     hydrateFromCache();
     render();
+    startLiveTimers();
 
     load().then(async () => {
       if (state.view === 'completed') {
