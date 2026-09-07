@@ -87,6 +87,9 @@ const ProfilePage = (() => {
       onOpenPassport: () => {
         window.location.href = 'passport.html';
       },
+      onOpenWorldChain: () => {
+        window.location.href = 'world-chain.html';
+      },
     });
 
     ParticipationStatusCard.mount(document.getElementById(SECTIONS.participation), {

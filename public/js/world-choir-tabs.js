@@ -114,7 +114,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-practice-config.js',
         'js/world-choir-onboarding.js?v=20260816a',
         'js/profile/change-location-modal.js',
-        'js/profile/user-identity-card.js?v=20260820a',
+        'js/profile/user-identity-card.js?v=20260907wchainbtn',
         'js/profile/participation-status-card.js?v=20260820a',
         'js/profile/practice-song-button.js',
         'js/profile/practice-countdown.js',
@@ -127,7 +127,7 @@ const WorldChoirTabs = (() => {
         'js/profile/daily-acts-peace.js?v=20260906perf',
         'js/profile/daily-acts-button.js?v=20260810i',
         'js/profile/owner-access.js?v=20270810c',
-        'js/profile/profile-page.js?v=20260906tabs',
+        'js/profile/profile-page.js?v=20260907wchainbtn',
       ],
       selectors: [
         '.ambient-bg',
