@@ -371,6 +371,107 @@ const WorldChoirMemory = (() => {
     `;
   }
 
+  function memChainFlagCircle(country, extraClass = '') {
+    const url = typeof WorldChoirFlags !== 'undefined'
+      ? WorldChoirFlags.flagCircleUrl(country)
+      : null;
+    const cls = `wc-chain-route__flag ${extraClass}`.trim();
+    if (!url) {
+      return `<span class="${cls} wc-chain-route__flag--empty" title="${esc(country)}" aria-hidden="true"></span>`;
+    }
+    return `<span class="${cls}" title="${esc(country)}"><img src="${esc(url)}" alt="" width="20" height="20" loading="lazy" decoding="async"></span>`;
+  }
+
+  function memChainRouteNodeStates(route = []) {
+    const activeIdx = route.findIndex((s) => s.status === 'active');
+    const selectedIdx = route.findIndex((s) => s.status === 'selected');
+    const allDone = route.length > 0 && route.every((s) => s.status === 'connected');
+
+    let actorIdx = -1;
+    if (!allDone) {
+      if (activeIdx > 0) actorIdx = activeIdx - 1;
+      else if (activeIdx === 0) actorIdx = 0;
+      else if (selectedIdx >= 0) actorIdx = selectedIdx;
+    }
+
+    return route.map((step, i) => {
+      let node = 'is-pending';
+      if (allDone || step.status === 'connected') node = 'is-done';
+      else if (i === actorIdx) node = 'is-current';
+
+      let line = null;
+      if (i < route.length - 1) {
+        if (allDone || step.status === 'connected') line = 'is-done';
+        else if (i === actorIdx) line = 'is-current';
+        else line = 'is-pending';
+      }
+      return { node, line };
+    });
+  }
+
+  function renderMemChainRoute(route = []) {
+    if (!route.length) return '';
+    const states = memChainRouteNodeStates(route);
+    const parts = [];
+    route.forEach((step, i) => {
+      parts.push(memChainFlagCircle(step.country, states[i].node));
+      if (states[i].line) {
+        parts.push(`<span class="wc-chain-route__line ${states[i].line}" aria-hidden="true"></span>`);
+      }
+    });
+    return `<div class="wc-chain-route" role="img" aria-label="World Chain route">${parts.join('')}</div>`;
+  }
+
+  /** Same card design as World Chain completed list (`renderCard`). */
+  function renderMemWorldChainCard(chain) {
+    if (!chain) return '';
+    const named = !!chain.viewer?.isNamed;
+    const chainId = encodeURIComponent(chain.id || '');
+    const detailHref = `world-chain.html?chain=${chainId}&from=completed`;
+    return `
+      <article class="wc-chain-card${named ? ' wc-chain-card--named' : ''}" data-chain-id="${esc(chain.id)}">
+        <div class="wc-chain-card__head">
+          <h3 class="wc-chain-card__title">WORLD CHAIN #${esc(chain.dailyChainNumber)}</h3>
+          <p class="wc-chain-card__status wc-chain-card__status--completed">
+            <span class="wc-chain-card__dot wc-chain-card__dot--completed" aria-hidden="true"></span>
+            COMPLETED
+          </p>
+          <p class="wc-chain-card__timer">${esc(chain.timerLabel || '')}</p>
+        </div>
+        ${renderMemChainRoute(chain.route)}
+        <div class="wc-chain-card__footer">
+          <p class="wc-chain-card__meta">
+            ${esc(chain.countries)} countries · ${esc(chain.connections)} connections<br>
+            ${esc(chain.routeSummary || '')}
+          </p>
+          <a class="wc-chain-card__cta" href="${esc(detailHref)}">
+            ${esc(chain.cta || 'VIEW COMPLETED CHAIN')} →
+          </a>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderWorldChainCompleted(chain = null) {
+    const hostId = 'mem-world-chain-host';
+    const labelId = 'mem-world-chain-label';
+    const card = chain
+      ? renderMemWorldChainCard(chain)
+      : `<p class="mem-empty">Completed World Chains will appear here.</p>`;
+
+    return `
+      <section class="mem-section mem-world-chain-section" id="${hostId}" aria-labelledby="${labelId}">
+        <div class="mem-section-row">
+          <h2 class="df-section-label mem-section-row__label" id="${labelId}">World Chain - Completed</h2>
+          <a class="mem-link" href="world-chain.html?view=completed">View All</a>
+        </div>
+        <div class="mem-world-chain-wrap">
+          ${card}
+        </div>
+      </section>
+    `;
+  }
+
   function renderFab() {
     return `
       <div class="mem-fab" id="mem-fab">
@@ -826,7 +927,7 @@ const WorldChoirMemory = (() => {
       ${renderEventCard(event)}
       ${renderStampsAchieved([])}
       ${renderItinerary([])}
-      ${renderItinerary([], { hostId: 'mem-route-host-2', labelId: 'mem-route-label-2' })}
+      ${renderWorldChainCompleted(null)}
       ${renderFab()}
       ${renderComposer()}
     `;
@@ -852,10 +953,13 @@ const WorldChoirMemory = (() => {
     const routeTask = typeof WorldChoirMemoryData !== 'undefined'
       ? WorldChoirMemoryData.loadPassTheWorldRoute().then((route) => {
         replaceHost('mem-route-host', renderItinerary(route));
-        replaceHost(
-          'mem-route-host-2',
-          renderItinerary(route, { hostId: 'mem-route-host-2', labelId: 'mem-route-label-2' })
-        );
+      }).catch(() => {})
+      : Promise.resolve();
+
+    const worldChainTask = typeof WorldChoirMemoryData !== 'undefined'
+      && typeof WorldChoirMemoryData.loadLatestCompletedWorldChain === 'function'
+      ? WorldChoirMemoryData.loadLatestCompletedWorldChain().then((chain) => {
+        replaceHost('mem-world-chain-host', renderWorldChainCompleted(chain));
       }).catch(() => {})
       : Promise.resolve();
 
@@ -868,7 +972,7 @@ const WorldChoirMemory = (() => {
       replaceHost('mem-stamps-host', renderStampsAchieved(stamps));
     }).catch(() => {});
 
-    await Promise.allSettled([eventTask, routeTask, stampsFull]);
+    await Promise.allSettled([eventTask, routeTask, worldChainTask, stampsFull]);
   }
 
   function render() {

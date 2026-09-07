@@ -217,10 +217,36 @@ const WorldChoirMemoryData = (() => {
     }
   }
 
+  /**
+   * Most recent completed World Chain (API sorts completedAt desc).
+   * Returns null when none exist / request fails.
+   */
+  async function loadLatestCompletedWorldChain() {
+    try {
+      const params = new URLSearchParams({
+        eventId: eventId(),
+        view: 'completed',
+      });
+      const id = deviceId();
+      if (id) params.set('deviceId', id);
+      const res = await fetch(`/api/world-chain?${params}`, {
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      if (!res.ok) return null;
+      const payload = await res.json().catch(() => null);
+      const chains = Array.isArray(payload?.chains) ? payload.chains : [];
+      return chains[0] || null;
+    } catch {
+      return null;
+    }
+  }
+
   return {
     getDefaultEvent,
     loadEventArchive,
     loadPassTheWorldRoute,
+    loadLatestCompletedWorldChain,
     eventId,
     deviceId,
   };
