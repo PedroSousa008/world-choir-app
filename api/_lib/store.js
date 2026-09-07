@@ -1051,15 +1051,102 @@ async function refreshEventMilestones(eventId) {
   return { stats, milestones };
 }
 
+/**
+ * Home "People Sang" freezes at event start (countdown → 0).
+ * Unique pledges with pledged_at <= event start. Map keeps live totals.
+ */
+function peopleSangSnapshotPath(eventId) {
+  return `${eventPrefix(eventId)}/people-sang-at-start.json`;
+}
+
+function countPeopleSangAtEventStart(pledges, eventStartMs) {
+  const seen = new Set();
+  let count = 0;
+  for (const pledge of pledges || []) {
+    if (!pledge?.user_id || seen.has(pledge.user_id)) continue;
+    const at = Date.parse(pledge.pledged_at || '');
+    if (!Number.isFinite(at) || at > eventStartMs) continue;
+    seen.add(pledge.user_id);
+    count += 1;
+  }
+  return count;
+}
+
+async function readPeopleSangSnapshot(eventId) {
+  try {
+    return await readBlobJson(peopleSangSnapshotPath(eventId));
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+    return null;
+  }
+}
+
+async function ensurePeopleSangAtEventStart(eventId, pledges = null) {
+  assertBlobConfigured();
+  const trimmedEvent = String(eventId || 'world-choir-2027').trim();
+  const existing = await readPeopleSangSnapshot(trimmedEvent);
+  if (existing && typeof existing.voices === 'number' && Number.isFinite(existing.voices)) {
+    return {
+      voices: Math.max(0, Math.floor(existing.voices)),
+      eventStart: existing.eventStart || null,
+      frozenAt: existing.frozenAt || null,
+    };
+  }
+
+  let getEventStartUtc;
+  try {
+    ({ getEventStartUtc } = require('./world-choir-event-schedule'));
+  } catch {
+    return null;
+  }
+
+  const eventStart = getEventStartUtc(new Date());
+  const eventStartMs = Date.parse(eventStart);
+  if (!Number.isFinite(eventStartMs) || Date.now() < eventStartMs) {
+    return null;
+  }
+
+  const list = pledges || (await listPledges(trimmedEvent));
+  const voices = countPeopleSangAtEventStart(list, eventStartMs);
+  const record = {
+    voices,
+    eventStart,
+    frozenAt: new Date().toISOString(),
+  };
+
+  try {
+    await writeJson(peopleSangSnapshotPath(trimmedEvent), record, { overwrite: false });
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+    const raced = await readPeopleSangSnapshot(trimmedEvent);
+    if (raced && typeof raced.voices === 'number') {
+      return {
+        voices: Math.max(0, Math.floor(raced.voices)),
+        eventStart: raced.eventStart || eventStart,
+        frozenAt: raced.frozenAt || null,
+      };
+    }
+  }
+
+  return record;
+}
+
 async function getWorldChoirStats(eventId) {
   assertBlobConfigured();
   const trimmedEvent = String(eventId || 'world-choir-2027').trim();
   const { stats, milestones } = await refreshEventMilestones(trimmedEvent);
+  const peopleSangSnap = await ensurePeopleSangAtEventStart(trimmedEvent).catch(() => null);
+  const peopleSang = peopleSangSnap && typeof peopleSangSnap.voices === 'number'
+    ? peopleSangSnap.voices
+    : null;
 
   return {
     eventId: trimmedEvent,
     updatedAt: new Date().toISOString(),
     voices: stats.voices,
+    /** Frozen at event start for Home "People Sang" (and Memory archive). */
+    peopleSang,
+    peopleSangEventStart: peopleSangSnap?.eventStart || null,
     cities: stats.cities,
     countries: stats.countries,
     continents: stats.continents,
@@ -1092,6 +1179,7 @@ module.exports = {
   assembleOwnerDatabaseRows,
   buildOwnerDatabaseRows,
   getWorldChoirStats,
+  ensurePeopleSangAtEventStart,
   refreshEventMilestones,
   computeWorldChoirStatsFromPledges,
   getOwnerPasswordHash,

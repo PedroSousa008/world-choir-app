@@ -301,7 +301,7 @@ const WorldChoirHome = (() => {
   let confettiRaf = 0;
   let confettiPaint = null;
   let confettiBound = false;
-  const POST_EVENT_STATS_CACHE_KEY = 'wc_post_event_stats_v1';
+  const POST_EVENT_STATS_CACHE_KEY = 'wc_post_event_stats_v2';
 
   function readCachedPostEventStats() {
     try {
@@ -326,38 +326,62 @@ const WorldChoirHome = (() => {
     }
   }
 
+  /** Home "People Sang" = frozen at event start; never use live Map counts. */
+  function resolvePeopleSang(stats) {
+    if (!stats || typeof stats !== 'object') return null;
+    if (stats.peopleSang != null && Number.isFinite(Number(stats.peopleSang))) {
+      return Math.max(0, Math.floor(Number(stats.peopleSang)));
+    }
+    if (stats.voices != null && Number.isFinite(Number(stats.voices))) {
+      return Math.max(0, Math.floor(Number(stats.voices)));
+    }
+    return null;
+  }
+
+  function normalizePostEventStats(raw) {
+    const base = raw && typeof raw === 'object' ? { ...raw } : {};
+    const peopleSang = resolvePeopleSang(base);
+    return {
+      ...base,
+      peopleSang,
+      voices: peopleSang,
+      cities: base.cities ?? null,
+      songs: 1,
+      dailyActsCompleted: base.dailyActsCompleted ?? null,
+    };
+  }
+
   function getPostEventStatsFallback() {
     const cached = readCachedPostEventStats();
-    const map = typeof WorldChoirDB !== 'undefined'
-      ? WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id)
-      : null;
+    const normalized = normalizePostEventStats(cached || {});
     return {
-      voices: cached?.voices ?? map?.voices ?? 0,
-      cities: cached?.cities ?? map?.cities ?? 0,
+      voices: normalized.voices ?? 0,
+      peopleSang: normalized.peopleSang,
+      cities: normalized.cities ?? 0,
       songs: 1,
-      dailyActsCompleted: cached?.dailyActsCompleted ?? null,
+      dailyActsCompleted: normalized.dailyActsCompleted,
     };
   }
 
   function fetchPostEventStats() {
     if (postEventStatsPromise) return postEventStatsPromise;
-    const cached = readCachedPostEventStats();
+    const cached = normalizePostEventStats(readCachedPostEventStats() || {});
 
     postEventStatsPromise = fetch(`/api/stats?eventId=${encodeURIComponent(WorldChoirConfig.CURRENT_EVENT.id)}`, {
       credentials: 'same-origin',
     })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        postEventStats = data || cached || {};
+        postEventStats = normalizePostEventStats(data || cached || {});
         if (data) writeCachedPostEventStats(postEventStats);
         return postEventStats;
       })
       .catch(() => {
-        postEventStats = cached || {};
+        postEventStats = normalizePostEventStats(cached || {});
         return postEventStats;
       });
 
-    if (cached) {
+    if (cached.peopleSang != null || cached.voices != null) {
       postEventStatsPromise.then((fresh) => {
         if (fresh && (homeView === 'post-event' || homeView === 'post-event-complete')) {
           updatePostEventStatsUI(fresh);
@@ -1202,10 +1226,7 @@ const WorldChoirHome = (() => {
 
     window.addEventListener('wc-pledges-synced', () => {
       updateVoicesCounter();
-      if (homeView === 'post-event' || homeView === 'post-event-complete') {
-        const map = WorldChoirDB.getMapStats(WorldChoirConfig.CURRENT_EVENT.id);
-        if (map?.voices != null) updatePostEventStatsUI({ voices: map.voices });
-      }
+      // Post-event "People Sang" stays frozen at event start — do not follow live Map counts.
     });
     window.addEventListener('wc-map-aggregate-synced', updateVoicesCounter);
     window.addEventListener('wc-pledges-synced', updatePostEventHeroCopy);

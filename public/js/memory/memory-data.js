@@ -106,7 +106,9 @@ const WorldChoirMemoryData = (() => {
       ]);
 
       if (statsRes) {
-        if (statsRes.voices != null) voices = Number(statsRes.voices) || 0;
+        // Prefer frozen peopleSang (who were in by event start); live voices keep growing on Map.
+        if (statsRes.peopleSang != null) voices = Number(statsRes.peopleSang) || 0;
+        else if (statsRes.voices != null) voices = Number(statsRes.voices) || 0;
         if (statsRes.countries != null) countries = Number(statsRes.countries) || 0;
         if (statsRes.promisesMade != null) {
           promisesMade = Number(statsRes.promisesMade) || 0;
