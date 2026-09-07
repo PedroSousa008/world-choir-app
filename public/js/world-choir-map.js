@@ -541,6 +541,18 @@ const WorldChoirMap = (() => {
   let mapBootstrapped = false;
   let mapStartPromise = null;
 
+  function recenterMapAfterLayout() {
+    if (!map) return;
+    map.invalidateSize({ animate: false, pan: false });
+    // After soft-tab reveal, Leaflet often keeps a stale center from a 0-size container.
+    if (!applyUserHomeCenter({ force: true, animate: false })) {
+      const view = getInitialMapView();
+      map.setView(view.center, view.zoom, { animate: false });
+    }
+    // City lights may need a second pass once size is real.
+    refreshMapData();
+  }
+
   function onTabShow() {
     document.body.classList.add('map-page');
     // Force layout before Leaflet measures the container.
@@ -551,11 +563,10 @@ const WorldChoirMap = (() => {
 
     return ensureMapStarted().then(() => {
       requestAnimationFrame(() => {
-        map?.invalidateSize({ animate: false, pan: false });
-        setTimeout(() => map?.invalidateSize({ animate: false, pan: false }), 60);
-        setTimeout(() => map?.invalidateSize({ animate: false, pan: false }), 200);
+        recenterMapAfterLayout();
+        setTimeout(recenterMapAfterLayout, 60);
+        setTimeout(recenterMapAfterLayout, 220);
       });
-      refreshMapData();
       // Never leave the map boot skeleton on soft switches.
       const skel = document.getElementById('map-boot-skel');
       if (skel) {

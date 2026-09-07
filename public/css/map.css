@@ -553,8 +553,25 @@ body.map-page {
 
 .map-stats__loading,
 .map-stats__values {
-  display: flex;
   gap: 8px;
+}
+
+/* Soft-tab safe: must live in map.css — map.html inline styles are not adopted
+   when Map is soft-loaded into another tab host. */
+.map-stats__values {
+  display: none !important;
+}
+
+.map-stats__loading {
+  display: flex !important;
+}
+
+.map-stats--loaded .map-stats__values {
+  display: flex !important;
+}
+
+.map-stats--loaded .map-stats__loading {
+  display: none !important;
 }
 
 .map-stats--loaded .map-stats__values,
@@ -666,6 +683,31 @@ body.map-page {
 
 .map-empty.hidden {
   display: none;
+}
+
+/* Soft-tab safe empty CTA toggles (also defined inline on map.html for cold loads). */
+#map-empty {
+  display: none !important;
+}
+
+#map-empty:not(.hidden) {
+  display: block !important;
+}
+
+#map-empty-btn {
+  display: none !important;
+}
+
+#map-empty-btn:not([hidden]) {
+  display: inline-flex !important;
+}
+
+#map-empty-btn-skeleton {
+  display: none;
+}
+
+#map-empty-btn-skeleton.visible {
+  display: block;
 }
 
 .map-empty__title {
