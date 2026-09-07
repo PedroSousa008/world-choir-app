@@ -113,6 +113,22 @@
     });
   }
 
+  async function waitForLetterFonts() {
+    if (!document.fonts?.load) return;
+    try {
+      await Promise.all([
+        document.fonts.load('15px "Brittany Signature"'),
+        document.fonts.load('20px "Brittany Signature"'),
+        document.fonts.load('8px "Special Elite"'),
+        document.fonts.load('10px Caveat'),
+        document.fonts.load('400 10px Caveat'),
+      ]);
+      if (document.fonts.ready) await document.fonts.ready;
+    } catch {
+      /* proceed with fallbacks */
+    }
+  }
+
   async function init() {
     const visualRoot = document.getElementById('sws-letter-visual');
     const srRoot = document.getElementById('sws-letter-sr');
@@ -134,6 +150,10 @@
     } catch (err) {
       console.warn('Song We Sang: DB ready failed', err);
     }
+
+    // Fonts must be ready before layout — missing Special Elite/Caveat
+    // used to push the signature down and hide the underline/heart.
+    await waitForLetterFonts();
 
     const alreadyStarted = WorldChoirDB.hasStartedSongWeSangLetter();
     const reduceMotion = prefersReducedMotion();

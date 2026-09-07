@@ -164,7 +164,19 @@ const SongWeSangTypingEngine = (() => {
   }
 
   function prepareFlourishStroke(path) {
-    const len = path.getTotalLength();
+    if (!path) return 0;
+    let len = 0;
+    try {
+      len = path.getTotalLength();
+    } catch {
+      len = 0;
+    }
+    if (!Number.isFinite(len) || len <= 0) {
+      path.style.strokeDasharray = 'none';
+      path.style.strokeDashoffset = '0';
+      path.style.transition = 'none';
+      return 0;
+    }
     path.style.strokeDasharray = `${len}`;
     path.style.strokeDashoffset = `${len}`;
     path.style.transition = 'none';
@@ -192,8 +204,14 @@ const SongWeSangTypingEngine = (() => {
   function revealFlourishInstant(signatureEl) {
     const parts = attachFlourish(signatureEl);
     if (!parts) return;
-    if (parts.underline) parts.underline.style.strokeDashoffset = '0';
-    if (parts.heart) parts.heart.style.strokeDashoffset = '0';
+    if (parts.underline) {
+      parts.underline.style.strokeDasharray = 'none';
+      parts.underline.style.strokeDashoffset = '0';
+    }
+    if (parts.heart) {
+      parts.heart.style.strokeDasharray = 'none';
+      parts.heart.style.strokeDashoffset = '0';
+    }
     parts.svg.classList.add('is-drawn');
     revealStampInstant();
   }

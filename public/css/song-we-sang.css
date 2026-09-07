@@ -142,7 +142,8 @@ html.sws-page body {
   width: 100%;
   max-width: 480px;
   border-radius: 8px;
-  overflow: hidden;
+  /* Keep rounded clip on the image; do not clip signature underline/heart. */
+  overflow: visible;
   box-shadow:
     0 8px 40px rgba(0, 0, 0, 0.7),
     0 2px 8px rgba(0, 0, 0, 0.5);
@@ -279,11 +280,11 @@ html.sws-page body {
 }
 
 .sws-letter__underline {
-  stroke-width: 0.55;
+  stroke-width: 0.9;
 }
 
 .sws-letter__heart {
-  stroke-width: 0.55;
+  stroke-width: 0.9;
 }
 
 /* ── Stamp (bottom-right of paper) ── */
