@@ -577,7 +577,7 @@ const WorldChoirMap = (() => {
     updateCountdown();
     setInterval(updateCountdown, 1000);
 
-    WorldChoirDB.startMapAggregateSync({ intervalMs: 2000 });
+    WorldChoirDB.startMapAggregateSync({ intervalMs: 1500 });
 
     WorldChoirParticipation.init({
       onSuccess: onParticipationSuccess,

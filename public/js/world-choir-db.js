@@ -26,7 +26,8 @@ const WorldChoirDB = (() => {
   let lastCitySnapshot = null;
   let lastVoiceCount = null;
 
-  const LIVE_SYNC_INTERVAL_MS = 2000;
+  /** Poll often enough that new voices usually land within ~2–5s. */
+  const LIVE_SYNC_INTERVAL_MS = 1500;
   const AGGREGATE_SESSION_KEY = 'wc_map_aggregate_v1';
   const MY_PLEDGE_SESSION_KEY = 'wc_my_pledge_v1';
 
@@ -65,9 +66,11 @@ const WorldChoirDB = (() => {
   }
 
   async function apiFetch(path, options = {}) {
+    const { headers: optionHeaders, cache: optionCache, ...rest } = options;
     const res = await fetch(`${apiBase()}${path}`, {
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-      ...options,
+      ...rest,
+      headers: { 'Content-Type': 'application/json', ...(optionHeaders || {}) },
+      cache: optionCache || 'no-store',
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {

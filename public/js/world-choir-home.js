@@ -1235,7 +1235,7 @@ const WorldChoirHome = (() => {
     window.addEventListener('wc-pledge-added', updateVoicesCounter);
     window.addEventListener('wc-voices-live-update', updateVoicesCounter);
 
-    WorldChoirDB.startLiveSync({ intervalMs: 2000 });
+    WorldChoirDB.startLiveSync({ intervalMs: 1500 });
 
     LiveEventMode.init();
     render();

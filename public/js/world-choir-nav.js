@@ -421,9 +421,9 @@ const WorldChoirNav = (() => {
   const TAB_ASSETS = {
     home: [
       'index.html',
-      'css/home.css?v=20260907headline',
-      'js/world-choir-home.js?v=20260907headline',
-      'js/world-choir-db.js?v=20260906perf2',
+      'css/home.css?v=20260907voices',
+      'js/world-choir-home.js?v=20260907voices',
+      'js/world-choir-db.js?v=20260907voices',
     ],
     map: [
       'map.html',
@@ -433,7 +433,7 @@ const WorldChoirNav = (() => {
       'js/map/sponsor-bar.js?v=20260905a',
       '/api/map-sponsors',
       'js/world-choir-map-tiles.js?v=20260906mapfix2',
-      'js/world-choir-map.js?v=20260907a',
+      'js/world-choir-map.js?v=20260907voices',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
@@ -454,12 +454,12 @@ const WorldChoirNav = (() => {
     ],
     profile: [
       'profile.html',
-      'css/profile.css?v=20260906boot',
-      'js/profile/profile-page.js?v=20260907wchainbtn',
+      'css/profile.css?v=20260907voices',
+      'js/profile/profile-page.js?v=20260907voices',
       'js/profile/daily-acts-peace.js?v=20260906perf',
       'js/profile/daily-acts-button.js?v=20260810i',
       'js/world-choir-onboarding.js?v=20260816a',
-      'js/world-choir-db.js?v=20260906perf2',
+      'js/world-choir-db.js?v=20260907voices',
       'passport.html',
       'css/passport.css?v=20260902q',
       'js/profile/passport-route.js?v=20260901b',

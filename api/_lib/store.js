@@ -609,13 +609,13 @@ async function getPledgesMeta(eventId) {
       return cacheSet(cacheKey, {
         count: index.count,
         updated_at: index.updated_at || null,
-      }, 1500);
+      }, 400);
     }
     if (Array.isArray(index?.pledges)) {
       return cacheSet(cacheKey, {
         count: index.pledges.length,
         updated_at: index.updated_at || null,
-      }, 1500);
+      }, 400);
     }
   } catch (err) {
     if (isBlobUnavailable(err)) throw wrapBlobError(err);
@@ -624,7 +624,7 @@ async function getPledgesMeta(eventId) {
   return cacheSet(cacheKey, {
     count: pledges.length,
     updated_at: new Date().toISOString(),
-  }, 1500);
+  }, 400);
 }
 
 /**
@@ -707,7 +707,7 @@ async function getMapAggregate(eventId) {
     },
     stats,
     cities,
-  }, 2000);
+  }, 500);
 }
 
 async function listAllUsers() {

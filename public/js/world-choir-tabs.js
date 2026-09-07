@@ -11,7 +11,7 @@ const WorldChoirTabs = (() => {
       href: 'index.html',
       title: 'World Choir',
       css: [
-        'css/home.css?v=20260907headline',
+        'css/home.css?v=20260907voices',
         'css/privacy-consent.css?v=20260905a',
         'css/profile.css?v=20270706b',
         'css/daily-peace.css?v=20260810e',
@@ -28,7 +28,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
         'js/profile/daily-acts-peace.js?v=20260906perf',
-        'js/world-choir-home.js?v=20260907headline',
+        'js/world-choir-home.js?v=20260907voices',
       ],
       selectors: [
         '#earth-canvas',
@@ -67,7 +67,7 @@ const WorldChoirTabs = (() => {
         'js/map/sponsor-constants.js?v=20260902k',
         'js/map/sponsor-data.js?v=20260902a',
         'js/map/sponsor-bar.js?v=20260905a',
-        'js/world-choir-map.js?v=20260906tabs',
+        'js/world-choir-map.js?v=20260907voices',
       ],
       selectors: ['.map-page__stars', '#map-shell', '#voice-joined'],
       bodySelectors: ['#participation-overlay'],
@@ -101,7 +101,7 @@ const WorldChoirTabs = (() => {
       href: 'profile.html',
       title: 'World Choir — Profile',
       css: [
-        'css/profile.css?v=20260906boot',
+        'css/profile.css?v=20260907voices',
         'css/privacy-consent.css?v=20260905a',
         'css/world-choir-onboarding.css?v=20260816a',
         'css/daily-peace.css?v=20260810e',
@@ -127,7 +127,7 @@ const WorldChoirTabs = (() => {
         'js/profile/daily-acts-peace.js?v=20260906perf',
         'js/profile/daily-acts-button.js?v=20260810i',
         'js/profile/owner-access.js?v=20270810c',
-        'js/profile/profile-page.js?v=20260907wchainbtn',
+        'js/profile/profile-page.js?v=20260907voices',
       ],
       selectors: [
         '.ambient-bg',

@@ -21,15 +21,15 @@ module.exports = async function handler(req, res) {
     const eventId = req.query.eventId || 'world-choir-2027';
 
     if (req.query.meta === '1') {
-      // Short CDN/browser cache — clients poll every 2s and revalidate via signature.
-      res.setHeader('Cache-Control', 'public, max-age=1, s-maxage=2, stale-while-revalidate=5');
+      // Live voices counter — never CDN-cache; clients poll ~every 1.5–2s.
+      res.setHeader('Cache-Control', 'no-store');
       const meta = await getPledgesMeta(eventId);
       return res.status(200).json(meta);
     }
 
     // Map aggregate — mirrors client getMapStats/getAggregatedCities over /api/pledges.
     if (req.query.aggregate === '1') {
-      res.setHeader('Cache-Control', 'public, max-age=1, s-maxage=2, stale-while-revalidate=5');
+      res.setHeader('Cache-Control', 'no-store');
       const aggregate = await getMapAggregate(eventId);
       return res.status(200).json(aggregate);
     }
