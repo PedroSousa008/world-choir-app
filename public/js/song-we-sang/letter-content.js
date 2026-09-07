@@ -14,8 +14,8 @@
  */
 const SongWeSangLetterContent = (() => {
 
-  /** Milliseconds between each revealed character. Tune later. */
-  const LETTER_CHARACTER_INTERVAL_MS = 90;
+  /** Milliseconds between each revealed character (~21 letters/sec). */
+  const LETTER_CHARACTER_INTERVAL_MS = 48;
 
   /** Back-compat alias */
   const TYPE_INTERVAL = LETTER_CHARACTER_INTERVAL_MS;
