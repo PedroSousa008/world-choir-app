@@ -192,34 +192,34 @@ html.sws-page body {
 
 /* 2. Main body paragraphs — Special Elite 15px */
 .sws-letter__p {
-  margin: 0 0 0.75em;
+  margin: 0 0 0.55em;
   padding: 0;
   font-family: 'Special Elite', 'Courier New', monospace;
   font-size: 8px;
   font-weight: 400;
-  line-height: 1.65;
+  line-height: 1.55;
   color: #2a1f0e;
 }
 
 /* 3. Short standalone lines (Different countries. etc.) — same as body */
 .sws-letter__line {
-  margin: 0 0 0.2em;
+  margin: 0 0 0.15em;
   padding: 0;
   font-family: 'Special Elite', 'Courier New', monospace;
   font-size: 8px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.45;
   color: #2a1f0e;
 }
 
 /* 4. Emphasis / bold phrases */
 .sws-letter__emphasis {
-  margin: 0.6em 0;
+  margin: 0.4em 0;
   padding: 0;
   font-family: 'Special Elite', 'Courier New', monospace;
   font-size: 8px;
   font-weight: 400;   /* Special Elite has no bold; italic adds weight */
-  line-height: 1.65;
+  line-height: 1.55;
   color: #1a110a;
 }
 
