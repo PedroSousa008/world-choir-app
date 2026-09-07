@@ -980,17 +980,8 @@ const WorldChoirMemory = (() => {
     void hydrate();
   }
 
-  function onTabShow() {
-    /* Memory keeps hydrating in the background while hidden. */
-  }
-
   function init() {
     if (typeof WorldChoirNav !== 'undefined' && !WorldChoirNav.guardMemoryRoute()) return;
-    if (window.__WC_MEMORY_BOOTSTRAPPED) {
-      onTabShow();
-      return;
-    }
-    window.__WC_MEMORY_BOOTSTRAPPED = true;
     if (typeof WorldChoirNav !== 'undefined') WorldChoirNav.startWatcher('memory');
     // Paint immediately — never wait on DB / network before first Memory UI.
     paintShell();
@@ -1000,5 +991,5 @@ const WorldChoirMemory = (() => {
     void (typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.ready() : Promise.resolve());
   }
 
-  return { init, onTabShow, render };
+  return { init, render };
 })();

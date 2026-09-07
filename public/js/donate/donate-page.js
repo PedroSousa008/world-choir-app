@@ -2132,41 +2132,7 @@ const WorldChoirDonate = (() => {
     return false;
   }
 
-  let donateBootstrapped = false;
-
-  function onTabShow() {
-    if (typeof CreatorFoundationsStore === 'undefined') {
-      return Promise.reject(new Error('CreatorFoundationsStore missing'));
-    }
-    const content = document.getElementById('donate-content');
-    if (!content) return Promise.reject(new Error('Donate content missing'));
-
-    const hasCards = () => !!(content.querySelector(
-      'button[aria-label], [role="listitem"], .df-card, [data-foundation-id], #df-foundations-mount'
-    ));
-
-    // Always ensure chrome exists before reveal (never blank donate).
-    if (!content.innerHTML.trim()) {
-      try { renderHomeShell(); } catch { /* ignore */ }
-    }
-
-    if (hasCards() && CreatorFoundationsStore.isReady?.()) {
-      try { renderHome(); } catch { /* ignore */ }
-      return Promise.resolve();
-    }
-
-    return CreatorFoundationsStore.ready().then(() => {
-      try { renderHome(); } catch (err) { console.warn('[Donate] onTabShow render failed', err); }
-      if (!content.innerHTML.trim()) renderHomeShell();
-    });
-  }
-
   async function init() {
-    if (donateBootstrapped) {
-      await onTabShow();
-      return;
-    }
-    donateBootstrapped = true;
     WorldChoirNav.startWatcher('donate');
     ensureModal();
     document.addEventListener('keydown', (e) => {
@@ -2212,5 +2178,5 @@ const WorldChoirDonate = (() => {
     }
   }
 
-  return { init, onTabShow };
+  return { init };
 })();

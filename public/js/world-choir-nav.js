@@ -256,65 +256,8 @@ const WorldChoirNav = (() => {
     }, 0);
   }
 
-  function setActivePage(pageId, { animate = true } = {}) {
-    if (!pageId) return;
-    const target = getNavItem(pageId);
-    currentActivePage = pageId;
-    setActiveClasses(pageId);
-    if (target) {
-      setNavDuration(transitionDurationMs());
-      placeIndicatorOnItem(target, {
-        animate: !!animate && !prefersReducedMotion(),
-        visible: true,
-      });
-    }
-  }
-
-  function pageIdFromPathname(pathname) {
-    const file = (pathname || window.location.pathname || '').split('/').pop() || '';
-    if (!file || file === 'index.html' || file === '') return 'home';
-    const hit = ALL_PAGES.find((p) => p.href === file);
-    return hit?.id || null;
-  }
-
-  /** Soft-switch primary tabs when the keep-alive host is available; else full navigation. */
-  function navigateToPrimaryTab(pageId, { animate = true } = {}) {
-    const page = ALL_PAGES.find((p) => p.id === pageId);
-    if (!page) return false;
-
-    if (page.requiresMemory && !WorldChoirConfig.isMemoryUnlocked()) {
-      return navigateToPrimaryTab('home', { animate });
-    }
-
-    const tabs = typeof WorldChoirTabs !== 'undefined' ? WorldChoirTabs : null;
-    if (tabs?.isPrimary?.(pageId)) {
-      if (!tabs.isHosted()) {
-        const entry = tabs.getActive?.() || currentActivePage || pageIdFromPathname() || pageId;
-        if (tabs.isPrimary(entry)) tabs.attach(entry);
-      }
-      if (tabs.isHosted()) {
-        clearPendingNavigation();
-        clearStoredTransition();
-        document.documentElement.classList.remove('wc-nav-handoff');
-        setActivePage(pageId, { animate });
-        void tabs.switchTo(pageId, { updateHistory: true });
-        return true;
-      }
-    }
-
-    window.location.href = page.href;
-    return true;
-  }
-
   function activateTab(pageId, href, { navigate } = { navigate: true }) {
     if (!pageId) return;
-
-    // Memory stays gated until the live event is completed.
-    if (pageId === 'memory' && !WorldChoirConfig.isMemoryUnlocked()) {
-      pageId = 'home';
-      href = 'index.html';
-    }
-
     const target = getNavItem(pageId);
     if (!target) {
       if (navigate && href) window.location.href = href;
@@ -342,35 +285,14 @@ const WorldChoirNav = (() => {
       fromPage !== pageId &&
       (!!fromItem || redirecting || indicatorEl?.classList.contains('is-visible'));
 
+    currentActivePage = pageId;
+
     if (!navigate || !href) {
-      currentActivePage = pageId;
       setNavDuration(NAV_TRANSITION_MS);
       setActiveClasses(pageId);
       placeIndicatorOnItem(target, { animate: shouldAnimate, visible: true });
       return;
     }
-
-    // Soft keep-alive switch — same destination UI, no full reload.
-    const tabs = typeof WorldChoirTabs !== 'undefined' ? WorldChoirTabs : null;
-    if (tabs?.isPrimary?.(pageId)) {
-      if (!tabs.isHosted()) {
-        const entry = tabs.getActive?.() || fromPage || currentActivePage || pageId;
-        if (tabs.isPrimary(entry)) tabs.attach(entry);
-      }
-      if (tabs.isHosted()) {
-        clearPendingNavigation();
-        clearStoredTransition();
-        document.documentElement.classList.remove('wc-nav-handoff');
-        currentActivePage = pageId;
-        setNavDuration(NAV_TRANSITION_MS);
-        setActiveClasses(pageId);
-        placeIndicatorOnItem(target, { animate: shouldAnimate, visible: true });
-        void tabs.switchTo(pageId, { updateHistory: true });
-        return;
-      }
-    }
-
-    currentActivePage = pageId;
 
     if (!shouldAnimate) {
       clearStoredTransition();
@@ -500,7 +422,7 @@ const WorldChoirNav = (() => {
     home: [
       'index.html',
       'css/home.css?v=20260907voices',
-      'js/world-choir-home.js?v=20260907tabs',
+      'js/world-choir-home.js?v=20260907voices',
       'js/world-choir-db.js?v=20260907voices',
     ],
     map: [
@@ -511,7 +433,7 @@ const WorldChoirNav = (() => {
       'js/map/sponsor-bar.js?v=20260905a',
       '/api/map-sponsors',
       'js/world-choir-map-tiles.js?v=20260906mapfix2',
-      'js/world-choir-map.js?v=20260907tabsfix',
+      'js/world-choir-map.js?v=20260907voices',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
@@ -522,18 +444,18 @@ const WorldChoirNav = (() => {
     donate: [
       'donate.html',
       'css/foundation-public-card.css?v=20260904cd',
-      'css/donate.css?v=20260906donate',
+      'css/donate.css?v=20260907space',
       'js/donate/creator-foundations-store.js?v=20260907fee65',
       'js/donate/donation-flow.js?v=20260831a',
       'js/foundation-public-card.js?v=20260904cb',
-      'js/donate/donate-page.js?v=20260907tabsfix',
+      'js/donate/donate-page.js?v=20260907fee65',
       '/api/creator-foundations',
       '/api/donations?action=config',
     ],
     profile: [
       'profile.html',
       'css/profile.css?v=20260907voices',
-      'js/profile/profile-page.js?v=20260907tabsfix',
+      'js/profile/profile-page.js?v=20260907voices',
       'js/profile/daily-acts-peace.js?v=20260906perf',
       'js/profile/daily-acts-button.js?v=20260810i',
       'js/world-choir-onboarding.js?v=20260816a',
@@ -564,7 +486,7 @@ const WorldChoirNav = (() => {
       'js/world-choir-flags.js?v=20260902n',
       'js/memory/memory-data.js?v=20260907wchain',
       'js/memory/memory-feed.js?v=20260904bt',
-      'js/memory/memory-page.js?v=20260907tabs',
+      'js/memory/memory-page.js?v=20260907wchain',
       'js/profile/passport-stamps.js?v=20260902a',
       'js/profile/world-choir-passport.js?v=20260902q',
     ],
@@ -698,19 +620,9 @@ const WorldChoirNav = (() => {
   }
 
   function startWatcher(activePage) {
-    // Background soft-tab preload must not steal the nav chrome.
-    if (window.__WC_TAB_SILENT_INIT) return;
-
     let wasUnlocked = WorldChoirConfig.isMemoryUnlocked();
     mount(activePage);
     prefetchTabs(activePage);
-
-    if (
-      typeof WorldChoirTabs !== 'undefined' &&
-      WorldChoirTabs.isPrimary?.(activePage)
-    ) {
-      WorldChoirTabs.attach(activePage);
-    }
 
     if (watchInterval) clearInterval(watchInterval);
     watchInterval = setInterval(() => {
@@ -720,25 +632,13 @@ const WorldChoirNav = (() => {
       const unlocked = WorldChoirConfig.isMemoryUnlocked();
       if (unlocked !== wasUnlocked) {
         wasUnlocked = unlocked;
-        mount(currentActivePage || activePage);
-        if (unlocked && typeof WorldChoirTabs !== 'undefined') {
-          WorldChoirTabs.preloadMemoryIfUnlocked?.();
-        }
+        mount(activePage);
       }
     }, 1000);
   }
 
   function guardMemoryRoute() {
     if (!WorldChoirConfig.isMemoryUnlocked()) {
-      if (
-        typeof WorldChoirTabs !== 'undefined' &&
-        WorldChoirTabs.isHosted?.() &&
-        WorldChoirTabs.isPrimary?.('home')
-      ) {
-        void WorldChoirTabs.switchTo('home', { updateHistory: true });
-        setActivePage('home', { animate: false });
-        return false;
-      }
       window.location.replace('index.html');
       return false;
     }
@@ -752,8 +652,6 @@ const WorldChoirNav = (() => {
     guardMemoryRoute,
     getVisiblePages,
     prefetchTabs,
-    setActivePage,
-    navigateToPrimaryTab,
     getNavIconSvg: (key) => NAV_ICON_SVGS[key] || '',
     getNavGlyph: (pageId) => {
       const page = ALL_PAGES.find((p) => p.id === pageId);

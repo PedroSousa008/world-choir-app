@@ -143,11 +143,11 @@
 /* ─── Intro ─── */
 
 .df-intro {
-  margin-bottom: 26px;
+  margin-bottom: 10px;
   max-width: none;
   position: relative;
   overflow: hidden;
-  padding-bottom: 8px;
+  padding-bottom: 0;
 }
 
 .df-intro__text {
@@ -202,7 +202,7 @@
 }
 
 .df-intro__title {
-  margin: 0 0 10px;
+  margin: 0;
   font-family: var(--font-sans);
   font-size: clamp(1.45rem, 5.5vw, 1.75rem);
   font-weight: 600;
@@ -241,7 +241,7 @@
 /* ─── Post-event total donated ─── */
 
 .df-total-donated {
-  margin: 4px 0 28px;
+  margin: 4px 0 14px;
   padding: 22px 18px 26px;
   text-align: center;
   border: 1px solid var(--df-line);
