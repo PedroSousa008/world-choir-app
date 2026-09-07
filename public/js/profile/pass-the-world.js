@@ -501,8 +501,8 @@ const PassTheWorld = (() => {
   }
 
   function itineraryPageSize() {
-    if (typeof window === 'undefined' || !window.matchMedia) return 8;
-    return window.matchMedia('(min-width: 900px)').matches ? 12 : 8;
+    if (typeof window === 'undefined' || !window.matchMedia) return 7;
+    return window.matchMedia('(min-width: 900px)').matches ? 12 : 7;
   }
 
   /** Newest destinations first (highest day / latest arrival). */
