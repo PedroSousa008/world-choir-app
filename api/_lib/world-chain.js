@@ -31,9 +31,9 @@ const Status = {
   EXPIRED: 'EXPIRED',
 };
 
-/** Temporary test: Chain #2 starts with Voice #5 (Portugal) → Hvar, Croatia (1 connection). */
+/** Temporary test: disabled — Voice #5 is selected randomly like every other Voice. */
 const TEST_FORCE_STARTER = {
-  enabled: true,
+  enabled: false,
   dailyChainNumber: 2,
   startCountry: 'Portugal',
   voiceNumber: 5,
@@ -44,8 +44,10 @@ const TEST_FORCE_STARTER = {
 };
 
 /** Bump when generation rules change so the day regenerates. */
-const CHAIN_STORAGE_VERSION = 'v7';
-const CHAIN_ENGINE = 'cycle-14utc-v7';
+const CHAIN_STORAGE_VERSION = 'v8';
+const CHAIN_ENGINE = 'global-number-v8';
+/** First published daily set used #1–#5; continuous numbering continues after that. */
+const CHAIN_NUMBER_FLOOR = 5;
 
 /**
  * World Chain day: [14:00 UTC, next 14:00 UTC).
@@ -105,6 +107,10 @@ function archiveIndexPath(eventId) {
 
 function archiveChainPath(eventId, chainId) {
   return `${archiveRoot(eventId)}/chains/${encodeURIComponent(chainId)}.json`;
+}
+
+function chainCounterPath(eventId) {
+  return `wc-data/world-chain/meta/${encodeURIComponent(eventId)}/chain-number.json`;
 }
 
 function normalizeCountry(value) {
@@ -728,6 +734,49 @@ async function archiveCompletedChain(chain) {
   }, { overwrite: true });
 }
 
+async function discoverMaxChainNumber(eventId) {
+  let max = 0;
+  const index = await readArchiveIndex(eventId);
+  for (const id of index?.chainIds || []) {
+    const chain = await readArchivedChain(eventId, id);
+    const n = Number(chain?.dailyChainNumber) || 0;
+    if (n > max) max = n;
+  }
+  return max;
+}
+
+/**
+ * Globally increasing World Chain numbers (never reset each day).
+ * Returns `count` consecutive numbers and advances the persistent counter.
+ */
+async function allocateGlobalChainNumbers(eventId, count) {
+  assertBlobConfigured();
+  const n = Math.max(0, Number(count) || 0);
+  if (n <= 0) return [];
+
+  const path = chainCounterPath(eventId);
+  let stored = null;
+  try {
+    stored = await readBlobJson(path);
+  } catch {
+    stored = null;
+  }
+
+  let next = Number(stored?.nextNumber);
+  if (!Number.isFinite(next) || next < 1) {
+    const discovered = await discoverMaxChainNumber(eventId);
+    next = Math.max(discovered, CHAIN_NUMBER_FLOOR) + 1;
+  }
+
+  const numbers = Array.from({ length: n }, (_, i) => next + i);
+  await writeJson(path, {
+    eventId,
+    nextNumber: next + n,
+    updatedAt: new Date().toISOString(),
+  }, { overwrite: true });
+  return numbers;
+}
+
 async function generateDailyChains(eventId, day, now = new Date()) {
   assertBlobConfigured();
   const nowMs = now.getTime();
@@ -764,7 +813,7 @@ async function generateDailyChains(eventId, day, now = new Date()) {
   const usedStartCountries = new Set();
   const otherChains = [];
 
-  // --- Design chain (Voice #5): Chain #2 = Portugal → Hvar, Croatia (1 connection) ---
+  // Optional design chain (disabled in production — all starters chosen randomly).
   const forcedStarter = resolveForcedStarter(byVoice);
   let designChain = null;
   if (forcedStarter) {
@@ -775,7 +824,7 @@ async function generateDailyChains(eventId, day, now = new Date()) {
     }
   }
 
-  // --- Remaining chains: randomly select a starting Voice, then build route from their country ---
+  // Random starting Voices + varied route lengths/countries.
   let attempt = 0;
   const maxAttempts = DAILY_CHAIN_COUNT * 12;
   const targetOthers = designChain ? DAILY_CHAIN_COUNT - 1 : DAILY_CHAIN_COUNT;
@@ -843,10 +892,9 @@ async function generateDailyChains(eventId, day, now = new Date()) {
   }
 
   const chains = placeDesignChain(otherChains, designChain);
-
-  // Ensure numbers are #1 … #N in display order (design chain locked to its slot).
+  const globalNumbers = await allocateGlobalChainNumbers(eventId, chains.length);
   chains.forEach((chain, idx) => {
-    chain.dailyChainNumber = idx + 1;
+    chain.dailyChainNumber = globalNumbers[idx] || (idx + 1);
   });
 
   for (const chain of chains) {
@@ -899,18 +947,7 @@ function isValidTestDay(manifest, chains, bounds) {
   if (manifest.engine !== CHAIN_ENGINE) return false;
   if (chains.length < DAILY_CHAIN_COUNT) return false;
   if (bounds && !chainsAlignToCycle(chains, bounds)) return false;
-  if (!TEST_FORCE_STARTER.enabled) return true;
-  const targetNum = Number(TEST_FORCE_STARTER.dailyChainNumber) || 2;
-  const design = [...chains].find((c) => Number(c.dailyChainNumber) === targetNum);
-  if (!design) return false;
-  const startCountry = design.route?.[0]?.country;
-  const final = design.route?.[design.route.length - 1];
-  const voice = Number(design.startingVoiceNumber);
-  return voice === Number(TEST_FORCE_STARTER.voiceNumber)
-    && countriesEqual(startCountry, TEST_FORCE_STARTER.startCountry)
-    && countriesEqual(final?.country, TEST_FORCE_STARTER.destinationCountry)
-    && citiesEqual(final?.requiredCity, TEST_FORCE_STARTER.destinationCity)
-    && design.route.length === 2;
+  return true;
 }
 
 async function ensureDailyChains(eventId = DEFAULT_EVENT_ID, now = new Date()) {

@@ -3,9 +3,9 @@
  * Matches World Choir Home visual system; consumes /api/world-chain.
  */
 const WorldChainPage = (() => {
-  const TODAY_CACHE_KEY = 'wc_world_chain_today_v2';
-  const CHAIN_CACHE_PREFIX = 'wc_world_chain_one_v2:';
-  const COMPLETED_CACHE_KEY = 'wc_world_chain_completed_v2';
+  const TODAY_CACHE_KEY = 'wc_world_chain_today_v3';
+  const CHAIN_CACHE_PREFIX = 'wc_world_chain_one_v3:';
+  const COMPLETED_CACHE_KEY = 'wc_world_chain_completed_v3';
   const PHOTO_BOOK_PENDING_KEY = 'wc_photo_book_pending_v1';
   const PHOTO_BOOK_CACHE_PREFIX = 'wc_photo_book_list_v1:';
   const PHOTO_BOOK_MAX_CHARS = 80;
