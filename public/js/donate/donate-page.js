@@ -2135,7 +2135,12 @@ const WorldChoirDonate = (() => {
   let donateBootstrapped = false;
 
   function onTabShow() {
-    /* Foundations already live in the keep-alive panel. */
+    const content = document.getElementById('donate-content');
+    if (content && !content.innerHTML.trim() && typeof CreatorFoundationsStore !== 'undefined') {
+      void CreatorFoundationsStore.ready().then(() => {
+        try { renderHome(); } catch (err) { console.warn('[Donate] onTabShow render failed', err); }
+      });
+    }
   }
 
   async function init() {
@@ -2162,7 +2167,10 @@ const WorldChoirDonate = (() => {
     }
 
     try {
-      await CreatorFoundationsStore.ready();
+      await Promise.race([
+        CreatorFoundationsStore.ready(),
+        new Promise((resolve) => setTimeout(resolve, 4000)),
+      ]);
       applyDeepLinkCause();
       const hasResumeQuery = (() => {
         try {

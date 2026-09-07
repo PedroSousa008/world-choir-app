@@ -166,6 +166,11 @@ const ProfilePage = (() => {
 
   function onTabShow() {
     updateVoicesCounter();
+    if (!profileReady) {
+      try { revealProfile(); } catch { /* ignore */ }
+    } else {
+      try { refresh(); } catch { /* ignore */ }
+    }
   }
 
   function init() {

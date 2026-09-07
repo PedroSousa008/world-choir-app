@@ -69,7 +69,7 @@ const WorldChoirTabs = (() => {
         'js/map/sponsor-constants.js?v=20260902k',
         'js/map/sponsor-data.js?v=20260902a',
         'js/map/sponsor-bar.js?v=20260905a',
-        'js/world-choir-map.js?v=20260907tabs2',
+        'js/world-choir-map.js?v=20260907tabs3',
       ],
       selectors: ['.map-page__stars', '#map-shell', '#voice-joined'],
       bodySelectors: ['#participation-overlay'],
@@ -92,7 +92,7 @@ const WorldChoirTabs = (() => {
         'js/donate/creator-foundations-store.js?v=20260907fee65',
         'js/donate/donation-flow.js?v=20260831a',
         'js/foundation-public-card.js?v=20260904cb',
-        'js/donate/donate-page.js?v=20260907tabs',
+        'js/donate/donate-page.js?v=20260907tabs3',
       ],
       selectors: ['.ambient-bg', '#donate-page'],
       init: () => window.WorldChoirDonate?.init?.(),
@@ -128,7 +128,7 @@ const WorldChoirTabs = (() => {
         'js/profile/daily-acts-peace.js?v=20260906perf',
         'js/profile/daily-acts-button.js?v=20260810i',
         'js/profile/owner-access.js?v=20270810c',
-        'js/profile/profile-page.js?v=20260907tabs',
+        'js/profile/profile-page.js?v=20260907tabs3',
       ],
       selectors: [
         '.ambient-bg',
@@ -514,7 +514,7 @@ const WorldChoirTabs = (() => {
       return true;
     }
 
-    // Keep current tab visible until destination is ready (no blank frame).
+    // Keep current tab visible until destination panel shell is ready.
     try {
       await loadPanel(id);
     } catch (err) {
@@ -525,7 +525,22 @@ const WorldChoirTabs = (() => {
 
     if (gen !== switchGen) return false;
 
-    await reveal(id);
+    // Reveal immediately, then finish tab-specific show work (e.g. Map Leaflet).
+    activeId = id;
+    applyPanelVisibility(id);
+    applyBodyMode(id);
+    syncTitle(id);
+    const showWork = Promise.resolve(PRIMARY[id]?.onShow?.());
+    // Map can take a beat on first paint — don't leave the user on a blank gate;
+    // await briefly so stats/markers land, but cap wait so nav never hangs.
+    if (id === 'map') {
+      await Promise.race([
+        showWork,
+        new Promise((resolve) => setTimeout(resolve, 4000)),
+      ]);
+    } else {
+      await showWork;
+    }
 
     if (updateHistory) {
       const url = PRIMARY[id].href + (window.location.search || '');

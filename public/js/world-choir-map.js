@@ -544,37 +544,67 @@ const WorldChoirMap = (() => {
   function onTabShow() {
     document.body.classList.add('map-page');
     if (!mapBootstrapped || !map) {
-      return ensureMapStarted();
+      return ensureMapStarted().then(() => {
+        WorldChoirMap.refreshMapData?.();
+        void checkVoiceJoinedFromSession();
+      });
     }
     requestAnimationFrame(() => {
       map.invalidateSize({ animate: false, pan: false });
       setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 60);
       setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 200);
     });
+    refreshMapData();
     void checkVoiceJoinedFromSession();
     return Promise.resolve();
   }
 
   function init() {
-    if (mapBootstrapped || mapStartPromise) {
+    if (mapBootstrapped) {
       if (!window.__WC_TAB_SILENT_INIT) onTabShow();
-      return mapStartPromise || Promise.resolve();
-    }
-    // Hidden soft-tab preload: mount shell only. Leaflet needs a visible sized
-    // container — full map start runs on first real reveal via onTabShow.
-    if (window.__WC_TAB_SILENT_INIT) {
       return Promise.resolve();
     }
+    if (mapStartPromise) return mapStartPromise;
+
+    // Soft-tab preload: mount Leaflet in a temporary off-screen visible box so
+    // the map is fully ready before the first user tap (Leaflet needs layout).
+    if (window.__WC_TAB_SILENT_INIT) {
+      const panel = document.querySelector('.wc-tab-panel[data-wc-tab="map"]');
+      const prev = panel ? panel.getAttribute('style') : null;
+      if (panel) {
+        panel.style.display = 'block';
+        panel.style.visibility = 'hidden';
+        panel.style.position = 'fixed';
+        panel.style.inset = '0';
+        panel.style.pointerEvents = 'none';
+        panel.style.zIndex = '-1';
+      }
+      return ensureMapStarted()
+        .catch((err) => {
+          console.warn('[WorldChoirMap] silent preload failed', err);
+        })
+        .finally(() => {
+          if (!panel) return;
+          if (prev == null) panel.removeAttribute('style');
+          else panel.setAttribute('style', prev);
+          panel.classList.remove('is-active');
+          panel.setAttribute('aria-hidden', 'true');
+        });
+    }
+
     return ensureMapStarted();
   }
 
   function ensureMapStarted() {
-    if (mapBootstrapped) return Promise.resolve();
+    if (mapBootstrapped && map) return Promise.resolve();
     if (mapStartPromise) return mapStartPromise;
     mapStartPromise = (async () => {
-      mapBootstrapped = true;
+      const silent = !!window.__WC_TAB_SILENT_INIT;
+      if (!silent) document.body.classList.add('map-page');
       WorldChoirMapTiles.warmBasemap?.();
-      await startMap();
+      await startMap({ silent });
+      mapBootstrapped = true;
+      if (!silent) refreshMapData();
     })().catch((err) => {
       mapBootstrapped = false;
       mapStartPromise = null;
@@ -583,8 +613,8 @@ const WorldChoirMap = (() => {
     return mapStartPromise;
   }
 
-  async function startMap() {
-    document.body.classList.add('map-page');
+  async function startMap({ silent = false } = {}) {
+    if (!silent) document.body.classList.add('map-page');
     WorldChoirNav.startWatcher('map');
 
     const clearBootSkel = () => {
@@ -603,9 +633,12 @@ const WorldChoirMap = (() => {
     if (typeof MapSponsorData !== 'undefined') MapSponsorData.prefetch?.();
 
     const sponsorInit = (typeof MapSponsorBar !== 'undefined')
-      ? MapSponsorBar.init().catch((err) => {
-        console.warn('Map sponsor bar failed to initialize:', err);
-      })
+      ? Promise.race([
+        MapSponsorBar.init().catch((err) => {
+          console.warn('Map sponsor bar failed to initialize:', err);
+        }),
+        new Promise((resolve) => setTimeout(resolve, 2500)),
+      ])
       : Promise.resolve();
 
     initMap();
@@ -671,6 +704,9 @@ const WorldChoirMap = (() => {
     });
 
     checkVoiceJoinedFromSession();
+    if (silent) {
+      document.body.classList.remove('map-page');
+    }
   }
 
   return { init, onTabShow, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
