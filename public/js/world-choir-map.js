@@ -577,11 +577,13 @@ const WorldChoirMap = (() => {
 
   function ensureMapStarted() {
     if (map && mapBootstrapped) return Promise.resolve();
-    // Drop a stale resolved promise from a failed prior attempt.
-    if (mapStartPromise && !(map && mapBootstrapped)) {
-      /* keep in-flight promise only — handled below */
+    // Reuse only an in-flight start; never reuse a settled promise without a live map.
+    if (mapStartPromise && !map) {
+      // If previous attempt finished without a map, mapStartPromise was cleared in catch.
+      // If still in flight, reuse it.
+      return mapStartPromise;
     }
-    if (mapStartPromise) return mapStartPromise;
+    if (map && mapBootstrapped) return Promise.resolve();
     mapStartPromise = (async () => {
       document.body.classList.add('map-page');
       WorldChoirMapTiles.warmBasemap?.();
@@ -589,9 +591,7 @@ const WorldChoirMap = (() => {
       if (!map) throw new Error('Map failed to create Leaflet instance');
       mapBootstrapped = true;
       refreshMapData();
-    })().then(() => {
-      /* keep mapStartPromise for reuse while healthy */
-    }).catch((err) => {
+    })().catch((err) => {
       mapBootstrapped = false;
       mapStartPromise = null;
       throw err;
