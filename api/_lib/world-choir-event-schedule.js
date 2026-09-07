@@ -16,7 +16,7 @@ const DEFAULT_EVENT_ID = 'world-choir-2027';
 const TEST_TIMEZONE = 'Europe/Lisbon';
 
 /** Set true only while running end-to-end event tests. */
-const TEMP_EVENT_TEST_OVERRIDE_ENABLED = false;
+const TEMP_EVENT_TEST_OVERRIDE_ENABLED = true;
 
 function getLisbonOffsetMinutes(now = new Date()) {
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -44,10 +44,11 @@ function getLisbonLocalDateParts(now = new Date()) {
 }
 
 /**
- * TEMP test start (unused while TEMP_EVENT_TEST_OVERRIDE_ENABLED is false).
- * Official schedule is 2027-09-21T16:00:00.000Z.
+ * TEMP test start (Preview Round).
+ * Pre-event video starts 5 minutes earlier (14:40 UTC).
+ * Official schedule remains 2027-09-21T16:00:00.000Z — turn override off after testing.
  */
-const TEST_EVENT_START_UTC = '2026-09-03T22:00:00.000Z';
+const TEST_EVENT_START_UTC = '2026-09-07T14:45:00.000Z';
 
 function getTestEventStartUtc() {
   return TEST_EVENT_START_UTC;
