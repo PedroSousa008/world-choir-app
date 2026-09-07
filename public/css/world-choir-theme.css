@@ -380,6 +380,42 @@ body {
   max-width: none;
 }
 
+/* Keep-alive soft tab host — primary tabs stay mounted; switches only reveal. */
+html.wc-tab-shell,
+body.wc-tab-shell {
+  height: 100%;
+}
+
+body.wc-tab-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+#wc-tab-host.wc-tab-host {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+.wc-tab-panel {
+  display: none;
+  width: 100%;
+  min-height: 100%;
+}
+
+.wc-tab-panel.is-active {
+  display: block;
+}
+
+body.wc-tab-shell.map-page #wc-tab-host.wc-tab-host,
+body.wc-tab-shell.map-page .wc-tab-panel.is-active {
+  height: 100%;
+  min-height: 100%;
+}
+
 /* Bottom navigation */
 .bottom-nav {
   --nav-indicator-duration: 200ms;

@@ -162,7 +162,18 @@ const ProfilePage = (() => {
     return true;
   }
 
+  let profileBootstrapped = false;
+
+  function onTabShow() {
+    updateVoicesCounter();
+  }
+
   function init() {
+    if (profileBootstrapped) {
+      onTabShow();
+      return;
+    }
+    profileBootstrapped = true;
     ChangeLocationModal.init();
     PracticeMode.init();
     DailyActsPeace.init();
@@ -217,5 +228,5 @@ const ProfilePage = (() => {
       });
   }
 
-  return { init, refresh };
+  return { init, onTabShow, refresh };
 })();

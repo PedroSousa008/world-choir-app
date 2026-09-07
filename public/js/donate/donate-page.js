@@ -2132,7 +2132,18 @@ const WorldChoirDonate = (() => {
     return false;
   }
 
+  let donateBootstrapped = false;
+
+  function onTabShow() {
+    /* Foundations already live in the keep-alive panel. */
+  }
+
   async function init() {
+    if (donateBootstrapped) {
+      onTabShow();
+      return;
+    }
+    donateBootstrapped = true;
     WorldChoirNav.startWatcher('donate');
     ensureModal();
     document.addEventListener('keydown', (e) => {
@@ -2178,5 +2189,5 @@ const WorldChoirDonate = (() => {
     }
   }
 
-  return { init };
+  return { init, onTabShow };
 })();

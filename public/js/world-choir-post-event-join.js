@@ -85,6 +85,9 @@ const WorldChoirPostEventJoin = (() => {
   }
 
   function isMapPage() {
+    if (typeof WorldChoirTabs !== 'undefined' && WorldChoirTabs.isHosted?.()) {
+      return WorldChoirTabs.getActive?.() === 'map';
+    }
     return /map\.html$/i.test(String(window.location.pathname || ''));
   }
 
@@ -212,13 +215,21 @@ const WorldChoirPostEventJoin = (() => {
       });
       return;
     }
+    if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.navigateToPrimaryTab) {
+      WorldChoirNav.navigateToPrimaryTab('map');
+      return;
+    }
     window.location.href = 'map.html';
   }
 
   function startJoinFlow() {
     closeInvite();
     if (typeof WorldChoirParticipation === 'undefined') {
-      window.location.href = 'map.html';
+      if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.navigateToPrimaryTab) {
+        WorldChoirNav.navigateToPrimaryTab('map');
+      } else {
+        window.location.href = 'map.html';
+      }
       return;
     }
 

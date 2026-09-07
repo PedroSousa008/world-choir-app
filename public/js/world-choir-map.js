@@ -538,13 +538,34 @@ const WorldChoirMap = (() => {
     applyUserHomeCenter({ force: true, animate: true });
   }
 
+  let mapBootstrapped = false;
+
+  function onTabShow() {
+    document.body.classList.add('map-page');
+    if (map) {
+      requestAnimationFrame(() => {
+        map.invalidateSize({ animate: false, pan: false });
+        setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 60);
+        setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 200);
+      });
+    }
+    void checkVoiceJoinedFromSession();
+  }
+
   function init() {
+    if (mapBootstrapped) {
+      if (!window.__WC_TAB_SILENT_INIT) onTabShow();
+      return;
+    }
+    mapBootstrapped = true;
     WorldChoirMapTiles.warmBasemap?.();
     startMap();
   }
 
   async function startMap() {
-    document.body.classList.add('map-page');
+    if (!window.__WC_TAB_SILENT_INIT) {
+      document.body.classList.add('map-page');
+    }
     WorldChoirNav.startWatcher('map');
 
     const clearBootSkel = () => {
@@ -633,5 +654,5 @@ const WorldChoirMap = (() => {
     checkVoiceJoinedFromSession();
   }
 
-  return { init, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
+  return { init, onTabShow, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
 })();

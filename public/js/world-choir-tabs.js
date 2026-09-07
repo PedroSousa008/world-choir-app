@@ -25,10 +25,11 @@ const WorldChoirTabs = (() => {
         'js/world-choir-reminders.js',
         'js/world-choir-pledge-state.js?v=20260906perf2',
         'js/world-choir-participation.js',
+        'js/world-choir-post-event-join.js?v=20260907tabs',
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
         'js/profile/daily-acts-peace.js?v=20260906perf',
-        'js/world-choir-home.js?v=20260907voices',
+        'js/world-choir-home.js?v=20260907tabs',
       ],
       selectors: [
         '#earth-canvas',
@@ -44,6 +45,7 @@ const WorldChoirTabs = (() => {
       ],
       keepOutside: ['#wc-global-live', '#nav-root'],
       init: () => window.WorldChoirHome?.init?.(),
+      onShow: () => window.WorldChoirHome?.onTabShow?.(),
     },
     map: {
       href: 'map.html',
@@ -67,7 +69,7 @@ const WorldChoirTabs = (() => {
         'js/map/sponsor-constants.js?v=20260902k',
         'js/map/sponsor-data.js?v=20260902a',
         'js/map/sponsor-bar.js?v=20260905a',
-        'js/world-choir-map.js?v=20260907voices',
+        'js/world-choir-map.js?v=20260907tabs',
       ],
       selectors: ['.map-page__stars', '#map-shell', '#voice-joined'],
       bodySelectors: ['#participation-overlay'],
@@ -89,13 +91,14 @@ const WorldChoirTabs = (() => {
       ],
       scripts: [
         'js/profile/change-location-modal.js',
-        'js/donate/creator-foundations-store.js?v=20260906donate',
+        'js/donate/creator-foundations-store.js?v=20260907fee65',
         'js/donate/donation-flow.js?v=20260831a',
         'js/foundation-public-card.js?v=20260904cb',
-        'js/donate/donate-page.js?v=20260906tabs',
+        'js/donate/donate-page.js?v=20260907tabs',
       ],
       selectors: ['.ambient-bg', '#donate-page'],
       init: () => window.WorldChoirDonate?.init?.(),
+      onShow: () => window.WorldChoirDonate?.onTabShow?.(),
     },
     profile: {
       href: 'profile.html',
@@ -115,7 +118,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-onboarding.js?v=20260816a',
         'js/profile/change-location-modal.js',
         'js/profile/user-identity-card.js?v=20260907wchainbtn',
-        'js/profile/participation-status-card.js?v=20260820a',
+        'js/profile/participation-status-card.js?v=20260907a',
         'js/profile/practice-song-button.js',
         'js/profile/practice-countdown.js',
         'js/profile/lyrics-display.js?v=20260906perf',
@@ -127,7 +130,7 @@ const WorldChoirTabs = (() => {
         'js/profile/daily-acts-peace.js?v=20260906perf',
         'js/profile/daily-acts-button.js?v=20260810i',
         'js/profile/owner-access.js?v=20270810c',
-        'js/profile/profile-page.js?v=20260907voices',
+        'js/profile/profile-page.js?v=20260907tabs',
       ],
       selectors: [
         '.ambient-bg',
@@ -138,6 +141,7 @@ const WorldChoirTabs = (() => {
         '#practice-mode',
       ],
       init: () => window.ProfilePage?.init?.(),
+      onShow: () => window.ProfilePage?.onTabShow?.(),
     },
     memory: {
       href: 'memory.html',
@@ -160,10 +164,11 @@ const WorldChoirTabs = (() => {
         'js/world-choir-flags.js?v=20260902n',
         'js/memory/memory-data.js?v=20260907wchain',
         'js/memory/memory-feed.js?v=20260904bt',
-        'js/memory/memory-page.js?v=20260907wchain',
+        'js/memory/memory-page.js?v=20260907tabs',
       ],
       selectors: ['.ambient-bg', '#memory-page'],
       init: () => window.WorldChoirMemory?.init?.(),
+      onShow: () => window.WorldChoirMemory?.onTabShow?.(),
     },
   };
 
@@ -456,16 +461,21 @@ const WorldChoirTabs = (() => {
     return loadPromises[id];
   }
 
+  function preloadPanel(id) {
+    if (!isPrimary(id) || !hostEl) return;
+    if (id === 'memory' && !WorldChoirConfig?.isMemoryUnlocked?.()) return;
+    void loadPanel(id).catch((err) => {
+      console.warn('[WorldChoirTabs] preload failed', id, err);
+    });
+  }
+
   function schedulePreload(exceptId) {
     if (preloadStarted) return;
     preloadStarted = true;
     const run = () => {
       Object.keys(PRIMARY).forEach((id) => {
         if (id === exceptId) return;
-        if (id === 'memory' && !WorldChoirConfig?.isMemoryUnlocked?.()) return;
-        void loadPanel(id).catch((err) => {
-          console.warn('[WorldChoirTabs] preload failed', id, err);
-        });
+        preloadPanel(id);
       });
     };
     if (typeof requestIdleCallback === 'function') {
@@ -473,6 +483,12 @@ const WorldChoirTabs = (() => {
     } else {
       setTimeout(run, 400);
     }
+  }
+
+  /** After Memory unlocks mid-session, warm that panel without a full reload. */
+  function preloadMemoryIfUnlocked() {
+    if (!hostEl || !WorldChoirConfig?.isMemoryUnlocked?.()) return;
+    preloadPanel('memory');
   }
 
   async function switchTo(id, { updateHistory = true } = {}) {
@@ -538,9 +554,11 @@ const WorldChoirTabs = (() => {
     getActive,
     isActive,
     hrefFor,
+    pageIdFromPath,
     attach,
     switchTo,
     preload: schedulePreload,
+    preloadMemoryIfUnlocked,
     ensureLoaded: loadPanel,
   };
 })();
