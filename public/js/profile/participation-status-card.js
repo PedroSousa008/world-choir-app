@@ -41,6 +41,17 @@ const ParticipationStatusCard = (() => {
       return '';
     }
 
+    // After the event starts, joining is via the post-event invite — not “I'll Sing”.
+    const canIllSing = typeof WorldChoirPostEventJoin !== 'undefined'
+      ? WorldChoirPostEventJoin.shouldShowIllSingCta()
+      : (typeof WorldChoirConfig !== 'undefined'
+        && (WorldChoirConfig.getGlobalEventState?.() === WorldChoirConfig.EventState?.UPCOMING
+          || WorldChoirConfig.getGlobalEventState?.() === WorldChoirConfig.EventState?.FINAL_HOUR));
+
+    if (!canIllSing) {
+      return '';
+    }
+
     const eventTitle = WorldChoirConfig.ACTIVE_EVENT.title;
 
     return `

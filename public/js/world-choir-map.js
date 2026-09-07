@@ -371,6 +371,15 @@ const WorldChoirMap = (() => {
     empty?.classList.remove('hidden');
     empty.classList.toggle('map-empty--resolving', pledgeState === 'loading');
 
+    const postEvent = typeof WorldChoirPostEventJoin !== 'undefined'
+      ? WorldChoirPostEventJoin.isPostEventComplete()
+      : (typeof WorldChoirConfig !== 'undefined'
+        && WorldChoirConfig.getGlobalEventState?.() === WorldChoirConfig.EventState?.COMPLETED);
+    const ctaLabel = postEvent
+      ? (WorldChoirPostEventJoin?.CTA_LABEL || 'Be a part of the World Choir')
+      : "I'll Sing";
+    if (btn) btn.textContent = ctaLabel;
+
     if (pledgeState === 'loading') {
       btn.hidden = true;
       skeleton?.classList.add('visible');
@@ -576,7 +585,12 @@ const WorldChoirMap = (() => {
 
     document.getElementById('map-empty-btn')?.addEventListener('click', () => {
       if (WorldChoirPledgeState.isPledged()) return;
-      WorldChoirParticipation.open();
+      const postEvent = typeof WorldChoirPostEventJoin !== 'undefined'
+        && WorldChoirPostEventJoin.isPostEventComplete();
+      WorldChoirParticipation.open({
+        postEvent,
+        onSuccess: onParticipationSuccess,
+      });
     });
 
     window.addEventListener('wc-pledge-added', (e) => {
