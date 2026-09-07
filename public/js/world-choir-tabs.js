@@ -11,7 +11,7 @@ const WorldChoirTabs = (() => {
       href: 'index.html',
       title: 'World Choir',
       css: [
-        'css/home.css?v=20260905b',
+        'css/home.css?v=20260907headline',
         'css/privacy-consent.css?v=20260905a',
         'css/profile.css?v=20270706b',
         'css/daily-peace.css?v=20260810e',

@@ -421,7 +421,7 @@ const WorldChoirNav = (() => {
   const TAB_ASSETS = {
     home: [
       'index.html',
-      'css/home.css?v=20260905b',
+      'css/home.css?v=20260907headline',
       'js/world-choir-home.js?v=20260907peoplesang',
       'js/world-choir-db.js?v=20260906perf2',
     ],

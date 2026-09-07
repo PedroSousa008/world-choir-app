@@ -278,7 +278,7 @@ const WorldChoirHome = (() => {
     return `
       ${renderVoicesCounter()}
       <img class="home-logo" src="${WorldChoirConfig.LOGO.url}" alt="${WorldChoirConfig.LOGO.alt}" width="1024" height="1024" decoding="async">
-      <h1 class="home-headline">The world sings together in</h1>
+      <h1 class="home-headline sws-quote-shimmer">The world sings together in</h1>
 
       <div class="countdown-hero">
         <div class="countdown-hero__grid">

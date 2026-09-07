@@ -1286,13 +1286,21 @@ a.home-after-card--song:active {
   white-space: nowrap;
 }
 
+/* Letter-follow shimmer: post-event song quote + pre-event countdown headline. */
 .home-after-song__quote.sws-quote-shimmer {
   /* Base appearance stays identical; the shimmering gradient is clipped to text. */
-  color: var(--text-secondary);
+  --sws-shimmer-base: var(--text-secondary);
+  color: var(--sws-shimmer-base);
+}
+
+.home-headline.sws-quote-shimmer {
+  --sws-shimmer-base: var(--text-primary);
+  color: var(--sws-shimmer-base);
 }
 
 @supports (-webkit-background-clip: text) {
-  .home-after-song__quote.sws-quote-shimmer {
+  .home-after-song__quote.sws-quote-shimmer,
+  .home-headline.sws-quote-shimmer {
     color: transparent;
     -webkit-text-fill-color: transparent;
     -webkit-background-clip: text;
@@ -1301,12 +1309,12 @@ a.home-after-card--song:active {
     /* Base -> highlight peak -> base. */
     background-image: linear-gradient(
       90deg,
-      var(--text-secondary) 0%,
-      var(--text-secondary) 38%,
+      var(--sws-shimmer-base) 0%,
+      var(--sws-shimmer-base) 38%,
       rgba(30, 90, 180, 0.72) 48%,
       rgba(70, 150, 255, 0.95) 53%,
       rgba(30, 90, 180, 0.72) 58%,
-      var(--text-secondary) 100%
+      var(--sws-shimmer-base) 100%
     );
     background-size: 240% 100%;
     background-repeat: repeat-x;
@@ -1335,12 +1343,13 @@ a.home-after-card--song:active {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-after-song__quote.sws-quote-shimmer {
+  .home-after-song__quote.sws-quote-shimmer,
+  .home-headline.sws-quote-shimmer {
     animation: none !important;
     background-image: none !important;
     background-clip: initial !important;
-    -webkit-text-fill-color: var(--text-secondary) !important;
-    color: var(--text-secondary) !important;
+    -webkit-text-fill-color: var(--sws-shimmer-base) !important;
+    color: var(--sws-shimmer-base) !important;
   }
 }
 
