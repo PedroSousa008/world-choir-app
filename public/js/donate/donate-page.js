@@ -1584,7 +1584,7 @@ const WorldChoirDonate = (() => {
       </div>
 
       <p class="donate-modal__note">
-        A ${CreatorFoundationsStore.getPlatform().feePercent || 6.5}% platform fee helps keep World Choir and Creator Foundations working.
+        A ${CreatorFoundationsStore.getPlatform().feePercent ?? 6.5}% platform fee helps keep World Choir and Creator Foundations working.
         Payments are not live yet — this flow is a preview only. Simulated gifts never appear as real supporter totals or funding progress.
       </p>
 

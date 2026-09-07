@@ -14,7 +14,7 @@ const CreatorFoundationsStore = (() => {
   const FALLBACK_URL = 'data/creator-foundations.json';
   const DEMO_URL = 'data/creator-foundations.demo.json';
   const PAGE_SIZE = 24;
-  const SESSION_KEY = 'wc_cf_catalog_v2';
+  const SESSION_KEY = 'wc_cf_catalog_v1';
   const FOUNDATION_CAUSES = [
     'Food & Hunger',
     'Health',
