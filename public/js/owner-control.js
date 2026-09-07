@@ -554,7 +554,7 @@ const OwnerControl = (() => {
             ${metricBtn(money(o.totalDonated, currency), 'Total donated', 'donations', null, true)}
             ${metricBtn(o.totalDonors, 'Donors', 'donations')}
             ${metricBtn(o.totalDonations, 'Donations', 'donations')}
-            ${metricBtn(money(o.operationsShare, currency), 'Operations share (10%)', 'donations', null, true)}
+            ${metricBtn(money(o.operationsShare, currency), `Operations share (${o.platformFeePercent ?? 6.5}%)`, 'donations', null, true)}
           </div>
           <div class="owner-group">
             <p class="owner-group__title">Foundations</p>
@@ -1402,7 +1402,7 @@ const OwnerControl = (() => {
     const list = state.data.foundations || [];
     const currency = state.data.currency || 'EUR';
     const platformFee = Number(state.data.platformFeePercent);
-    const foundationShare = Number.isFinite(platformFee) ? 100 - platformFee : 90;
+    const foundationShare = Number.isFinite(platformFee) ? 100 - platformFee : 93.5;
     const detail = state.foundationDetail
       ? list.find((f) => f.id === state.foundationDetail)
       : null;

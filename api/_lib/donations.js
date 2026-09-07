@@ -1,6 +1,6 @@
 /**
  * Creator Foundation donations — fee math, ledger writes, Stripe helpers.
- * Platform collects 100%; ledger records 90% foundation / 10% World Choir.
+ * Platform collects 100%; ledger records 93.5% foundation / 6.5% World Choir.
  * Never fake success. Never store raw card data.
  */
 const { randomUUID } = require('crypto');

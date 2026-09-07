@@ -63,7 +63,7 @@ const WorldChoirDonationFlow = (() => {
 
   function feeSplit(amount) {
     const grossCents = Math.round(Number(amount) * 100);
-    const feePercent = config?.platformFeePercent ?? 10;
+    const feePercent = config?.platformFeePercent ?? 6.5;
     const feeCents = Math.round(grossCents * (feePercent / 100));
     return {
       amountGross: grossCents / 100,
@@ -397,6 +397,7 @@ const WorldChoirDonationFlow = (() => {
     const symbol = currencySymbol(currency);
     const feeOpen = state.feeDetailsOpen === true;
     const valid = amountIsValid();
+    const feeMeta = feeSplit(0);
 
     return `
       <div class="df-checkout__amount-step">
@@ -459,8 +460,8 @@ const WorldChoirDonationFlow = (() => {
         <div class="df-checkout__transparency">
           <p class="df-checkout__transparency-kicker">One-time donation</p>
           <p class="df-checkout__transparency-copy">
-            10% of every donation supports World Choir's operational costs.
-            The remaining 90% goes directly to the Foundation.
+            ${esc(String(feeMeta.feePercent))}% of every donation supports World Choir's operational costs.
+            The remaining ${esc(String(feeMeta.foundationPercent))}% goes directly to the Foundation.
           </p>
           <button
             type="button"

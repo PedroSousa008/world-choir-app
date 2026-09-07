@@ -12,7 +12,7 @@ const {
 const ROOT = 'wc-data/members';
 const INFLUENCERS_PATH = `${ROOT}/influencers.json`;
 const DONATIONS_LEDGER_PATH = `${ROOT}/donations-ledger.json`;
-const PLATFORM_FEE_PERCENT = 10;
+const PLATFORM_FEE_PERCENT = 6.5;
 
 async function readInfluencersDoc() {
   assertBlobConfigured();
@@ -390,7 +390,7 @@ async function resetInfluencerPasswordByEmail({ email, newPassword }) {
 
 /**
  * Operations earnings from verified successful donations only.
- * Fee is currently 10% for app operational costs.
+ * Fee is currently 6.5% for app operational costs.
  */
 async function getOperationsOverview() {
   const donations = await readDonationsLedger();
@@ -492,8 +492,8 @@ function influencerToFoundation(row, projects = []) {
     ],
     howDonationsAreUsed: [
       'Every donation supports two causes at once.',
-      '90% goes directly to the creator\'s foundation and the people it serves.',
-      '10% helps sustain the infrastructure that enables thousands of creators and millions of supporters to come together in a trusted, transparent ecosystem for good.',
+      `${100 - PLATFORM_FEE_PERCENT}% goes directly to the creator's foundation and the people it serves.`,
+      `${PLATFORM_FEE_PERCENT}% helps sustain the infrastructure that enables thousands of creators and millions of supporters to come together in a trusted, transparent ecosystem for good.`,
       'By supporting World Choir, donors help expand the movement itself—allowing more foundations to be created, more communities to be served, and more acts of peace and generosity to reach the world.',
     ].join('\n\n'),
     featured: true,

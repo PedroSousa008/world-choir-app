@@ -14,7 +14,7 @@ const CreatorFoundationsStore = (() => {
   const FALLBACK_URL = 'data/creator-foundations.json';
   const DEMO_URL = 'data/creator-foundations.demo.json';
   const PAGE_SIZE = 24;
-  const SESSION_KEY = 'wc_cf_catalog_v1';
+  const SESSION_KEY = 'wc_cf_catalog_v2';
   const FOUNDATION_CAUSES = [
     'Food & Hunger',
     'Health',
@@ -95,7 +95,7 @@ const CreatorFoundationsStore = (() => {
     if (!warm) return false;
     catalog = {
       version: warm.version || 3,
-      platform: warm.platform || { feePercent: 10 },
+      platform: warm.platform || { feePercent: 6.5 },
       currency: warm.currency || 'EUR',
       supportedCurrencies: warm.supportedCurrencies || ['EUR'],
       suggestedAmounts: warm.suggestedAmounts || [5, 10, 25, 50, 100],
@@ -146,7 +146,7 @@ const CreatorFoundationsStore = (() => {
           if (data?.dataPolicy?.demo === true) return catalog;
           catalog = {
             version: data.version || 3,
-            platform: data.platform || { feePercent: 10 },
+            platform: data.platform || { feePercent: 6.5 },
             currency: data.currency || 'EUR',
             supportedCurrencies: data.supportedCurrencies || ['EUR'],
             suggestedAmounts: data.suggestedAmounts || [5, 10, 25, 50, 100],
@@ -203,7 +203,7 @@ const CreatorFoundationsStore = (() => {
 
       catalog = {
         version: data.version || 3,
-        platform: data.platform || { feePercent: 10 },
+        platform: data.platform || { feePercent: 6.5 },
         currency: data.currency || 'EUR',
         supportedCurrencies: data.supportedCurrencies || ['EUR'],
         suggestedAmounts: data.suggestedAmounts || [5, 10, 25, 50, 100],
@@ -392,7 +392,7 @@ const CreatorFoundationsStore = (() => {
   }
 
   function getPlatform() {
-    return catalog?.platform || { feePercent: 10, feePurpose: '' };
+    return catalog?.platform || { feePercent: 6.5, feePurpose: '' };
   }
 
   function getCurrency() {
