@@ -2135,13 +2135,15 @@ const WorldChoirDonate = (() => {
   let donateBootstrapped = false;
 
   function onTabShow() {
+    if (typeof CreatorFoundationsStore === 'undefined') return Promise.resolve();
     const content = document.getElementById('donate-content');
-    if (content && !content.innerHTML.trim() && typeof CreatorFoundationsStore !== 'undefined') {
-      return CreatorFoundationsStore.ready().then(() => {
-        try { renderHome(); } catch (err) { console.warn('[Donate] onTabShow render failed', err); }
-      });
-    }
-    return Promise.resolve();
+    const hasCards = !!(content && content.querySelector(
+      'button[aria-label], [role="listitem"], .df-card, [data-foundation-id]'
+    ));
+    if (hasCards && CreatorFoundationsStore.isReady?.()) return Promise.resolve();
+    return CreatorFoundationsStore.ready().then(() => {
+      try { renderHome(); } catch (err) { console.warn('[Donate] onTabShow render failed', err); }
+    });
   }
 
   async function init() {

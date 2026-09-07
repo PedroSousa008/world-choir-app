@@ -69,7 +69,7 @@ const WorldChoirTabs = (() => {
         'js/map/sponsor-constants.js?v=20260902k',
         'js/map/sponsor-data.js?v=20260902a',
         'js/map/sponsor-bar.js?v=20260905a',
-        'js/world-choir-map.js?v=20260907tabs4',
+        'js/world-choir-map.js?v=20260907tabs5',
       ],
       selectors: ['.map-page__stars', '#map-shell', '#voice-joined'],
       bodySelectors: ['#participation-overlay'],
@@ -92,7 +92,7 @@ const WorldChoirTabs = (() => {
         'js/donate/creator-foundations-store.js?v=20260907fee65',
         'js/donate/donation-flow.js?v=20260831a',
         'js/foundation-public-card.js?v=20260904cb',
-        'js/donate/donate-page.js?v=20260907tabs4',
+        'js/donate/donate-page.js?v=20260907tabs5',
       ],
       selectors: ['.ambient-bg', '#donate-page'],
       init: () => window.WorldChoirDonate?.init?.(),
@@ -530,9 +530,10 @@ const WorldChoirTabs = (() => {
     applyPanelVisibility(id);
     applyBodyMode(id);
     syncTitle(id);
+    // Flush layout so Map/Leaflet and Donate measure a real visible panel.
+    try { void panels[id]?.el?.offsetWidth; } catch { /* ignore */ }
     const showWork = Promise.resolve(PRIMARY[id]?.onShow?.());
-    // Map can take a beat on first paint — don't leave the user on a blank gate;
-    // await briefly so stats/markers land, but cap wait so nav never hangs.
+    // Map can take a beat on first paint — await with a hard cap so nav never hangs.
     if (id === 'map') {
       await Promise.race([
         showWork,

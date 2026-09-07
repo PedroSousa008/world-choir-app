@@ -543,8 +543,12 @@ const WorldChoirMap = (() => {
 
   function onTabShow() {
     document.body.classList.add('map-page');
-    // Always ensure a live Leaflet map when the tab is shown. Silent preload only
-    // mounts the shell — Leaflet needs a real visible layout pass.
+    // Force layout before Leaflet measures the container.
+    const panel = document.querySelector('.wc-tab-panel[data-wc-tab="map"]');
+    if (panel) void panel.offsetWidth;
+    const mapEl = document.getElementById('world-map');
+    if (mapEl) void mapEl.offsetWidth;
+
     return ensureMapStarted().then(() => {
       requestAnimationFrame(() => {
         map?.invalidateSize({ animate: false, pan: false });
@@ -557,7 +561,7 @@ const WorldChoirMap = (() => {
   }
 
   function init() {
-    if (mapBootstrapped && map) {
+    if (map && mapBootstrapped) {
       if (!window.__WC_TAB_SILENT_INIT) return onTabShow();
       return Promise.resolve();
     }
@@ -572,15 +576,22 @@ const WorldChoirMap = (() => {
   }
 
   function ensureMapStarted() {
-    if (mapBootstrapped && map) return Promise.resolve();
+    if (map && mapBootstrapped) return Promise.resolve();
+    // Drop a stale resolved promise from a failed prior attempt.
+    if (mapStartPromise && !(map && mapBootstrapped)) {
+      /* keep in-flight promise only — handled below */
+    }
     if (mapStartPromise) return mapStartPromise;
     mapStartPromise = (async () => {
       document.body.classList.add('map-page');
       WorldChoirMapTiles.warmBasemap?.();
       await startMap({ silent: false });
+      if (!map) throw new Error('Map failed to create Leaflet instance');
       mapBootstrapped = true;
       refreshMapData();
-    })().catch((err) => {
+    })().then(() => {
+      /* keep mapStartPromise for reuse while healthy */
+    }).catch((err) => {
       mapBootstrapped = false;
       mapStartPromise = null;
       throw err;
