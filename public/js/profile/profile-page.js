@@ -162,7 +162,27 @@ const ProfilePage = (() => {
     return true;
   }
 
+  let profileBootstrapped = false;
+
+  function onTabShow() {
+    updateVoicesCounter();
+    try {
+      if (!profileReady) revealProfile();
+      else refresh();
+    } catch (err) {
+      console.warn('[Profile] onTabShow failed', err);
+    }
+    // Guarantee booting chrome never sticks on soft switches.
+    clearBootingState();
+    return Promise.resolve();
+  }
+
   function init() {
+    if (profileBootstrapped) {
+      onTabShow();
+      return;
+    }
+    profileBootstrapped = true;
     ChangeLocationModal.init();
     PracticeMode.init();
     DailyActsPeace.init();
@@ -217,5 +237,5 @@ const ProfilePage = (() => {
       });
   }
 
-  return { init, refresh };
+  return { init, onTabShow, refresh };
 })();

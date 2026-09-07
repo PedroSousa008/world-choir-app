@@ -684,7 +684,11 @@ const WorldChoirHome = (() => {
     });
 
     document.getElementById('home-open-memory')?.addEventListener('click', () => {
-      window.location.href = 'memory.html';
+      if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.navigateToPrimaryTab) {
+        WorldChoirNav.navigateToPrimaryTab('memory');
+      } else {
+        window.location.href = 'memory.html';
+      }
     });
 
     ['map.html', 'daily-acts.html', 'song-we-sang.html'].forEach((href) => {
@@ -1092,7 +1096,18 @@ const WorldChoirHome = (() => {
     }
   }
 
+  let homeBootstrapped = false;
+
+  function onTabShow() {
+    /* Keep countdown / live sync ticking; nothing special required. */
+  }
+
   function init() {
+    if (homeBootstrapped) {
+      onTabShow();
+      return;
+    }
+    homeBootstrapped = true;
     homeReady = false;
 
     // Instant warm paint from session (same path as Profile) — countdown/CTA without map aggregate.
@@ -1208,7 +1223,11 @@ const WorldChoirHome = (() => {
       onSuccess: async (pledge) => {
         if (pledge?.latitude && pledge?.longitude) {
           WorldChoirParticipation.triggerVoiceJoinedAnimation(pledge);
-          window.location.href = 'map.html';
+          if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.navigateToPrimaryTab) {
+            WorldChoirNav.navigateToPrimaryTab('map');
+          } else {
+            window.location.href = 'map.html';
+          }
         } else {
           render();
         }
@@ -1243,5 +1262,5 @@ const WorldChoirHome = (() => {
     countdownTimer = setInterval(updateCountdown, 1000);
   }
 
-  return { init, render };
+  return { init, onTabShow, render };
 })();

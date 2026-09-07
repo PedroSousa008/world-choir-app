@@ -538,13 +538,90 @@ const WorldChoirMap = (() => {
     applyUserHomeCenter({ force: true, animate: true });
   }
 
-  function init() {
-    WorldChoirMapTiles.warmBasemap?.();
-    startMap();
+  let mapBootstrapped = false;
+  let mapStartPromise = null;
+
+  function onTabShow() {
+    document.body.classList.add('map-page');
+    // Force layout before Leaflet measures the container.
+    const panel = document.querySelector('.wc-tab-panel[data-wc-tab="map"]');
+    if (panel) void panel.offsetWidth;
+    const mapEl = document.getElementById('world-map');
+    if (mapEl) void mapEl.offsetWidth;
+
+    return ensureMapStarted().then(() => {
+      requestAnimationFrame(() => {
+        map?.invalidateSize({ animate: false, pan: false });
+        setTimeout(() => map?.invalidateSize({ animate: false, pan: false }), 60);
+        setTimeout(() => map?.invalidateSize({ animate: false, pan: false }), 200);
+      });
+      refreshMapData();
+      // Never leave the map boot skeleton on soft switches.
+      const skel = document.getElementById('map-boot-skel');
+      if (skel) {
+        skel.classList.add('is-done');
+        skel.setAttribute('aria-busy', 'false');
+        skel.remove();
+      }
+      void checkVoiceJoinedFromSession();
+    });
   }
 
-  async function startMap() {
-    document.body.classList.add('map-page');
+  function init() {
+    if (map && mapBootstrapped) {
+      if (!window.__WC_TAB_SILENT_INIT) return onTabShow();
+      return Promise.resolve();
+    }
+    if (mapStartPromise) return mapStartPromise;
+
+    // Soft-tab preload: fetch/assets/shell only. Full Leaflet starts on first show.
+    if (window.__WC_TAB_SILENT_INIT) {
+      return Promise.resolve();
+    }
+
+    return ensureMapStarted();
+  }
+
+  function ensureMapStarted() {
+    if (map && mapBootstrapped) return Promise.resolve();
+
+    // Only reuse an in-flight start. Never reuse a settled promise without a live map.
+    if (mapStartPromise) {
+      return mapStartPromise.then(() => {
+        if (map && mapBootstrapped) return;
+        mapStartPromise = null;
+        return ensureMapStarted();
+      }).catch(() => {
+        mapStartPromise = null;
+        return ensureMapStarted();
+      });
+    }
+
+    mapStartPromise = (async () => {
+      if (typeof L === 'undefined' || !L?.map) {
+        throw new Error('Leaflet is not loaded');
+      }
+      const mapEl = document.getElementById('world-map');
+      if (!mapEl) throw new Error('Map container missing');
+      document.body.classList.add('map-page');
+      WorldChoirMapTiles.warmBasemap?.();
+      await startMap({ silent: false });
+      if (!map) throw new Error('Map failed to create Leaflet instance');
+      mapBootstrapped = true;
+      refreshMapData();
+      requestAnimationFrame(() => {
+        map?.invalidateSize({ animate: false, pan: false });
+      });
+    })().catch((err) => {
+      mapBootstrapped = false;
+      mapStartPromise = null;
+      throw err;
+    });
+    return mapStartPromise;
+  }
+
+  async function startMap({ silent = false } = {}) {
+    if (!silent) document.body.classList.add('map-page');
     WorldChoirNav.startWatcher('map');
 
     const clearBootSkel = () => {
@@ -563,9 +640,12 @@ const WorldChoirMap = (() => {
     if (typeof MapSponsorData !== 'undefined') MapSponsorData.prefetch?.();
 
     const sponsorInit = (typeof MapSponsorBar !== 'undefined')
-      ? MapSponsorBar.init().catch((err) => {
-        console.warn('Map sponsor bar failed to initialize:', err);
-      })
+      ? Promise.race([
+        MapSponsorBar.init().catch((err) => {
+          console.warn('Map sponsor bar failed to initialize:', err);
+        }),
+        new Promise((resolve) => setTimeout(resolve, 2500)),
+      ])
       : Promise.resolve();
 
     initMap();
@@ -631,7 +711,10 @@ const WorldChoirMap = (() => {
     });
 
     checkVoiceJoinedFromSession();
+    if (silent) {
+      document.body.classList.remove('map-page');
+    }
   }
 
-  return { init, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
+  return { init, onTabShow, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
 })();
