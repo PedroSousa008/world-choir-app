@@ -135,7 +135,7 @@ const SongWeSangTypingEngine = (() => {
     const svg = document.createElementNS(NS, 'svg');
     svg.setAttribute('class', 'sws-letter__flourish');
     // Wider than the text so the stroke can continue past "In".
-    svg.setAttribute('viewBox', '0 0 180 26');
+    svg.setAttribute('viewBox', '0 0 180 36');
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
     svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
@@ -146,7 +146,7 @@ const SongWeSangTypingEngine = (() => {
     // Starts under "e" in The; continues through and past "In".
     underline.setAttribute(
       'd',
-      'M22 3.2 C 42 3.8, 62 2.6, 82 3.4 C 102 4.1, 122 2.7, 142 3.5 C 155 3.9, 165 3.1, 174 3.4'
+      'M22 8.2 C 42 8.8, 62 7.6, 82 8.4 C 102 9.1, 122 7.7, 142 8.5 C 155 8.9, 165 8.1, 174 8.4'
     );
 
     const heart = document.createElementNS(NS, 'path');
@@ -155,7 +155,7 @@ const SongWeSangTypingEngine = (() => {
     // Small quick outline heart near the right end of the underline, slightly below.
     heart.setAttribute(
       'd',
-      'M171 18.5 C 167.4 14.6, 167.2 11.6, 169.3 11.6 C 170.5 11.6, 171.2 12.5, 171.2 12.5 C 171.2 12.5, 171.9 11.6, 173.1 11.6 C 175.3 11.6, 175.4 14.7, 171 18.5'
+      'M171 26.5 C 165.8 20.8, 165.5 16.4, 168.4 16.4 C 170 16.4, 171 17.7, 171 17.7 C 171 17.7, 172 16.4, 173.6 16.4 C 176.6 16.4, 176.8 21, 171 26.5'
     );
 
     svg.appendChild(underline);
