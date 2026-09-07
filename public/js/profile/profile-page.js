@@ -171,6 +171,7 @@ const ProfilePage = (() => {
     } else {
       try { refresh(); } catch { /* ignore */ }
     }
+    return Promise.resolve();
   }
 
   function init() {

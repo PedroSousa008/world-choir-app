@@ -543,53 +543,29 @@ const WorldChoirMap = (() => {
 
   function onTabShow() {
     document.body.classList.add('map-page');
-    if (!mapBootstrapped || !map) {
-      return ensureMapStarted().then(() => {
-        WorldChoirMap.refreshMapData?.();
-        void checkVoiceJoinedFromSession();
+    // Always ensure a live Leaflet map when the tab is shown. Silent preload only
+    // mounts the shell — Leaflet needs a real visible layout pass.
+    return ensureMapStarted().then(() => {
+      requestAnimationFrame(() => {
+        map?.invalidateSize({ animate: false, pan: false });
+        setTimeout(() => map?.invalidateSize({ animate: false, pan: false }), 60);
+        setTimeout(() => map?.invalidateSize({ animate: false, pan: false }), 200);
       });
-    }
-    requestAnimationFrame(() => {
-      map.invalidateSize({ animate: false, pan: false });
-      setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 60);
-      setTimeout(() => map.invalidateSize({ animate: false, pan: false }), 200);
+      refreshMapData();
+      void checkVoiceJoinedFromSession();
     });
-    refreshMapData();
-    void checkVoiceJoinedFromSession();
-    return Promise.resolve();
   }
 
   function init() {
-    if (mapBootstrapped) {
-      if (!window.__WC_TAB_SILENT_INIT) onTabShow();
+    if (mapBootstrapped && map) {
+      if (!window.__WC_TAB_SILENT_INIT) return onTabShow();
       return Promise.resolve();
     }
     if (mapStartPromise) return mapStartPromise;
 
-    // Soft-tab preload: mount Leaflet in a temporary off-screen visible box so
-    // the map is fully ready before the first user tap (Leaflet needs layout).
+    // Soft-tab preload: fetch/assets/shell only. Full Leaflet starts on first show.
     if (window.__WC_TAB_SILENT_INIT) {
-      const panel = document.querySelector('.wc-tab-panel[data-wc-tab="map"]');
-      const prev = panel ? panel.getAttribute('style') : null;
-      if (panel) {
-        panel.style.display = 'block';
-        panel.style.visibility = 'hidden';
-        panel.style.position = 'fixed';
-        panel.style.inset = '0';
-        panel.style.pointerEvents = 'none';
-        panel.style.zIndex = '-1';
-      }
-      return ensureMapStarted()
-        .catch((err) => {
-          console.warn('[WorldChoirMap] silent preload failed', err);
-        })
-        .finally(() => {
-          if (!panel) return;
-          if (prev == null) panel.removeAttribute('style');
-          else panel.setAttribute('style', prev);
-          panel.classList.remove('is-active');
-          panel.setAttribute('aria-hidden', 'true');
-        });
+      return Promise.resolve();
     }
 
     return ensureMapStarted();
@@ -599,12 +575,11 @@ const WorldChoirMap = (() => {
     if (mapBootstrapped && map) return Promise.resolve();
     if (mapStartPromise) return mapStartPromise;
     mapStartPromise = (async () => {
-      const silent = !!window.__WC_TAB_SILENT_INIT;
-      if (!silent) document.body.classList.add('map-page');
+      document.body.classList.add('map-page');
       WorldChoirMapTiles.warmBasemap?.();
-      await startMap({ silent });
+      await startMap({ silent: false });
       mapBootstrapped = true;
-      if (!silent) refreshMapData();
+      refreshMapData();
     })().catch((err) => {
       mapBootstrapped = false;
       mapStartPromise = null;
