@@ -214,29 +214,31 @@ const WorldChoirTabs = (() => {
     const panel = panels[id]?.el;
     if (!panel) return false;
     if (id === 'home') {
+      // Real countdown/post-event UI — not the inline boot skeleton alone.
       return !!(
-        panel.querySelector('.home-headline, .home-after, .home-skeleton, #home-voices-counter')
+        panel.querySelector('.home-headline, .home-after-hero')
+        && !panel.querySelector('.home-skeleton')
       );
     }
     if (id === 'map') {
-      return !!(panel.querySelector('#map-shell, #map, .map-stats'));
+      return !!(panel.querySelector('#map-shell .leaflet-container, #map.leaflet-container, .map-stats.map-stats--loaded, #stat-voices'));
     }
     if (id === 'donate') {
       const content = panel.querySelector('#donate-content');
       if (!content) return false;
-      // Empty shell = not hydrated yet.
       return !!(
         content.querySelector('.df-intro__title, .df-explore, .df-card, [role="listitem"], .df-search-trigger')
-        || (content.textContent || '').trim().length > 40
       );
     }
     if (id === 'profile') {
-      return !!(
-        panel.querySelector('.identity-card, .profile-voices-counter, .profile-page__skeleton, #profile-content .profile-block')
-      );
+      // Inline HTML skeletons are not enough — need real profile widgets.
+      if (panel.querySelector('.identity-card')) return true;
+      const voices = panel.querySelector('.profile-voices-counter');
+      if (voices && !voices.classList.contains('wc-skel')) return true;
+      return false;
     }
     if (id === 'memory') {
-      return !!(panel.querySelector('#memory-page .mem-shell, .mem-intro, .memory-page'));
+      return !!(panel.querySelector('.mem-intro, .mem-feed, .memory-photo, .mem-stamps'));
     }
     return panel.childElementCount > 0;
   }
