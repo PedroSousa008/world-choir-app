@@ -81,7 +81,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — Donate',
       css: [
         'css/foundation-public-card.css?v=20260904cd',
-        'css/donate.css?v=20260907space',
+        'css/donate.css?v=20260907fpnav',
         'css/privacy-consent.css?v=20260905a',
         'css/profile.css?v=20270706b',
         'css/daily-peace.css?v=20260810e',

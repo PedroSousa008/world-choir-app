@@ -1506,7 +1506,8 @@
 
 .df-fp {
   margin: 0 -20px;
-  padding: 0 0 8px;
+  /* Reserve space for the fixed back/share bar so content never jumps under it. */
+  padding: calc(52px + env(safe-area-inset-top, 0px)) 0 8px;
 }
 
 .df-fp-nav {
@@ -1514,11 +1515,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 4px 16px 10px;
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 5;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.92) 55%, rgba(0, 0, 0, 0));
+  left: 0;
+  right: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  padding: calc(4px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+  /* Solid/composited layer — sticky + fading gradients tremble on mobile scroll. */
+  background: #000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .df-fp-nav__back,
