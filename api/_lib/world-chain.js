@@ -45,7 +45,7 @@ const TEST_FORCE_STARTER = {
 
 /** Bump when generation rules change so the day regenerates. */
 const CHAIN_STORAGE_VERSION = 'v8';
-const CHAIN_ENGINE = 'global-number-v8';
+const CHAIN_ENGINE = 'random-lengths-v9';
 /** First published daily set used #1–#5; continuous numbering continues after that. */
 const CHAIN_NUMBER_FLOOR = 5;
 
@@ -265,6 +265,11 @@ function pickVariedLengths(maxCountries, count = DAILY_CHAIN_COUNT) {
       const next = lengths[i] + (i % 2 === 0 ? 1 : -1);
       lengths[i] = Math.max(min, Math.min(max, next));
     }
+  }
+  // Never present short→long in list order — shuffle so any chain # can be any size.
+  for (let i = lengths.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [lengths[i], lengths[j]] = [lengths[j], lengths[i]];
   }
   return lengths;
 }
@@ -777,10 +782,13 @@ async function allocateGlobalChainNumbers(eventId, count) {
   return numbers;
 }
 
-async function generateDailyChains(eventId, day, now = new Date()) {
+async function generateDailyChains(eventId, day, now = new Date(), opts = {}) {
   assertBlobConfigured();
   const nowMs = now.getTime();
   const bounds = cycleBoundsUTC(now);
+  const preferredNumbers = Array.isArray(opts.preferredNumbers)
+    ? opts.preferredNumbers.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)
+    : null;
   const [pledges, users] = await Promise.all([
     listPledges(eventId),
     listAllUsers().catch(() => []),
@@ -892,7 +900,15 @@ async function generateDailyChains(eventId, day, now = new Date()) {
   }
 
   const chains = placeDesignChain(otherChains, designChain);
-  const globalNumbers = await allocateGlobalChainNumbers(eventId, chains.length);
+  const sortedPreferred = preferredNumbers && preferredNumbers.length
+    ? [...preferredNumbers].sort((a, b) => a - b)
+    : null;
+  const globalNumbers = (
+    sortedPreferred
+    && sortedPreferred.length === chains.length
+  )
+    ? sortedPreferred
+    : await allocateGlobalChainNumbers(eventId, chains.length);
   chains.forEach((chain, idx) => {
     chain.dailyChainNumber = globalNumbers[idx] || (idx + 1);
   });
@@ -955,6 +971,7 @@ async function ensureDailyChains(eventId = DEFAULT_EVENT_ID, now = new Date()) {
   const bounds = cycleBoundsUTC(now);
   const day = bounds.dayKey;
   const existing = await readManifest(eventId, day);
+  let previousNumbers = null;
   if (existing?.chainIds?.length) {
     const chains = [];
     for (const id of existing.chainIds) {
@@ -962,10 +979,15 @@ async function ensureDailyChains(eventId = DEFAULT_EVENT_ID, now = new Date()) {
       if (chain) chains.push(chain);
     }
     if (isValidTestDay(existing, chains, bounds)) return existing;
+    previousNumbers = chains
+      .map((c) => Number(c.dailyChainNumber))
+      .filter((n) => Number.isFinite(n) && n > 0);
     // Stale / incomplete / wrong window — rebuild under the current engine.
   }
   try {
-    return await generateDailyChains(eventId, day, now);
+    return await generateDailyChains(eventId, day, now, {
+      preferredNumbers: previousNumbers,
+    });
   } catch (err) {
     const again = await readManifest(eventId, day);
     if (again?.engine === CHAIN_ENGINE && again?.chainIds?.length) return again;
