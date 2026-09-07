@@ -1262,5 +1262,7 @@ const WorldChoirHome = (() => {
     countdownTimer = setInterval(updateCountdown, 1000);
   }
 
-  return { init, onTabShow, render };
+  const api = { init, onTabShow, render };
+  window.WorldChoirHome = api;
+  return api;
 })();

@@ -237,5 +237,7 @@ const ProfilePage = (() => {
       });
   }
 
-  return { init, onTabShow, refresh };
+  const api = { init, onTabShow, refresh };
+  window.ProfilePage = api;
+  return api;
 })();

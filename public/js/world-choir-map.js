@@ -716,5 +716,7 @@ const WorldChoirMap = (() => {
     }
   }
 
-  return { init, onTabShow, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
+  const api = { init, onTabShow, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
+  window.WorldChoirMap = api;
+  return api;
 })();

@@ -29,7 +29,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
         'js/profile/daily-acts-peace.js?v=20260906perf',
-        'js/world-choir-home.js?v=20260907tabs',
+        'js/world-choir-home.js?v=20260907tabshydrate',
       ],
       selectors: [
         '#earth-canvas',
@@ -44,8 +44,8 @@ const WorldChoirTabs = (() => {
         '#live-event-mode',
       ],
       keepOutside: ['#wc-global-live', '#nav-root'],
-      init: () => window.WorldChoirHome?.init?.(),
-      onShow: () => window.WorldChoirHome?.onTabShow?.(),
+      init: () => tabApi('home')?.init?.(),
+      onShow: () => tabApi('home')?.onTabShow?.(),
     },
     map: {
       href: 'map.html',
@@ -69,12 +69,12 @@ const WorldChoirTabs = (() => {
         'js/map/sponsor-constants.js?v=20260902k',
         'js/map/sponsor-data.js?v=20260902a',
         'js/map/sponsor-bar.js?v=20260905a',
-        'js/world-choir-map.js?v=20260907tabsfix',
+        'js/world-choir-map.js?v=20260907tabshydrate',
       ],
       selectors: ['.map-page__stars', '#map-shell', '#voice-joined'],
       bodySelectors: ['#participation-overlay'],
-      init: () => window.WorldChoirMap?.init?.(),
-      onShow: () => window.WorldChoirMap?.onTabShow?.(),
+      init: () => tabApi('map')?.init?.(),
+      onShow: () => tabApi('map')?.onTabShow?.(),
     },
     donate: {
       href: 'donate.html',
@@ -92,11 +92,11 @@ const WorldChoirTabs = (() => {
         'js/donate/creator-foundations-store.js?v=20260907fee65',
         'js/donate/donation-flow.js?v=20260831a',
         'js/foundation-public-card.js?v=20260904cb',
-        'js/donate/donate-page.js?v=20260907tabsfix',
+        'js/donate/donate-page.js?v=20260907tabshydrate',
       ],
       selectors: ['.ambient-bg', '#donate-page'],
-      init: () => window.WorldChoirDonate?.init?.(),
-      onShow: () => window.WorldChoirDonate?.onTabShow?.(),
+      init: () => tabApi('donate')?.init?.(),
+      onShow: () => tabApi('donate')?.onTabShow?.(),
     },
     profile: {
       href: 'profile.html',
@@ -128,7 +128,7 @@ const WorldChoirTabs = (() => {
         'js/profile/daily-acts-peace.js?v=20260906perf',
         'js/profile/daily-acts-button.js?v=20260810i',
         'js/profile/owner-access.js?v=20270810c',
-        'js/profile/profile-page.js?v=20260907tabsfix',
+        'js/profile/profile-page.js?v=20260907tabshydrate',
       ],
       selectors: [
         '.ambient-bg',
@@ -138,8 +138,8 @@ const WorldChoirTabs = (() => {
         '#change-location-overlay',
         '#practice-mode',
       ],
-      init: () => window.ProfilePage?.init?.(),
-      onShow: () => window.ProfilePage?.onTabShow?.(),
+      init: () => tabApi('profile')?.init?.(),
+      onShow: () => tabApi('profile')?.onTabShow?.(),
     },
     memory: {
       href: 'memory.html',
@@ -162,11 +162,11 @@ const WorldChoirTabs = (() => {
         'js/world-choir-flags.js?v=20260902n',
         'js/memory/memory-data.js?v=20260907wchain',
         'js/memory/memory-feed.js?v=20260904bt',
-        'js/memory/memory-page.js?v=20260907tabs',
+        'js/memory/memory-page.js?v=20260907tabshydrate',
       ],
       selectors: ['.ambient-bg', '#memory-page'],
-      init: () => window.WorldChoirMemory?.init?.(),
-      onShow: () => window.WorldChoirMemory?.onTabShow?.(),
+      init: () => tabApi('memory')?.init?.(),
+      onShow: () => tabApi('memory')?.onTabShow?.(),
     },
   };
 
@@ -189,6 +189,57 @@ const WorldChoirTabs = (() => {
   let preloadStarted = false;
   const panels = Object.create(null);
   const loadPromises = Object.create(null);
+
+  function tabApi(id) {
+    // Prefer window exports (set by each page module). Fall back to lexical globals.
+    if (id === 'home') {
+      return window.WorldChoirHome || (typeof WorldChoirHome !== 'undefined' ? WorldChoirHome : null);
+    }
+    if (id === 'map') {
+      return window.WorldChoirMap || (typeof WorldChoirMap !== 'undefined' ? WorldChoirMap : null);
+    }
+    if (id === 'donate') {
+      return window.WorldChoirDonate || (typeof WorldChoirDonate !== 'undefined' ? WorldChoirDonate : null);
+    }
+    if (id === 'profile') {
+      return window.ProfilePage || (typeof ProfilePage !== 'undefined' ? ProfilePage : null);
+    }
+    if (id === 'memory') {
+      return window.WorldChoirMemory || (typeof WorldChoirMemory !== 'undefined' ? WorldChoirMemory : null);
+    }
+    return null;
+  }
+
+  function isPanelHydrated(id) {
+    const panel = panels[id]?.el;
+    if (!panel) return false;
+    if (id === 'home') {
+      return !!(
+        panel.querySelector('.home-headline, .home-after, .home-skeleton, #home-voices-counter')
+      );
+    }
+    if (id === 'map') {
+      return !!(panel.querySelector('#map-shell, #map, .map-stats'));
+    }
+    if (id === 'donate') {
+      const content = panel.querySelector('#donate-content');
+      if (!content) return false;
+      // Empty shell = not hydrated yet.
+      return !!(
+        content.querySelector('.df-intro__title, .df-explore, .df-card, [role="listitem"], .df-search-trigger')
+        || (content.textContent || '').trim().length > 40
+      );
+    }
+    if (id === 'profile') {
+      return !!(
+        panel.querySelector('.identity-card, .profile-voices-counter, .profile-page__skeleton, #profile-content .profile-block')
+      );
+    }
+    if (id === 'memory') {
+      return !!(panel.querySelector('#memory-page .mem-shell, .mem-intro, .memory-page'));
+    }
+    return panel.childElementCount > 0;
+  }
 
   function isPrimary(id) {
     return !!(id && PRIMARY[id]);
@@ -442,6 +493,12 @@ const WorldChoirTabs = (() => {
   }
 
   async function loadPanel(id) {
+    // Previously marked ready but empty (failed silent window.* init) — force rehydrate.
+    if (panels[id]?.ready && !isPanelHydrated(id)) {
+      panels[id].ready = false;
+      panels[id].loaded = false;
+      delete loadPromises[id];
+    }
     if (panels[id]?.ready) return panels[id];
     if (loadPromises[id]) return loadPromises[id];
 
@@ -451,25 +508,29 @@ const WorldChoirTabs = (() => {
       if (!hostEl) throw new Error('Tab host not attached');
 
       const panel = ensurePanel(id);
-      if (panel.ready) return panel;
+      if (panel.ready && isPanelHydrated(id)) return panel;
 
-      const res = await fetch(spec.href, { credentials: 'same-origin', cache: 'force-cache' });
-      if (!res.ok) throw new Error(`Failed to fetch ${spec.href}`);
-      const html = await res.text();
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      const nodes = collectNodes(doc, spec);
-      nodes.forEach((node) => panel.el.appendChild(document.adoptNode(node)));
+      // If shell exists but never hydrated, keep the shell and only re-run assets/init.
+      const needsDom = panel.el.childElementCount === 0;
+      if (needsDom) {
+        const res = await fetch(spec.href, { credentials: 'same-origin', cache: 'force-cache' });
+        if (!res.ok) throw new Error(`Failed to fetch ${spec.href}`);
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const nodes = collectNodes(doc, spec);
+        nodes.forEach((node) => panel.el.appendChild(document.adoptNode(node)));
 
-      // Shell-level nodes (e.g. global live host) stay outside tab panels.
-      (spec.bodySelectors || []).forEach((sel) => {
-        const node = doc.querySelector(sel);
-        if (!node) return;
-        if (node.id && document.getElementById(node.id)) return;
-        const navRoot = document.getElementById('nav-root');
-        const adopted = document.adoptNode(node);
-        if (navRoot) document.body.insertBefore(adopted, navRoot);
-        else document.body.appendChild(adopted);
-      });
+        // Shell-level nodes (e.g. global live host) stay outside tab panels.
+        (spec.bodySelectors || []).forEach((sel) => {
+          const node = doc.querySelector(sel);
+          if (!node) return;
+          if (node.id && document.getElementById(node.id)) return;
+          const navRoot = document.getElementById('nav-root');
+          const adopted = document.adoptNode(node);
+          if (navRoot) document.body.insertBefore(adopted, navRoot);
+          else document.body.appendChild(adopted);
+        });
+      }
 
       await ensureAssets(spec);
 
@@ -478,16 +539,38 @@ const WorldChoirTabs = (() => {
       window.__WC_TAB_SILENT_INIT = true;
       try {
         await Promise.resolve(spec.init?.());
+        // Some pages hydrate in onTabShow — call it during load too so preload is real content.
+        await Promise.resolve(spec.onShow?.());
       } finally {
         window.__WC_TAB_SILENT_INIT = false;
       }
 
+      // Wait briefly for async hydrate (Donate foundations, etc.).
+      if (!isPanelHydrated(id)) {
+        const waitUntil = performance.now() + (id === 'donate' ? 2500 : 1200);
+        while (performance.now() < waitUntil && !isPanelHydrated(id)) {
+          await new Promise((r) => setTimeout(r, 40));
+          if (!isPanelHydrated(id)) {
+            try { await Promise.resolve(spec.onShow?.()); } catch { /* ignore */ }
+          }
+        }
+      }
+
       // One frame so layout/paint can settle before we allow reveal.
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+      if (!isPanelHydrated(id)) {
+        throw new Error(`[WorldChoirTabs] ${id} panel failed to hydrate`);
+      }
+
       panel.ready = true;
       return panel;
     })().catch((err) => {
       delete loadPromises[id];
+      if (panels[id]) {
+        panels[id].ready = false;
+        panels[id].loaded = false;
+      }
       throw err;
     });
 

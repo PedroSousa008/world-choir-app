@@ -1000,5 +1000,7 @@ const WorldChoirMemory = (() => {
     void (typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.ready() : Promise.resolve());
   }
 
-  return { init, onTabShow, render };
+  const api = { init, onTabShow, render };
+  window.WorldChoirMemory = api;
+  return api;
 })();

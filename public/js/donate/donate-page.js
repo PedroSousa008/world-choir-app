@@ -2212,5 +2212,7 @@ const WorldChoirDonate = (() => {
     }
   }
 
-  return { init, onTabShow };
+  const api = { init, onTabShow };
+  window.WorldChoirDonate = api;
+  return api;
 })();
