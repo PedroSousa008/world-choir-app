@@ -16,7 +16,8 @@
     { "source": "/profile", "destination": "/profile.html" },
     { "source": "/owner-database", "destination": "/owner-database.html" },
     { "source": "/owner", "destination": "/owner.html" },
-    { "source": "/members", "destination": "/members.html" }
+    { "source": "/members", "destination": "/members.html" },
+    { "source": "/pitch/simon-squibb", "destination": "/pitch/simon-squibb.html" }
   ],
   "functions": {
     "api/**/*.js": {

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>World Choir — for Simon Squibb</title>
+  <link rel="icon" type="image/png" href="/images/world-choir-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --void: #030303;
+      --ink: #f3efe6;
+      --mute: rgba(243, 239, 230, 0.62);
+      --whisper: rgba(243, 239, 230, 0.38);
+      --warm: #e8c9a0;
+      --line: rgba(243, 239, 230, 0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--void);
+      color: var(--ink);
+      font-family: "Outfit", system-ui, sans-serif;
+      font-weight: 300;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    .deck {
+      height: 100%;
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
+      scroll-behavior: smooth;
+    }
+
+    .slide {
+      position: relative;
+      min-height: 100%;
+      height: 100svh;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
+      display: grid;
+      align-items: end;
+      padding: clamp(28px, 5vw, 72px);
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .slide--center { align-items: center; }
+    .slide--top { align-items: start; padding-top: clamp(64px, 12vh, 120px); }
+
+    .slide__media {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background: var(--void) center / cover no-repeat;
+      transform: scale(1.02);
+    }
+
+    .slide__veil {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.88) 100%);
+      pointer-events: none;
+    }
+
+    .slide__veil--soft {
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.72) 100%);
+    }
+
+    .slide__veil--side {
+      background:
+        linear-gradient(90deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 48%, rgba(0,0,0,0.2) 100%);
+    }
+
+    .slide__veil--center {
+      background:
+        radial-gradient(ellipse at center, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.78) 72%, rgba(0,0,0,0.92) 100%);
+    }
+
+    .content {
+      max-width: min(18ch, 92vw);
+      width: 100%;
+    }
+
+    .content--wide { max-width: min(22ch, 94vw); }
+    .content--narrow { max-width: min(14ch, 90vw); }
+    .content--center {
+      margin-inline: auto;
+      text-align: center;
+    }
+
+    .eyebrow {
+      font-family: "Outfit", sans-serif;
+      font-size: clamp(0.7rem, 1.1vw, 0.85rem);
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--whisper);
+      margin-bottom: 1.4rem;
+      font-weight: 400;
+    }
+
+    .headline {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 500;
+      font-size: clamp(3.2rem, 7.2vw, 5.75rem);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      text-wrap: balance;
+    }
+
+    .headline em {
+      font-style: italic;
+      font-weight: 400;
+      color: var(--warm);
+    }
+
+    .headline--xl {
+      font-size: clamp(3.6rem, 8.5vw, 6.75rem);
+    }
+
+    .sub {
+      margin-top: 1.35rem;
+      font-size: clamp(1rem, 1.35vw, 1.25rem);
+      line-height: 1.45;
+      color: var(--mute);
+      max-width: 28ch;
+      font-weight: 300;
+    }
+
+    .sub--center {
+      margin-inline: auto;
+    }
+
+    .logo {
+      width: clamp(42px, 5vw, 56px);
+      height: auto;
+      opacity: 0.92;
+      margin-bottom: 1.75rem;
+      filter: drop-shadow(0 8px 24px rgba(0,0,0,0.45));
+    }
+
+    .mark {
+      display: inline-block;
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      font-size: clamp(0.85rem, 1.1vw, 1rem);
+      letter-spacing: 0.08em;
+      color: var(--whisper);
+    }
+
+    .chrome {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 40;
+    }
+
+    .chrome__top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 22px clamp(20px, 4vw, 40px);
+    }
+
+    .chrome__brand {
+      font-size: 0.68rem;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: rgba(243, 239, 230, 0.42);
+      pointer-events: auto;
+      text-decoration: none;
+    }
+
+    .chrome__brand:hover { color: rgba(243, 239, 230, 0.75); }
+
+    .chrome__count {
+      font-variant-numeric: tabular-nums;
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      color: rgba(243, 239, 230, 0.42);
+    }
+
+    .dots {
+      position: absolute;
+      right: clamp(14px, 2.5vw, 28px);
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      pointer-events: auto;
+    }
+
+    .dots button {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      border: 0;
+      padding: 0;
+      background: rgba(243, 239, 230, 0.22);
+      cursor: pointer;
+      transition: transform 0.25s ease, background 0.25s ease;
+    }
+
+    .dots button.is-active {
+      background: var(--warm);
+      transform: scale(1.35);
+    }
+
+    .hint {
+      position: absolute;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      font-size: 0.68rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(243, 239, 230, 0.28);
+      transition: opacity 0.4s ease;
+    }
+
+    .hint.is-hidden { opacity: 0; }
+
+    .lines {
+      display: grid;
+      gap: 1.6rem;
+      margin-top: 0.4rem;
+    }
+
+    .lines p {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: clamp(2rem, 4.2vw, 3.15rem);
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      max-width: 16ch;
+    }
+
+    .lines p span {
+      display: block;
+      margin-top: 0.45rem;
+      font-family: "Outfit", sans-serif;
+      font-size: clamp(0.95rem, 1.2vw, 1.1rem);
+      line-height: 1.4;
+      color: var(--mute);
+      letter-spacing: 0;
+      font-weight: 300;
+    }
+
+    @media (max-width: 720px) {
+      .slide { align-items: end; }
+      .headline, .headline--xl {
+        font-size: clamp(2.7rem, 12vw, 3.6rem);
+      }
+      .dots { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .deck { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="chrome" aria-hidden="false">
+    <div class="chrome__top">
+      <a class="chrome__brand" href="/">World Choir</a>
+      <div class="chrome__count"><span id="slide-num">01</span> / 12</div>
+    </div>
+    <nav class="dots" id="dots" aria-label="Slides"></nav>
+    <div class="hint" id="hint">Scroll</div>
+  </div>
+
+  <main class="deck" id="deck" aria-label="Pitch deck for Simon Squibb">
+
+    <!-- 01 -->
+    <section class="slide slide--center" data-slide="1">
+      <div class="slide__media" style="background-image:url('/images/foundation/foundation-overview-hero-background.png')"></div>
+      <div class="slide__veil slide__veil--center"></div>
+      <div class="content content--center content--wide">
+        <img class="logo" src="/images/world-choir-logo.png" alt="">
+        <h1 class="headline headline--xl">The world<br>sings together.</h1>
+        <p class="sub sub--center">A private introduction for Simon Squibb</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="slide" data-slide="2">
+      <div class="slide__media" style="background-image:url('/images/after-event.png')"></div>
+      <div class="slide__veil"></div>
+      <div class="content content--wide">
+        <p class="eyebrow">The moment</p>
+        <h1 class="headline">21 September<br>2027</h1>
+        <p class="sub">16:00 UTC · one song · every continent</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="slide slide--center" data-slide="3">
+      <div class="slide__media" style="background-image:url('/images/background-imagine.png')"></div>
+      <div class="slide__veil slide__veil--soft"></div>
+      <div class="content content--center">
+        <p class="eyebrow">The song</p>
+        <h1 class="headline headline--xl"><em>Imagine</em></h1>
+        <p class="sub sub--center">John Lennon · sung by the world at once</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="slide" data-slide="4">
+      <div class="slide__media" style="background-image:url('/images/imagine-after.png')"></div>
+      <div class="slide__veil slide__veil--side"></div>
+      <div class="content">
+        <h1 class="headline">Not an app.<br><em>A movement</em><br>that happens<br>once a year.</h1>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="slide slide--top" data-slide="5">
+      <div class="slide__media" style="background-image:url('/images/passport/passport-world-map.png'); background-size: cover; background-position: center 40%; filter: brightness(0.55) contrast(1.05);"></div>
+      <div class="slide__veil slide__veil--soft"></div>
+      <div class="content content--wide">
+        <p class="eyebrow">World Choir</p>
+        <h1 class="headline">People join.<br>They practice.<br>Then they sing<br>as one.</h1>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="slide" data-slide="6">
+      <div class="slide__media" style="background-image:url('/images/chain-header.png')"></div>
+      <div class="slide__veil"></div>
+      <div class="content">
+        <p class="eyebrow">Connection</p>
+        <h1 class="headline">Real Voices.<br>Real cities.<br><em>Real links.</em></h1>
+        <p class="sub">From Daily Acts of Peace to World Chain — participation that leaves a mark.</p>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="slide" data-slide="7">
+      <div class="slide__media" style="background-image:url('/images/daily-acts/daily-act-background.jpg')"></div>
+      <div class="slide__veil"></div>
+      <div class="content content--wide">
+        <p class="eyebrow">Creator Foundations</p>
+        <h1 class="headline">Attention<br>becomes<br><em>impact.</em></h1>
+        <p class="sub">Inside World Choir, creators open a Foundation on the Donate page — a home for the cause they stand for.</p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="slide slide--center" data-slide="8">
+      <div class="slide__media" style="background: radial-gradient(ellipse at 50% 35%, #1a1612 0%, #050505 55%, #000 100%);"></div>
+      <div class="slide__veil slide__veil--center"></div>
+      <div class="content content--center content--wide">
+        <p class="eyebrow">Simon Squibb</p>
+        <h1 class="headline">Help people<br>help people.</h1>
+        <p class="sub sub--center">Your mission already moves millions to begin.<br>World Choir can turn that same energy into a lasting cause inside a global moment.</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="slide" data-slide="9">
+      <div class="slide__media" style="background-image:url('/images/world-choir-logo-donate.png'); background-size: 42% auto; background-position: 88% 45%; background-color: #050505;"></div>
+      <div class="slide__veil slide__veil--side"></div>
+      <div class="content">
+        <p class="eyebrow">Your place</p>
+        <h1 class="headline">A Foundation<br>with your name<br>on Donate.</h1>
+        <p class="sub">Present among the Voices who come to sing — and stay to give.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="slide slide--center" data-slide="10">
+      <div class="slide__media" style="background-image:url('/images/practice/practice-song-background.webp')"></div>
+      <div class="slide__veil slide__veil--soft"></div>
+      <div class="content content--center">
+        <div class="lines" style="justify-items: center; text-align: center;">
+          <p>Sing together.<span>One synchronized moment for the world.</span></p>
+          <p>Give together.<span>Support the dreamers you already fight for.</span></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="slide" data-slide="11">
+      <div class="slide__media" style="background-image:url('/images/memory-after.png')"></div>
+      <div class="slide__veil"></div>
+      <div class="content content--wide">
+        <p class="eyebrow">The invitation</p>
+        <h1 class="headline">Bring your<br>Foundation<br>into the choir.</h1>
+        <p class="sub">Not a sponsorship banner.<br>A permanent home for your cause inside World Choir.</p>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="slide slide--center" data-slide="12">
+      <div class="slide__media" style="background-image:url('/images/foundation/foundation-overview-hero-background.png')"></div>
+      <div class="slide__veil slide__veil--center"></div>
+      <div class="content content--center">
+        <img class="logo" src="/images/world-choir-logo.png" alt="">
+        <h1 class="headline headline--xl">What’s your<br><em>dream</em><br>for the world?</h1>
+        <p class="mark">World Choir · Creator Foundation</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    (function () {
+      const deck = document.getElementById('deck');
+      const slides = [...deck.querySelectorAll('.slide')];
+      const dots = document.getElementById('dots');
+      const num = document.getElementById('slide-num');
+      const hint = document.getElementById('hint');
+      let index = 0;
+
+      slides.forEach((_, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+        b.addEventListener('click', () => {
+          slides[i].scrollIntoView({ behavior: 'smooth' });
+        });
+        dots.appendChild(b);
+      });
+
+      const buttons = [...dots.querySelectorAll('button')];
+
+      function setActive(i) {
+        index = i;
+        buttons.forEach((b, bi) => b.classList.toggle('is-active', bi === i));
+        num.textContent = String(i + 1).padStart(2, '0');
+        hint.classList.toggle('is-hidden', i > 0);
+      }
+
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const i = slides.indexOf(entry.target);
+          if (i >= 0) setActive(i);
+        });
+      }, { root: deck, threshold: 0.55 });
+
+      slides.forEach((s) => io.observe(s));
+      setActive(0);
+
+      function go(delta) {
+        const next = Math.max(0, Math.min(slides.length - 1, index + delta));
+        slides[next].scrollIntoView({ behavior: 'smooth' });
+      }
+
+      window.addEventListener('keydown', (e) => {
+        if (['ArrowDown', 'ArrowRight', 'PageDown', ' '].includes(e.key)) {
+          e.preventDefault();
+          go(1);
+        } else if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key)) {
+          e.preventDefault();
+          go(-1);
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          slides[0].scrollIntoView({ behavior: 'smooth' });
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          slides[slides.length - 1].scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
