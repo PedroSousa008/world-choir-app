@@ -5241,17 +5241,27 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  gap: 16px 24px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
+}
+
+.owner-notif-header__copy {
+  min-width: min(100%, 280px);
+  flex: 1 1 280px;
 }
 
 .owner-notif-title {
-  margin: 4px 0 6px;
+  margin: 2px 0 6px;
   font-size: 1.55rem;
   font-weight: 600;
   letter-spacing: -0.03em;
   color: #f2efe8;
+}
+
+.owner-notif-sub {
+  margin: 0;
+  max-width: 42ch;
 }
 
 .owner-notif-header__actions {
@@ -5262,20 +5272,87 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   justify-content: flex-end;
 }
 
-.owner-notif-kpis {
+.owner-notif-kpi-row {
+  display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
   margin-bottom: 14px;
+}
+
+.owner-notif-kpi {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  min-width: 0;
+}
+
+.owner-notif-kpi__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.owner-notif-kpi__label {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8a8d97;
+  line-height: 1.35;
+}
+
+.owner-notif-kpi__icon {
+  color: #6a6f7c;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.owner-notif-kpi__value {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: #f2efe8;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.owner-notif-kpi__delta {
+  margin: 8px 0 0;
+  font-size: 0.74rem;
+  color: #8a8d97;
+}
+
+.owner-notif-kpi__delta.is-up { color: #5dca8a; }
+.owner-notif-kpi__delta.is-down { color: #e07070; }
+.owner-notif-kpi__delta.is-flat { color: #8a8d97; }
+
+.owner-notif-grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.owner-notif-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .owner-notif-row {
   margin-bottom: 14px;
 }
 
-.owner-notif-banner {
-  margin-bottom: 14px;
+.owner-notif-panel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 16px 18px;
+  min-width: 0;
 }
 
-.owner-notif .sa-panel__head {
+.owner-notif-panel__head {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -5284,10 +5361,20 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   margin-bottom: 12px;
 }
 
+.owner-notif-panel__title {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a8d97;
+  font-weight: 600;
+}
+
 .owner-notif-topic-cell strong {
   display: block;
   margin-bottom: 6px;
   color: #f2efe8;
+  font-weight: 500;
 }
 
 .owner-notif-bar {
@@ -5325,17 +5412,12 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   flex-wrap: wrap;
 }
 
-.owner-notif-donut--empty {
-  min-height: 120px;
-  align-items: center;
-}
-
 .owner-notif-legend {
   list-style: none;
   margin: 0;
   padding: 0;
   flex: 1;
-  min-width: 180px;
+  min-width: 160px;
 }
 
 .owner-notif-legend li {
@@ -5343,7 +5425,7 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   grid-template-columns: 10px 1fr auto;
   gap: 8px;
   align-items: center;
-  padding: 4px 0;
+  padding: 3px 0;
   font-size: 0.78rem;
   color: #8a8d97;
 }
@@ -5351,6 +5433,7 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 .owner-notif-legend strong {
   color: #f2efe8;
   font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
 
 .owner-notif-legend__swatch {
@@ -5394,9 +5477,7 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   background: rgba(78, 197, 232, 0.08);
 }
 
-.owner-notif-badge.is-average {
-  color: #8a8d97;
-}
+.owner-notif-badge.is-average { color: #8a8d97; }
 
 .owner-notif-badge.is-low {
   color: #e07070;
@@ -5404,9 +5485,7 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   background: rgba(224, 112, 112, 0.08);
 }
 
-.owner-notif-actions-cell {
-  position: relative;
-}
+.owner-notif-actions-cell { position: relative; }
 
 .owner-notif-more {
   min-width: 32px;
@@ -5459,6 +5538,8 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   justify-content: space-between;
 }
 
+.owner-notif-upcoming__item:last-child { border-bottom: 0; }
+
 .owner-notif-upcoming__copy {
   flex: 1;
   min-width: 0;
@@ -5470,18 +5551,42 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 .owner-notif-upcoming__copy strong {
   color: #f2efe8;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .owner-notif-audience__total {
-  margin: 0 0 10px;
-  font-size: 1.1rem;
+  margin: 0 0 12px;
+  font-size: 1rem;
   color: #f2efe8;
 }
 
 .owner-notif-audience__total strong {
+  display: block;
   font-size: 1.45rem;
-  color: #4ec5e8;
+  color: #f2efe8;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  margin-bottom: 2px;
+}
+
+.owner-notif-audience__split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.owner-notif-audience__split strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.15rem;
+  color: #f2efe8;
+}
+
+.owner-notif-note {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 .owner-notif-health__status {
@@ -5500,17 +5605,10 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   background: #8a8d97;
 }
 
-.owner-notif-dot.is-warn {
-  background: #e0b060;
-}
+.owner-notif-dot.is-warn { background: #e0b060; }
+.owner-notif-dot.is-ok { background: #5dca8a; }
 
-.owner-notif-dot.is-ok {
-  background: #5dca8a;
-}
-
-.owner-notif-meta {
-  margin: 0;
-}
+.owner-notif-meta { margin: 0; }
 
 .owner-notif-meta > div {
   display: flex;
@@ -5521,10 +5619,7 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   font-size: 0.86rem;
 }
 
-.owner-notif-meta dt {
-  color: #8a8d97;
-}
-
+.owner-notif-meta dt { color: #8a8d97; }
 .owner-notif-meta dd {
   margin: 0;
   color: #f2efe8;
@@ -5539,9 +5634,9 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   letter-spacing: -0.02em;
 }
 
-.owner-notif-filters {
-  margin-bottom: 14px;
-}
+.owner-notif-best__time--empty { color: #f2efe8; }
+
+.owner-notif-filters { margin-bottom: 14px; }
 
 .owner-notif-filters__row {
   display: flex;
@@ -5585,9 +5680,7 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   align-items: center;
 }
 
-.owner-notif-sound-row select {
-  flex: 1;
-}
+.owner-notif-sound-row select { flex: 1; }
 
 .owner-notif-radio {
   display: flex;
@@ -5610,9 +5703,7 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   font-size: 0.88rem;
 }
 
-.owner-notif-estimate strong {
-  color: #4ec5e8;
-}
+.owner-notif-estimate strong { color: #4ec5e8; }
 
 .owner-notif-preview__device {
   margin-top: 12px;
@@ -5651,9 +5742,7 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   line-height: 1.45;
 }
 
-.owner-notif-review {
-  margin: 0 0 16px;
-}
+.owner-notif-review { margin: 0 0 16px; }
 
 .owner-notif-review > div {
   display: grid;
@@ -5664,18 +5753,18 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   font-size: 0.88rem;
 }
 
-.owner-notif-review dt {
-  color: #8a8d97;
-}
+.owner-notif-review dt { color: #8a8d97; }
+.owner-notif-review dd { margin: 0; color: #f2efe8; }
 
-.owner-notif-review dd {
-  margin: 0;
-  color: #f2efe8;
-}
-
-@media (max-width: 1100px) {
-  .owner-notif-kpis {
+/* Keep 4 KPI cards on typical Owner desktop (sidebar + main). */
+@media (max-width: 820px) {
+  .owner-notif-kpi-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .owner-notif-grid-2,
+  .owner-notif-grid-3 {
+    grid-template-columns: 1fr;
   }
 
   .owner-notif-compose-grid {
@@ -5683,13 +5772,8 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   }
 }
 
-@media (max-width: 720px) {
-  .owner-notif-kpis {
-    grid-template-columns: 1fr;
-  }
-
-  .sa-grid-2.owner-notif-row,
-  .sa-grid-3.owner-notif-row {
+@media (max-width: 560px) {
+  .owner-notif-kpi-row {
     grid-template-columns: 1fr;
   }
 

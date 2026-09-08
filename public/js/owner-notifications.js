@@ -129,46 +129,42 @@ const OwnerNotifications = (() => {
   function renderKpi(icon, label, value, delta) {
     const d = fmtDelta(delta);
     return `
-      <article class="sa-kpi owner-notif-kpi">
-        <div class="sa-kpi__top">
-          <span class="sa-kpi__label">${label}</span>
-          <span class="sa-kpi__icon">${icon}</span>
+      <article class="owner-notif-kpi">
+        <div class="owner-notif-kpi__top">
+          <p class="owner-notif-kpi__label">${label}</p>
+          <span class="owner-notif-kpi__icon" aria-hidden="true">${icon}</span>
         </div>
-        <span class="sa-kpi__value">${value}</span>
-        <span class="sa-kpi__delta ${d.cls}">${d.text}</span>
+        <p class="owner-notif-kpi__value">${value}</p>
+        <p class="owner-notif-kpi__delta ${d.cls}">${d.text}</p>
       </article>`;
   }
 
   function donutSvg(segments, total, esc) {
-    if (!total) {
-      return `<div class="owner-notif-donut owner-notif-donut--empty"><p class="owner-muted">No data for this time period.</p></div>`;
-    }
-    // Harmonious cyan/blue/green/slate palette (matches Owner accents)
     const palette = ['#4ec5e8', '#5dca8a', '#6b8cff', '#8a9bb8', '#3aa8c9', '#7bc9a6', '#5a7a9a', '#9bb0c8', '#6a6f7c'];
     const r = 54;
     const c = 2 * Math.PI * r;
     let offset = 0;
-    const arcs = segments.filter((s) => s.sent > 0).map((s, i) => {
-      const len = (s.sent / total) * c;
+    const arcs = (segments || []).filter((s) => s.sent > 0).map((s, i) => {
+      const len = (s.sent / Math.max(total, 1)) * c;
       const dash = `${len} ${c - len}`;
-      const el = `<circle class="owner-notif-donut__seg" cx="70" cy="70" r="${r}" fill="none" stroke="${palette[i % palette.length]}" stroke-width="14" stroke-dasharray="${dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 70 70)"></circle>`;
+      const el = `<circle cx="70" cy="70" r="${r}" fill="none" stroke="${palette[i % palette.length]}" stroke-width="14" stroke-dasharray="${dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 70 70)"></circle>`;
       offset += len;
       return el;
     }).join('');
     return `
       <div class="owner-notif-donut">
-        <svg viewBox="0 0 140 140" width="160" height="160" role="img" aria-label="Topic distribution">
-          <circle cx="70" cy="70" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14"></circle>
+        <svg viewBox="0 0 140 140" width="148" height="148" role="img" aria-label="Topic distribution, ${esc(fmt(total))} sent">
+          <circle cx="70" cy="70" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="14"></circle>
           ${arcs}
-          <text x="70" y="66" text-anchor="middle" fill="#f2efe8" font-size="16" font-weight="600">${esc(fmt(total))}</text>
-          <text x="70" y="84" text-anchor="middle" fill="#8a8d97" font-size="10" letter-spacing="0.08em">SENT</text>
+          <text x="70" y="66" text-anchor="middle" fill="#f2efe8" font-size="15" font-weight="600">${esc(fmt(total))}</text>
+          <text x="70" y="84" text-anchor="middle" fill="#8a8d97" font-size="9" letter-spacing="0.1em">SENT</text>
         </svg>
         <ul class="owner-notif-legend">
-          ${segments.map((s, i) => `
+          ${(segments || []).map((s, i) => `
             <li>
               <span class="owner-notif-legend__swatch" style="background:${palette[i % palette.length]}"></span>
               <span>${esc(s.label)}</span>
-              <strong>${s.pct.toFixed(1)}%</strong>
+              <strong>${total > 0 ? `${Number(s.pct).toFixed(1)}%` : '—'}</strong>
             </li>`).join('')}
         </ul>
       </div>`;
@@ -183,9 +179,12 @@ const OwnerNotifications = (() => {
   }
 
   function topicBar(rateVal, maxRate) {
+    if (rateVal == null && !(maxRate > 0)) {
+      return `<span class="owner-notif-bar owner-notif-bar--empty" aria-hidden="true"><span style="width:0%"></span></span>`;
+    }
     const v = rateVal == null ? 0 : Number(rateVal);
     const max = Math.max(maxRate || 1, 1);
-    const pct = Math.max(4, Math.round((v / max) * 100));
+    const pct = v > 0 ? Math.max(6, Math.round((v / max) * 100)) : 0;
     return `<span class="owner-notif-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>`;
   }
 
@@ -210,10 +209,10 @@ const OwnerNotifications = (() => {
     return `
       <section class="owner-section owner-notif">
         <header class="owner-notif-header">
-          <div>
+          <div class="owner-notif-header__copy">
             <p class="owner-section__label">Notifications</p>
             <h2 class="owner-notif-title">Notifications</h2>
-            <p class="owner-muted">Manage, schedule and understand World Choir notifications.</p>
+            <p class="owner-muted owner-notif-sub">Manage, schedule and understand World Choir notifications.</p>
           </div>
           <div class="owner-notif-header__actions">
             ${renderRangeChips(state)}
@@ -221,61 +220,55 @@ const OwnerNotifications = (() => {
           </div>
         </header>
 
-        ${d.provider && !d.provider.pushConfigured ? `
-          <div class="owner-flash is-ok owner-notif-banner" role="status">
-            Push delivery is not configured yet. You can draft, schedule, and record campaigns; devices will not receive pushes until a provider is connected.
-          </div>` : ''}
-
-        <div class="sa-kpis owner-notif-kpis">
+        <div class="owner-notif-kpi-row" role="list" aria-label="Notification performance">
           ${renderKpi(ICONS.sent, 'Notifications Sent', fmt(k.sent?.value), k.sent?.deltaPct)}
           ${renderKpi(ICONS.eye, 'Open Rate', fmtPct(k.openRate?.value), k.openRate?.deltaPct)}
           ${renderKpi(ICONS.click, 'Clicks', fmt(k.clicks?.value), k.clicks?.deltaPct)}
           ${renderKpi(ICONS.actions, 'Actions Completed', fmt(k.actionsCompleted?.value), k.actionsCompleted?.deltaPct)}
         </div>
 
-        <div class="sa-grid-2 owner-notif-row">
-          <article class="sa-panel">
-            <div class="sa-panel__head">
-              <h3 class="sa-panel__title">Performance by Topic</h3>
+        <div class="owner-notif-grid-2 owner-notif-row">
+          <article class="owner-notif-panel">
+            <div class="owner-notif-panel__head">
+              <h3 class="owner-notif-panel__title">Performance by Topic</h3>
             </div>
-            ${topics.some((t) => t.sent > 0) ? `
-              <div class="owner-table-wrap">
-                <table class="owner-table owner-notif-topic-table">
-                  <thead>
-                    <tr><th>#</th><th>Topic</th><th>Sent</th><th>Open Rate</th><th>Click Rate</th><th>Action Rate</th></tr>
-                  </thead>
-                  <tbody>
-                    ${topics.map((t, i) => `
-                      <tr class="owner-notif-topic-row" data-notif-topic-filter="${esc(t.topic)}" tabindex="0" role="button" aria-label="Filter history for ${esc(t.label)}">
-                        <td>${i + 1}</td>
-                        <td>
-                          <div class="owner-notif-topic-cell">
-                            <strong>${esc(t.label)}</strong>
-                            ${topicBar(t.actionRate, maxAction)}
-                          </div>
-                        </td>
-                        <td>${fmt(t.sent)}</td>
-                        <td>${fmtPct(t.openRate)}</td>
-                        <td>${fmtPct(t.clickRate)}</td>
-                        <td>${fmtPct(t.actionRate)}</td>
-                      </tr>`).join('')}
-                  </tbody>
-                </table>
-              </div>` : `<p class="owner-empty">No notifications sent yet.<br>Create your first notification to begin seeing performance.</p>`}
+            <div class="owner-table-wrap">
+              <table class="owner-table owner-notif-topic-table">
+                <thead>
+                  <tr><th>#</th><th>Topic</th><th>Sent</th><th>Open Rate</th><th>Click Rate</th><th>Action Rate</th></tr>
+                </thead>
+                <tbody>
+                  ${topics.length ? topics.map((t, i) => `
+                    <tr class="owner-notif-topic-row" data-notif-topic-filter="${esc(t.topic)}" tabindex="0" role="button" aria-label="Filter history for ${esc(t.label)}">
+                      <td>${i + 1}</td>
+                      <td>
+                        <div class="owner-notif-topic-cell">
+                          <strong>${esc(t.label)}</strong>
+                          ${topicBar(t.actionRate ?? (t.sent ? 0 : null), maxAction)}
+                        </div>
+                      </td>
+                      <td>${fmt(t.sent)}</td>
+                      <td>${fmtPct(t.openRate)}</td>
+                      <td>${fmtPct(t.clickRate)}</td>
+                      <td>${fmtPct(t.actionRate)}</td>
+                    </tr>`).join('') : `<tr><td colspan="6" class="owner-empty">No topic data yet.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
           </article>
 
-          <article class="sa-panel">
-            <div class="sa-panel__head">
-              <h3 class="sa-panel__title">Topic Distribution</h3>
+          <article class="owner-notif-panel">
+            <div class="owner-notif-panel__head">
+              <h3 class="owner-notif-panel__title">Topic Distribution</h3>
             </div>
             ${donutSvg(dist.segments || [], dist.totalSent || 0, esc)}
           </article>
         </div>
 
-        <div class="sa-grid-2 owner-notif-row owner-notif-row--lists">
-          <article class="sa-panel">
-            <div class="sa-panel__head">
-              <h3 class="sa-panel__title">Recent Notifications</h3>
+        <div class="owner-notif-grid-2 owner-notif-row owner-notif-row--lists">
+          <article class="owner-notif-panel">
+            <div class="owner-notif-panel__head">
+              <h3 class="owner-notif-panel__title">Recent Notifications</h3>
               <button type="button" class="owner-btn-ghost" data-notif-view-all="sent">View All</button>
             </div>
             ${recent.length ? `
@@ -319,9 +312,9 @@ const OwnerNotifications = (() => {
               </div>` : `<p class="owner-empty">No notifications sent yet.<br>Create your first notification to begin seeing performance.</p>`}
           </article>
 
-          <article class="sa-panel">
-            <div class="sa-panel__head">
-              <h3 class="sa-panel__title">Upcoming Notifications</h3>
+          <article class="owner-notif-panel">
+            <div class="owner-notif-panel__head">
+              <h3 class="owner-notif-panel__title">Upcoming Notifications</h3>
               <button type="button" class="owner-btn-ghost" data-notif-view-all="scheduled">View All</button>
             </div>
             ${upcoming.length ? `
@@ -348,23 +341,31 @@ const OwnerNotifications = (() => {
           </article>
         </div>
 
-        <div class="sa-grid-3 owner-notif-row">
-          <article class="sa-panel">
-            <div class="sa-panel__head"><h3 class="sa-panel__title">Audience</h3></div>
+        <div class="owner-notif-grid-3 owner-notif-row">
+          <article class="owner-notif-panel">
+            <div class="owner-notif-panel__head"><h3 class="owner-notif-panel__title">Audience</h3></div>
             <p class="owner-notif-audience__total"><strong>${fmt(audience.totalVoices)}</strong> Total Voices</p>
             ${audience.devicePermissionKnown ? `
               <p class="owner-muted">${fmtPct(audience.notificationsEnabled)} Notifications Enabled</p>
               <p class="owner-muted">${fmtPct(audience.notificationsDisabled)} Notifications Disabled</p>
             ` : `
-              <p class="owner-muted">App subscription status: not tracked yet</p>
-              <p class="owner-muted">Device delivery permission: not available</p>
-              <p class="owner-muted" style="margin-top:8px">${esc(audience.note || '')}</p>
+              <div class="owner-notif-audience__split">
+                <div>
+                  <span class="owner-notif-kpi__label">Notifications Enabled</span>
+                  <strong>—</strong>
+                </div>
+                <div>
+                  <span class="owner-notif-kpi__label">Notifications Disabled</span>
+                  <strong>—</strong>
+                </div>
+              </div>
+              <p class="owner-muted owner-notif-note">Device permission reach is not available until push subscriptions are stored. Total Voices reflects registered accounts.</p>
             `}
           </article>
 
-          <article class="sa-panel">
-            <div class="sa-panel__head">
-              <h3 class="sa-panel__title">System Health</h3>
+          <article class="owner-notif-panel">
+            <div class="owner-notif-panel__head">
+              <h3 class="owner-notif-panel__title">System Health</h3>
               <button type="button" class="owner-btn-ghost" data-notif-health-details>View Details</button>
             </div>
             <p class="owner-notif-health__status">
@@ -376,19 +377,22 @@ const OwnerNotifications = (() => {
               <div><dt>Failed</dt><dd>${fmt(health.failed)}</dd></div>
               <div><dt>Delivery Rate</dt><dd>${fmtPct(health.deliveryRate)}</dd></div>
             </dl>
-            <p class="owner-muted" style="margin-top:10px">${esc(health.note || '')}</p>
+            ${!d.provider?.pushConfigured ? `<p class="owner-muted owner-notif-note">Push provider not connected — campaigns can be drafted and recorded only.</p>` : ''}
           </article>
 
-          <article class="sa-panel">
-            <div class="sa-panel__head">
-              <h3 class="sa-panel__title">Best Time to Send (${esc((state.notifRange || '30d').toUpperCase())})</h3>
+          <article class="owner-notif-panel">
+            <div class="owner-notif-panel__head">
+              <h3 class="owner-notif-panel__title">Best Time to Send (${esc((state.notifRange || '30d').toUpperCase())})</h3>
             </div>
             ${best.windowLabel ? `
               <p class="owner-notif-best__time">${esc(best.windowLabel)}</p>
               <p class="owner-muted">${esc(best.timezoneNote || 'Local time')}</p>
               <p class="owner-muted">${esc(best.subtitle || '')}</p>
             ` : `
-              <p class="owner-empty">${esc(best.note || 'No data for this time period.')}</p>
+              <p class="owner-notif-best__time owner-notif-best__time--empty">—</p>
+              <p class="owner-muted">Local time</p>
+              <p class="owner-muted">${esc(best.subtitle || 'Highest engagement across all topics')}</p>
+              <p class="owner-muted owner-notif-note">${esc(best.note || 'No data for this time period.')}</p>
             `}
           </article>
         </div>
