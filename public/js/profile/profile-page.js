@@ -186,7 +186,6 @@ const ProfilePage = (() => {
     ChangeLocationModal.init();
     PracticeMode.init();
     DailyActsPeace.init();
-    OwnerAccess.init();
     WorldChoirNav.startWatcher('profile');
 
     document.getElementById('profile-privacy-prefs')?.addEventListener('click', (e) => {

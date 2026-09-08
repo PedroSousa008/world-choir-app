@@ -532,7 +532,7 @@ const WorldChoirNav = (() => {
     ],
     profile: [
       'profile.html',
-      'css/profile.css?v=20260907voices',
+      'css/profile.css?v=20260908noowner',
       'js/profile/profile-page.js?v=20260907tabshydrate',
       'js/profile/daily-acts-peace.js?v=20260906perf',
       'js/profile/daily-acts-button.js?v=20260810i',
