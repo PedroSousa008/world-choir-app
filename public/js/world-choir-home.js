@@ -86,25 +86,18 @@ const WorldChoirHome = (() => {
         '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
       share:
         '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.7 13.5l6.6 3.9M15.3 6.6L8.7 10.5"/></svg>',
-      // World Chain — globe + people ring (outline style matching Home action icons)
+      // World Chain — network hub (outline style matching Home action icons)
       chain:
         '<svg class="btn-icon__svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        + '<circle cx="12" cy="12" r="9.1"/>'
-        + '<circle cx="12" cy="12" r="4.85"/>'
-        + '<ellipse cx="12" cy="12" rx="2" ry="4.85"/>'
-        + '<path d="M7.15 12h9.7"/>'
-        + '<circle cx="12" cy="2.7" r="1"/>'
-        + '<path d="M10.35 4.55c.85.7 1.85.7 2.7 0"/>'
-        + '<circle cx="21.3" cy="12" r="1"/>'
-        + '<path d="M19.45 10.35c-.7.85-.7 1.85 0 2.7"/>'
-        + '<circle cx="12" cy="21.3" r="1"/>'
-        + '<path d="M13.65 19.45c-.85-.7-1.85-.7-2.7 0"/>'
-        + '<circle cx="2.7" cy="12" r="1"/>'
-        + '<path d="M4.55 13.65c.7-.85.7-1.85 0-2.7"/>'
-        + '<circle cx="18.2" cy="5.8" r="0.75"/>'
-        + '<circle cx="18.2" cy="18.2" r="0.75"/>'
-        + '<circle cx="5.8" cy="18.2" r="0.75"/>'
-        + '<circle cx="5.8" cy="5.8" r="0.75"/>'
+        + '<circle cx="12" cy="12" r="2.4"/>'
+        + '<circle cx="12" cy="4.25" r="2.15"/>'
+        + '<circle cx="19.75" cy="12" r="2.15"/>'
+        + '<circle cx="12" cy="19.75" r="2.15"/>'
+        + '<circle cx="4.25" cy="12" r="2.15"/>'
+        + '<path d="M12 6.5v3"/>'
+        + '<path d="M17.5 12h-3"/>'
+        + '<path d="M12 17.5v-3"/>'
+        + '<path d="M6.5 12h3"/>'
         + '</svg>',
     };
     return icons[type] || '';

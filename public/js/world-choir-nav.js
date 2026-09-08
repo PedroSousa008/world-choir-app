@@ -500,7 +500,7 @@ const WorldChoirNav = (() => {
     home: [
       'index.html',
       'css/home.css?v=20260907voices',
-      'js/world-choir-home.js?v=20260907tabshydrate',
+      'js/world-choir-home.js?v=20260908network',
       'js/world-choir-db.js?v=20260907voices',
     ],
     map: [
