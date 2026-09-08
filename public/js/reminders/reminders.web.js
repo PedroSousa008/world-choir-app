@@ -28,6 +28,7 @@ const WorldChoirRemindersWeb = (() => {
           <p class="remind-fallback-hint" id="remind-fallback-hint" hidden></p>
           <div class="remind-fallback-actions">
             <button class="btn btn-primary" id="remind-fallback-add" type="button">Add to Reminders</button>
+            <button class="btn btn-secondary" id="remind-fallback-push" type="button">Enable Push Notifications</button>
             <button class="btn btn-secondary" id="remind-fallback-copy" type="button">Copy Reminder Details</button>
             <button class="btn btn-secondary" id="remind-fallback-cancel" type="button" data-a11y-close>Cancel</button>
           </div>
@@ -38,6 +39,7 @@ const WorldChoirRemindersWeb = (() => {
     document.body.insertAdjacentHTML('beforeend', html);
 
     document.getElementById('remind-fallback-add')?.addEventListener('click', addToReminders);
+    document.getElementById('remind-fallback-push')?.addEventListener('click', enablePush);
     document.getElementById('remind-fallback-copy')?.addEventListener('click', copyReminderDetails);
     document.getElementById('remind-fallback-cancel')?.addEventListener('click', close);
     document.getElementById('remind-fallback-overlay')?.addEventListener('click', (e) => {
@@ -98,6 +100,21 @@ const WorldChoirRemindersWeb = (() => {
       }, 2200);
     } catch {
       showHint('Could not copy automatically. Select and copy the text below.');
+    }
+  }
+
+  async function enablePush() {
+    if (typeof WorldChoirPush === 'undefined') {
+      showHint('Push notifications are not available on this page yet.');
+      return;
+    }
+    showHint('Requesting permission…');
+    try {
+      const result = await WorldChoirPush.subscribe({ role: 'voice' });
+      if (result.ok) showHint('Push notifications enabled for this device.', true);
+      else showHint(result.error || 'Could not enable push notifications.');
+    } catch (err) {
+      showHint(err.message || 'Could not enable push notifications.');
     }
   }
 

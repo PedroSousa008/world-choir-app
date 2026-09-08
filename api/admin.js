@@ -45,6 +45,7 @@ const {
   sendTestNotification,
   estimateAudience,
   evaluateFatigue,
+  runNotificationDispatchQueue,
 } = require('./_lib/owner-notifications');
 const {
   buildPromiseMemoryIntel,
@@ -282,6 +283,13 @@ module.exports = async function handler(req, res) {
       } catch { /* empty store */ }
       const result = evaluateFatigue(campaigns, req.body?.audience, { topic: req.body?.topic });
       return res.status(200).json(result);
+    }
+
+    if (action === 'notification-process-queue' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const report = await runNotificationDispatchQueue();
+      return res.status(200).json({ ok: true, ...report });
     }
 
     if (action === 'promise-memory' && req.method === 'GET') {

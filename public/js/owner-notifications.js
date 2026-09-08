@@ -216,6 +216,8 @@ const OwnerNotifications = (() => {
           </div>
           <div class="owner-notif-header__actions">
             ${renderRangeChips(state)}
+            <button type="button" class="owner-btn-ghost" data-notif-enable-test>Enable test pushes</button>
+            <button type="button" class="owner-btn-ghost" data-notif-process-queue>Process queue</button>
             <button type="button" class="owner-btn" data-notif-create>+ Create Notification</button>
           </div>
         </header>
@@ -344,10 +346,12 @@ const OwnerNotifications = (() => {
         <div class="owner-notif-grid-3 owner-notif-row">
           <article class="owner-notif-panel">
             <div class="owner-notif-panel__head"><h3 class="owner-notif-panel__title">Audience</h3></div>
-            <p class="owner-notif-audience__total"><strong>${fmt(audience.totalVoices)}</strong> Total Voices</p>
+            <p class="owner-notif-audience__total"><strong>${fmt(audience.notificationsEnabledCount != null ? audience.notificationsEnabledCount : audience.totalVoices)}</strong> ${audience.notificationsEnabledCount != null ? 'Reachable devices' : 'Total Voices'}</p>
             ${audience.devicePermissionKnown ? `
+              <p class="owner-muted">${fmt(audience.totalVoices)} Total Voices</p>
               <p class="owner-muted">${fmtPct(audience.notificationsEnabled)} Notifications Enabled</p>
               <p class="owner-muted">${fmtPct(audience.notificationsDisabled)} Notifications Disabled</p>
+              <p class="owner-muted owner-notif-note">${esc(audience.note || '')}</p>
             ` : `
               <div class="owner-notif-audience__split">
                 <div>
@@ -359,7 +363,7 @@ const OwnerNotifications = (() => {
                   <strong>—</strong>
                 </div>
               </div>
-              <p class="owner-muted owner-notif-note">Device permission reach is not available until push subscriptions are stored. Total Voices reflects registered accounts.</p>
+              <p class="owner-muted owner-notif-note">${esc(audience.note || 'Device permission reach is not available yet.')}</p>
             `}
           </article>
 
@@ -369,7 +373,7 @@ const OwnerNotifications = (() => {
               <button type="button" class="owner-btn-ghost" data-notif-health-details>View Details</button>
             </div>
             <p class="owner-notif-health__status">
-              <span class="owner-notif-dot is-warn" aria-hidden="true"></span>
+              <span class="owner-notif-dot ${health.status === 'operational' ? 'is-ok' : 'is-warn'}" aria-hidden="true"></span>
               ${esc(health.statusLabel || 'Unknown')}
             </p>
             <dl class="owner-notif-meta">
@@ -377,7 +381,7 @@ const OwnerNotifications = (() => {
               <div><dt>Failed</dt><dd>${fmt(health.failed)}</dd></div>
               <div><dt>Delivery Rate</dt><dd>${fmtPct(health.deliveryRate)}</dd></div>
             </dl>
-            ${!d.provider?.pushConfigured ? `<p class="owner-muted owner-notif-note">Push provider not connected — campaigns can be drafted and recorded only.</p>` : ''}
+            ${!d.provider?.dispatchEnabled || !d.provider?.pushConfigured ? `<p class="owner-muted owner-notif-note">${esc(health.note || '')}</p>` : `<p class="owner-muted owner-notif-note">${esc(health.note || '')}</p>`}
           </article>
 
           <article class="owner-notif-panel">
@@ -852,6 +856,33 @@ const OwnerNotifications = (() => {
       refreshEstimate(state, api).then(onRender);
     });
 
+    root.querySelector('[data-notif-enable-test]')?.addEventListener('click', async () => {
+      try {
+        if (typeof WorldChoirPush === 'undefined') {
+          setFlash('Push client not loaded on this page.', 'err');
+          onRender();
+          return;
+        }
+        const result = await WorldChoirPush.subscribe({ role: 'owner_test' });
+        setFlash(result.ok ? 'This browser is registered for Owner test pushes.' : (result.error || 'Could not enable test pushes.'), result.ok ? 'ok' : 'err');
+        onRender();
+      } catch (err) {
+        setFlash(err.message || 'Could not enable test pushes.', 'err');
+        onRender();
+      }
+    });
+
+    root.querySelector('[data-notif-process-queue]')?.addEventListener('click', async () => {
+      try {
+        const report = await api('notification-process-queue', { method: 'POST', body: {} });
+        setFlash(`Queue processed — started ${report.scheduledStarted || 0}, batches ${report.batchesProcessed || 0}, completed ${report.completed || 0}.`);
+        await loadData();
+      } catch (err) {
+        setFlash(err.message || 'Could not process queue.', 'err');
+        onRender();
+      }
+    });
+
     root.querySelectorAll('[data-notif-composer-close]').forEach((el) => {
       el.addEventListener('click', () => {
         state.notifComposerOpen = false;
@@ -1190,13 +1221,13 @@ const OwnerNotifications = (() => {
 
           if (form.delivery === 'schedule') {
             await api('notification-schedule', { method: 'POST', body: payload });
-            setFlash('Notification scheduled. Auto-dispatch requires a production queue (not enabled yet).');
+            setFlash('Notification scheduled. Cron / Process queue will dispatch at the scheduled time.');
           } else {
             const res = await api('notification-send', {
               method: 'POST',
               body: { ...payload, confirmToken },
             });
-            setFlash(res.dispatch?.message || 'Notification recorded.');
+            setFlash(res.dispatch?.message || 'Notification queued for delivery.');
           }
           state.notifComposerOpen = false;
           state.notifComposer = null;

@@ -10,6 +10,9 @@
  */
 
 const { listAllUsers, listAllPledges, writeJson, readBlobJson, listBlobs } = require('./store');
+const { getAudienceReachSummary } = require('./push-subscriptions');
+const { getProviderStatus, isDispatchEnabled } = require('./push-provider');
+const { enqueueCampaignSend, processDueCampaigns } = require('./notification-dispatch');
 
 const ROOT = 'wc-data/owner/notifications';
 const INDEX_PATH = `${ROOT}/campaigns-index.json`;
@@ -475,6 +478,20 @@ function assertEditable(campaign) {
  */
 async function estimateAudience(audienceDefinition) {
   const audience = normalizeAudience(audienceDefinition);
+  try {
+    const { resolveRecipients } = require('./push-subscriptions');
+    const { recipients, totalActive } = await resolveRecipients(audience);
+    if (totalActive > 0 || recipients.length > 0) {
+      return {
+        estimated: recipients.length,
+        totalVoices: totalActive,
+        notes: 'Estimate based on active push subscriptions (reachable devices).',
+        filtersApplied: audience.mode === 'custom' ? Object.keys(audience.filters || {}) : [],
+        source: 'push_subscriptions',
+      };
+    }
+  } catch { /* fall through */ }
+
   const [users, pledges] = await Promise.all([
     listAllUsers().catch(() => []),
     listAllPledges().catch(() => []),
@@ -484,8 +501,9 @@ async function estimateAudience(audienceDefinition) {
     return {
       estimated: totalVoices,
       totalVoices,
-      notes: 'Estimate based on registered voices / pledges. Device push reach is unknown until a provider is connected.',
+      notes: 'No push subscriptions yet — estimate falls back to registered voices. Enable notifications in the app to build reachable audience.',
       filtersApplied: [],
+      source: 'users_pledges',
     };
   }
 
@@ -501,16 +519,16 @@ async function estimateAudience(audienceDefinition) {
     const c = String(filters.city).trim().toLowerCase();
     pool = pool.filter((row) => String(row.city || '').trim().toLowerCase() === c);
   }
-  // Remaining filters are scaffolded: no reliable source fields yet → do not invent counts.
   const unsupported = applied.filter((k) => !['country', 'city'].includes(k));
   return {
     estimated: pool.length,
     totalVoices,
     notes: unsupported.length
       ? `Filters applied where data exists. Unsupported filters ignored for estimate: ${unsupported.join(', ')}.`
-      : 'Estimate from pledge/user geo fields.',
+      : 'Estimate from pledge/user geo fields (no push subscriptions registered yet).',
     filtersApplied: applied.filter((k) => ['country', 'city'].includes(k)),
     unsupportedFilters: unsupported,
+    source: 'users_pledges',
   };
 }
 
@@ -647,20 +665,23 @@ function deltaPct(current, previous) {
 }
 
 async function buildAudienceCard() {
-  const [users, pledges] = await Promise.all([
-    listAllUsers().catch(() => []),
-    listAllPledges().catch(() => []),
-  ]);
-  const totalVoices = Math.max(users.length, pledges.length);
-  // App has no reliable device-permission store yet — do not invent enabled %.
-  return {
-    totalVoices,
-    notificationsEnabled: null,
-    notificationsDisabled: null,
-    appSubscriptionKnown: false,
-    devicePermissionKnown: false,
-    note: 'Reachable device permission data is not available yet. Total Voices reflects registered accounts/pledges. App subscription vs device delivery permission will appear once push tokens are stored.',
-  };
+  try {
+    return await getAudienceReachSummary();
+  } catch {
+    const [users, pledges] = await Promise.all([
+      listAllUsers().catch(() => []),
+      listAllPledges().catch(() => []),
+    ]);
+    const totalVoices = Math.max(users.length, pledges.length);
+    return {
+      totalVoices,
+      notificationsEnabled: null,
+      notificationsDisabled: null,
+      appSubscriptionKnown: false,
+      devicePermissionKnown: false,
+      note: 'Could not load push subscription reach yet.',
+    };
+  }
 }
 
 function buildSystemHealth(campaigns) {
@@ -672,22 +693,31 @@ function buildSystemHealth(campaigns) {
     failed += Number(c.metrics?.failed_count) || 0;
   }
   const attempts = delivered + failed;
+  const providers = getProviderStatus();
+  const operational = providers.pushConfigured && providers.dispatchEnabled;
   return {
-    status: 'not_configured',
-    statusLabel: 'Push Service Not Configured',
-    providers: {
-      apns: { status: 'not_configured' },
-      fcm: { status: 'not_configured' },
-      web_push: { status: 'not_configured' },
-    },
+    status: operational ? 'operational' : (providers.pushConfigured ? 'configured_paused' : 'not_configured'),
+    statusLabel: operational
+      ? 'Push Service Operational'
+      : (providers.pushConfigured
+        ? 'Push Configured (dispatch paused)'
+        : 'Push Service Not Configured'),
+    providers: providers.providers,
     delivered,
     failed,
     deliveryRate: rate(delivered, attempts),
-    note: 'No FCM/APNs/web-push credentials are connected. Campaigns can be drafted, scheduled, and recorded; production device delivery requires a provider + background queue.',
+    note: operational
+      ? 'Web Push is live. Cron drains scheduled and queued campaigns in batches.'
+      : (providers.pushConfigured
+        ? 'VAPID keys are present but PUSH_DISPATCH_ENABLED is off — sends stay dry-run.'
+        : 'Set WEB_PUSH_VAPID_* keys and CRON_SECRET, then enable PUSH_DISPATCH_ENABLED.'),
     queue: {
-      status: 'not_configured',
-      note: 'Production broadcasts must not run in the request lifecycle. Wire a job queue / cron before enabling live dispatch.',
+      status: process.env.CRON_SECRET ? 'configured' : 'not_configured',
+      note: process.env.CRON_SECRET
+        ? 'Vercel Cron hits /api/cron-notifications every minute.'
+        : 'Set CRON_SECRET and add the vercel.json cron entry.',
     },
+    dispatchEnabled: providers.dispatchEnabled,
   };
 }
 
@@ -843,11 +873,7 @@ async function buildNotificationsOverview({ range = '30d' } = {}) {
     bestTime: bestTimeToSend(sentInRange, range),
     fatigueDefaults: FATIGUE_DEFAULTS,
     fatigueSample,
-    provider: {
-      pushConfigured: false,
-      inAppSupported: false,
-      note: 'Channel field supports push / in_app / push_and_in_app. Only recorded campaign workflows are active until providers are wired.',
-    },
+    provider: getProviderStatus(),
   };
 }
 
@@ -1163,7 +1189,7 @@ async function scheduleNotification(body, actor) {
 }
 
 /**
- * Dispatch boundary — does NOT send real push until a provider is configured.
+ * Dispatch boundary — enqueues a chunked send job (never blasts sync for large audiences).
  * Idempotent: re-calling on already-sent returns the existing row.
  */
 async function sendNotification(body, actor, { confirmToken } = {}) {
@@ -1182,9 +1208,21 @@ async function sendNotification(body, actor, { confirmToken } = {}) {
         fatigue: evaluateFatigue(index.campaigns, row.audience, { topic: row.topic }),
         estimate: { estimated: row.estimated_audience },
         dispatch: {
-          mode: row.dispatchMode || 'recorded_only',
-          devicesNotified: 0,
+          mode: row.dispatchMode || 'queued',
+          devicesNotified: Number(row.metrics?.delivered_count) || 0,
           message: 'Already sent — returning existing campaign (idempotent).',
+        },
+      };
+    }
+    if (row.status === NOTIFICATION_STATUS.SENDING) {
+      return {
+        notification: publicCampaign(row),
+        fatigue: evaluateFatigue(index.campaigns, row.audience, { topic: row.topic }),
+        estimate: { estimated: row.estimated_audience },
+        dispatch: {
+          mode: 'queued',
+          devicesNotified: Number(row.metrics?.delivered_count) || 0,
+          message: 'Campaign is already sending — cron continues batch delivery.',
         },
       };
     }
@@ -1214,63 +1252,66 @@ async function sendNotification(body, actor, { confirmToken } = {}) {
     }
   }
 
-  // Mark sending then sent (recorded_only). Never broadcast from this process.
-  row.status = NOTIFICATION_STATUS.SENDING;
-  row.updated_at = nowIso();
-  row.estimated_audience = estimate.estimated;
-  row.metrics = {
-    ...emptyMetrics(),
-    ...(row.metrics || {}),
-    targeted_count: estimate.estimated,
-  };
-  index.campaigns = index.campaigns.map((c) => (c.id === row.id ? row : c));
-  await writeIndex(index);
-
-  row.status = NOTIFICATION_STATUS.SENT;
-  row.sent_at = nowIso();
-  row.updated_at = row.sent_at;
-  row.scheduled_at = null;
-  row.dispatchMode = 'recorded_only';
-  row.providerStatus = 'not_configured';
-  row.metrics = {
-    ...row.metrics,
-    sent_count: estimate.estimated,
-    delivered_count: 0,
-    failed_count: 0,
-    denominator: 'sent',
-  };
-
-  index.campaigns = index.campaigns.map((c) => (c.id === row.id ? row : c));
-  await writeIndex(index);
-  await appendAudit({
-    action: 'sent',
+  // Prefer push-subscription reach for targeting confirmation messaging.
+  const queued = await enqueueCampaignSend(row, {
+    readIndex,
+    writeIndex,
+    appendAudit,
+    emptyMetrics,
     actor: actor || 'owner',
-    notificationId: row.id,
-    meta: {
-      dispatchMode: 'recorded_only',
-      estimated: estimate.estimated,
-      note: 'No devices were notified — push provider not configured.',
-    },
   });
 
   return {
-    notification: publicCampaign(row),
+    notification: publicCampaign(queued.campaign || row),
     fatigue,
-    estimate,
-    dispatch: {
-      mode: 'recorded_only',
-      devicesNotified: 0,
-      message: 'Campaign recorded as sent for Owner analytics. No push provider is configured, so no devices were notified.',
-    },
+    estimate: { estimated: queued.dispatch?.devicesTargeted ?? estimate.estimated },
+    dispatch: queued.dispatch,
   };
 }
 
 async function sendTestNotification(body, actor) {
-  // No owner device token store exists yet.
+  const title = String(body?.title || 'World Choir test').trim() || 'World Choir test';
+  const message = String(body?.message || 'This is a test notification for the Owner device.').trim();
+  const draft = await saveNotification({
+    topic: body?.topic || 'others',
+    title,
+    message,
+    destination_type: body?.destination_type || 'home',
+    destination_payload: body?.destination_payload || {},
+    sound_key: body?.sound_key || 'default',
+    priority: 'normal',
+    channel: 'push',
+    audience: { mode: 'everyone', filters: {} },
+    status: NOTIFICATION_STATUS.DRAFT,
+    origin: NOTIFICATION_ORIGIN.SYSTEM,
+  }, actor || 'owner');
+
+  const index = await readIndex();
+  const row = index.campaigns.find((c) => c.id === draft.id);
+  const queued = await enqueueCampaignSend(row, {
+    readIndex,
+    writeIndex,
+    appendAudit,
+    emptyMetrics,
+    actor: actor || 'owner',
+    ownerTestOnly: true,
+  });
+
+  if (!(queued.dispatch?.devicesTargeted > 0)) {
+    return {
+      ok: false,
+      message: 'No Owner test device registered. Open Owner → Notifications and click “Enable test pushes on this browser”, then try again.',
+      actor: actor || null,
+      notification: publicCampaign(queued.campaign || row),
+    };
+  }
+
   return {
-    ok: false,
-    message: 'No test device/subscription is registered for the Owner account. Connect a push provider and store the Owner device token before using Send Test.',
+    ok: true,
+    message: queued.dispatch?.message || 'Test notification queued for Owner test device(s).',
     actor: actor || null,
+    notification: publicCampaign(queued.campaign || row),
+    dispatch: queued.dispatch,
   };
 }
 
@@ -1303,6 +1344,17 @@ function getNotificationConstants() {
 function calcActionRate(actionCompleted, delivered, sent) {
   const den = delivered > 0 ? delivered : sent;
   return rate(actionCompleted, den);
+}
+
+async function runNotificationDispatchQueue(opts = {}) {
+  return processDueCampaigns({
+    readIndex,
+    writeIndex,
+    appendAudit,
+    emptyMetrics,
+    maxCampaigns: opts.maxCampaigns || 5,
+    maxBatches: opts.maxBatches || 8,
+  });
 }
 
 module.exports = {
@@ -1338,6 +1390,7 @@ module.exports = {
   scheduleNotification,
   sendNotification,
   sendTestNotification,
+  runNotificationDispatchQueue,
   getNotificationConstants,
   performanceBadge,
   pickDenominator,

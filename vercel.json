@@ -1,6 +1,12 @@
 {
   "buildCommand": "echo 'Static site - no build needed'",
   "outputDirectory": "public",
+  "crons": [
+    {
+      "path": "/api/cron-notifications",
+      "schedule": "* * * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/daily-acts", "destination": "/daily-acts.html" },
     { "source": "/world-chain", "destination": "/world-chain.html" },
@@ -23,6 +29,13 @@
       "source": "/(.*\\.html)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
       ]
     },
     {
