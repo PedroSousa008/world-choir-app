@@ -11,6 +11,7 @@ const OwnerControl = (() => {
     { id: 'overview', label: 'Overview' },
     { id: 'community', label: 'Community' },
     { id: 'map', label: 'Map' },
+    { id: 'notifications', label: 'Notifications' },
     { id: 'donations', label: 'Donations' },
     { id: 'foundations', label: 'Creator Foundations' },
     { id: 'sponsors', label: 'Sponsors' },
@@ -132,6 +133,22 @@ const OwnerControl = (() => {
     sponsorAnalyticsCustomFrom: null,
     sponsorAnalyticsCustomTo: null,
     sponsorAnalyticsChartMetric: 'impressions',
+    notifData: null,
+    notifBusy: false,
+    notifRange: '30d',
+    notifView: 'overview',
+    notifComposerOpen: false,
+    notifComposer: null,
+    notifMenuId: null,
+    notifAnalytics: null,
+    notifHealthOpen: false,
+    notifList: null,
+    notifListBusy: false,
+    notifListStatus: 'all',
+    notifListTopic: 'all',
+    notifListPerf: 'all',
+    notifListQuery: '',
+    notifListPage: 1,
   };
 
   const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
@@ -2283,6 +2300,56 @@ const OwnerControl = (() => {
     return OwnerPassTheWorld.render(state, { esc, money, num, when });
   }
 
+  async function ensureNotifLoaded(silent = false) {
+    if (state.notifBusy) return;
+    state.notifBusy = true;
+    if (!silent) render();
+    try {
+      const q = new URLSearchParams({ range: state.notifRange || '30d' });
+      state.notifData = await api('notifications', { query: `&${q.toString()}` });
+    } catch (err) {
+      if (!silent) setFlash(err.message || 'Could not load notifications.', 'err');
+    } finally {
+      state.notifBusy = false;
+    }
+  }
+
+  async function ensureNotifListLoaded(silent = false) {
+    if (state.notifListBusy) return;
+    state.notifListBusy = true;
+    if (!silent) render();
+    try {
+      const q = new URLSearchParams({
+        status: state.notifListStatus || 'all',
+        topic: state.notifListTopic || 'all',
+        performance: state.notifListPerf || 'all',
+        query: state.notifListQuery || '',
+        page: String(state.notifListPage || 1),
+        pageSize: '25',
+        range: state.notifRange || 'all',
+      });
+      state.notifList = await api('notification-list', { query: `&${q.toString()}` });
+    } catch (err) {
+      if (!silent) setFlash(err.message || 'Could not load notification list.', 'err');
+    } finally {
+      state.notifListBusy = false;
+    }
+  }
+
+  function renderNotifications() {
+    if (!state.notifData && !state.notifBusy) {
+      ensureNotifLoaded().then(() => render());
+      return `<section class="owner-section"><p class="owner-muted">Loading Notifications…</p></section>`;
+    }
+    if (typeof OwnerNotifications === 'undefined') {
+      return `<section class="owner-section"><p class="owner-muted">Notifications module not loaded.</p></section>`;
+    }
+    if (state.notifView === 'list' && !state.notifList && !state.notifListBusy) {
+      ensureNotifListLoaded().then(() => render());
+    }
+    return OwnerNotifications.render(state, { esc, money, num, when });
+  }
+
   async function ensureWcpbLoaded(silent = false) {
     if (state.wcpbBusy) return;
     state.wcpbBusy = true;
@@ -3002,6 +3069,7 @@ const OwnerControl = (() => {
       case 'overview': return renderOverview();
       case 'community': return renderCommunity();
       case 'map': return renderMap();
+      case 'notifications': return renderNotifications();
       case 'donations': return renderDonations();
       case 'foundations': return renderFoundations();
       case 'sponsors': return renderSponsors();
@@ -3665,6 +3733,22 @@ const OwnerControl = (() => {
       });
     } else if (typeof OwnerPassTheWorld !== 'undefined') {
       OwnerPassTheWorld.stopPolling();
+    }
+
+    if (typeof OwnerNotifications !== 'undefined' && state.section === 'notifications') {
+      OwnerNotifications.bind(root(), state, { esc, money, num, when }, {
+        api,
+        setFlash,
+        onRender: () => render(),
+        loadData: async (silent) => {
+          await ensureNotifLoaded(silent);
+          render();
+        },
+        loadList: async (silent) => {
+          await ensureNotifListLoaded(silent);
+          render();
+        },
+      });
     }
 
     if (typeof OwnerWorldChainPhotoBook !== 'undefined' && state.section === 'world-chain-photo-book') {

@@ -32,6 +32,21 @@ const {
   exportPassTheWorldCsv,
 } = require('./_lib/pass-the-world-owner');
 const {
+  buildNotificationsOverview,
+  listNotifications,
+  getNotification,
+  saveNotification,
+  duplicateNotification,
+  archiveNotification,
+  deleteNotification,
+  cancelNotification,
+  scheduleNotification,
+  sendNotification,
+  sendTestNotification,
+  estimateAudience,
+  evaluateFatigue,
+} = require('./_lib/owner-notifications');
+const {
   buildPromiseMemoryIntel,
   getPromiseDetail,
   createFolder,
@@ -150,6 +165,123 @@ module.exports = async function handler(req, res) {
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="pass-the-world-${kind}.csv"`);
       return res.status(200).send(csv);
+    }
+
+    if (action === 'notifications' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const range = String(req.query.range || '30d');
+      const data = await buildNotificationsOverview({ range });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'notification-list' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await listNotifications({
+        status: String(req.query.status || 'all'),
+        topic: String(req.query.topic || 'all'),
+        query: String(req.query.query || ''),
+        performance: String(req.query.performance || 'all'),
+        page: Number(req.query.page || 1),
+        pageSize: Number(req.query.pageSize || 25),
+        range: String(req.query.range || 'all'),
+      });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'notification' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const id = String(req.query.id || '').trim();
+      if (!id) return res.status(400).json({ error: 'id is required' });
+      const data = await getNotification(id);
+      return res.status(200).json(data);
+    }
+
+    if (action === 'notification-save' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const notification = await saveNotification(req.body || {}, actor || 'owner');
+      return res.status(200).json(notification);
+    }
+
+    if (action === 'notification-schedule' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const result = await scheduleNotification(req.body || {}, actor || 'owner');
+      return res.status(200).json(result);
+    }
+
+    if (action === 'notification-send' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const confirmToken = req.body?.confirmToken;
+      const result = await sendNotification(req.body || {}, actor || 'owner', { confirmToken });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'notification-send-test' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const result = await sendTestNotification(req.body || {}, actor || 'owner');
+      return res.status(200).json(result);
+    }
+
+    if (action === 'notification-duplicate' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const notification = await duplicateNotification(req.body?.id, actor || 'owner');
+      return res.status(200).json(notification);
+    }
+
+    if (action === 'notification-archive' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const notification = await archiveNotification(req.body?.id, actor || 'owner');
+      return res.status(200).json(notification);
+    }
+
+    if (action === 'notification-delete' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const result = await deleteNotification(req.body?.id, actor || 'owner');
+      return res.status(200).json(result);
+    }
+
+    if (action === 'notification-cancel' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const notification = await cancelNotification(req.body?.id, actor || 'owner');
+      return res.status(200).json(notification);
+    }
+
+    if (action === 'notification-audience-estimate' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const result = await estimateAudience(req.body?.audience);
+      return res.status(200).json(result);
+    }
+
+    if (action === 'notification-fatigue' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      let campaigns = [];
+      try {
+        const { readBlobJson } = require('./_lib/store');
+        const index = await readBlobJson('wc-data/owner/notifications/campaigns-index.json');
+        campaigns = Array.isArray(index?.campaigns) ? index.campaigns : [];
+      } catch { /* empty store */ }
+      const result = evaluateFatigue(campaigns, req.body?.audience, { topic: req.body?.topic });
+      return res.status(200).json(result);
     }
 
     if (action === 'promise-memory' && req.method === 'GET') {
