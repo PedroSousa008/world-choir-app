@@ -623,6 +623,7 @@ const WorldChoirNav = (() => {
       'js/world-chain-page.js?v=20260911chainLight',
       '/api/world-chain',
       'images/chain-header.png?v=20260905h',
+      'images/chain-light.png?v=20260911chainLight',
     ],
     'daily-acts': [
       'daily-acts.html',
