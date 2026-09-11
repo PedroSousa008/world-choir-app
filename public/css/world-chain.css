@@ -2134,3 +2134,22 @@ html[data-theme="light"] .wc-viewer-table__voice-num,
 html[data-theme="light"] .wc-viewer-status__label {
   color: #0c0c0e;
 }
+
+/* Light Mode only — Photo Book title + connected-world copy black; hope quote dark grey */
+html[data-theme="light"] .wc-photobook-header__title,
+html[data-theme="light"] .wc-photobook-close__headline {
+  color: #0c0c0e;
+}
+
+html[data-theme="light"] .wc-photobook-header__sub {
+  color: #0c0c0e;
+}
+
+html[data-theme="light"] .wc-photobook-close__quote p {
+  color: #3f424a;
+}
+
+html[data-theme="light"] .wc-photobook-close__earth {
+  filter: none !important;
+  opacity: 1;
+}

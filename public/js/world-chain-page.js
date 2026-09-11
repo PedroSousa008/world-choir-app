@@ -60,6 +60,8 @@ const WorldChainPage = (() => {
 
   const CHAIN_HERO_DARK = 'images/chain-header.png?v=20260905h';
   const CHAIN_HERO_LIGHT = 'images/chain-light.png?v=20260911chainLight2';
+  const PHOTO_BOOK_LOGO_DARK = 'images/world-choir-logo.png?v=20270706';
+  const PHOTO_BOOK_LOGO_LIGHT = 'images/world-choir-light.png?v=20260911homeFix';
 
   function isLightTheme() {
     try {
@@ -74,12 +76,31 @@ const WorldChainPage = (() => {
     return isLightTheme() ? CHAIN_HERO_LIGHT : CHAIN_HERO_DARK;
   }
 
+  function photoBookLogoSrc() {
+    try {
+      if (typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.homeLogoUrl) {
+        return WorldChoirConfig.homeLogoUrl();
+      }
+    } catch {
+      /* fall through */
+    }
+    return isLightTheme() ? PHOTO_BOOK_LOGO_LIGHT : PHOTO_BOOK_LOGO_DARK;
+  }
+
   /** Keep the hero on the correct asset for the active theme (soft tabs + live toggle). */
   function syncChainHeroImage() {
     const src = chainHeroSrc();
     document.querySelectorAll('.wc-chain-hero__img, [data-wc-chain-hero]').forEach((img) => {
       if (img.getAttribute('src') !== src) img.setAttribute('src', src);
       img.classList.remove('wc-chain-hero__img--dark', 'wc-chain-hero__img--light');
+    });
+  }
+
+  /** Photo Book closing mark — same theme-aware logo as Home. */
+  function syncPhotoBookLogo() {
+    const src = photoBookLogoSrc();
+    document.querySelectorAll('.wc-photobook-close__earth, [data-wc-photobook-logo]').forEach((img) => {
+      if (img.getAttribute('src') !== src) img.setAttribute('src', src);
     });
   }
 
@@ -1015,7 +1036,8 @@ const WorldChainPage = (() => {
         <footer class="wc-photobook-close">
           <img
             class="wc-photobook-close__earth"
-            src="images/world-choir-logo.png?v=20270706"
+            data-wc-photobook-logo
+            src="${photoBookLogoSrc()}"
             alt=""
             width="120"
             height="120"
@@ -1538,6 +1560,7 @@ const WorldChainPage = (() => {
     paintLiveTimers();
     startLiveTimers();
     syncChainHeroImage();
+    syncPhotoBookLogo();
     if (!window.__WC_TAB_SILENT_INIT && typeof WorldChoirBoot !== 'undefined') {
       WorldChoirBoot.ready();
     }
@@ -2224,6 +2247,7 @@ const WorldChainPage = (() => {
     applyUrlState();
     render();
     syncChainHeroImage();
+    syncPhotoBookLogo();
     startLiveTimers();
     // Soft refresh in background — never block the tab reveal.
     void load().catch(() => {});
@@ -2268,6 +2292,7 @@ const WorldChainPage = (() => {
       });
       window.addEventListener('wc:themechange', () => {
         syncChainHeroImage();
+        syncPhotoBookLogo();
       });
     }
 
@@ -2275,6 +2300,7 @@ const WorldChainPage = (() => {
     hydrateFromCache();
     render();
     syncChainHeroImage();
+    syncPhotoBookLogo();
     startLiveTimers();
 
     load().then(async () => {
