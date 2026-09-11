@@ -872,3 +872,10 @@ html[data-theme="light"] .dap-square.is-today.is-available .dap-square__mystery 
 html[data-theme="light"] .dap-calendar__month {
   color: #ffffff;
 }
+
+/* Light Mode only — act detail rectangle clear grey (same as Home lightbulb) */
+html[data-theme="light"] .dap-sheet__panel {
+  background: #e8e8ec;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.12);
+}
