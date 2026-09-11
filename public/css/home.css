@@ -292,6 +292,7 @@ body.home-guide-open {
   height: auto;
   margin: 0 auto 24px;
   object-fit: contain;
+  filter: none !important;
 }
 
 .home-voices-counter {
@@ -464,6 +465,31 @@ body.home-guide-open {
 html[data-theme="light"] .countdown-hero__label,
 html[data-theme="light"] .countdown-name {
   color: #ffffff;
+}
+
+/* Light Mode only — lightbulb icon: clear light grey (default + open/close).
+   Do not alter Dark Mode guide chrome. */
+html[data-theme="light"] .home-guide-btn,
+html[data-theme="light"] .home-guide-btn:hover,
+html[data-theme="light"] .home-guide-btn:active,
+html[data-theme="light"] .home-guide-btn[aria-expanded="true"],
+html[data-theme="light"] .home-guide-btn:focus-visible {
+  color: #c5c9d4;
+}
+
+html[data-theme="light"] .home-guide-btn:focus-visible {
+  outline-color: #c5c9d4;
+}
+
+html[data-theme="light"] .home-guide-panel__close,
+html[data-theme="light"] .home-guide-panel__close:hover,
+html[data-theme="light"] .home-guide-panel__close:active,
+html[data-theme="light"] .home-guide-panel__close:focus-visible {
+  color: #c5c9d4;
+}
+
+html[data-theme="light"] .home-guide-panel__close:focus-visible {
+  outline-color: #c5c9d4;
 }
 
 /* ─── Home help tab + empty placeholder panel ─── */

@@ -101,7 +101,7 @@ const WorldChoirConfig = (() => {
 
   const LOGO_LIGHT = {
     src: 'images/world-choir-light.png',
-    version: '20260911logoOnly',
+    version: '20260911homeFix',
     alt: 'World Choir App',
     get url() {
       return `${this.src}?v=${this.version}`;
