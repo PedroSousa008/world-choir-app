@@ -274,8 +274,7 @@ const WorldChoirHome = (() => {
 
     return `
       ${renderVoicesCounter()}
-      <img class="home-logo home-logo--dark" src="${WorldChoirConfig.LOGO.url}" alt="${WorldChoirConfig.LOGO.alt}" width="1024" height="1024" decoding="async">
-      <img class="home-logo home-logo--light" src="${WorldChoirConfig.LOGO_LIGHT.url}" alt="${WorldChoirConfig.LOGO_LIGHT.alt}" width="1024" height="1024" decoding="async">
+      <img class="home-logo" src="${WorldChoirConfig.homeLogoUrl()}" alt="${WorldChoirConfig.LOGO.alt}" width="1024" height="1024" decoding="async">
       <h1 class="home-headline sws-quote-shimmer">The world sings together in</h1>
 
       <div class="countdown-hero">
@@ -1097,7 +1096,9 @@ const WorldChoirHome = (() => {
   let homeBootstrapped = false;
 
   function onTabShow() {
-    /* Keep countdown / live sync ticking; nothing special required. */
+    if (typeof WorldChoirTheme !== 'undefined') {
+      WorldChoirTheme.syncBrandLogos?.();
+    }
   }
 
   function init() {

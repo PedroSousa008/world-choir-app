@@ -49,8 +49,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260911logoSwap">
-  <link rel="stylesheet" href="css/profile.css?v=20260911logoSwap">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260911logoOnly">
+  <link rel="stylesheet" href="css/profile.css?v=20260911logoOnly">
   <link rel="stylesheet" href="css/privacy-consent.css?v=20260911theme">
   <link rel="stylesheet" href="css/world-choir-onboarding.css?v=20260816a">
     <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
@@ -78,8 +78,16 @@
           <path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56M17.51 17.51l1.56 1.56M2 12h2.2M19.8 12H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56"/>
         </svg>
       </button>
-      <img class="profile-logo profile-logo--dark" src="images/world-choir-logo.png?v=20270706" alt="World Choir App" width="1024" height="1024" decoding="async">
-      <img class="profile-logo profile-logo--light" src="images/world-choir-light.png?v=20260911homeFix" alt="World Choir App" width="1024" height="1024" decoding="async">
+      <img class="profile-logo" id="profile-logo" src="images/world-choir-logo.png?v=20270706" alt="World Choir App" width="1024" height="1024" decoding="async">
+      <script>
+        (function () {
+          try {
+            if (document.documentElement.getAttribute('data-theme') !== 'light') return;
+            var img = document.getElementById('profile-logo');
+            if (img) img.src = 'images/world-choir-light.png?v=20260911logoOnly';
+          } catch (e) {}
+        })();
+      </script>
       <p class="profile-voices-counter wc-skel wc-skel--voices" id="profile-voices-counter" aria-live="polite" aria-hidden="true"></p>
     </div>
 
@@ -178,7 +186,7 @@
   <div id="nav-root"></div>
 
     <script src="js/world-choir-boot.js?v=20260906nav2"></script>
-  <script src="js/world-choir-config.js?v=20260911homeFix"></script>
+  <script src="js/world-choir-config.js?v=20260911logoOnly"></script>
   <script src="js/world-choir-privacy.js?v=20260905a"></script>
   <script src="js/world-choir-countries.js?v=20260831a"></script>
   <script src="js/world-choir-db.js?v=20260907voices"></script>
@@ -188,7 +196,7 @@
   <script src="js/world-choir-post-event-join.js?v=20260907tabs"></script>
   <script src="js/world-choir-practice-config.js"></script>
   <script src="js/world-choir-a11y.js?v=20260903p"></script>
-  <script src="js/world-choir-theme.js?v=20260911theme"></script>
+  <script src="js/world-choir-theme.js?v=20260911logoOnly"></script>
   <script src="js/world-choir-nav.js?v=20260911theme"></script>
   <script src="js/world-choir-tabs.js?v=20260911theme"></script>
   <script src="js/world-choir-onboarding.js?v=20260816a"></script>
@@ -205,7 +213,7 @@
   <script src="js/profile/invite-button.js?v=20260813p"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260906perf"></script>
   <script src="js/profile/daily-acts-button.js?v=20260810i"></script>
-  <script src="js/profile/profile-page.js?v=20260911theme"></script>
+  <script src="js/profile/profile-page.js?v=20260911logoOnly"></script>
   <script>
     // Paint Profile immediately — do not wait on live-event scripts.
     ProfilePage.init();

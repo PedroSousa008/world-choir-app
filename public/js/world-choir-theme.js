@@ -24,6 +24,24 @@ const WorldChoirTheme = (() => {
     return theme === 'light' ? '#ffffff' : '#000000';
   }
 
+  function syncBrandLogos(theme) {
+    const mode = normalize(theme || get());
+    let darkUrl = 'images/world-choir-logo.png?v=20270706';
+    let lightUrl = 'images/world-choir-light.png?v=20260911logoOnly';
+    try {
+      if (typeof WorldChoirConfig !== 'undefined') {
+        if (WorldChoirConfig.LOGO?.url) darkUrl = WorldChoirConfig.LOGO.url;
+        if (WorldChoirConfig.LOGO_LIGHT?.url) lightUrl = WorldChoirConfig.LOGO_LIGHT.url;
+      }
+    } catch {
+      /* ignore */
+    }
+    const next = mode === 'light' ? lightUrl : darkUrl;
+    document.querySelectorAll('img.home-logo, img.profile-logo').forEach((img) => {
+      if (img.getAttribute('src') !== next) img.setAttribute('src', next);
+    });
+  }
+
   function apply(theme, { animate = false } = {}) {
     const next = normalize(theme);
     const root = document.documentElement;
@@ -43,6 +61,7 @@ const WorldChoirTheme = (() => {
     }
 
     syncToggles(next);
+    syncBrandLogos(next);
     try {
       window.dispatchEvent(new CustomEvent(EVENT, { detail: { theme: next } }));
     } catch {
@@ -112,7 +131,10 @@ const WorldChoirTheme = (() => {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('[data-wc-theme-toggle]').forEach(bindToggle);
+      syncBrandLogos(get());
     });
+  } else {
+    syncBrandLogos(get());
   }
 
   return {
@@ -124,6 +146,7 @@ const WorldChoirTheme = (() => {
     apply,
     bindToggle,
     syncToggles,
+    syncBrandLogos,
     init,
     isLight: () => get() === 'light',
     isDark: () => get() === 'dark',

@@ -195,6 +195,7 @@ const ProfilePage = (() => {
     if (typeof WorldChoirTheme !== 'undefined') {
       WorldChoirTheme.bindToggle?.(document.getElementById('profile-theme-toggle'));
       WorldChoirTheme.syncToggles?.();
+      WorldChoirTheme.syncBrandLogos?.();
     }
 
     document.getElementById('profile-privacy-prefs')?.addEventListener('click', (e) => {
