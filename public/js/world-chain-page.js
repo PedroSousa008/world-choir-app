@@ -58,6 +58,31 @@ const WorldChainPage = (() => {
       .replace(/"/g, '&quot;');
   }
 
+  const CHAIN_HERO_DARK = 'images/chain-header.png?v=20260905h';
+  const CHAIN_HERO_LIGHT = 'images/chain-light.png?v=20260911chainLight2';
+
+  function isLightTheme() {
+    try {
+      if (typeof WorldChoirTheme !== 'undefined' && WorldChoirTheme.isLight?.()) return true;
+      return document.documentElement.getAttribute('data-theme') === 'light';
+    } catch {
+      return false;
+    }
+  }
+
+  function chainHeroSrc() {
+    return isLightTheme() ? CHAIN_HERO_LIGHT : CHAIN_HERO_DARK;
+  }
+
+  /** Keep the hero on the correct asset for the active theme (soft tabs + live toggle). */
+  function syncChainHeroImage() {
+    const src = chainHeroSrc();
+    document.querySelectorAll('.wc-chain-hero__img, [data-wc-chain-hero]').forEach((img) => {
+      if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+      img.classList.remove('wc-chain-hero__img--dark', 'wc-chain-hero__img--light');
+    });
+  }
+
   function nowMs() {
     return Date.now() + (Number(state.serverSkewMs) || 0);
   }
@@ -528,21 +553,14 @@ const WorldChainPage = (() => {
       </header>
       <div class="wc-chain-hero">
         <img
-          class="wc-chain-hero__img wc-chain-hero__img--dark"
-          src="images/chain-header.png?v=20260905h"
+          class="wc-chain-hero__img"
+          data-wc-chain-hero
+          src="${chainHeroSrc()}"
           alt=""
           width="1619"
           height="971"
           decoding="async"
           fetchpriority="high"
-        >
-        <img
-          class="wc-chain-hero__img wc-chain-hero__img--light"
-          src="images/chain-light.png?v=20260911chainLight"
-          alt=""
-          width="1619"
-          height="971"
-          decoding="async"
         >
         <div class="wc-chain-hero__copy">
           <h2 class="wc-chain-headline">A more connected world<br>is a kinder world.</h2>
@@ -1519,6 +1537,7 @@ const WorldChainPage = (() => {
     bind();
     paintLiveTimers();
     startLiveTimers();
+    syncChainHeroImage();
     if (!window.__WC_TAB_SILENT_INIT && typeof WorldChoirBoot !== 'undefined') {
       WorldChoirBoot.ready();
     }
@@ -2204,6 +2223,7 @@ const WorldChainPage = (() => {
     hydrateFromCache();
     applyUrlState();
     render();
+    syncChainHeroImage();
     startLiveTimers();
     // Soft refresh in background — never block the tab reveal.
     void load().catch(() => {});
@@ -2246,11 +2266,15 @@ const WorldChainPage = (() => {
       window.addEventListener('popstate', () => {
         restoreFromUrl();
       });
+      window.addEventListener('wc:themechange', () => {
+        syncChainHeroImage();
+      });
     }
 
     // Instant paint from URL + session cache (never flash the wrong page).
     hydrateFromCache();
     render();
+    syncChainHeroImage();
     startLiveTimers();
 
     load().then(async () => {
