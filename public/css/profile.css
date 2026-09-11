@@ -187,15 +187,9 @@
 .identity-card {
   text-align: center;
   padding: 32px 28px;
-  background: linear-gradient(
-    165deg,
-    rgba(16, 16, 24, 0.92) 0%,
-    rgba(10, 10, 14, 0.88) 100%
-  );
+  background: var(--surface-gradient);
   border: 1px solid var(--df-line);
-  box-shadow:
-    0 16px 56px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-card), var(--inset-highlight);
 }
 
 .identity-name {

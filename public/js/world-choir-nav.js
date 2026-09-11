@@ -570,7 +570,7 @@ const WorldChoirNav = (() => {
     donate: [
       'donate.html',
       'css/foundation-public-card.css?v=20260904cd',
-      'css/donate.css?v=20260911theme',
+      'css/donate.css?v=20260911theme2',
       'js/donate/creator-foundations-store.js?v=20260907fee65',
       'js/donate/donation-flow.js?v=20260831a',
       'js/foundation-public-card.js?v=20260904cb',
@@ -580,7 +580,7 @@ const WorldChoirNav = (() => {
     ],
     profile: [
       'profile.html',
-      'css/profile.css?v=20260911theme',
+      'css/profile.css?v=20260911theme2',
       'js/profile/profile-page.js?v=20260911theme',
       'js/profile/daily-acts-peace.js?v=20260906perf',
       'js/profile/daily-acts-button.js?v=20260810i',
