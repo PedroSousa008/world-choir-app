@@ -1,12 +1,15 @@
 /**
  * World Choir — shared map basemap tiles
  *
- * Primary: Carto Dark Matter (no labels) via MapLibre vector — deep black tones, no API key.
+ * Dark: Carto Dark Matter (no labels)
+ * Light: Carto Positron (no labels)
  * Optional: Carto raster via /api/map-tile when CARTO_API_KEY is set on Vercel.
  */
 const WorldChoirMapTiles = (() => {
   const CARTO_DARK_VECTOR_STYLE =
     'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json';
+  const CARTO_LIGHT_VECTOR_STYLE =
+    'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json';
 
   const PROXY_URL = '/api/map-tile?z={z}&x={x}&y={y}&r={r}';
 
@@ -18,6 +21,7 @@ const WorldChoirMapTiles = (() => {
 
   let resolvePromise = null;
   let activeMode = 'vector';
+  let boundMap = null;
   const basemapLayers = [];
 
   function canUseMapLibre() {
@@ -32,6 +36,26 @@ const WorldChoirMapTiles = (() => {
     const dpr = window.devicePixelRatio || 1;
     if (isMobileMap()) return Math.min(dpr, 1.5);
     return Math.min(dpr, 2);
+  }
+
+  function uiTheme() {
+    if (typeof WorldChoirTheme !== 'undefined' && WorldChoirTheme.get) {
+      return WorldChoirTheme.get() === 'light' ? 'light' : 'dark';
+    }
+    try {
+      return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  }
+
+  function vectorStyleUrl() {
+    return uiTheme() === 'light' ? CARTO_LIGHT_VECTOR_STYLE : CARTO_DARK_VECTOR_STYLE;
+  }
+
+  function rasterProxyUrl() {
+    const theme = uiTheme() === 'light' ? 'light' : 'dark';
+    return `${PROXY_URL}&theme=${theme}`;
   }
 
   async function detectMode() {
@@ -84,7 +108,7 @@ const WorldChoirMapTiles = (() => {
 
   function createVectorLayer() {
     return L.maplibreGL({
-      style: CARTO_DARK_VECTOR_STYLE,
+      style: vectorStyleUrl(),
       interactive: false,
       // App-tuned padding (library default is 0.1). Keep non-zero so the GL
       // canvas stays aligned with Leaflet marker overlays.
@@ -98,7 +122,7 @@ const WorldChoirMapTiles = (() => {
   }
 
   function createRasterLayer(overrides = {}) {
-    return L.tileLayer(PROXY_URL, {
+    return L.tileLayer(rasterProxyUrl(), {
       ...SHARED_RASTER_OPTS,
       ...overrides,
     });
@@ -138,6 +162,7 @@ const WorldChoirMapTiles = (() => {
   }
 
   function addBasemapLayers(map) {
+    boundMap = map;
     removeBasemapLayers(map);
 
     if (canUseMapLibre()) {
@@ -152,6 +177,7 @@ const WorldChoirMapTiles = (() => {
   }
 
   function addSingleBasemapLayer(map) {
+    boundMap = map;
     removeBasemapLayers(map);
 
     if (canUseMapLibre()) {
@@ -168,6 +194,12 @@ const WorldChoirMapTiles = (() => {
     );
     activeMode = 'raster';
     return 'raster';
+  }
+
+  function refreshTheme(map = boundMap) {
+    if (!map) return;
+    addBasemapLayers(map);
+    syncToMap(map);
   }
 
   /**
@@ -209,10 +241,17 @@ const WorldChoirMapTiles = (() => {
   function warmBasemap() {
     try {
       fetch(CARTO_DARK_VECTOR_STYLE, { cache: 'force-cache', mode: 'cors' }).catch(() => {});
+      fetch(CARTO_LIGHT_VECTOR_STYLE, { cache: 'force-cache', mode: 'cors' }).catch(() => {});
       fetch('/api/map-config', { cache: 'force-cache' }).catch(() => {});
     } catch {
       /* ignore */
     }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('wc:themechange', () => {
+      refreshTheme();
+    });
   }
 
   return {
@@ -222,5 +261,6 @@ const WorldChoirMapTiles = (() => {
     addSingleBasemapLayer,
     syncToMap,
     warmBasemap,
+    refreshTheme,
   };
 })();

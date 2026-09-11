@@ -102,7 +102,7 @@ body.wc-privacy-open {
 .wc-privacy__close:hover,
 .wc-privacy__close:focus-visible {
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--df-line);
   outline: none;
 }
 
@@ -129,7 +129,7 @@ body.wc-privacy-open {
   letter-spacing: -0.02em;
   line-height: 1.25;
   text-align: center;
-  color: #f4f4f6;
+  color: var(--text-primary);
 }
 
 .wc-privacy__heart {
@@ -188,7 +188,7 @@ body.wc-privacy-open {
 .wc-privacy__row-text strong {
   font-size: 0.9rem;
   font-weight: 650;
-  color: #f4f4f6;
+  color: var(--text-primary);
 }
 
 .wc-privacy__row-text span {
@@ -223,13 +223,39 @@ body.wc-privacy-open {
 
 .wc-privacy__btn--essential {
   background: rgba(8, 10, 16, 0.75);
-  color: #f4f4f6;
+  color: var(--text-primary);
   border: 1.5px solid rgba(255, 255, 255, 0.55);
 }
 
 .wc-privacy__btn--essential:hover {
   border-color: #fff;
   background: rgba(16, 18, 26, 0.9);
+}
+
+html[data-theme="light"] .wc-privacy__dialog {
+  background:
+    linear-gradient(165deg, #ffffff 0%, #f4f5f8 55%, #eef0f4 100%);
+  border: 1px solid var(--df-line-strong);
+  box-shadow:
+    0 0 0 1px rgba(37, 99, 235, 0.06),
+    0 24px 64px rgba(0, 0, 0, 0.12),
+    0 0 40px rgba(37, 99, 235, 0.06);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .wc-privacy__btn--essential {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1.5px solid var(--border-soft);
+}
+
+html[data-theme="light"] .wc-privacy__btn--essential:hover {
+  border-color: var(--text-secondary);
+  background: var(--bg-card-hover);
+}
+
+html[data-theme="light"] .wc-privacy__policy {
+  color: var(--text-muted);
 }
 
 .wc-privacy__btn--accept {

@@ -22,7 +22,7 @@ html.wc-live-gate .ambient-bg {
 }
 
 html.wc-live-gate body {
-  background: #000;
+  background: var(--bg-primary);
 }
 
 html.wc-live-gate main,
@@ -47,7 +47,7 @@ html.wc-live-gate .wc-global-live--boot {
   position: fixed;
   inset: 0;
   z-index: 12000;
-  background: #000;
+  background: var(--bg-primary);
 }
 
 #live-event-mode:not(.active),
@@ -61,7 +61,7 @@ html.wc-live-gate .wc-global-live--boot {
   position: fixed;
   inset: 0;
   z-index: 13000 !important;
-  background: #000 !important;
+  background: var(--bg-primary) !important;
   display: flex !important;
   pointer-events: auto;
 }
@@ -71,7 +71,7 @@ html.wc-live-gate .wc-global-live--boot {
   inset: 0;
   z-index: 12000;
   display: none;
-  background: #000;
+  background: var(--bg-primary);
   color: #fff;
 }
 
@@ -120,7 +120,7 @@ html.wc-live-gate .wc-global-live--boot {
   align-items: center;
   justify-content: center;
   min-height: 0;
-  background: #000;
+  background: var(--bg-primary);
 }
 
 .wc-global-live__video {
@@ -129,7 +129,7 @@ html.wc-live-gate .wc-global-live--boot {
   max-width: none;
   max-height: none;
   object-fit: contain;
-  background: #000;
+  background: var(--bg-primary);
   pointer-events: none;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -209,7 +209,7 @@ html.wc-live-gate .wc-global-live--boot {
   padding: 8px 14px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-mid);
   backdrop-filter: blur(12px);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
@@ -292,7 +292,7 @@ html.wc-live-gate .wc-global-live--boot {
   padding: 12px 20px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--df-line);
   color: #fff;
   font: inherit;
   font-size: 0.85rem;

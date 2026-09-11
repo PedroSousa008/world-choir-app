@@ -1,22 +1,65 @@
-/* World Choir — Premium Dark Theme */
+/* World Choir — Premium theme system (Dark default + Light) */
 
-:root {
+:root,
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Surfaces */
   --bg-void: #000000;
   --bg-primary: #000000;
   --bg-secondary: #0a0a0a;
   --bg-card: rgba(10, 10, 10, 0.85);
   --bg-card-hover: rgba(16, 16, 16, 0.92);
+  --background-primary: var(--bg-primary);
+  --background-secondary: var(--bg-secondary);
+  --surface-primary: var(--bg-card);
+  --surface-secondary: var(--bg-secondary);
+
+  /* Borders */
   --border-subtle: rgba(255, 255, 255, 0.06);
   --border-glow: rgba(61, 124, 255, 0.22);
+  --border-primary: var(--border-subtle);
+
+  /* Text */
   --text-primary: #f4f4f6;
   --text-secondary: #a8abb8;
   --text-muted: #8a8e9a; /* ≥4.5:1 on black — WCAG AA for small text */
+
+  /* Accents (identity colours) */
   --accent-blue: #3d7cff;
   --accent-violet: #6b5ce7;
   --accent-aurora: #4ec5e8;
   --accent-gold: #c9a962;
+  --accent-primary: var(--accent-aurora);
+  --accent-secondary: var(--accent-blue);
   --glow-blue: rgba(61, 124, 255, 0.35);
   --glow-violet: rgba(107, 92, 231, 0.25);
+
+  /* Chrome */
+  --icon-primary: var(--text-primary);
+  --icon-secondary: var(--text-muted);
+  --nav-background: rgba(0, 0, 0, 0.92);
+  --overlay-background: rgba(0, 0, 0, 0.72);
+  --input-background: rgba(255, 255, 255, 0.04);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --logo-filter: none;
+  --wc-boot-bg: #000000;
+
+  /* Donate / Memory shared editorial tokens (dark) */
+  --df-warm: #f2efe8;
+  --df-warm-soft: rgba(242, 239, 232, 0.72);
+  --df-muted: #8a8d97;
+  --df-line: rgba(255, 255, 255, 0.08);
+  --df-line-strong: rgba(78, 197, 232, 0.28);
+  --df-accent: var(--accent-aurora);
+  --mem-card-bg: #070708;
+  --surface-lift: rgba(255, 255, 255, 0.04);
+  --surface-lift-soft: rgba(255, 255, 255, 0.02);
+  --surface-lift-mid: rgba(255, 255, 255, 0.03);
+  --border-soft: rgba(255, 255, 255, 0.12);
+  --border-mid: rgba(255, 255, 255, 0.1);
+
   --radius-sm: 12px;
   --radius-md: 18px;
   --radius-lg: 24px;
@@ -24,6 +67,61 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
   --nav-height: 84px;
   --transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --theme-transition: 250ms ease;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-void: #ffffff;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f5;
+  --bg-card: rgba(255, 255, 255, 0.94);
+  --bg-card-hover: #ececf0;
+  --background-primary: var(--bg-primary);
+  --background-secondary: var(--bg-secondary);
+  --surface-primary: var(--bg-card);
+  --surface-secondary: var(--bg-secondary);
+
+  --border-subtle: rgba(0, 0, 0, 0.09);
+  --border-glow: rgba(37, 99, 235, 0.28);
+  --border-primary: var(--border-subtle);
+
+  --text-primary: #0c0c0e;
+  --text-secondary: #3a3d46;
+  --text-muted: #5a5e69; /* ≥4.5:1 on white */
+
+  --accent-blue: #2563eb;
+  --accent-violet: #5546d6;
+  --accent-aurora: #0a7f9c;
+  --accent-gold: #8f7034;
+  --accent-primary: var(--accent-aurora);
+  --accent-secondary: var(--accent-blue);
+  --glow-blue: rgba(37, 99, 235, 0.2);
+  --glow-violet: rgba(85, 70, 214, 0.16);
+
+  --icon-primary: var(--text-primary);
+  --icon-secondary: var(--text-muted);
+  --nav-background: rgba(255, 255, 255, 0.94);
+  --overlay-background: rgba(255, 255, 255, 0.78);
+  --input-background: rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.06);
+  --inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --logo-filter: brightness(0);
+  --wc-boot-bg: #ffffff;
+
+  --df-warm: #141416;
+  --df-warm-soft: rgba(20, 20, 22, 0.72);
+  --df-muted: #5a5e69;
+  --df-line: rgba(0, 0, 0, 0.09);
+  --df-line-strong: rgba(10, 127, 156, 0.32);
+  --df-accent: var(--accent-aurora);
+  --mem-card-bg: #f3f3f5;
+  --surface-lift: rgba(0, 0, 0, 0.04);
+  --surface-lift-soft: rgba(0, 0, 0, 0.025);
+  --surface-lift-mid: rgba(0, 0, 0, 0.035);
+  --border-soft: rgba(0, 0, 0, 0.12);
+  --border-mid: rgba(0, 0, 0, 0.1);
 }
 
 *, *::before, *::after {
@@ -35,7 +133,7 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #000000;
+  background: var(--bg-primary);
   overflow-x: clip;
   max-width: 100%;
 }
@@ -50,13 +148,47 @@ body {
   line-height: 1.5;
 }
 
+/* Refined colour transition when the user toggles theme (not on every paint). */
+html.wc-theme-animating,
+html.wc-theme-animating *:not(img):not(video):not(canvas):not(iframe):not(svg image):not(.leaflet-tile):not(.maplibregl-canvas):not(.maplibre-canvas) {
+  transition:
+    background-color var(--theme-transition),
+    color var(--theme-transition),
+    border-color var(--theme-transition),
+    fill var(--theme-transition),
+    stroke var(--theme-transition),
+    box-shadow var(--theme-transition),
+    opacity var(--theme-transition) !important;
+}
+
 /* Ambient background */
 .ambient-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: #000000;
+  background: var(--bg-primary);
+}
+
+/* Brand logos designed for dark UI → black mark in Light Mode (not page invert). */
+html[data-theme="light"] .profile-logo,
+html[data-theme="light"] .df-topbar__logo img,
+html[data-theme="light"] .home-logo,
+html[data-theme="light"] .wc-brand-logo,
+html[data-theme="light"] img[src*="world-choir-logo"] {
+  filter: var(--logo-filter);
+}
+
+/* Keep photographic / content imagery untouched even if nested under logo selectors */
+html[data-theme="light"] .df-card img,
+html[data-theme="light"] .mem-feed img,
+html[data-theme="light"] .memory-photo img,
+html[data-theme="light"] .wc-chain-hero__img,
+html[data-theme="light"] .foundation-card img,
+html[data-theme="light"] img[src*="flag"],
+html[data-theme="light"] .wc-flag,
+html[data-theme="light"] .leaflet-marker-icon {
+  filter: none !important;
 }
 
 .ambient-bg.breathing {
@@ -197,12 +329,12 @@ body {
   min-width: 72px;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: var(--shadow-card), var(--inset-highlight);
 }
 
 .countdown-unit.final-hour {
   border-color: var(--border-glow);
-  box-shadow: 0 8px 40px var(--glow-blue), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 40px var(--glow-blue), var(--inset-highlight);
 }
 
 .countdown-value {
@@ -440,7 +572,7 @@ body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
   left: 0;
   right: 0;
   height: var(--nav-height);
-  background: rgba(0, 0, 0, 0.92);
+  background: var(--nav-background);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-top: 1px solid var(--border-subtle);
@@ -604,7 +736,7 @@ body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
 .form-textarea,
 .form-select {
   width: 100%;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-lift);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 14px 16px;
@@ -658,7 +790,7 @@ a:focus-visible {
 }
 
 .reason-chip {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--input-background);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 12px;
@@ -673,7 +805,7 @@ a:focus-visible {
 .reason-chip.selected {
   border-color: var(--accent-blue);
   color: var(--text-primary);
-  background: rgba(61, 124, 255, 0.1);
+  background: var(--glow-blue);
 }
 
 /* Live state */
@@ -682,7 +814,7 @@ a:focus-visible {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: #000000;
+  background: var(--bg-primary);
   animation: livePulse 4s ease-in-out infinite;
 }
 
@@ -811,7 +943,7 @@ html.wc-booting:not(.wc-boot-skeletons)::before {
   position: fixed;
   inset: 0;
   z-index: 2147483000;
-  background: #000;
+  background: var(--wc-boot-bg, #000);
   pointer-events: none;
 }
 
@@ -822,7 +954,7 @@ html.wc-booting.wc-nav-handoff:not(.wc-boot-skeletons)::before {
 
 html.wc-booting:not(.wc-boot-skeletons),
 html.wc-booting:not(.wc-boot-skeletons) body {
-  background: #000 !important;
+  background: var(--wc-boot-bg, #000) !important;
 }
 
 .wc-skel {
@@ -830,12 +962,22 @@ html.wc-booting:not(.wc-boot-skeletons) body {
   border-radius: 8px;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.045) 0%,
-    rgba(255, 255, 255, 0.11) 50%,
-    rgba(255, 255, 255, 0.045) 100%
+    var(--surface-lift) 0%,
+    var(--surface-lift) 50%,
+    var(--surface-lift) 100%
   );
   background-size: 200% 100%;
   animation: wcSkelShimmer 0.9s ease-in-out infinite;
+}
+
+html[data-theme="light"] .wc-skel {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 0%,
+    rgba(0, 0, 0, 0.09) 50%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+  background-size: 200% 100%;
 }
 
 @keyframes wcSkelShimmer {
@@ -869,7 +1011,7 @@ html.wc-booting:not(.wc-boot-skeletons) body {
   margin-bottom: 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-lift-soft);
 }
 
 .wc-skel-card--row {

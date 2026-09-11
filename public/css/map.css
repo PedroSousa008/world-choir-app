@@ -2,7 +2,7 @@
 
 body.map-page {
   overflow: hidden;
-  background: #000000;
+  background: var(--bg-primary);
   height: 100dvh;
   height: 100vh; /* fallback */
   width: 100%;
@@ -15,7 +15,7 @@ body.map-page {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: #000000;
+  background: var(--bg-primary);
 }
 
 .map-shell {
@@ -53,9 +53,9 @@ body.map-page {
   border-radius: 16px;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.04) 100%
+    var(--surface-lift) 0%,
+    var(--border-mid) 50%,
+    var(--surface-lift) 100%
   );
   background-size: 200% 100%;
   animation: wcSkelShimmer 0.9s ease-in-out infinite;
@@ -72,9 +72,9 @@ body.map-page {
   border-radius: 14px;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.04) 100%
+    var(--surface-lift) 0%,
+    var(--border-mid) 50%,
+    var(--surface-lift) 100%
   );
   background-size: 200% 100%;
   animation: wcSkelShimmer 0.9s ease-in-out infinite;
@@ -83,18 +83,18 @@ body.map-page {
 #world-map {
   width: 100%;
   height: 100%;
-  background: #000000;
+  background: var(--bg-primary);
   touch-action: none;
 }
 
 .leaflet-container {
-  background: #000000 !important;
+  background: var(--bg-primary) !important;
   font-family: var(--font-sans);
 }
 
 .leaflet-container .maplibregl-map,
 .leaflet-container .maplibregl-canvas {
-  background: #000000;
+  background: var(--bg-primary);
   outline: none;
 }
 
@@ -624,9 +624,9 @@ body.map-page {
   border-radius: 6px;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.12) 50%,
-    rgba(255, 255, 255, 0.04) 100%
+    var(--surface-lift) 0%,
+    var(--border-soft) 50%,
+    var(--surface-lift) 100%
   );
   background-size: 200% 100%;
   animation: mapStatSkeleton 1.4s ease-in-out infinite;
@@ -737,9 +737,9 @@ body.map-page {
   border-radius: var(--radius-sm);
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.04) 100%
+    var(--surface-lift) 0%,
+    var(--border-mid) 50%,
+    var(--surface-lift) 100%
   );
   background-size: 200% 100%;
   animation: map-empty-skeleton 1.4s ease-in-out infinite;

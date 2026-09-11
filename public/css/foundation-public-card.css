@@ -1,16 +1,5 @@
-/* Canonical Foundation public card — Donate tab + Foundation Control Center live preview */
-
-:root,
-.fcc-live-preview,
-.donate-page,
-.df-checkout {
-  --df-warm: #f2efe8;
-  --df-warm-soft: rgba(242, 239, 232, 0.72);
-  --df-muted: #8a8d97;
-  --df-line: rgba(255, 255, 255, 0.08);
-  --df-line-strong: rgba(78, 197, 232, 0.28);
-  --df-accent: var(--accent-aurora, #4ec5e8);
-}
+/* Canonical Foundation public card — Donate tab + Foundation Control Center live preview
+   Theme tokens (--df-*) come from world-choir-theme.css */
 
 .df-fcard {
   display: grid;
@@ -21,7 +10,7 @@
   padding: 0;
   border: 1px solid var(--df-line);
   border-radius: 10px;
-  background: #070708;
+  background: var(--mem-card-bg);
   color: inherit;
   text-align: left;
   font: inherit;
@@ -45,7 +34,7 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   min-height: 0;
-  background: #0c0c0e;
+  background: var(--bg-secondary);
   overflow: hidden;
 }
 

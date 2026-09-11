@@ -60,13 +60,13 @@
   min-height: 76px;
   padding: 14px 16px 14px 14px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border-subtle);
   background: linear-gradient(
     165deg,
     rgba(18, 18, 24, 0.96) 0%,
     rgba(12, 12, 16, 0.92) 100%
   );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 var(--surface-lift);
   text-decoration: none;
   color: inherit;
   transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
@@ -98,7 +98,7 @@
 
 .contact-card--tiktok .contact-card__icon {
   background: #0a0a0c;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-soft);
   color: #fff;
 }
 
@@ -179,13 +179,13 @@
   gap: 14px;
   padding: 16px 16px 16px 14px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border-subtle);
   background: linear-gradient(
     165deg,
     rgba(16, 16, 22, 0.94) 0%,
     rgba(10, 10, 14, 0.9) 100%
   );
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 var(--surface-lift);
 }
 
 .contact-info-card__icon {

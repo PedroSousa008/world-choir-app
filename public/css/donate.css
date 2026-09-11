@@ -1,16 +1,9 @@
 /* World Choir — Donate / Creator Foundations
-   Editorial, restrained, mobile-first. Almost pure black. */
+   Editorial, restrained, mobile-first. Theme tokens live in world-choir-theme.css. */
 
-/* Tokens on :root + checkout so the flow (mounted on body) resolves colors */
-:root,
 .donate-page,
 .df-checkout {
-  --df-warm: #f2efe8;
-  --df-warm-soft: rgba(242, 239, 232, 0.72);
-  --df-muted: #8a8d97;
-  --df-line: rgba(255, 255, 255, 0.08);
-  --df-line-strong: rgba(78, 197, 232, 0.28);
-  --df-accent: var(--accent-aurora, #4ec5e8);
+  /* --df-* resolved from html[data-theme] */
 }
 
 .donate-page {
@@ -128,7 +121,7 @@
 .df-search-trigger:hover,
 .df-search-trigger:focus-visible {
   color: var(--df-warm);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-lift);
   outline: none;
 }
 
@@ -246,7 +239,7 @@
   text-align: center;
   border: 1px solid var(--df-line);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-lift-mid);
 }
 
 .df-total-donated__label {
@@ -503,7 +496,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-soft);
   background: transparent;
   color: var(--df-muted);
   font-family: var(--font-sans);
@@ -537,7 +530,7 @@
 .df-cause:hover,
 .df-cause:focus-visible {
   color: var(--df-warm-soft);
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: var(--border-soft);
   outline: none;
 }
 
@@ -570,7 +563,7 @@
   padding: 0;
   border: 1px solid var(--df-line);
   border-radius: 12px;
-  background: #070708;
+  background: var(--mem-card-bg);
   color: inherit;
   text-align: left;
   font: inherit;
@@ -613,7 +606,7 @@
 .df-spotlight__avatar--glyph {
   display: grid;
   place-items: center;
-  background: #0c0c0e;
+  background: var(--bg-secondary);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -779,7 +772,7 @@
   padding: 0;
   border: 1px solid var(--df-line);
   border-radius: 10px;
-  background: #070708;
+  background: var(--mem-card-bg);
   color: inherit;
   text-align: left;
   font: inherit;
@@ -797,9 +790,9 @@
 .df-pending-line {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.04) 100%
+    var(--surface-lift) 0%,
+    var(--df-line) 50%,
+    var(--surface-lift) 100%
   );
   background-size: 200% 100%;
   animation: df-pending-shimmer 1.2s ease-in-out infinite;
@@ -838,7 +831,7 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   min-height: 0;
-  background: #0c0c0e;
+  background: var(--bg-secondary);
   overflow: hidden;
 }
 
@@ -1080,7 +1073,7 @@
   padding: 0;
   border: 1px solid var(--df-line);
   border-radius: 10px;
-  background: #070708;
+  background: var(--mem-card-bg);
   color: inherit;
   text-align: left;
   font: inherit;
@@ -1099,7 +1092,7 @@
 .df-pcard__media {
   position: relative;
   height: 120px;
-  background: #0c0c0e;
+  background: var(--bg-secondary);
   overflow: hidden;
 }
 
@@ -1181,7 +1174,7 @@
 
 .df-row:hover,
 .df-row:focus-visible {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-lift-soft);
   outline: none;
 }
 
@@ -1307,7 +1300,7 @@
 .df-empty__action {
   appearance: none;
   margin-top: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--border-soft);
   background: transparent;
   color: var(--df-warm-soft);
   font-family: var(--font-sans);
@@ -1423,7 +1416,7 @@
 
 .df-srow:hover,
 .df-srow:focus-visible {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-lift-soft);
   outline: none;
 }
 
@@ -1432,7 +1425,7 @@
   height: 48px;
   border-radius: 50%;
   border: 1px solid var(--df-line);
-  background: #0c0c0e;
+  background: var(--bg-secondary);
   overflow: hidden;
   display: grid;
   place-items: center;
@@ -1523,8 +1516,8 @@
   box-sizing: border-box;
   padding: calc(4px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
   /* Solid/composited layer — sticky + fading gradients tremble on mobile scroll. */
-  background: #000;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-subtle);
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
@@ -1823,7 +1816,7 @@
 .df-fp-story {
   border: 1px solid var(--df-line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--surface-lift-soft);
   overflow: hidden;
   transition: border-color 0.22s ease, background 0.22s ease;
 }
@@ -1911,7 +1904,7 @@
   flex-direction: column;
   border: 1px solid var(--df-line);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-lift-soft);
   overflow: hidden;
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
@@ -2043,7 +2036,7 @@
 .df-fp-alloc__track {
   height: 3px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--df-line);
   overflow: hidden;
 }
 
@@ -2127,7 +2120,7 @@
 
 .df-progress {
   height: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--df-line);
   margin: 2px 0 0;
   overflow: hidden;
   border-radius: 999px;
@@ -2525,7 +2518,7 @@ body.df-checkout-open {
 .df-checkout__close:hover,
 .df-checkout__close:focus-visible {
   color: var(--df-warm-soft);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-lift);
   outline: none;
 }
 
@@ -2574,7 +2567,7 @@ body.df-checkout-open {
   display: grid;
   place-items: center;
   background: #121214;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-mid);
   box-shadow: 0 0 0 1px rgba(78, 197, 232, 0.12), 0 12px 32px rgba(0, 0, 0, 0.45);
   font-size: 1.15rem;
   font-weight: 600;
@@ -2665,8 +2658,8 @@ body.df-checkout-open {
 
 .df-checkout__amount {
   appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border-mid);
+  background: var(--surface-lift-soft);
   color: var(--df-warm-soft);
   border-radius: 16px;
   padding: 16px 8px;
@@ -2684,7 +2677,7 @@ body.df-checkout-open {
 }
 
 .df-checkout__amount:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--border-soft);
   color: var(--df-warm);
 }
 
@@ -2697,7 +2690,7 @@ body.df-checkout-open {
 .df-checkout__amount.is-selected {
   border-color: var(--df-accent);
   color: var(--df-warm);
-  background: color-mix(in srgb, var(--df-accent) 10%, rgba(255, 255, 255, 0.02));
+  background: color-mix(in srgb, var(--df-accent) 10%, var(--surface-lift-soft));
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--df-accent) 35%, transparent),
     0 8px 28px rgba(78, 197, 232, 0.12);
@@ -2729,9 +2722,9 @@ body.df-checkout-open {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border-soft);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-lift-mid);
   padding: 4px 14px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -2836,7 +2829,7 @@ body.df-checkout-open {
 .df-checkout__transparency {
   margin-top: 22px;
   padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid var(--border-subtle);
   text-align: center;
 }
 
@@ -2878,16 +2871,16 @@ body.df-checkout-open {
 }
 
 .df-checkout__fee-preview {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--df-line);
   border-radius: 14px;
   padding: 4px 14px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-lift-soft);
 }
 
 .df-checkout__location--compact {
   margin: 8px 0 4px;
   padding-top: 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid var(--border-subtle);
   text-align: center;
 }
 
@@ -2974,9 +2967,9 @@ body.df-checkout-open {
 .df-checkout__payment-el.is-preparing {
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--df-line);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-lift-soft);
 }
 
 .df-checkout__payment-preparing {
@@ -3044,7 +3037,7 @@ body.df-checkout-open {
   border-radius: 14px;
   padding: 14px 16px;
   margin: 18px 0 10px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface-lift-soft);
 }
 
 .df-checkout__fee-row {

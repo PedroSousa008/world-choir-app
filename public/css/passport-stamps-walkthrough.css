@@ -87,7 +87,7 @@
   font-size: 0.98rem;
   font-weight: 650;
   line-height: 1.25;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .psw-wt__callout-copy {
@@ -142,7 +142,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--border-soft);
   transition: background 0.2s ease, transform 0.2s ease;
 }
 

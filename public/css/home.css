@@ -33,7 +33,7 @@
   height: 40px;
   margin: 0;
   padding: 0 6px 0 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-mid);
   border-right: none;
   border-radius: 10px 0 0 10px;
   background: #1c1d21;
@@ -109,7 +109,7 @@
   background: rgba(16, 18, 24, 0.92);
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
-  color: #f2efe8;
+  color: var(--df-warm);
   text-align: center;
   box-shadow: none;
   pointer-events: auto;
@@ -136,7 +136,7 @@
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--border-subtle);
   color: rgba(242, 239, 232, 0.88);
   cursor: pointer;
   appearance: none;
@@ -155,7 +155,7 @@
   font-weight: 650;
   letter-spacing: -0.02em;
   line-height: 1.15;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .home-guide-panel__subtitle {
@@ -229,7 +229,7 @@
   font-size: 0.98rem;
   font-weight: 650;
   line-height: 1.2;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .home-guide-card__copy {
@@ -332,7 +332,7 @@ body.home-guide-open {
   }
   18% {
     transform: scale(1.22);
-    color: #ffffff;
+    color: var(--text-primary);
     text-shadow:
       0 0 12px rgba(78, 197, 232, 0.95),
       0 0 28px rgba(61, 124, 255, 0.7);
@@ -432,7 +432,7 @@ body.home-guide-open {
 
 .countdown-hero__unit {
   background: rgba(6, 8, 14, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 20px 8px;
   backdrop-filter: blur(24px);
@@ -566,7 +566,7 @@ body.home-guide-open {
 .btn-hero__glow {
   position: absolute;
   inset: 0;
-  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.12) 50%, transparent 60%);
+  background: linear-gradient(105deg, transparent 40%, var(--border-soft) 50%, transparent 60%);
   transform: translateX(-100%);
   animation: btnShine 5s ease-in-out infinite;
 }
@@ -594,9 +594,9 @@ body.home-guide-open {
   border-radius: var(--radius-md);
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.04) 100%
+    var(--surface-lift) 0%,
+    var(--border-mid) 50%,
+    var(--surface-lift) 100%
   );
   background-size: 200% 100%;
   animation: btnHeroSkeleton 1.4s ease-in-out infinite;
@@ -686,7 +686,7 @@ body.home-guide-open {
   width: 48px;
   height: 48px;
   padding: 0;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-lift);
   border: 1px solid var(--border-subtle);
   border-radius: 50%;
   color: var(--text-secondary);
@@ -709,7 +709,7 @@ body.home-guide-open {
 
 .btn-glass {
   padding: 12px 18px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-lift-mid);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
@@ -748,7 +748,7 @@ body.home-guide-open {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-lift-mid);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -1056,7 +1056,7 @@ body.home-guide-open {
   padding: 18px 16px;
   border-radius: var(--radius-md);
   background: rgba(12, 14, 22, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--df-line);
 }
 
 .home-after-card__eyebrow {
@@ -1091,7 +1091,7 @@ body.home-guide-open {
   width: 1px;
   align-self: stretch;
   margin: 2px 10px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-mid);
 }
 
 .home-after-voices-stat {
@@ -1163,7 +1163,7 @@ a.home-after-voices-stat:active {
   width: 1px;
   min-height: 72px;
   align-self: center;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-mid);
   padding: 0;
 }
 
@@ -1221,7 +1221,7 @@ a.home-after-card--song {
 
 a.home-after-card--song:hover,
 a.home-after-card--song:focus-visible {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--border-soft);
   background: rgba(16, 18, 28, 0.92);
   outline: none;
 }
@@ -1238,7 +1238,7 @@ a.home-after-card--song:active {
   object-fit: cover;
   background:
     linear-gradient(145deg, rgba(40, 60, 100, 0.4), rgba(10, 14, 24, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--df-line);
 }
 
 .home-after-song__meta {
@@ -1443,8 +1443,8 @@ a.home-after-card--song:active {
   max-width: 100%;
   padding: 10px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-lift);
   color: var(--text-primary);
   font: inherit;
   font-size: 0.68rem;
@@ -1458,7 +1458,7 @@ a.home-after-card--song:active {
 }
 
 .home-after-promise__btn:active {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--df-line);
 }
 
 .home-after-promise-title {
@@ -1484,8 +1484,8 @@ a.home-after-card--song:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-primary);
+  border: 1px solid var(--df-line);
 }
 
 /* Bleed + cover so the map paints every pixel of the box on mobile and desktop. */
@@ -1498,7 +1498,7 @@ a.home-after-card--song:active {
   z-index: 0;
   width: auto;
   height: auto;
-  background-color: #000;
+  background-color: var(--bg-primary);
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -1605,7 +1605,7 @@ a.home-after-card--song:active {
   height: 36px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--border-subtle);
   color: var(--text-secondary);
   font-size: 1.4rem;
   line-height: 1;
@@ -1682,7 +1682,7 @@ a.home-after-card--song:active {
     flex-direction: row;
     gap: 0;
     background: rgba(6, 8, 14, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     padding: 14px 6px;
     backdrop-filter: blur(24px);
@@ -1701,7 +1701,7 @@ a.home-after-card--song:active {
   }
 
   .countdown-hero__unit:not(:last-child) {
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid var(--df-line);
   }
 
   .countdown-hero__value {
@@ -1766,9 +1766,9 @@ a.home-after-card--song:active {
   border-radius: 8px;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.045) 0%,
-    rgba(255, 255, 255, 0.11) 50%,
-    rgba(255, 255, 255, 0.045) 100%
+    var(--surface-lift) 0%,
+    var(--surface-lift) 50%,
+    var(--surface-lift) 100%
   );
   background-size: 200% 100%;
   animation: homeSkelShimmer 1.1s ease-in-out infinite;
@@ -1901,7 +1901,7 @@ a.home-after-card--song:active {
   .home-skel-countdown {
     gap: 0;
     background: rgba(6, 8, 14, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md, 12px);
     padding: 14px 6px;
     margin-bottom: 20px;
@@ -1911,9 +1911,9 @@ a.home-after-card--song:active {
     height: 3.4rem;
     background: linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.03) 0%,
-      rgba(255, 255, 255, 0.08) 50%,
-      rgba(255, 255, 255, 0.03) 100%
+      var(--surface-lift-mid) 0%,
+      var(--df-line) 50%,
+      var(--surface-lift-mid) 100%
     );
     background-size: 200% 100%;
     animation: homeSkelShimmer 1.1s ease-in-out infinite;

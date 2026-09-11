@@ -5,7 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#000000">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+    <script>
+    /* Apply persisted theme before first paint — default dark, never flash wrong theme */
+    (function () {
+      try {
+        var t = localStorage.getItem('wc_theme_v1');
+        if (t !== 'light' && t !== 'dark') t = 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+        document.documentElement.style.colorScheme = t;
+        document.documentElement.style.setProperty('--wc-boot-bg', t === 'light' ? '#ffffff' : '#000000');
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', t === 'light' ? '#ffffff' : '#000000');
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.style.setProperty('--wc-boot-bg', '#000000');
+      }
+    })();
+  </script>
+<meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="description" content="World Choir Influencer login for Creator Foundations.">
@@ -15,11 +32,11 @@
   <link rel="stylesheet" href="css/inter-font.css?v=20260906perf">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-  <link rel="stylesheet" href="css/map.css?v=20260826d">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260907tabsrestore">
+  <link rel="stylesheet" href="css/map.css?v=20260911theme">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260911theme">
   <link rel="stylesheet" href="css/foundation-public-card.css?v=20260904cd">
   <link rel="stylesheet" href="css/foundation-control.css?v=20260819g">
-  <link rel="stylesheet" href="css/live-event.css?v=20260904an">
+  <link rel="stylesheet" href="css/live-event.css?v=20260911theme">
   <script src="js/world-choir-event-schedule.js?v=20260907official"></script>
   <script src="js/live-event/live-event-config.js?v=20260904an"></script>
   <script src="js/live-event/live-event-boot.js?v=20260904an"></script>
@@ -36,7 +53,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
-  <script src="js/world-choir-map-tiles.js?v=20260826d"></script>
+  <script src="js/world-choir-map-tiles.js?v=20260911theme"></script>
   <script src="js/owner-map.js?v=20260826d"></script>
   <script src="js/foundation-public-card.js?v=20260904cb"></script>
   <script src="js/world-choir-countries.js?v=20260831a"></script>

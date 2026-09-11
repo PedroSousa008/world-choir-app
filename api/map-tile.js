@@ -26,7 +26,9 @@ module.exports = async function handler(req, res) {
   }
 
   const subdomain = ['a', 'b', 'c', 'd'][(Number(x) + Number(y)) % 4];
-  const upstream = `https://${subdomain}.basemaps.cartocdn.com/dark_nolabels/${z}/${x}/${y}${scale}.png?key=${encodeURIComponent(key)}`;
+  const theme = String(req.query.theme || 'dark').trim() === 'light' ? 'light' : 'dark';
+  const style = theme === 'light' ? 'light_nolabels' : 'dark_nolabels';
+  const upstream = `https://${subdomain}.basemaps.cartocdn.com/${style}/${z}/${x}/${y}${scale}.png?key=${encodeURIComponent(key)}`;
 
   try {
     const upstreamRes = await fetch(upstream, {

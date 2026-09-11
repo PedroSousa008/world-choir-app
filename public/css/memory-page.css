@@ -1,16 +1,5 @@
 /* World Choir — post-event Memory tab
-   Same visual DNA as Donate: black, muted labels, cyan accents, thin borders. */
-
-:root,
-.memory-page {
-  --df-warm: #f2efe8;
-  --df-warm-soft: rgba(242, 239, 232, 0.72);
-  --df-muted: #8a8d97;
-  --df-line: rgba(255, 255, 255, 0.08);
-  --df-line-strong: rgba(78, 197, 232, 0.28);
-  --df-accent: var(--accent-aurora, #4ec5e8);
-  --mem-card-bg: #070708;
-}
+   Same visual DNA as Donate. Theme tokens live in world-choir-theme.css. */
 
 .memory-page {
   position: relative;
@@ -137,8 +126,8 @@
   flex: 0 0 auto;
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 0 1px var(--border-subtle);
+  background: var(--surface-lift-mid);
   transition: transform 220ms ease, opacity 220ms ease, width 220ms ease, height 220ms ease;
   width: min(32vw, 150px);
   height: 180px;
@@ -282,7 +271,7 @@
   object-fit: cover;
   border-radius: 10px;
   flex-shrink: 0;
-  background: #111;
+  background: var(--bg-secondary);
   border: 1px solid var(--df-line);
 }
 
@@ -492,7 +481,7 @@
   top: 11px;
   right: calc(50% + 8px);
   width: calc(100% - 16px);
-  border-top: 1px dashed rgba(255, 255, 255, 0.22);
+  border-top: 1px dashed var(--border-soft);
   pointer-events: none;
 }
 
@@ -591,7 +580,7 @@
   place-items: center;
   cursor: pointer;
   color: var(--df-accent);
-  background: #050505;
+  background: var(--bg-secondary);
   border: 1.5px solid var(--df-accent);
   box-shadow: 0 0 18px rgba(78, 197, 232, 0.18);
   transition: transform 160ms ease, background 160ms ease, opacity 160ms ease;
@@ -743,7 +732,7 @@ html.mem-composer-open body {
   border-radius: 12px;
   border: 1px solid var(--df-line);
   overflow: hidden;
-  background: #050505;
+  background: var(--bg-secondary);
   margin-bottom: 14px;
   display: grid;
   place-items: center;
@@ -788,7 +777,7 @@ html.mem-composer-open body {
   min-height: 84px;
   border-radius: 10px;
   border: 1px solid var(--df-line);
-  background: #050505;
+  background: var(--bg-secondary);
   color: var(--df-warm);
   font: inherit;
   padding: 12px;

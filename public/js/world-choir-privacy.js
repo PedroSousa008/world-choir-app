@@ -150,7 +150,7 @@ const WorldChoirPrivacy = (() => {
     const link = document.createElement('link');
     link.id = 'wc-privacy-consent-css';
     link.rel = 'stylesheet';
-    link.href = 'css/privacy-consent.css?v=20260905a';
+    link.href = 'css/privacy-consent.css?v=20260911theme';
     document.head.appendChild(link);
   }
 

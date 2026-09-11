@@ -4,24 +4,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <meta name="description" content="Your World Choir Passport — a permanent record of your voice in the global choir.">
+    <script>
+    /* Apply persisted theme before first paint — default dark, never flash wrong theme */
+    (function () {
+      try {
+        var t = localStorage.getItem('wc_theme_v1');
+        if (t !== 'light' && t !== 'dark') t = 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+        document.documentElement.style.colorScheme = t;
+        document.documentElement.style.setProperty('--wc-boot-bg', t === 'light' ? '#ffffff' : '#000000');
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', t === 'light' ? '#ffffff' : '#000000');
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.style.setProperty('--wc-boot-bg', '#000000');
+      }
+    })();
+  </script>
+<meta name="description" content="Your World Choir Passport — a permanent record of your voice in the global choir.">
   <title>World Choir — Passport</title>
   <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20270706">
   <link rel="apple-touch-icon" href="images/world-choir-logo.png?v=20270706">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260907tabsrestore">
-  <link rel="stylesheet" href="css/passport.css?v=20260904a">
+  <link rel="stylesheet" href="css/world-choir-theme.css?v=20260911theme">
+  <link rel="stylesheet" href="css/passport.css?v=20260911theme">
   <link rel="stylesheet" href="css/pass-the-world-walkthrough.css?v=20260904c">
   <link rel="stylesheet" href="css/passport-stamps-walkthrough.css?v=20260904b">
   <link rel="stylesheet" href="css/daily-peace.css?v=20260810e">
-  <link rel="stylesheet" href="css/privacy-consent.css?v=20260905a">
+  <link rel="stylesheet" href="css/privacy-consent.css?v=20260911theme">
   <link rel="preconnect" href="https://basemaps.cartocdn.com">
   <link rel="dns-prefetch" href="https://unpkg.com">
   <link rel="preload" as="image" href="images/passport/passport-feature.png?v=20260821b">
   <link rel="preload" as="image" href="images/passport/passport-inside-bg.png?v=20260827c" fetchpriority="high">
-  <link rel="stylesheet" href="css/live-event.css?v=20260904as">
+  <link rel="stylesheet" href="css/live-event.css?v=20260911theme">
   <script src="js/world-choir-event-schedule.js?v=20260907official"></script>
   <script src="js/live-event/live-event-config.js?v=20260904as"></script>
   <script src="js/live-event/live-event-boot.js?v=20260904as"></script>
@@ -70,7 +87,8 @@
   <script src="js/world-choir-participation.js?v=20260907a"></script>
   <script src="js/world-choir-post-event-join.js?v=20260907a"></script>
   <script src="js/world-choir-a11y.js?v=20260903o"></script>
-  <script src="js/world-choir-nav.js?v=20260911wchain"></script>
+  <script src="js/world-choir-theme.js?v=20260911theme"></script>
+  <script src="js/world-choir-nav.js?v=20260911theme"></script>
   <script src="js/profile/daily-acts-peace.js?v=20260906perf"></script>
   <script src="js/profile/passport-route.js?v=20260901b"></script>
   <script src="js/profile/passport-stamps.js?v=20260904b"></script>

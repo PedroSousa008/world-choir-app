@@ -4,7 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
-  <meta name="description" content="Continue your World Choir Passport story.">
+    <script>
+    /* Apply persisted theme before first paint — default dark, never flash wrong theme */
+    (function () {
+      try {
+        var t = localStorage.getItem('wc_theme_v1');
+        if (t !== 'light' && t !== 'dark') t = 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+        document.documentElement.style.colorScheme = t;
+        document.documentElement.style.setProperty('--wc-boot-bg', t === 'light' ? '#ffffff' : '#000000');
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', t === 'light' ? '#ffffff' : '#000000');
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.style.setProperty('--wc-boot-bg', '#000000');
+      }
+    })();
+  </script>
+<meta name="description" content="Continue your World Choir Passport story.">
   <title>World Choir — Your Story</title>
   <link rel="icon" type="image/png" href="images/world-choir-logo.png?v=20260906perf">
   <meta http-equiv="refresh" content="0; url=passport.html?page=story">
@@ -12,7 +29,7 @@
     // Instant redirect — story now lives inside passport.html for fast chapter switching.
     location.replace('passport.html?page=story');
   </script>
-  <link rel="stylesheet" href="css/live-event.css?v=20260904an">
+  <link rel="stylesheet" href="css/live-event.css?v=20260911theme">
   <script src="js/world-choir-event-schedule.js?v=20260907official"></script>
   <script src="js/live-event/live-event-config.js?v=20260904an"></script>
   <script src="js/live-event/live-event-boot.js?v=20260904an"></script>

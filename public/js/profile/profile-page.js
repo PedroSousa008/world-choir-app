@@ -192,6 +192,11 @@ const ProfilePage = (() => {
     DailyActsPeace.init();
     WorldChoirNav.startWatcher('profile');
 
+    if (typeof WorldChoirTheme !== 'undefined') {
+      WorldChoirTheme.bindToggle?.(document.getElementById('profile-theme-toggle'));
+      WorldChoirTheme.syncToggles?.();
+    }
+
     document.getElementById('profile-privacy-prefs')?.addEventListener('click', (e) => {
       e.preventDefault();
       if (typeof WorldChoirPrivacy !== 'undefined' && WorldChoirPrivacy.openPreferences) {
