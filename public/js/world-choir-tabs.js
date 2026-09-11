@@ -11,7 +11,7 @@ const WorldChoirTabs = (() => {
       href: 'index.html',
       title: 'World Choir',
       css: [
-        'css/home.css?v=20260911theme',
+        'css/home.css?v=20260911homeLight',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260911theme2',
         'css/daily-peace.css?v=20260810e',
@@ -29,7 +29,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
         'js/profile/daily-acts-peace.js?v=20260906perf',
-        'js/world-choir-home.js?v=20260911theme',
+        'js/world-choir-home.js?v=20260911homeLight',
       ],
       selectors: [
         '#earth-canvas',

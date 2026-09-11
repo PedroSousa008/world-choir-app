@@ -180,12 +180,12 @@ html.wc-theme-animating *:not(img):not(video):not(canvas):not(iframe):not(svg im
   background: var(--bg-primary);
 }
 
-/* Brand logos designed for dark UI → black mark in Light Mode (not page invert). */
+/* Brand logos designed for dark UI → black mark in Light Mode (not page invert).
+   Home uses a dedicated light asset (world-choir-light.png) — do not filter it. */
 html[data-theme="light"] .profile-logo,
 html[data-theme="light"] .df-topbar__logo img,
-html[data-theme="light"] .home-logo,
 html[data-theme="light"] .wc-brand-logo,
-html[data-theme="light"] img[src*="world-choir-logo"] {
+html[data-theme="light"] img[src*="world-choir-logo"]:not([src*="world-choir-light"]) {
   filter: var(--logo-filter);
 }
 

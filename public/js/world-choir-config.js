@@ -99,6 +99,30 @@ const WorldChoirConfig = (() => {
     },
   };
 
+  const LOGO_LIGHT = {
+    src: 'images/world-choir-light.png',
+    version: '20260911theme',
+    alt: 'World Choir App',
+    get url() {
+      return `${this.src}?v=${this.version}`;
+    },
+  };
+
+  /** Theme-aware Home mark: dark logo on dark UI, dedicated light asset in Light Mode. */
+  function homeLogoUrl() {
+    try {
+      if (typeof WorldChoirTheme !== 'undefined' && WorldChoirTheme.isLight?.()) {
+        return LOGO_LIGHT.url;
+      }
+      if (document.documentElement.getAttribute('data-theme') === 'light') {
+        return LOGO_LIGHT.url;
+      }
+    } catch {
+      /* ignore */
+    }
+    return LOGO.url;
+  }
+
   /** Shared Passport bottom-right world map — replace public/images/passport/passport-world-map.png for all users */
   const PASSPORT_WORLD_MAP = {
     src: 'images/passport/passport-world-map.png',
@@ -845,6 +869,8 @@ const WorldChoirConfig = (() => {
     ACTIVE_EVENT,
     CURRENT_EVENT,
     LOGO,
+    LOGO_LIGHT,
+    homeLogoUrl,
     PASSPORT_WORLD_MAP,
     PASSPORT_FEATURE_IMAGE,
     PASSPORT_INSIDE_BACKGROUND,

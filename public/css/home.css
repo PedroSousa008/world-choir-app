@@ -461,6 +461,11 @@ body.home-guide-open {
   color: var(--text-muted);
 }
 
+html[data-theme="light"] .countdown-hero__label,
+html[data-theme="light"] .countdown-name {
+  color: #ffffff;
+}
+
 /* ─── Home help tab + empty placeholder panel ─── */
 
 .home-help-tab {
