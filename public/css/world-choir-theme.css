@@ -181,12 +181,31 @@ html.wc-theme-animating *:not(img):not(video):not(canvas):not(iframe):not(svg im
 }
 
 /* Brand logos designed for dark UI → black mark in Light Mode (not page invert).
-   Home uses a dedicated light asset (world-choir-light.png) — do not filter it. */
+   NEVER filter .home-logo — Home swaps to world-choir-light.png via CSS. */
 html[data-theme="light"] .profile-logo,
 html[data-theme="light"] .df-topbar__logo img,
 html[data-theme="light"] .wc-brand-logo,
-html[data-theme="light"] img[src*="world-choir-logo"]:not([src*="world-choir-light"]) {
+html[data-theme="light"] img[src*="world-choir-logo"]:not(.home-logo):not([src*="world-choir-light"]) {
   filter: var(--logo-filter);
+}
+
+/* Home mark: dedicated light asset, never brightness/invert */
+html[data-theme="light"] .home-logo,
+html[data-theme="light"] .home-logo--light,
+html[data-theme="light"] img[src*="world-choir-light"] {
+  filter: none !important;
+}
+
+.home-logo--light {
+  display: none;
+}
+
+html[data-theme="light"] .home-logo--dark {
+  display: none !important;
+}
+
+html[data-theme="light"] .home-logo--light {
+  display: block !important;
 }
 
 /* Keep photographic / content imagery untouched even if nested under logo selectors */

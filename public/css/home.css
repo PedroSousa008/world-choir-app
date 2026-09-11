@@ -292,6 +292,7 @@ body.home-guide-open {
   height: auto;
   margin: 0 auto 24px;
   object-fit: contain;
+  filter: none !important;
 }
 
 .home-voices-counter {

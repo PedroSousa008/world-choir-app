@@ -547,8 +547,8 @@ const WorldChoirNav = (() => {
   const TAB_ASSETS = {
     home: [
       'index.html',
-      'css/home.css?v=20260911homeLight',
-      'js/world-choir-home.js?v=20260911homeLight',
+      'css/home.css?v=20260911homeFix',
+      'js/world-choir-home.js?v=20260911homeFix',
       'js/world-choir-db.js?v=20260907voices',
     ],
     map: [

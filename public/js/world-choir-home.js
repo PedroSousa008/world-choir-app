@@ -274,7 +274,8 @@ const WorldChoirHome = (() => {
 
     return `
       ${renderVoicesCounter()}
-      <img class="home-logo" src="${WorldChoirConfig.homeLogoUrl()}" alt="${WorldChoirConfig.LOGO.alt}" width="1024" height="1024" decoding="async">
+      <img class="home-logo home-logo--dark" src="${WorldChoirConfig.LOGO.url}" alt="${WorldChoirConfig.LOGO.alt}" width="1024" height="1024" decoding="async">
+      <img class="home-logo home-logo--light" src="${WorldChoirConfig.LOGO_LIGHT.url}" alt="${WorldChoirConfig.LOGO_LIGHT.alt}" width="1024" height="1024" decoding="async">
       <h1 class="home-headline sws-quote-shimmer">The world sings together in</h1>
 
       <div class="countdown-hero">
@@ -1096,17 +1097,7 @@ const WorldChoirHome = (() => {
   let homeBootstrapped = false;
 
   function onTabShow() {
-    syncHomeLogoForTheme();
-  }
-
-  function syncHomeLogoForTheme() {
-    const url = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.homeLogoUrl
-      ? WorldChoirConfig.homeLogoUrl()
-      : null;
-    if (!url) return;
-    document.querySelectorAll('img.home-logo').forEach((img) => {
-      if (img.getAttribute('src') !== url) img.setAttribute('src', url);
-    });
+    /* Keep countdown / live sync ticking; nothing special required. */
   }
 
   function init() {
@@ -1116,10 +1107,6 @@ const WorldChoirHome = (() => {
     }
     homeBootstrapped = true;
     homeReady = false;
-
-    window.addEventListener('wc:themechange', () => {
-      syncHomeLogoForTheme();
-    });
 
     // Instant warm paint from session (same path as Profile) — countdown/CTA without map aggregate.
     if (typeof WorldChoirDB !== 'undefined' && typeof WorldChoirDB.primeLocalCaches === 'function') {
