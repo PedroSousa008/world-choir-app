@@ -306,6 +306,54 @@ const WorldChoirNav = (() => {
     return true;
   }
 
+  /** Soft keep-alive open for World Chain (Home/Profile) — same speed as primary tabs. */
+  function openWorldChain({ search = '', animate = false } = {}) {
+    const href = `world-chain.html${search || ''}`;
+    const tabs = typeof WorldChoirTabs !== 'undefined' ? WorldChoirTabs : null;
+
+    if (tabs?.isPrimary?.('world-chain')) {
+      if (!tabs.isHosted()) {
+        const entry = tabs.getActive?.() || currentActivePage || pageIdFromPathname() || 'home';
+        if (tabs.isPrimary(entry)) tabs.attach(entry);
+      }
+      if (tabs.isHosted()) {
+        clearPendingNavigation();
+        clearStoredTransition();
+        document.documentElement.classList.remove('wc-nav-handoff');
+        currentActivePage = 'world-chain';
+        setActiveClasses('world-chain');
+        placeIndicatorOnItem(null);
+        void (async () => {
+          const ok = await tabs.switchTo('world-chain', { updateHistory: true });
+          if (!ok) {
+            window.location.href = href;
+            return;
+          }
+          if (search) {
+            try {
+              history.replaceState(
+                { ...(history.state || {}), wcTab: 'world-chain' },
+                '',
+                href
+              );
+            } catch {
+              /* ignore */
+            }
+            try {
+              WorldChainPage?.onTabShow?.();
+            } catch {
+              /* ignore */
+            }
+          }
+        })();
+        return true;
+      }
+    }
+
+    window.location.href = href;
+    return true;
+  }
+
   function activateTab(pageId, href, { navigate } = { navigate: true }) {
     if (!pageId) return;
 
@@ -500,7 +548,7 @@ const WorldChoirNav = (() => {
     home: [
       'index.html',
       'css/home.css?v=20260907voices',
-      'js/world-choir-home.js?v=20260908network',
+      'js/world-choir-home.js?v=20260911wchain',
       'js/world-choir-db.js?v=20260907voices',
     ],
     map: [
@@ -533,7 +581,7 @@ const WorldChoirNav = (() => {
     profile: [
       'profile.html',
       'css/profile.css?v=20260908noowner',
-      'js/profile/profile-page.js?v=20260908noowner',
+      'js/profile/profile-page.js?v=20260911wchain',
       'js/profile/daily-acts-peace.js?v=20260906perf',
       'js/profile/daily-acts-button.js?v=20260810i',
       'js/world-choir-onboarding.js?v=20260816a',
@@ -567,6 +615,14 @@ const WorldChoirNav = (() => {
       'js/memory/memory-page.js?v=20260907tabshydrate',
       'js/profile/passport-stamps.js?v=20260902a',
       'js/profile/world-choir-passport.js?v=20260902q',
+    ],
+    'world-chain': [
+      'world-chain.html',
+      'css/world-chain.css?v=20260905ac',
+      'js/world-choir-flags.js?v=20260905s',
+      'js/world-chain-page.js?v=20260911wchain',
+      '/api/world-chain',
+      'images/chain-header.png?v=20260905h',
     ],
     'daily-acts': [
       'daily-acts.html',
@@ -616,12 +672,15 @@ const WorldChoirNav = (() => {
     if (prefetchStarted) return;
     prefetchStarted = true;
 
+    // Warm World Chain immediately — Home/Profile entry must match tab speed.
+    (TAB_ASSETS['world-chain'] || []).forEach(prefetchUrl);
+
     const run = () => {
       if (typeof WorldChoirMapTiles !== 'undefined') {
         WorldChoirMapTiles.warmBasemap?.();
       }
       Object.keys(TAB_ASSETS).forEach((id) => {
-        if (id === activePage) return;
+        if (id === activePage || id === 'world-chain') return;
         if (id === 'memory' && !WorldChoirConfig.isMemoryUnlocked()) return;
         (TAB_ASSETS[id] || []).forEach(prefetchUrl);
       });
@@ -631,6 +690,13 @@ const WorldChoirNav = (() => {
       try {
         if (typeof CreatorFoundationsStore !== 'undefined') {
           CreatorFoundationsStore.ready();
+        }
+      } catch {
+        /* ignore */
+      }
+      try {
+        if (typeof WorldChainPage !== 'undefined') {
+          WorldChainPage.warmTodayCache?.();
         }
       } catch {
         /* ignore */
@@ -754,6 +820,7 @@ const WorldChoirNav = (() => {
     prefetchTabs,
     setActivePage,
     navigateToPrimaryTab,
+    openWorldChain,
     getNavIconSvg: (key) => NAV_ICON_SVGS[key] || '',
     getNavGlyph: (pageId) => {
       const page = ALL_PAGES.find((p) => p.id === pageId);

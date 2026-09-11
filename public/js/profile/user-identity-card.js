@@ -51,7 +51,11 @@ const UserIdentityCard = (() => {
     });
     document.getElementById('open-world-chain-btn')?.addEventListener('click', () => {
       if (typeof onOpenWorldChain === 'function') onOpenWorldChain();
-      else window.location.href = 'world-chain.html';
+      else if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openWorldChain) {
+        WorldChoirNav.openWorldChain();
+      } else {
+        window.location.href = 'world-chain.html';
+      }
     });
   }
 

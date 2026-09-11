@@ -88,7 +88,11 @@ const ProfilePage = (() => {
         window.location.href = 'passport.html';
       },
       onOpenWorldChain: () => {
-        window.location.href = 'world-chain.html';
+        if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openWorldChain) {
+          WorldChoirNav.openWorldChain();
+        } else {
+          window.location.href = 'world-chain.html';
+        }
       },
     });
 

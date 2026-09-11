@@ -47,6 +47,8 @@ const WorldChainPage = (() => {
 
   let liveTimerInterval = null;
   let liveTimerReloadArmed = false;
+  let pageReady = false;
+  let popBound = false;
 
   function esc(value) {
     return String(value ?? '')
@@ -1509,7 +1511,9 @@ const WorldChainPage = (() => {
     bind();
     paintLiveTimers();
     startLiveTimers();
-    if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
+    if (!window.__WC_TAB_SILENT_INIT && typeof WorldChoirBoot !== 'undefined') {
+      WorldChoirBoot.ready();
+    }
   }
 
   async function loadCompleted(opts = {}) {
@@ -1719,7 +1723,19 @@ const WorldChainPage = (() => {
     return 'landing';
   }
 
+  function goHomeSoft(e) {
+    if (e) e.preventDefault();
+    if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.navigateToPrimaryTab) {
+      WorldChoirNav.navigateToPrimaryTab('home');
+      return;
+    }
+    window.location.href = 'index.html';
+  }
+
   function bind() {
+    document.querySelectorAll('a.wc-chain-back[href="index.html"]').forEach((a) => {
+      a.addEventListener('click', goHomeSoft);
+    });
     document.querySelector('[data-retry]')?.addEventListener('click', () => load());
     document.querySelectorAll('[data-open-completed]').forEach((btn) => {
       btn.addEventListener('click', () => loadCompleted());
@@ -2176,13 +2192,53 @@ const WorldChainPage = (() => {
     }
   }
 
+  function onTabShow() {
+    hydrateFromCache();
+    applyUrlState();
+    render();
+    startLiveTimers();
+    // Soft refresh in background — never block the tab reveal.
+    void load().catch(() => {});
+  }
+
+  async function warmTodayCache() {
+    try {
+      if (readCachedToday()) return;
+      await WorldChoirDB.ready?.();
+      const id = deviceId();
+      const eid = eventId();
+      const res = await fetch(
+        `/api/world-chain?deviceId=${encodeURIComponent(id)}&eventId=${encodeURIComponent(eid)}`,
+        { credentials: 'same-origin' }
+      );
+      if (!res.ok) return;
+      const payload = await res.json();
+      if (payload) cacheTodayPayload(payload);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function isReady() {
+    return pageReady;
+  }
+
   function init() {
+    if (pageReady) {
+      onTabShow();
+      return;
+    }
+    pageReady = true;
+
     if (typeof WorldChoirNav !== 'undefined') {
       WorldChoirNav.startWatcher('world-chain');
     }
-    window.addEventListener('popstate', () => {
-      restoreFromUrl();
-    });
+    if (!popBound) {
+      popBound = true;
+      window.addEventListener('popstate', () => {
+        restoreFromUrl();
+      });
+    }
 
     // Instant paint from URL + session cache (never flash the wrong page).
     hydrateFromCache();
@@ -2212,7 +2268,7 @@ const WorldChainPage = (() => {
     });
   }
 
-  return { init };
+  return { init, onTabShow, isReady, warmTodayCache };
 })();
 
 window.WorldChainPage = WorldChainPage;

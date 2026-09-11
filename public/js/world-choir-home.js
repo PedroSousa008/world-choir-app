@@ -176,7 +176,11 @@ const WorldChoirHome = (() => {
     root.getElementById('share-btn')?.addEventListener('click', shareCountdown);
     root.getElementById('home-carousel-btn')?.addEventListener('click', (e) => {
       e.preventDefault();
-      window.location.href = 'world-chain.html';
+      if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openWorldChain) {
+        WorldChoirNav.openWorldChain();
+      } else {
+        window.location.href = 'world-chain.html';
+      }
     });
   }
 

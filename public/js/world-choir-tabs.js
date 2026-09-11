@@ -29,7 +29,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
         'js/profile/daily-acts-peace.js?v=20260906perf',
-        'js/world-choir-home.js?v=20260908network',
+        'js/world-choir-home.js?v=20260911wchain',
       ],
       selectors: [
         '#earth-canvas',
@@ -127,7 +127,7 @@ const WorldChoirTabs = (() => {
         'js/profile/invite-button.js?v=20260813p',
         'js/profile/daily-acts-peace.js?v=20260906perf',
         'js/profile/daily-acts-button.js?v=20260810i',
-        'js/profile/profile-page.js?v=20260908noowner',
+        'js/profile/profile-page.js?v=20260911wchain',
       ],
       selectors: [
         '.ambient-bg',
@@ -166,6 +166,23 @@ const WorldChoirTabs = (() => {
       selectors: ['.ambient-bg', '#memory-page'],
       init: () => tabApi('memory')?.init?.(),
       onShow: () => tabApi('memory')?.onTabShow?.(),
+    },
+    // Soft secondary (Home / Profile entry) — keep-alive like primary tabs.
+    'world-chain': {
+      href: 'world-chain.html',
+      title: 'World Choir — World Chain',
+      css: [
+        'css/world-chain.css?v=20260905ac',
+        'css/privacy-consent.css?v=20260905a',
+        'css/live-event.css?v=20260904as',
+      ],
+      scripts: [
+        'js/world-choir-flags.js?v=20260905s',
+        'js/world-chain-page.js?v=20260911wchain',
+      ],
+      selectors: ['.ambient-bg', '#world-chain-page'],
+      init: () => tabApi('world-chain')?.init?.(),
+      onShow: () => tabApi('world-chain')?.onTabShow?.(),
     },
   };
 
@@ -206,6 +223,9 @@ const WorldChoirTabs = (() => {
     if (id === 'memory') {
       return window.WorldChoirMemory || (typeof WorldChoirMemory !== 'undefined' ? WorldChoirMemory : null);
     }
+    if (id === 'world-chain') {
+      return window.WorldChainPage || (typeof WorldChainPage !== 'undefined' ? WorldChainPage : null);
+    }
     return null;
   }
 
@@ -238,6 +258,13 @@ const WorldChoirTabs = (() => {
     }
     if (id === 'memory') {
       return !!(panel.querySelector('.mem-intro, .mem-feed, .memory-photo, .mem-stamps'));
+    }
+    if (id === 'world-chain') {
+      // Init marks ready even while showing the landing boot skeleton (cache miss).
+      return !!(
+        panel.querySelector('#world-chain-root')
+        && tabApi('world-chain')?.isReady?.()
+      );
     }
     return panel.childElementCount > 0;
   }
@@ -589,9 +616,13 @@ const WorldChoirTabs = (() => {
   function schedulePreload(exceptId) {
     if (preloadStarted) return;
     preloadStarted = true;
+    // World Chain is opened from Home/Profile — warm it first so it feels like a tab.
+    if (exceptId !== 'world-chain') {
+      preloadPanel('world-chain');
+    }
     const run = () => {
       Object.keys(PRIMARY).forEach((id) => {
-        if (id === exceptId) return;
+        if (id === exceptId || id === 'world-chain') return;
         preloadPanel(id);
       });
     };
