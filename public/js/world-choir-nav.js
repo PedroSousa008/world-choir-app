@@ -547,8 +547,8 @@ const WorldChoirNav = (() => {
   const TAB_ASSETS = {
     home: [
       'index.html',
-      'css/home.css?v=20260911homeFix',
-      'js/world-choir-home.js?v=20260911homeFix',
+      'css/home.css?v=20260911logoSwap',
+      'js/world-choir-home.js?v=20260911logoSwap',
       'js/world-choir-db.js?v=20260907voices',
     ],
     map: [
@@ -580,7 +580,7 @@ const WorldChoirNav = (() => {
     ],
     profile: [
       'profile.html',
-      'css/profile.css?v=20260911theme2',
+      'css/profile.css?v=20260911logoSwap',
       'js/profile/profile-page.js?v=20260911theme',
       'js/profile/daily-acts-peace.js?v=20260906perf',
       'js/profile/daily-acts-button.js?v=20260810i',

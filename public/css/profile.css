@@ -65,6 +65,7 @@
   height: auto;
   margin: 0 auto 12px;
   object-fit: contain;
+  filter: none !important;
 }
 
 .profile-voices-counter {

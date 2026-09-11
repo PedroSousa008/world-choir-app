@@ -180,31 +180,45 @@ html.wc-theme-animating *:not(img):not(video):not(canvas):not(iframe):not(svg im
   background: var(--bg-primary);
 }
 
-/* Brand logos designed for dark UI → black mark in Light Mode (not page invert).
-   NEVER filter .home-logo — Home swaps to world-choir-light.png via CSS. */
-html[data-theme="light"] .profile-logo,
+/* Brand logos for surfaces that still use the dark-UI mark.
+   Home/Profile use dedicated world-choir-light.png — never brightness/invert those. */
 html[data-theme="light"] .df-topbar__logo img,
 html[data-theme="light"] .wc-brand-logo,
-html[data-theme="light"] img[src*="world-choir-logo"]:not(.home-logo):not([src*="world-choir-light"]) {
+html[data-theme="light"] img[src*="world-choir-logo"]:not(.home-logo):not(.profile-logo):not([src*="world-choir-light"]) {
   filter: var(--logo-filter);
 }
 
-/* Home mark: dedicated light asset, never brightness/invert */
 html[data-theme="light"] .home-logo,
 html[data-theme="light"] .home-logo--light,
+html[data-theme="light"] .profile-logo,
+html[data-theme="light"] .profile-logo--light,
 html[data-theme="light"] img[src*="world-choir-light"] {
   filter: none !important;
 }
 
-.home-logo--light {
-  display: none;
-}
-
-html[data-theme="light"] .home-logo--dark {
+/* Home: exactly one logo visible — light asset never shows in Dark Mode */
+img.home-logo.home-logo--light {
   display: none !important;
 }
 
-html[data-theme="light"] .home-logo--light {
+html[data-theme="light"] img.home-logo.home-logo--dark {
+  display: none !important;
+}
+
+html[data-theme="light"] img.home-logo.home-logo--light {
+  display: block !important;
+}
+
+/* Profile: same swap, keep existing .profile-logo size/position */
+img.profile-logo.profile-logo--light {
+  display: none !important;
+}
+
+html[data-theme="light"] img.profile-logo.profile-logo--dark {
+  display: none !important;
+}
+
+html[data-theme="light"] img.profile-logo.profile-logo--light {
   display: block !important;
 }
 
