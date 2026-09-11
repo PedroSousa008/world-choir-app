@@ -850,20 +850,20 @@
   }
 }
 
-/* Light Mode only — mystery "?" uses the same clear grey as the Home lightbulb.
-   Box / tile surfaces stay exactly as Dark Mode rules define them (tokens only). */
+/* Light Mode only — mystery "?" is white; tile boxes stay as-is.
+   Dark Mode rules above are untouched. */
 html[data-theme="light"] .dap-square__mystery {
-  color: #e8e8ec !important;
+  color: #ffffff !important;
   opacity: 0.95;
 }
 
 html[data-theme="light"] .dap-square.is-future .dap-square__mystery {
-  color: #e8e8ec !important;
+  color: #ffffff !important;
   opacity: 0.9;
 }
 
 html[data-theme="light"] .dap-square.is-available .dap-square__mystery,
 html[data-theme="light"] .dap-square.is-today.is-available .dap-square__mystery {
-  color: #e8e8ec !important;
+  color: #ffffff !important;
   opacity: 0.95;
 }
