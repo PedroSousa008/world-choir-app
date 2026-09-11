@@ -1016,3 +1016,10 @@ html[data-theme="light"] .map-stat {
   box-shadow: none;
   backdrop-filter: none;
 }
+
+html[data-theme="light"] .city-card {
+  background: #e8e8ec;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  backdrop-filter: none;
+}
