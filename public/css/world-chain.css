@@ -2084,3 +2084,11 @@
     animation: none;
   }
 }
+
+/* Light Mode only — chain boxes clear grey (same as Home / Daily Acts sheets).
+   Dark Mode card surfaces above stay untouched. */
+html[data-theme="light"] .wc-chain-card,
+html[data-theme="light"] .wc-chain-empty {
+  background: #e8e8ec;
+  border-color: rgba(0, 0, 0, 0.08);
+}
