@@ -2107,3 +2107,30 @@ html[data-theme="light"] .wc-viewer-progress {
   border-color: rgba(0, 0, 0, 0.08);
   box-shadow: none;
 }
+
+/* Light Mode only — Watch Live title black; light/grey copy → dark grey */
+html[data-theme="light"] .wc-viewer-hero__title {
+  color: #0c0c0e;
+}
+
+html[data-theme="light"] .wc-viewer-hero__meta,
+html[data-theme="light"] .wc-viewer-hero__route,
+html[data-theme="light"] .wc-viewer-hero__line,
+html[data-theme="light"] .wc-viewer-stats__label,
+html[data-theme="light"] .wc-viewer-progress__title,
+html[data-theme="light"] .wc-viewer-progress__aside,
+html[data-theme="light"] .wc-viewer-table__head,
+html[data-theme="light"] .wc-viewer-strip__code,
+html[data-theme="light"] .wc-viewer-table__idx,
+html[data-theme="light"] .wc-viewer-table__voice-city,
+html[data-theme="light"] .wc-viewer-status__detail,
+html[data-theme="light"] .wc-viewer-status--wait {
+  color: #3f424a;
+}
+
+html[data-theme="light"] .wc-viewer-stats__num,
+html[data-theme="light"] .wc-viewer-table__country-name,
+html[data-theme="light"] .wc-viewer-table__voice-num,
+html[data-theme="light"] .wc-viewer-status__label {
+  color: #0c0c0e;
+}

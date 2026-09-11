@@ -149,7 +149,7 @@ const WorldChoirTabs = (() => {
         'css/profile.css?v=20260911logoSwap',
         'css/daily-peace.css?v=20260810e',
         'css/memory-page.css?v=20260911theme',
-        'css/world-chain.css?v=20260911viewerGrey',
+        'css/world-chain.css?v=20260911viewerText',
         'css/privacy-consent.css?v=20260911theme',
         'css/live-event.css?v=20260911theme',
       ],
@@ -172,7 +172,7 @@ const WorldChoirTabs = (() => {
       href: 'world-chain.html',
       title: 'World Choir — World Chain',
       css: [
-        'css/world-chain.css?v=20260911viewerGrey',
+        'css/world-chain.css?v=20260911viewerText',
         'css/privacy-consent.css?v=20260911theme',
         'css/live-event.css?v=20260911theme',
       ],
