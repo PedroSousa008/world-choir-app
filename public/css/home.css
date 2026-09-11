@@ -245,6 +245,42 @@ body.home-guide-open {
   overflow: hidden;
 }
 
+/* Light Mode only — clear grey chrome; Dark Mode values above stay untouched */
+html[data-theme="light"] .home-guide-btn {
+  background: #e8e8ec;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: var(--accent-aurora);
+}
+
+html[data-theme="light"] .home-guide-btn:hover,
+html[data-theme="light"] .home-guide-btn:active,
+html[data-theme="light"] .home-guide-btn[aria-expanded="true"] {
+  background: #e8e8ec;
+}
+
+html[data-theme="light"] .home-guide-panel {
+  background: rgba(232, 232, 236, 0.97);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: var(--text-primary);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+html[data-theme="light"] .home-guide-panel__close {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .home-guide-card {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .home-guide-backdrop {
+  background: rgba(255, 255, 255, 0.45);
+}
+
 @media (max-width: 340px) {
   .home-guide-panel {
     padding-left: 12px;
@@ -465,31 +501,6 @@ body.home-guide-open {
 html[data-theme="light"] .countdown-hero__label,
 html[data-theme="light"] .countdown-name {
   color: #ffffff;
-}
-
-/* Light Mode only — lightbulb icon: clear light grey (default + open/close).
-   Do not alter Dark Mode guide chrome. */
-html[data-theme="light"] .home-guide-btn,
-html[data-theme="light"] .home-guide-btn:hover,
-html[data-theme="light"] .home-guide-btn:active,
-html[data-theme="light"] .home-guide-btn[aria-expanded="true"],
-html[data-theme="light"] .home-guide-btn:focus-visible {
-  color: #c5c9d4;
-}
-
-html[data-theme="light"] .home-guide-btn:focus-visible {
-  outline-color: #c5c9d4;
-}
-
-html[data-theme="light"] .home-guide-panel__close,
-html[data-theme="light"] .home-guide-panel__close:hover,
-html[data-theme="light"] .home-guide-panel__close:active,
-html[data-theme="light"] .home-guide-panel__close:focus-visible {
-  color: #c5c9d4;
-}
-
-html[data-theme="light"] .home-guide-panel__close:focus-visible {
-  outline-color: #c5c9d4;
 }
 
 /* ─── Home help tab + empty placeholder panel ─── */
