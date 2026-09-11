@@ -849,3 +849,33 @@
     padding-inline: 40px;
   }
 }
+
+/* Light Mode only — mystery "?" uses the same clear grey as the Home lightbulb.
+   Dark Mode rules above are untouched. */
+html[data-theme="light"] .dap-square__mystery {
+  color: #e8e8ec;
+  opacity: 0.95;
+}
+
+html[data-theme="light"] .dap-square.is-future .dap-square__mystery {
+  color: #e8e8ec;
+  opacity: 0.9;
+}
+
+html[data-theme="light"] .dap-square.is-available .dap-square__mystery {
+  color: #e8e8ec;
+  opacity: 0.95;
+}
+
+/* Keep available tiles dark enough in Light Mode so the clear-grey "?" stays readable */
+html[data-theme="light"] .dap-square.is-available {
+  background: #2c2d32;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #e8e8ec;
+}
+
+html[data-theme="light"] .dap-square.is-available:hover {
+  background: #35363c;
+  border-color: rgba(0, 0, 0, 0.16);
+  color: #f0f0f2;
+}
