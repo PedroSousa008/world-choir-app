@@ -2098,3 +2098,12 @@ html[data-theme="light"] .wc-chain-hero__img,
 html[data-theme="light"] img[src*="chain-light"] {
   filter: none !important;
 }
+
+/* Light Mode only — Watch Live stats + progress/table panels clear grey.
+   Dark Mode surfaces above stay untouched. */
+html[data-theme="light"] .wc-viewer-stats,
+html[data-theme="light"] .wc-viewer-progress {
+  background: #e8e8ec;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: none;
+}

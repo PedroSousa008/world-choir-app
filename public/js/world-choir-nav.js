@@ -608,7 +608,7 @@ const WorldChoirNav = (() => {
     memory: [
       'memory.html',
       'css/memory-page.css?v=20260911theme',
-      'css/world-chain.css?v=20260911chainLight2',
+      'css/world-chain.css?v=20260911viewerGrey',
       'js/world-choir-flags.js?v=20260902n',
       'js/memory/memory-data.js?v=20260907wchain',
       'js/memory/memory-feed.js?v=20260904bt',
@@ -618,7 +618,7 @@ const WorldChoirNav = (() => {
     ],
     'world-chain': [
       'world-chain.html',
-      'css/world-chain.css?v=20260911chainLight2',
+      'css/world-chain.css?v=20260911viewerGrey',
       'js/world-choir-flags.js?v=20260905s',
       'js/world-chain-page.js?v=20260911chainLight2',
       '/api/world-chain',
