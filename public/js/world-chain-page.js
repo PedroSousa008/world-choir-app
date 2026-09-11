@@ -528,13 +528,21 @@ const WorldChainPage = (() => {
       </header>
       <div class="wc-chain-hero">
         <img
-          class="wc-chain-hero__img"
+          class="wc-chain-hero__img wc-chain-hero__img--dark"
           src="images/chain-header.png?v=20260905h"
           alt=""
           width="1619"
           height="971"
           decoding="async"
           fetchpriority="high"
+        >
+        <img
+          class="wc-chain-hero__img wc-chain-hero__img--light"
+          src="images/chain-light.png?v=20260911chainLight"
+          alt=""
+          width="1619"
+          height="971"
+          decoding="async"
         >
         <div class="wc-chain-hero__copy">
           <h2 class="wc-chain-headline">A more connected world<br>is a kinder world.</h2>

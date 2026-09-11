@@ -2092,3 +2092,18 @@ html[data-theme="light"] .wc-chain-empty {
   background: #e8e8ec;
   border-color: rgba(0, 0, 0, 0.08);
 }
+
+/* Light Mode only — hero uses chain-light.png; Dark Mode keeps chain-header.png.
+   Never stack both images. */
+img.wc-chain-hero__img.wc-chain-hero__img--light {
+  display: none !important;
+}
+
+html[data-theme="light"] img.wc-chain-hero__img.wc-chain-hero__img--dark {
+  display: none !important;
+}
+
+html[data-theme="light"] img.wc-chain-hero__img.wc-chain-hero__img--light {
+  display: block !important;
+  filter: none !important;
+}
