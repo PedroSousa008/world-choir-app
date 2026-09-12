@@ -81,7 +81,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — Donate',
       css: [
         'css/foundation-public-card.css?v=20260904cd',
-        'css/donate.css?v=20260911theme2',
+        'css/donate.css?v=20260912donateLight',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260911logoSwap',
         'css/daily-peace.css?v=20260810e',
@@ -92,7 +92,7 @@ const WorldChoirTabs = (() => {
         'js/donate/creator-foundations-store.js?v=20260907fee65',
         'js/donate/donation-flow.js?v=20260831a',
         'js/foundation-public-card.js?v=20260904cb',
-        'js/donate/donate-page.js?v=20260907tabshydrate',
+        'js/donate/donate-page.js?v=20260912donateLight',
       ],
       selectors: ['.ambient-bg', '#donate-page'],
       init: () => tabApi('donate')?.init?.(),
@@ -144,7 +144,7 @@ const WorldChoirTabs = (() => {
       href: 'memory.html',
       title: 'World Choir — The World Sang',
       css: [
-        'css/donate.css?v=20260911theme2',
+        'css/donate.css?v=20260912donateLight',
         'css/passport.css?v=20260911theme',
         'css/profile.css?v=20260911logoSwap',
         'css/daily-peace.css?v=20260810e',

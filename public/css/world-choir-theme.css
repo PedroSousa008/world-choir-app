@@ -181,10 +181,10 @@ html.wc-theme-animating *:not(img):not(video):not(canvas):not(iframe):not(svg im
 }
 
 /* Brand logos for surfaces that still use the dark-UI mark.
-   Home/Profile use dedicated world-choir-light.png — never brightness/invert those. */
-html[data-theme="light"] .df-topbar__logo img,
+   Home/Profile/Donate light use dedicated light assets — never brightness/invert those. */
+html[data-theme="light"] .df-topbar__logo img:not([src*="donations-light"]),
 html[data-theme="light"] .wc-brand-logo,
-html[data-theme="light"] img[src*="world-choir-logo"]:not(.home-logo):not(.profile-logo):not([src*="world-choir-light"]) {
+html[data-theme="light"] img[src*="world-choir-logo"]:not(.home-logo):not(.profile-logo):not([src*="world-choir-light"]):not([src*="donations-light"]) {
   filter: var(--logo-filter);
 }
 
@@ -192,7 +192,8 @@ html[data-theme="light"] .home-logo,
 html[data-theme="light"] .home-logo--light,
 html[data-theme="light"] .profile-logo,
 html[data-theme="light"] .profile-logo--light,
-html[data-theme="light"] img[src*="world-choir-light"] {
+html[data-theme="light"] img[src*="world-choir-light"],
+html[data-theme="light"] img[src*="donations-light"] {
   filter: none !important;
 }
 

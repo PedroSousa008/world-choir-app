@@ -22,6 +22,30 @@ const WorldChoirDonate = (() => {
   let searchQuery = '';
   let selectedCause = 'all';
   let lastFocusEl = null;
+  let themeBound = false;
+
+  const DONATE_LOGO_DARK = 'images/world-choir-logo-donate.png?v=20260813v';
+  const DONATE_LOGO_LIGHT = 'images/donations-light-logo.png?v=20260912donateLight';
+
+  function isLightTheme() {
+    try {
+      if (typeof WorldChoirTheme !== 'undefined' && WorldChoirTheme.isLight?.()) return true;
+      return document.documentElement.getAttribute('data-theme') === 'light';
+    } catch {
+      return false;
+    }
+  }
+
+  function donateLogoSrc() {
+    return isLightTheme() ? DONATE_LOGO_LIGHT : DONATE_LOGO_DARK;
+  }
+
+  function syncDonateLogo() {
+    const src = donateLogoSrc();
+    document.querySelectorAll('.df-topbar__logo img, [data-wc-donate-logo]').forEach((img) => {
+      if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+    });
+  }
 
   const CAUSE_FILTERS = [
     { id: 'all', label: 'All Causes', icon: 'all' },
@@ -317,7 +341,8 @@ const WorldChoirDonate = (() => {
       <div class="df-topbar">
         <a class="df-topbar__logo" href="index.html" aria-label="World Choir home">
           <img
-            src="images/world-choir-logo-donate.png?v=20260813v"
+            data-wc-donate-logo
+            src="${donateLogoSrc()}"
             alt="World Choir"
             width="105"
             height="35"
@@ -1037,6 +1062,7 @@ const WorldChoirDonate = (() => {
         <div id="df-foundations-mount">${renderFoundationsMountHtml()}</div>
       `;
       bindHomeEvents(opts);
+      syncDonateLogo();
       return;
     }
 
@@ -1051,6 +1077,7 @@ const WorldChoirDonate = (() => {
     `;
     mountDonateEarth3D();
     bindHomeEvents(opts);
+    syncDonateLogo();
   }
 
   function peopleIconSvg() {
@@ -2083,6 +2110,7 @@ const WorldChoirDonate = (() => {
     `;
     bindHomeEvents();
     mountDonateEarth3D();
+    syncDonateLogo();
   }
 
   function renderError(message) {
@@ -2141,6 +2169,13 @@ const WorldChoirDonate = (() => {
     const content = document.getElementById('donate-content');
     if (!content) return Promise.reject(new Error('Donate content missing'));
 
+    if (!themeBound) {
+      themeBound = true;
+      window.addEventListener('wc:themechange', () => {
+        syncDonateLogo();
+      });
+    }
+
     const hasCards = () => !!(content.querySelector(
       'button[aria-label], [role="listitem"], .df-card, [data-foundation-id], #df-foundations-mount'
     ));
@@ -2149,6 +2184,8 @@ const WorldChoirDonate = (() => {
     if (!content.innerHTML.trim()) {
       try { renderHomeShell(); } catch { /* ignore */ }
     }
+
+    syncDonateLogo();
 
     if (hasCards() && CreatorFoundationsStore.isReady?.()) {
       try { renderHome(); } catch { /* ignore */ }
@@ -2169,6 +2206,12 @@ const WorldChoirDonate = (() => {
     donateBootstrapped = true;
     WorldChoirNav.startWatcher('donate');
     ensureModal();
+    if (!themeBound) {
+      themeBound = true;
+      window.addEventListener('wc:themechange', () => {
+        syncDonateLogo();
+      });
+    }
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && searchOpen) closeSearch();
     });
@@ -2179,9 +2222,11 @@ const WorldChoirDonate = (() => {
       && CreatorFoundationsStore.primeFromSession?.();
     if (warmed || CreatorFoundationsStore?.isReady?.()) {
       renderHome();
+      syncDonateLogo();
       if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
     } else {
       renderHomeShell();
+      syncDonateLogo();
     }
 
     try {

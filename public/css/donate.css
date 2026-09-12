@@ -3140,3 +3140,33 @@ body.df-checkout-open {
   font-size: 0.95rem;
   color: var(--df-warm-soft);
 }
+
+/* Light Mode only — Donate home chrome + foundation cards.
+   Dark Mode stays untouched. */
+html[data-theme="light"] .df-intro__title,
+html[data-theme="light"] .df-fcard__name,
+html[data-theme="light"] .df-fcard__mission {
+  color: #0c0c0e;
+}
+
+html[data-theme="light"] .df-fcard__arrow {
+  color: #4ec5e8;
+}
+
+html[data-theme="light"] .df-fcard:hover .df-fcard__arrow,
+html[data-theme="light"] .df-fcard:focus-visible .df-fcard__arrow {
+  color: #4ec5e8;
+}
+
+html[data-theme="light"] .df-search-trigger {
+  color: #3f424a;
+}
+
+html[data-theme="light"] .df-search-trigger:hover,
+html[data-theme="light"] .df-search-trigger:focus-visible {
+  color: #0c0c0e;
+}
+
+html[data-theme="light"] .df-topbar__logo img {
+  filter: none !important;
+}
