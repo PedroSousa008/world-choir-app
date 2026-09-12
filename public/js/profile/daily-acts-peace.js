@@ -228,7 +228,11 @@ const DailyActsPeace = (() => {
   }
 
   function open(opts = {}) {
-    // Opening must NOT dismiss the notification.
+    // Soft keep-alive when the tab host is available (Home/Profile) — tab-speed open.
+    if (typeof WorldChoirNav !== 'undefined' && typeof WorldChoirNav.openDailyActs === 'function') {
+      WorldChoirNav.openDailyActs({ reset: true });
+      return;
+    }
     window.location.href = 'daily-acts.html';
   }
 

@@ -152,8 +152,13 @@ const WorldChoirHome = (() => {
   }
 
   function openDailyActsFromHome() {
-    if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.open({ tab: 'today' });
-    else window.location.href = 'daily-acts.html';
+    if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openDailyActs) {
+      WorldChoirNav.openDailyActs({ reset: true });
+    } else if (typeof DailyActsPeace !== 'undefined') {
+      DailyActsPeace.open({ tab: 'today' });
+    } else {
+      window.location.href = 'daily-acts.html';
+    }
   }
 
   function renderPledgedActionBar() {
@@ -681,6 +686,11 @@ const WorldChoirHome = (() => {
       window.location.href = 'song-we-sang.html';
     });
 
+    document.getElementById('home-stat-acts-link')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      openDailyActsFromHome();
+    });
+
     document.getElementById('home-open-memory')?.addEventListener('click', () => {
       if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.navigateToPrimaryTab) {
         WorldChoirNav.navigateToPrimaryTab('memory');
@@ -1006,7 +1016,9 @@ const WorldChoirHome = (() => {
       /* ignore */
     }
     closeHomeGuide();
-    if (typeof DailyActsPeace !== 'undefined' && typeof DailyActsPeace.open === 'function') {
+    if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openDailyActs) {
+      WorldChoirNav.openDailyActs({ reset: true });
+    } else if (typeof DailyActsPeace !== 'undefined' && typeof DailyActsPeace.open === 'function') {
       DailyActsPeace.open({ tab: 'today' });
     } else {
       window.location.href = 'daily-acts.html';

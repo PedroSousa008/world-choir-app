@@ -28,8 +28,8 @@ const WorldChoirTabs = (() => {
         'js/world-choir-post-event-join.js?v=20260907tabs',
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
-        'js/profile/daily-acts-peace.js?v=20260906perf',
-        'js/world-choir-home.js?v=20260912tabRoot',
+        'js/profile/daily-acts-peace.js?v=20260912dapFast',
+        'js/world-choir-home.js?v=20260912dapFast',
       ],
       selectors: [
         '#earth-canvas',
@@ -128,8 +128,8 @@ const WorldChoirTabs = (() => {
         'js/profile/practice-mode.js?v=20260904c',
         'js/profile/world-choir-history.js',
         'js/profile/invite-button.js?v=20260813p',
-        'js/profile/daily-acts-peace.js?v=20260906perf',
-        'js/profile/daily-acts-button.js?v=20260810i',
+        'js/profile/daily-acts-peace.js?v=20260912dapFast',
+        'js/profile/daily-acts-button.js?v=20260912dapFast',
         'js/profile/profile-page.js?v=20260912tabRoot',
       ],
       selectors: [
@@ -159,7 +159,7 @@ const WorldChoirTabs = (() => {
       ],
       scripts: [
         'js/world-choir-participation.js',
-        'js/profile/daily-acts-peace.js?v=20260906perf',
+        'js/profile/daily-acts-peace.js?v=20260912dapFast',
         'js/profile/passport-stamps.js?v=20260902a',
         'js/profile/world-choir-passport.js?v=20260912passportCover',
         'js/world-choir-flags.js?v=20260902n',
@@ -171,6 +171,28 @@ const WorldChoirTabs = (() => {
       init: () => tabApi('memory')?.init?.(),
       onShow: () => tabApi('memory')?.onTabShow?.(),
       onReset: () => tabApi('memory')?.resetToRoot?.(),
+    },
+    // Soft secondary (Home / Profile entry) — keep-alive like primary tabs.
+    'daily-acts': {
+      href: 'daily-acts.html',
+      title: 'World Choir — Daily Acts of Peace',
+      css: [
+        'css/daily-peace.css?v=20260813g',
+        'css/daily-acts-page.css?v=20260911sheetGrey',
+        'css/daily-acts-walkthrough.css?v=20260904c',
+        'css/privacy-consent.css?v=20260911theme',
+        'css/profile.css?v=20260912themeSlot',
+        'css/live-event.css?v=20260911theme',
+      ],
+      scripts: [
+        'js/profile/daily-acts-peace.js?v=20260912dapFast',
+        'js/daily-acts-walkthrough.js?v=20260904d',
+        'js/daily-acts-page.js?v=20260912dapFast',
+      ],
+      selectors: ['.ambient-bg', '#daily-acts-page'],
+      init: () => tabApi('daily-acts')?.init?.(),
+      onShow: () => tabApi('daily-acts')?.onTabShow?.(),
+      onReset: () => tabApi('daily-acts')?.resetToRoot?.(),
     },
     // Soft secondary (Home / Profile entry) — keep-alive like primary tabs.
     'world-chain': {
@@ -231,6 +253,9 @@ const WorldChoirTabs = (() => {
     if (id === 'world-chain') {
       return window.WorldChainPage || (typeof WorldChainPage !== 'undefined' ? WorldChainPage : null);
     }
+    if (id === 'daily-acts') {
+      return window.DailyActsPage || (typeof DailyActsPage !== 'undefined' ? DailyActsPage : null);
+    }
     return null;
   }
 
@@ -270,6 +295,12 @@ const WorldChoirTabs = (() => {
         panel.querySelector('#world-chain-root')
         && tabApi('world-chain')?.isReady?.()
       );
+    }
+    if (id === 'daily-acts') {
+      // Skeleton or real grid — soft open must not wait on the journey API.
+      return !!(panel.querySelector(
+        '#daily-acts-root .dap-header, #daily-acts-root .dap-grid, #daily-acts-root .wc-skel-page, #daily-acts-root .dap-error'
+      ));
     }
     return panel.childElementCount > 0;
   }
@@ -680,13 +711,16 @@ const WorldChoirTabs = (() => {
   function schedulePreload(exceptId) {
     if (preloadStarted) return;
     preloadStarted = true;
-    // World Chain is opened from Home/Profile — warm it first so it feels like a tab.
+    // Soft secondary pages opened from Home/Profile — warm first so they feel like tabs.
     if (exceptId !== 'world-chain') {
       preloadPanel('world-chain');
     }
+    if (exceptId !== 'daily-acts') {
+      preloadPanel('daily-acts');
+    }
     const run = () => {
       Object.keys(PRIMARY).forEach((id) => {
-        if (id === exceptId || id === 'world-chain') return;
+        if (id === exceptId || id === 'world-chain' || id === 'daily-acts') return;
         preloadPanel(id);
       });
     };

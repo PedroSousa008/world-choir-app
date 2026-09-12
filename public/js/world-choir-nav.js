@@ -267,12 +267,17 @@ const WorldChoirNav = (() => {
         animate: !!animate && !prefersReducedMotion(),
         visible: true,
       });
+    } else if (indicatorEl) {
+      // Soft secondary surfaces (World Chain, Daily Acts) — no bottom-tab match.
+      indicatorEl.classList.remove('is-visible');
     }
   }
 
   function pageIdFromPathname(pathname) {
     const file = (pathname || window.location.pathname || '').split('/').pop() || '';
     if (!file || file === 'index.html' || file === '') return 'home';
+    if (file === 'daily-acts.html') return 'daily-acts';
+    if (file === 'world-chain.html') return 'world-chain';
     const hit = ALL_PAGES.find((p) => p.href === file);
     return hit?.id || null;
   }
@@ -341,6 +346,57 @@ const WorldChoirNav = (() => {
             }
             try {
               WorldChainPage?.onTabShow?.();
+            } catch {
+              /* ignore */
+            }
+          }
+        })();
+        return true;
+      }
+    }
+
+    window.location.href = href;
+    return true;
+  }
+
+  /** Soft keep-alive open for Daily Acts of Peace (Home / Profile) — tab-speed. */
+  function openDailyActs({ hash = '', reset = true } = {}) {
+    const href = `daily-acts.html${hash || ''}`;
+    const tabs = typeof WorldChoirTabs !== 'undefined' ? WorldChoirTabs : null;
+
+    if (tabs?.isPrimary?.('daily-acts')) {
+      if (!tabs.isHosted()) {
+        const entry = tabs.getActive?.() || currentActivePage || pageIdFromPathname() || 'home';
+        if (tabs.isPrimary(entry)) tabs.attach(entry);
+      }
+      if (tabs.isHosted()) {
+        clearPendingNavigation();
+        clearStoredTransition();
+        document.documentElement.classList.remove('wc-nav-handoff');
+        currentActivePage = 'daily-acts';
+        setActiveClasses('daily-acts');
+        placeIndicatorOnItem(null);
+        void (async () => {
+          const ok = await tabs.switchTo('daily-acts', {
+            updateHistory: true,
+            reset: !!reset,
+          });
+          if (!ok) {
+            window.location.href = href;
+            return;
+          }
+          if (hash) {
+            try {
+              history.replaceState(
+                { ...(history.state || {}), wcTab: 'daily-acts' },
+                '',
+                href
+              );
+            } catch {
+              /* ignore */
+            }
+            try {
+              DailyActsPage?.onTabShow?.();
             } catch {
               /* ignore */
             }
@@ -547,7 +603,7 @@ const WorldChoirNav = (() => {
     home: [
       'index.html',
       'css/home.css?v=20260911guideGrey',
-      'js/world-choir-home.js?v=20260912tabRoot',
+      'js/world-choir-home.js?v=20260912dapFast',
       'js/world-choir-db.js?v=20260907voices',
     ],
     map: [
@@ -581,8 +637,8 @@ const WorldChoirNav = (() => {
       'profile.html',
       'css/profile.css?v=20260912themeSlot',
       'js/profile/profile-page.js?v=20260912tabRoot',
-      'js/profile/daily-acts-peace.js?v=20260906perf',
-      'js/profile/daily-acts-button.js?v=20260810i',
+      'js/profile/daily-acts-peace.js?v=20260912dapFast',
+      'js/profile/daily-acts-button.js?v=20260912dapFast',
       'js/world-choir-onboarding.js?v=20260816a',
       'js/world-choir-db.js?v=20260907voices',
       'passport.html',
@@ -627,7 +683,7 @@ const WorldChoirNav = (() => {
     'daily-acts': [
       'daily-acts.html',
       'css/daily-acts-page.css?v=20260911sheetGrey',
-      'js/daily-acts-page.js?v=20260912catsScroll',
+      'js/daily-acts-page.js?v=20260912dapFast',
     ],
   };
 
@@ -821,6 +877,7 @@ const WorldChoirNav = (() => {
     setActivePage,
     navigateToPrimaryTab,
     openWorldChain,
+    openDailyActs,
     getNavIconSvg: (key) => NAV_ICON_SVGS[key] || '',
     getNavGlyph: (pageId) => {
       const page = ALL_PAGES.find((p) => p.id === pageId);

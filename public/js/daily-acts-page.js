@@ -2,12 +2,16 @@
  * Daily Acts of Peace — minimalist act grid
  */
 const DailyActsPage = (() => {
+  const JOURNEY_CACHE_KEY = 'wc_dap_journey_v1';
   let journeyData = null;
   let selectedCategory = 'all';
   let view = { mode: 'grid' };
   let calendarMonth = null;
   let busy = false;
   let justCompletedDate = null;
+  let bootstrapped = false;
+  let hashBound = false;
+  let hydratePromise = null;
 
   function esc(str) {
     const d = document.createElement('div');
@@ -250,7 +254,40 @@ const DailyActsPage = (() => {
       `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&view=journey&date=${encodeURIComponent(localDateString())}&_t=${Date.now()}`
     );
     restoreCompletedSnapshots(completedSnap);
+    writeJourneyCache(journeyData);
     return journeyData;
+  }
+
+  function readJourneyCache() {
+    try {
+      const raw = sessionStorage.getItem(JOURNEY_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.date !== localDateString() || !parsed.payload) return null;
+      return parsed.payload;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeJourneyCache(payload) {
+    try {
+      sessionStorage.setItem(
+        JOURNEY_CACHE_KEY,
+        JSON.stringify({ date: localDateString(), payload })
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function paintFromCacheIfPossible() {
+    const cached = readJourneyCache();
+    if (!cached) return false;
+    journeyData = cached;
+    applyDailyActsRoute();
+    paint();
+    return true;
   }
 
   function completedByDate() {
@@ -1083,35 +1120,106 @@ const DailyActsPage = (() => {
     `;
   }
 
-  async function init() {
-    WorldChoirNav.startWatcher('daily-acts');
-    selectedCategory = 'all';
-    root().innerHTML = renderLoadingSkeleton();
-
-    try {
-      await WorldChoirDB.ready();
-      if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.start?.();
-      await loadJourney();
-      applyDailyActsRoute();
-      paint();
-      window.addEventListener('hashchange', () => {
+  async function hydrate() {
+    if (hydratePromise) return hydratePromise;
+    hydratePromise = (async () => {
+      try {
+        await WorldChoirDB.ready();
+        if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.start?.();
+        await loadJourney();
         applyDailyActsRoute();
         paint();
-      });
-    } catch (err) {
-      const inventory = err.inventory;
-      const extra = inventory
-        ? `<p class="owner-muted" style="margin-top:12px">Stored records still present: ${esc(inventory.voices)} voices · ${esc(inventory.users)} users · ${esc(inventory.files)} files</p>`
-        : '';
-      root().innerHTML = `
-        <p class="dap-error">${esc(err.storageUnavailable || /temporarily unavailable|nothing has been deleted/i.test(err.message || '')
-          ? (err.message || 'World Choir records are temporarily unavailable. Nothing has been deleted.')
-          : 'Could not load Daily Acts of Peace.')}</p>
-        ${extra}
-      `;
-      if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
-    }
+        if (!hashBound) {
+          hashBound = true;
+          window.addEventListener('hashchange', () => {
+            applyDailyActsRoute();
+            paint();
+          });
+        }
+      } catch (err) {
+        const inventory = err.inventory;
+        const extra = inventory
+          ? `<p class="owner-muted" style="margin-top:12px">Stored records still present: ${esc(inventory.voices)} voices · ${esc(inventory.users)} users · ${esc(inventory.files)} files</p>`
+          : '';
+        const el = root();
+        if (el) {
+          el.innerHTML = `
+            <p class="dap-error">${esc(err.storageUnavailable || /temporarily unavailable|nothing has been deleted/i.test(err.message || '')
+              ? (err.message || 'World Choir records are temporarily unavailable. Nothing has been deleted.')
+              : 'Could not load Daily Acts of Peace.')}</p>
+            ${extra}
+          `;
+        }
+        if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
+      } finally {
+        hydratePromise = null;
+      }
+    })();
+    return hydratePromise;
   }
 
-  return { init };
+  function resetToRoot() {
+    selectedCategory = 'all';
+    view = { mode: 'grid' };
+    calendarMonth = null;
+    justCompletedDate = null;
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      /* ignore */
+    }
+    if (journeyData) {
+      paint();
+    } else if (root() && !root().innerHTML.trim()) {
+      root().innerHTML = renderLoadingSkeleton();
+    }
+    return Promise.resolve();
+  }
+
+  function onTabShow() {
+    if (!bootstrapped) {
+      init();
+      return Promise.resolve();
+    }
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      /* ignore */
+    }
+    if (journeyData) {
+      paint();
+      void loadJourney().then(() => paint()).catch(() => {});
+    } else {
+      void hydrate();
+    }
+    return Promise.resolve();
+  }
+
+  function init() {
+    if (bootstrapped) {
+      onTabShow();
+      return;
+    }
+    bootstrapped = true;
+
+    if (typeof WorldChoirNav !== 'undefined') {
+      WorldChoirNav.startWatcher('daily-acts');
+    }
+
+    selectedCategory = 'all';
+    view = { mode: 'grid' };
+
+    // Instant first paint: cache → skeleton. Never block soft-tab reveal on network.
+    if (!paintFromCacheIfPossible()) {
+      const el = root();
+      if (el) el.innerHTML = renderLoadingSkeleton();
+    }
+    if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
+
+    void hydrate();
+  }
+
+  const api = { init, onTabShow, resetToRoot };
+  window.DailyActsPage = api;
+  return api;
 })();

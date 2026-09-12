@@ -18,8 +18,13 @@ const DailyActsButton = (() => {
   function mount(container) {
     container.innerHTML = render();
     document.getElementById('daily-acts-btn')?.addEventListener('click', () => {
-      if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.open({ tab: 'today' });
-      else window.location.href = 'daily-acts.html';
+      if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openDailyActs) {
+        WorldChoirNav.openDailyActs({ reset: true });
+      } else if (typeof DailyActsPeace !== 'undefined') {
+        DailyActsPeace.open({ tab: 'today' });
+      } else {
+        window.location.href = 'daily-acts.html';
+      }
     });
     document.getElementById('how-world-choir-works-btn')?.addEventListener('click', () => {
       if (typeof WorldChoirOnboarding === 'undefined') return;
