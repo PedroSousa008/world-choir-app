@@ -984,6 +984,19 @@ const WorldChoirMemory = (() => {
     /* Memory keeps hydrating in the background while hidden. */
   }
 
+  function resetToRoot() {
+    try {
+      closeComposer();
+    } catch {
+      /* ignore */
+    }
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      /* ignore */
+    }
+  }
+
   function init() {
     if (typeof WorldChoirNav !== 'undefined' && !WorldChoirNav.guardMemoryRoute()) return;
     if (window.__WC_MEMORY_BOOTSTRAPPED) {
@@ -1000,7 +1013,7 @@ const WorldChoirMemory = (() => {
     void (typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.ready() : Promise.resolve());
   }
 
-  const api = { init, onTabShow, render };
+  const api = { init, onTabShow, resetToRoot, render };
   window.WorldChoirMemory = api;
   return api;
 })();

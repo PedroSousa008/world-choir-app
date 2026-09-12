@@ -2198,6 +2198,33 @@ const WorldChoirDonate = (() => {
     });
   }
 
+  function resetToRoot() {
+    try {
+      if (typeof WorldChoirDonationFlow !== 'undefined') WorldChoirDonationFlow.close?.();
+    } catch {
+      /* ignore */
+    }
+    try {
+      closeModal();
+    } catch {
+      /* ignore */
+    }
+
+    selectedFoundation = null;
+    selectedProject = null;
+    searchOpen = false;
+    searchQuery = '';
+    selectedCause = 'all';
+
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      /* ignore */
+    }
+
+    return onTabShow();
+  }
+
   async function init() {
     if (donateBootstrapped) {
       await onTabShow();
@@ -2257,7 +2284,7 @@ const WorldChoirDonate = (() => {
     }
   }
 
-  const api = { init, onTabShow };
+  const api = { init, onTabShow, resetToRoot };
   window.WorldChoirDonate = api;
   return api;
 })();

@@ -616,6 +616,15 @@ const WorldChoirMap = (() => {
     });
   }
 
+  function resetToRoot() {
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      /* ignore */
+    }
+    return onTabShow();
+  }
+
   function init() {
     if (map && mapBootstrapped) {
       if (!window.__WC_TAB_SILENT_INIT) return onTabShow();
@@ -768,7 +777,7 @@ const WorldChoirMap = (() => {
     }
   }
 
-  const api = { init, onTabShow, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
+  const api = { init, onTabShow, resetToRoot, refreshMapData, runVoiceJoinedAnimation, restoreMapHeaderFromStorage };
   window.WorldChoirMap = api;
   return api;
 })();

@@ -1100,6 +1100,20 @@ const WorldChoirHome = (() => {
     /* Keep countdown / live sync ticking; nothing special required. */
   }
 
+  function resetToRoot() {
+    try {
+      closeHomeGuide();
+    } catch {
+      /* ignore */
+    }
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      /* ignore */
+    }
+    return onTabShow();
+  }
+
   function init() {
     if (homeBootstrapped) {
       onTabShow();
@@ -1260,7 +1274,7 @@ const WorldChoirHome = (() => {
     countdownTimer = setInterval(updateCountdown, 1000);
   }
 
-  const api = { init, onTabShow, render };
+  const api = { init, onTabShow, resetToRoot, render };
   window.WorldChoirHome = api;
   return api;
 })();

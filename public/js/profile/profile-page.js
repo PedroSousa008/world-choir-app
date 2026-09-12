@@ -181,6 +181,25 @@ const ProfilePage = (() => {
     return Promise.resolve();
   }
 
+  function resetToRoot() {
+    try {
+      if (typeof PracticeMode !== 'undefined') PracticeMode.exit?.();
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (typeof ChangeLocationModal !== 'undefined') ChangeLocationModal.close?.();
+    } catch {
+      /* ignore */
+    }
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      /* ignore */
+    }
+    return onTabShow();
+  }
+
   function init() {
     if (profileBootstrapped) {
       onTabShow();
@@ -245,7 +264,7 @@ const ProfilePage = (() => {
       });
   }
 
-  const api = { init, onTabShow, refresh };
+  const api = { init, onTabShow, resetToRoot, refresh };
   window.ProfilePage = api;
   return api;
 })();

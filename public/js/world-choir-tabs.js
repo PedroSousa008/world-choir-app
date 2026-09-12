@@ -29,7 +29,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
         'js/profile/daily-acts-peace.js?v=20260906perf',
-        'js/world-choir-home.js?v=20260911logoSwap',
+        'js/world-choir-home.js?v=20260912tabRoot',
       ],
       selectors: [
         '#earth-canvas',
@@ -46,6 +46,7 @@ const WorldChoirTabs = (() => {
       keepOutside: ['#wc-global-live', '#nav-root'],
       init: () => tabApi('home')?.init?.(),
       onShow: () => tabApi('home')?.onTabShow?.(),
+      onReset: () => tabApi('home')?.resetToRoot?.(),
     },
     map: {
       href: 'map.html',
@@ -69,12 +70,13 @@ const WorldChoirTabs = (() => {
         'js/map/sponsor-constants.js?v=20260902k',
         'js/map/sponsor-data.js?v=20260902a',
         'js/map/sponsor-bar.js?v=20260905a',
-        'js/world-choir-map.js?v=20260912scrollFix',
+        'js/world-choir-map.js?v=20260912tabRoot',
       ],
       selectors: ['.map-page__stars', '#map-shell', '#voice-joined'],
       bodySelectors: ['#participation-overlay'],
       init: () => tabApi('map')?.init?.(),
       onShow: () => tabApi('map')?.onTabShow?.(),
+      onReset: () => tabApi('map')?.resetToRoot?.(),
     },
     donate: {
       href: 'donate.html',
@@ -92,11 +94,12 @@ const WorldChoirTabs = (() => {
         'js/donate/creator-foundations-store.js?v=20260907fee65',
         'js/donate/donation-flow.js?v=20260831a',
         'js/foundation-public-card.js?v=20260904cb',
-        'js/donate/donate-page.js?v=20260912donateLight',
+        'js/donate/donate-page.js?v=20260912tabRoot',
       ],
       selectors: ['.ambient-bg', '#donate-page'],
       init: () => tabApi('donate')?.init?.(),
       onShow: () => tabApi('donate')?.onTabShow?.(),
+      onReset: () => tabApi('donate')?.resetToRoot?.(),
     },
     profile: {
       href: 'profile.html',
@@ -127,7 +130,7 @@ const WorldChoirTabs = (() => {
         'js/profile/invite-button.js?v=20260813p',
         'js/profile/daily-acts-peace.js?v=20260906perf',
         'js/profile/daily-acts-button.js?v=20260810i',
-        'js/profile/profile-page.js?v=20260911theme',
+        'js/profile/profile-page.js?v=20260912tabRoot',
       ],
       selectors: [
         '.ambient-bg',
@@ -139,6 +142,7 @@ const WorldChoirTabs = (() => {
       ],
       init: () => tabApi('profile')?.init?.(),
       onShow: () => tabApi('profile')?.onTabShow?.(),
+      onReset: () => tabApi('profile')?.resetToRoot?.(),
     },
     memory: {
       href: 'memory.html',
@@ -161,11 +165,12 @@ const WorldChoirTabs = (() => {
         'js/world-choir-flags.js?v=20260902n',
         'js/memory/memory-data.js?v=20260907wchain',
         'js/memory/memory-feed.js?v=20260904bt',
-        'js/memory/memory-page.js?v=20260907tabshydrate',
+        'js/memory/memory-page.js?v=20260912tabRoot',
       ],
       selectors: ['.ambient-bg', '#memory-page'],
       init: () => tabApi('memory')?.init?.(),
       onShow: () => tabApi('memory')?.onTabShow?.(),
+      onReset: () => tabApi('memory')?.resetToRoot?.(),
     },
     // Soft secondary (Home / Profile entry) — keep-alive like primary tabs.
     'world-chain': {
@@ -482,17 +487,67 @@ const WorldChoirTabs = (() => {
     syncTitle(id);
   }
 
-  async function prepareAndShow(id) {
+  async function prepareAndShow(id, { reset = false } = {}) {
     const spec = PRIMARY[id];
     beginPrepare(id);
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    const showWork = Promise.resolve(spec?.onShow?.());
+    const showWork = reset && typeof spec?.onReset === 'function'
+      ? Promise.resolve(spec.onReset())
+      : Promise.resolve(spec?.onShow?.());
     // Cap wait so a hung tab never traps navigation; fall through to reveal or hard nav.
     const capMs = id === 'map' ? 5000 : 3500;
     await Promise.race([
       showWork,
       new Promise((resolve) => setTimeout(resolve, capMs)),
     ]);
+  }
+
+  function scrollTabToTop(id) {
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      /* ignore */
+    }
+    try {
+      panels[id]?.el?.scrollTo?.(0, 0);
+    } catch {
+      /* ignore */
+    }
+    try {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function syncHistoryToTabRoot(id, { replace = false } = {}) {
+    const href = PRIMARY[id]?.href;
+    if (!href) return;
+    try {
+      const state = { ...(history.state || {}), wcTab: id };
+      if (replace || history.state?.wcTab === id) {
+        history.replaceState(state, '', href);
+      } else {
+        history.pushState(state, '', href);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function runTabReset(id) {
+    const spec = PRIMARY[id];
+    try {
+      if (typeof spec?.onReset === 'function') {
+        await Promise.resolve(spec.onReset());
+      } else {
+        await Promise.resolve(spec?.onShow?.());
+      }
+    } catch (err) {
+      console.warn('[WorldChoirTabs] resetToRoot failed', id, err);
+    }
+    scrollTabToTop(id);
   }
 
   function collectNodes(doc, spec) {
@@ -648,28 +703,23 @@ const WorldChoirTabs = (() => {
     preloadPanel('memory');
   }
 
-  async function switchTo(id, { updateHistory = true } = {}) {
+  async function switchTo(id, { updateHistory = true, reset = false } = {}) {
     if (!isPrimary(id)) {
       window.location.href = hrefFor(id) || id;
       return false;
     }
     if (id === 'memory' && !WorldChoirConfig?.isMemoryUnlocked?.()) {
-      return switchTo('home', { updateHistory });
+      return switchTo('home', { updateHistory, reset });
     }
 
     if (!hostEl) attach(activeId || id);
 
     const gen = ++switchGen;
 
-    // Already visible and ready — chrome-only update.
+    // Already visible and ready — optional root reset (re-tap / return to tab).
     if (activeId === id && panels[id]?.ready) {
-      if (updateHistory) {
-        try {
-          history.pushState({ ...(history.state || {}), wcTab: id }, '', PRIMARY[id].href);
-        } catch {
-          /* ignore */
-        }
-      }
+      if (reset) await runTabReset(id);
+      if (updateHistory) syncHistoryToTabRoot(id, { replace: true });
       return true;
     }
 
@@ -677,7 +727,7 @@ const WorldChoirTabs = (() => {
     try {
       await loadPanel(id);
       if (gen !== switchGen) return false;
-      await prepareAndShow(id);
+      await prepareAndShow(id, { reset });
     } catch (err) {
       console.error('[WorldChoirTabs] switch failed, falling back to full navigation', err);
       endPrepare(id);
@@ -691,18 +741,11 @@ const WorldChoirTabs = (() => {
     }
 
     reveal(id);
+    if (reset) scrollTabToTop(id);
 
     if (updateHistory) {
-      const url = PRIMARY[id].href + (window.location.search || '');
-      try {
-        if (history.state?.wcTab === id && pageIdFromPath(window.location.pathname) === id) {
-          history.replaceState({ ...(history.state || {}), wcTab: id }, '', url);
-        } else {
-          history.pushState({ ...(history.state || {}), wcTab: id }, '', PRIMARY[id].href);
-        }
-      } catch {
-        /* ignore */
-      }
+      // Always land on the tab root URL (no nested query like ?foundation=).
+      syncHistoryToTabRoot(id, { replace: history.state?.wcTab === id && pageIdFromPath(window.location.pathname) === id });
     }
 
     // Never re-arm black boot on soft tab switches.

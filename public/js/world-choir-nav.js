@@ -278,12 +278,12 @@ const WorldChoirNav = (() => {
   }
 
   /** Soft-switch primary tabs when the keep-alive host is available; else full navigation. */
-  function navigateToPrimaryTab(pageId, { animate = true } = {}) {
+  function navigateToPrimaryTab(pageId, { animate = true, reset = true } = {}) {
     const page = ALL_PAGES.find((p) => p.id === pageId);
     if (!page) return false;
 
     if (page.requiresMemory && !WorldChoirConfig.isMemoryUnlocked()) {
-      return navigateToPrimaryTab('home', { animate });
+      return navigateToPrimaryTab('home', { animate, reset });
     }
 
     const tabs = typeof WorldChoirTabs !== 'undefined' ? WorldChoirTabs : null;
@@ -297,7 +297,7 @@ const WorldChoirNav = (() => {
         clearStoredTransition();
         document.documentElement.classList.remove('wc-nav-handoff');
         setActivePage(pageId, { animate });
-        void tabs.switchTo(pageId, { updateHistory: true });
+        void tabs.switchTo(pageId, { updateHistory: true, reset });
         return true;
       }
     }
@@ -354,7 +354,7 @@ const WorldChoirNav = (() => {
     return true;
   }
 
-  function activateTab(pageId, href, { navigate } = { navigate: true }) {
+  function activateTab(pageId, href, { navigate, reset } = { navigate: true, reset: false }) {
     if (!pageId) return;
 
     // Memory stays gated until the live event is completed.
@@ -413,11 +413,12 @@ const WorldChoirNav = (() => {
         setNavDuration(NAV_TRANSITION_MS);
         setActiveClasses(pageId);
         placeIndicatorOnItem(target, { animate: shouldAnimate, visible: true });
-        void tabs.switchTo(pageId, { updateHistory: true });
+        void tabs.switchTo(pageId, { updateHistory: true, reset: !!reset });
         return;
       }
     }
 
+    // Hard pages (Passport, Daily Acts, legal, …): always load the tab root href.
     currentActivePage = pageId;
 
     if (!shouldAnimate) {
@@ -458,13 +459,11 @@ const WorldChoirNav = (() => {
 
     event.preventDefault();
 
-    // Already on this tab and not mid-transition elsewhere.
-    if (pageId === currentActivePage && !pendingHref && !handoffActive) return;
-
     // Same destination already pending — keep current animation/timer.
     if (pendingHref === href) return;
 
-    activateTab(pageId, href, { navigate: true });
+    // Tab select (including re-tap of the active tab) always returns to that tab's root.
+    activateTab(pageId, href, { navigate: true, reset: true });
   }
 
   function syncIndicatorLayout({ animate } = { animate: false }) {
@@ -548,7 +547,7 @@ const WorldChoirNav = (() => {
     home: [
       'index.html',
       'css/home.css?v=20260911guideGrey',
-      'js/world-choir-home.js?v=20260911logoSwap',
+      'js/world-choir-home.js?v=20260912tabRoot',
       'js/world-choir-db.js?v=20260907voices',
     ],
     map: [
@@ -559,7 +558,7 @@ const WorldChoirNav = (() => {
       'js/map/sponsor-bar.js?v=20260905a',
       '/api/map-sponsors',
       'js/world-choir-map-tiles.js?v=20260912ptwDark',
-      'js/world-choir-map.js?v=20260912scrollFix',
+      'js/world-choir-map.js?v=20260912tabRoot',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
@@ -574,14 +573,14 @@ const WorldChoirNav = (() => {
       'js/donate/creator-foundations-store.js?v=20260907fee65',
       'js/donate/donation-flow.js?v=20260831a',
       'js/foundation-public-card.js?v=20260904cb',
-      'js/donate/donate-page.js?v=20260912donateLight',
+      'js/donate/donate-page.js?v=20260912tabRoot',
       '/api/creator-foundations',
       '/api/donations?action=config',
     ],
     profile: [
       'profile.html',
       'css/profile.css?v=20260912themeSlot',
-      'js/profile/profile-page.js?v=20260911theme',
+      'js/profile/profile-page.js?v=20260912tabRoot',
       'js/profile/daily-acts-peace.js?v=20260906perf',
       'js/profile/daily-acts-button.js?v=20260810i',
       'js/world-choir-onboarding.js?v=20260816a',
@@ -612,7 +611,7 @@ const WorldChoirNav = (() => {
       'js/world-choir-flags.js?v=20260902n',
       'js/memory/memory-data.js?v=20260907wchain',
       'js/memory/memory-feed.js?v=20260904bt',
-      'js/memory/memory-page.js?v=20260907tabshydrate',
+      'js/memory/memory-page.js?v=20260912tabRoot',
       'js/profile/passport-stamps.js?v=20260902a',
       'js/profile/world-choir-passport.js?v=20260912passportCover',
     ],
