@@ -15,7 +15,7 @@ const PassTheWorld = (() => {
     { href: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', kind: 'js' },
     { href: 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js', kind: 'js' },
     { href: 'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js', kind: 'js' },
-    { href: 'js/world-choir-map-tiles.js?v=20260911theme', kind: 'js' },
+    { href: 'js/world-choir-map-tiles.js?v=20260912ptwDark', kind: 'js' },
   ];
 
   let root = null;

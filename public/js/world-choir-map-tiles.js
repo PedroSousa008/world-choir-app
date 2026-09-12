@@ -23,6 +23,8 @@ const WorldChoirMapTiles = (() => {
   let activeMode = 'vector';
   let boundMap = null;
   const basemapLayers = [];
+  /** Per-map theme lock: 'dark' | 'light' | null (follow UI theme). */
+  const mapThemeLock = new WeakMap();
 
   function canUseMapLibre() {
     return typeof L !== 'undefined' && typeof L.maplibreGL === 'function';
@@ -49,12 +51,18 @@ const WorldChoirMapTiles = (() => {
     }
   }
 
-  function vectorStyleUrl() {
-    return uiTheme() === 'light' ? CARTO_LIGHT_VECTOR_STYLE : CARTO_DARK_VECTOR_STYLE;
+  function themeForMap(map) {
+    const locked = map ? mapThemeLock.get(map) : null;
+    if (locked === 'dark' || locked === 'light') return locked;
+    return uiTheme();
   }
 
-  function rasterProxyUrl() {
-    const theme = uiTheme() === 'light' ? 'light' : 'dark';
+  function vectorStyleUrl(map) {
+    return themeForMap(map) === 'light' ? CARTO_LIGHT_VECTOR_STYLE : CARTO_DARK_VECTOR_STYLE;
+  }
+
+  function rasterProxyUrl(map) {
+    const theme = themeForMap(map) === 'light' ? 'light' : 'dark';
     return `${PROXY_URL}&theme=${theme}`;
   }
 
@@ -106,9 +114,9 @@ const WorldChoirMapTiles = (() => {
     basemapLayers.length = 0;
   }
 
-  function createVectorLayer() {
+  function createVectorLayer(map) {
     return L.maplibreGL({
-      style: vectorStyleUrl(),
+      style: vectorStyleUrl(map),
       interactive: false,
       // App-tuned padding (library default is 0.1). Keep non-zero so the GL
       // canvas stays aligned with Leaflet marker overlays.
@@ -121,8 +129,8 @@ const WorldChoirMapTiles = (() => {
     });
   }
 
-  function createRasterLayer(overrides = {}) {
-    return L.tileLayer(rasterProxyUrl(), {
+  function createRasterLayer(map, overrides = {}) {
+    return L.tileLayer(rasterProxyUrl(map), {
       ...SHARED_RASTER_OPTS,
       ...overrides,
     });
@@ -130,7 +138,7 @@ const WorldChoirMapTiles = (() => {
 
   function addRasterBasemapLayers(map) {
     trackLayer(
-      createRasterLayer({
+      createRasterLayer(map, {
         minZoom: 2,
         maxZoom: 2,
         maxNativeZoom: 19,
@@ -141,7 +149,7 @@ const WorldChoirMapTiles = (() => {
     );
 
     trackLayer(
-      createRasterLayer({
+      createRasterLayer(map, {
         minZoom: 2,
         maxZoom: 19,
         className: 'map-tile-layer map-tile-layer--detail',
@@ -161,12 +169,22 @@ const WorldChoirMapTiles = (() => {
     }).catch(() => {});
   }
 
-  function addBasemapLayers(map) {
+  function applyThemeLock(map, options = {}) {
+    if (!map) return;
+    if (options.theme === 'dark' || options.theme === 'light') {
+      mapThemeLock.set(map, options.theme);
+    } else if (options.theme === 'auto') {
+      mapThemeLock.delete(map);
+    }
+  }
+
+  function addBasemapLayers(map, options = {}) {
     boundMap = map;
+    applyThemeLock(map, options);
     removeBasemapLayers(map);
 
     if (canUseMapLibre()) {
-      trackLayer(createVectorLayer().addTo(map));
+      trackLayer(createVectorLayer(map).addTo(map));
       maybeUpgradeToRaster(map);
       return 'vector';
     }
@@ -176,18 +194,19 @@ const WorldChoirMapTiles = (() => {
     return 'raster';
   }
 
-  function addSingleBasemapLayer(map) {
+  function addSingleBasemapLayer(map, options = {}) {
     boundMap = map;
+    applyThemeLock(map, options);
     removeBasemapLayers(map);
 
     if (canUseMapLibre()) {
-      trackLayer(createVectorLayer().addTo(map));
+      trackLayer(createVectorLayer(map).addTo(map));
       maybeUpgradeToRaster(map);
       return 'vector';
     }
 
     trackLayer(
-      createRasterLayer({
+      createRasterLayer(map, {
         minZoom: 2,
         maxZoom: 19,
       }).addTo(map)

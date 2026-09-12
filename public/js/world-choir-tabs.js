@@ -65,7 +65,7 @@ const WorldChoirTabs = (() => {
         'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js',
         'js/world-choir-pledge-state.js?v=20260906perf2',
         'js/world-choir-participation.js',
-        'js/world-choir-map-tiles.js?v=20260911theme',
+        'js/world-choir-map-tiles.js?v=20260912ptwDark',
         'js/map/sponsor-constants.js?v=20260902k',
         'js/map/sponsor-data.js?v=20260902a',
         'js/map/sponsor-bar.js?v=20260905a',
@@ -145,7 +145,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — The World Sang',
       css: [
         'css/donate.css?v=20260912fpText2',
-        'css/passport.css?v=20260912passportWhite',
+        'css/passport.css?v=20260912ptwDarkCard',
         'css/profile.css?v=20260911logoSwap',
         'css/daily-peace.css?v=20260810e',
         'css/memory-page.css?v=20260911theme',

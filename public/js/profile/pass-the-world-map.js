@@ -883,7 +883,8 @@ const PassTheWorldMap = (() => {
     });
 
     if (typeof WorldChoirMapTiles !== 'undefined') {
-      WorldChoirMapTiles.addBasemapLayers(map);
+      // Pass the World card always uses the Dark Matter basemap (even in Light Mode).
+      WorldChoirMapTiles.addBasemapLayers(map, { theme: 'dark' });
     }
 
     if (!map.getPane('ptwOverlay')) {
