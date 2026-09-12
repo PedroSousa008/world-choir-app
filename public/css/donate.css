@@ -3170,3 +3170,23 @@ html[data-theme="light"] .df-search-trigger:focus-visible {
 html[data-theme="light"] .df-topbar__logo img {
   filter: none !important;
 }
+
+/* Light Mode only — Donate search: Close darker grey, typed text dark grey, names black */
+html[data-theme="light"] .df-search-inline__close {
+  color: #3f424a;
+}
+
+html[data-theme="light"] .df-search-inline__close:hover,
+html[data-theme="light"] .df-search-inline__close:focus-visible {
+  color: #0c0c0e;
+}
+
+html[data-theme="light"] .df-search-inline__input {
+  color: #3f424a;
+  -webkit-text-fill-color: #3f424a;
+}
+
+html[data-theme="light"] .df-srow__creator,
+html[data-theme="light"] .df-srow__foundation {
+  color: #0c0c0e;
+}
