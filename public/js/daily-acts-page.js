@@ -624,14 +624,36 @@ const DailyActsPage = (() => {
     window.history.replaceState(null, '', url);
   }
 
+  function readCatsScrollLeft() {
+    const track = document.querySelector('.dap-cats__track');
+    return track ? track.scrollLeft : null;
+  }
+
+  function restoreCatsScrollLeft(scrollLeft) {
+    if (scrollLeft == null || !Number.isFinite(scrollLeft)) return;
+    const apply = () => {
+      const track = document.querySelector('.dap-cats__track');
+      if (!track) return;
+      track.scrollLeft = scrollLeft;
+    };
+    apply();
+    // Re-apply after layout so a remount never snaps the row back to the start.
+    requestAnimationFrame(() => {
+      apply();
+      requestAnimationFrame(apply);
+    });
+  }
+
   function paint() {
     const el = root();
     if (!el) return;
+    const catsScrollLeft = readCatsScrollLeft();
     syncDailyActsRoute();
 
     if (view.mode === 'complete-moment') {
       el.innerHTML = renderMain() + renderCompleteMoment();
       bindGrid();
+      restoreCatsScrollLeft(catsScrollLeft);
       if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
       window.setTimeout(() => {
         if (view.mode === 'complete-moment' && view.item) {
@@ -646,6 +668,7 @@ const DailyActsPage = (() => {
       el.innerHTML = renderMain() + renderReflect(view.item);
       bindGrid();
       bindReflect();
+      restoreCatsScrollLeft(catsScrollLeft);
       if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
       return;
     }
@@ -654,6 +677,7 @@ const DailyActsPage = (() => {
       el.innerHTML = renderMain() + renderActDetail(view.item, { editingReflection: !!view.editingReflection });
       bindGrid();
       bindDetail();
+      restoreCatsScrollLeft(catsScrollLeft);
       if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
       return;
     }
@@ -662,6 +686,7 @@ const DailyActsPage = (() => {
       el.innerHTML = renderMain() + renderFutureSheet();
       bindGrid();
       bindSheetClose();
+      restoreCatsScrollLeft(catsScrollLeft);
       if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
       return;
     }
@@ -676,6 +701,7 @@ const DailyActsPage = (() => {
 
     el.innerHTML = renderMain();
     bindGrid();
+    restoreCatsScrollLeft(catsScrollLeft);
     markTodayViewed();
     maybeDailyActsWalkthrough();
     if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
@@ -704,21 +730,35 @@ const DailyActsPage = (() => {
     });
   }
 
-  function bindGrid() {
-    document.getElementById('dap-open-calendar')?.addEventListener('click', () => {
-      openCalendar(localDateString().slice(0, 7));
-    });
+  function updateCategorySelection(next) {
+    if (!next || next === selectedCategory) return false;
+    selectedCategory = next;
+    view = { mode: 'grid' };
 
-    document.querySelectorAll('[data-dap-cat]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const next = btn.getAttribute('data-dap-cat');
-        if (!next || next === selectedCategory) return;
-        selectedCategory = next;
-        view = { mode: 'grid' };
-        paint();
+    const el = root();
+    const track = el?.querySelector('.dap-cats__track');
+    const intro = el?.querySelector('.dap-theme-intro');
+    const gridOrEmpty = el?.querySelector('.dap-grid, .dap-empty-state');
+
+    // Keep the category track DOM intact so horizontal scroll never jumps.
+    if (track && intro && gridOrEmpty) {
+      syncDailyActsRoute();
+      track.querySelectorAll('[data-dap-cat]').forEach((btn) => {
+        const active = btn.getAttribute('data-dap-cat') === selectedCategory;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
       });
-    });
+      intro.outerHTML = renderThemeIntro();
+      gridOrEmpty.outerHTML = renderGrid();
+      bindSquareClicks();
+      return true;
+    }
 
+    paint();
+    return true;
+  }
+
+  function bindSquareClicks() {
     document.querySelectorAll('[data-open-date], [data-item-key]').forEach((btn) => {
       if (!btn.classList.contains('dap-square')) return;
       btn.addEventListener('click', () => {
@@ -738,6 +778,20 @@ const DailyActsPage = (() => {
         paint();
       });
     });
+  }
+
+  function bindGrid() {
+    document.getElementById('dap-open-calendar')?.addEventListener('click', () => {
+      openCalendar(localDateString().slice(0, 7));
+    });
+
+    document.querySelectorAll('[data-dap-cat]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        updateCategorySelection(btn.getAttribute('data-dap-cat'));
+      });
+    });
+
+    bindSquareClicks();
   }
 
   function handleNav(type, cause, assignmentDate) {
