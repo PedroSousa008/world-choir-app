@@ -96,9 +96,7 @@ const WorldChoirPassport = (() => {
   }
 
   function renderCoverPage(data, { loading = false, interactive = true, hidden = false } = {}) {
-    const logo = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.LOGO
-      ? WorldChoirConfig.LOGO.url
-      : 'images/world-choir-logo.png?v=20260906perf';
+    const logo = 'images/world-choir-logo.png?v=20270706';
     const mapImg = typeof WorldChoirConfig !== 'undefined' && WorldChoirConfig.PASSPORT_WORLD_MAP
       ? WorldChoirConfig.PASSPORT_WORLD_MAP.url
       : 'images/passport/passport-world-map.png?v=20260906perf';

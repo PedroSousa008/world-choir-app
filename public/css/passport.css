@@ -2711,3 +2711,21 @@ html.ptw-itinerary-open body {
   cursor: pointer;
 }
 
+/* Light Mode only — Passport cover (passport-feature page):
+   keep black primary text; dark-grey labels → clear grey; logo unfiltered. */
+html[data-theme="light"] .passport-card__page--cover .passport-card__brand-title,
+html[data-theme="light"] .passport-card__page--cover .passport-field__value,
+html[data-theme="light"] .passport-card__page--cover .passport-card__since .passport-field__value {
+  color: #0c0c0e;
+}
+
+html[data-theme="light"] .passport-card__page--cover .passport-field__label,
+html[data-theme="light"] .passport-card__page--cover .passport-card__since .passport-field__label {
+  color: #e8e8ec;
+}
+
+html[data-theme="light"] .passport-card__page--cover .passport-card__logo {
+  filter: none !important;
+  opacity: 1;
+}
+

@@ -145,7 +145,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — The World Sang',
       css: [
         'css/donate.css?v=20260912fpText2',
-        'css/passport.css?v=20260911theme',
+        'css/passport.css?v=20260912passportCover',
         'css/profile.css?v=20260911logoSwap',
         'css/daily-peace.css?v=20260810e',
         'css/memory-page.css?v=20260911theme',
@@ -157,7 +157,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-participation.js',
         'js/profile/daily-acts-peace.js?v=20260906perf',
         'js/profile/passport-stamps.js?v=20260902a',
-        'js/profile/world-choir-passport.js?v=20260902q',
+        'js/profile/world-choir-passport.js?v=20260912passportCover',
         'js/world-choir-flags.js?v=20260902n',
         'js/memory/memory-data.js?v=20260907wchain',
         'js/memory/memory-feed.js?v=20260904bt',
