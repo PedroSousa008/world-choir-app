@@ -69,7 +69,7 @@ const WorldChoirTabs = (() => {
         'js/map/sponsor-constants.js?v=20260902k',
         'js/map/sponsor-data.js?v=20260902a',
         'js/map/sponsor-bar.js?v=20260905a',
-        'js/world-choir-map.js?v=20260907mapstats',
+        'js/world-choir-map.js?v=20260912scrollFix',
       ],
       selectors: ['.map-page__stars', '#map-shell', '#voice-joined'],
       bodySelectors: ['#participation-overlay'],
@@ -465,7 +465,9 @@ const WorldChoirTabs = (() => {
         panel.el.classList.remove('is-preparing');
       }
     });
-    if (id === 'map') document.body.classList.add('map-page');
+    // Destination body mode immediately — clears map-page when leaving Map,
+    // and never leaves Map's overflow:hidden lock on scrollable tabs.
+    applyBodyMode(id);
   }
 
   function endPrepare(id) {
@@ -571,6 +573,8 @@ const WorldChoirTabs = (() => {
         await Promise.resolve(spec.onShow?.());
       } finally {
         window.__WC_TAB_SILENT_INIT = false;
+        // Preload must never steal body mode (Map used to leave map-page / scroll-lock on).
+        if (activeId) applyBodyMode(activeId);
       }
 
       // Wait briefly for async hydrate (Donate foundations, etc.).
@@ -579,10 +583,15 @@ const WorldChoirTabs = (() => {
         while (performance.now() < waitUntil && !isPanelHydrated(id)) {
           await new Promise((r) => setTimeout(r, 40));
           if (!isPanelHydrated(id)) {
+            window.__WC_TAB_SILENT_INIT = true;
             try { await Promise.resolve(spec.onShow?.()); } catch { /* ignore */ }
+            finally { window.__WC_TAB_SILENT_INIT = false; }
           }
         }
       }
+
+      // Restore the visible tab's body mode after any preload side effects.
+      if (activeId) applyBodyMode(activeId);
 
       // One frame so layout/paint can settle before we allow reveal.
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));

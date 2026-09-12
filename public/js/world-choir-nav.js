@@ -559,7 +559,7 @@ const WorldChoirNav = (() => {
       'js/map/sponsor-bar.js?v=20260905a',
       '/api/map-sponsors',
       'js/world-choir-map-tiles.js?v=20260911theme',
-      'js/world-choir-map.js?v=20260907mapstats',
+      'js/world-choir-map.js?v=20260912scrollFix',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',

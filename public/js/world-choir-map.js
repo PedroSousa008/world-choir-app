@@ -553,8 +553,44 @@ const WorldChoirMap = (() => {
     refreshMapData();
   }
 
+  function isMapTabActive() {
+    try {
+      if (typeof WorldChoirTabs !== 'undefined' && WorldChoirTabs.isHosted?.()) {
+        return WorldChoirTabs.getActive?.() === 'map';
+      }
+    } catch {
+      /* fall through */
+    }
+    // Hard navigation to map.html (soft-tab host not attached yet).
+    const file = (window.location.pathname || '').split('/').pop() || '';
+    return file === 'map.html' || file === 'map';
+  }
+
+  /** Map locks body scroll — only while Map is the visible tab (never during silent preload). */
+  function setMapBodyLock(on) {
+    if (on) {
+      if (window.__WC_TAB_SILENT_INIT) return;
+      if (typeof WorldChoirTabs !== 'undefined' && WorldChoirTabs.isHosted?.() && !isMapTabActive()) {
+        return;
+      }
+      document.body.classList.add('map-page');
+      return;
+    }
+    // Do not strip the lock while Map is genuinely showing.
+    if (!window.__WC_TAB_SILENT_INIT && isMapTabActive()) return;
+    document.body.classList.remove('map-page');
+  }
+
   function onTabShow() {
-    document.body.classList.add('map-page');
+    // Soft-tab preload calls onShow under __WC_TAB_SILENT_INIT — must not lock scroll.
+    if (window.__WC_TAB_SILENT_INIT) {
+      return ensureMapStarted().then(() => {
+        setMapBodyLock(false);
+        void checkVoiceJoinedFromSession();
+      });
+    }
+
+    setMapBodyLock(true);
     // Force layout before Leaflet measures the container.
     const panel = document.querySelector('.wc-tab-panel[data-wc-tab="map"]');
     if (panel) void panel.offsetWidth;
@@ -562,6 +598,8 @@ const WorldChoirMap = (() => {
     if (mapEl) void mapEl.offsetWidth;
 
     return ensureMapStarted().then(() => {
+      if (!window.__WC_TAB_SILENT_INIT && isMapTabActive()) setMapBodyLock(true);
+      else setMapBodyLock(false);
       requestAnimationFrame(() => {
         recenterMapAfterLayout();
         setTimeout(recenterMapAfterLayout, 60);
@@ -614,12 +652,15 @@ const WorldChoirMap = (() => {
       }
       const mapEl = document.getElementById('world-map');
       if (!mapEl) throw new Error('Map container missing');
-      document.body.classList.add('map-page');
+      setMapBodyLock(true);
       WorldChoirMapTiles.warmBasemap?.();
-      await startMap({ silent: false });
+      await startMap({ silent: !!window.__WC_TAB_SILENT_INIT });
       if (!map) throw new Error('Map failed to create Leaflet instance');
       mapBootstrapped = true;
       refreshMapData();
+      // Async start can finish after the user left Map — never leave scroll locked.
+      if (window.__WC_TAB_SILENT_INIT || !isMapTabActive()) setMapBodyLock(false);
+      else setMapBodyLock(true);
       requestAnimationFrame(() => {
         map?.invalidateSize({ animate: false, pan: false });
       });
@@ -632,7 +673,7 @@ const WorldChoirMap = (() => {
   }
 
   async function startMap({ silent = false } = {}) {
-    if (!silent) document.body.classList.add('map-page');
+    if (!silent) setMapBodyLock(true);
     WorldChoirNav.startWatcher('map');
 
     const clearBootSkel = () => {
@@ -722,8 +763,8 @@ const WorldChoirMap = (() => {
     });
 
     checkVoiceJoinedFromSession();
-    if (silent) {
-      document.body.classList.remove('map-page');
+    if (silent || window.__WC_TAB_SILENT_INIT || !isMapTabActive()) {
+      setMapBodyLock(false);
     }
   }
 
