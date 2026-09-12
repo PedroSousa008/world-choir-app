@@ -16,15 +16,16 @@
 }
 
 .profile-brand {
-  position: relative;
   text-align: center;
   margin-bottom: 28px;
 }
 
+/* Match Donate search trigger slot: 44×44, 20px icon, top-right of page
+   (Donate: padding 14/20 + margin-right -8 → 14px top, 12px right). */
 .profile-theme-toggle {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 14px;
+  right: 12px;
   width: 44px;
   height: 44px;
   margin: 0;
@@ -36,7 +37,7 @@
   place-items: center;
   cursor: pointer;
   border-radius: 50%;
-  z-index: 2;
+  z-index: 5;
   transition: color 0.25s ease, background 0.25s ease;
 }
 
