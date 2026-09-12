@@ -3190,3 +3190,52 @@ html[data-theme="light"] .df-srow__creator,
 html[data-theme="light"] .df-srow__foundation {
   color: #0c0c0e;
 }
+
+/* Light Mode only — Foundation profile: white→black, clear grey→dark grey, Connect icons dark grey */
+html[data-theme="light"] .df-fp-hero__title,
+html[data-theme="light"] .df-fp-supporters,
+html[data-theme="light"] .df-fp-supporters__count,
+html[data-theme="light"] .df-fp-block__title,
+html[data-theme="light"] .df-fp-story__heading,
+html[data-theme="light"] .df-fp-project__title,
+html[data-theme="light"] .df-fp-alloc__pct,
+html[data-theme="light"] .df-section h3,
+html[data-theme="light"] .df-fp .df-verified {
+  color: #0c0c0e;
+}
+
+html[data-theme="light"] .df-fp-hero__byline,
+html[data-theme="light"] .df-fp-hero__place,
+html[data-theme="light"] .df-fp-hero__mission,
+html[data-theme="light"] .df-fp-supporters__label,
+html[data-theme="light"] .df-fp-raised,
+html[data-theme="light"] .df-fp-kicker,
+html[data-theme="light"] .df-fp-about__text,
+html[data-theme="light"] .df-fp-muted,
+html[data-theme="light"] .df-fp-story__panel p,
+html[data-theme="light"] .df-fp-transparency__note,
+html[data-theme="light"] .df-fp-transparency__detail p,
+html[data-theme="light"] .df-fp-project__meta,
+html[data-theme="light"] .df-fp-project__desc,
+html[data-theme="light"] .df-fp-project__funding,
+html[data-theme="light"] .df-fp-alloc__label,
+html[data-theme="light"] .df-fp-nav__back,
+html[data-theme="light"] .df-fp-nav__share,
+html[data-theme="light"] .df-section h2,
+html[data-theme="light"] .df-section p,
+html[data-theme="light"] .df-fp .df-muted {
+  color: #3f424a !important;
+}
+
+html[data-theme="light"] .df-fp-story__chevron {
+  stroke: #3f424a;
+}
+
+html[data-theme="light"] .df-social__link {
+  color: #3f424a;
+}
+
+html[data-theme="light"] .df-social__link:hover,
+html[data-theme="light"] .df-social__link:focus-visible {
+  color: var(--df-accent);
+}
