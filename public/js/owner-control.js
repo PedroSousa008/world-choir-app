@@ -3355,7 +3355,7 @@ const OwnerControl = (() => {
           partnershipType: 'sponsored_standard',
           assignmentMethod: 'random',
           randomMinDay: 1,
-          randomMaxDay: state.dapLibrary?.catalogCount || 328,
+          randomMaxDay: state.dapLibrary?.catalogCount || 341,
           currency: 'EUR',
           paymentStatus: 'pending',
         };
@@ -3371,7 +3371,7 @@ const OwnerControl = (() => {
           partnershipType: 'sponsored_standard',
           assignmentMethod: 'random',
           randomMinDay: 1,
-          randomMaxDay: state.dapLibrary?.catalogCount || 328,
+          randomMaxDay: state.dapLibrary?.catalogCount || 341,
           currency: 'EUR',
           paymentStatus: 'pending',
         };
@@ -3566,7 +3566,7 @@ const OwnerControl = (() => {
         paymentStatus: fd.get('paymentStatus'),
         assignmentMethod: fd.get('assignmentMethod'),
         randomMinDay: Number(fd.get('randomMinDay')) || 1,
-        randomMaxDay: Number(fd.get('randomMaxDay')) || (state.dapLibrary?.catalogCount || 328),
+        randomMaxDay: Number(fd.get('randomMaxDay')) || (state.dapLibrary?.catalogCount || 341),
         specificDate: normalizeDateInput(fd.get('specificDate')) || null,
         internalNotes: String(fd.get('internalNotes') || '').trim(),
         actId: fd.get('actId') || null,

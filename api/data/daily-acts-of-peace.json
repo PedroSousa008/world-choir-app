@@ -1,6 +1,6 @@
 {
-  "version": 7,
-  "total": 328,
+  "version": 8,
+  "total": 341,
   "acts": [
     {
       "id": "dap-001",
@@ -2854,6 +2854,110 @@
       "category": "presence",
       "active": true,
       "reflectionPrompt": "What stayed with you after this moment?"
+    },
+    {
+      "id": "dap-499",
+      "text": "Ask a nursing home whether you can bring a board game or cards and spend an afternoon playing with residents.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Ask a nursing home whether you can bring a board game or cards and spend an afternoon playing with residents.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-500",
+      "text": "Do something today that the younger version of you would have been excited to do.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Do something today that the younger version of you would have been excited to do.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-501",
+      "text": "Learn the name of someone you regularly see but have never spoken to. Introduce yourself today.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Learn the name of someone you regularly see but have never spoken to. Introduce yourself today.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-502",
+      "text": "Take your pet somewhere they love but don't get to visit often. Make today their day.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Take your pet somewhere they love but don't get to visit often. Make today their day.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-503",
+      "text": "Give your pet an extra adventure today, a new walking route, a safe new place, or extra time exploring outside.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Give your pet an extra adventure today, a new walking route, a safe new place, or extra time exploring outside.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-504",
+      "text": "Go get yourself a small treat today. You've been trying, working, and showing up. Celebrate that.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Go get yourself a small treat today. You've been trying, working, and showing up. Celebrate that.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-505",
+      "text": "Visit a nursing home or senior living community and spend time talking with someone who would enjoy the company. Call ahead if visits need to be arranged.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Visit a nursing home or senior living community and spend time talking with someone who would enjoy the company. Call ahead if visits need to be arranged.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-506",
+      "text": "Ask a nursing home if there's a resident who rarely receives visitors. If appropriate, arrange a visit and spend some time with them.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Ask a nursing home if there's a resident who rarely receives visitors. If appropriate, arrange a visit and spend some time with them.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-507",
+      "text": "Contact a children's hospital or family-support organisation and ask what small approved item would brighten a child's day. Provide one if you can.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Contact a children's hospital or family-support organisation and ask what small approved item would brighten a child's day. Provide one if you can.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-508",
+      "text": "Ask a local shelter whether they accept volunteers to walk dogs or spend time socialising animals. If they do, give them an hour of your day.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Ask a local shelter whether they accept volunteers to walk dogs or spend time socialising animals. If they do, give them an hour of your day.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-509",
+      "text": "Cook or prepare something today and make an extra portion. Find someone to give it to.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Cook or prepare something today and make an extra portion. Find someone to give it to.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
+    },
+    {
+      "id": "dap-510",
+      "text": "Choose someone who has helped you many times. Today, find a practical way to return one of those favours.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Choose someone who has helped you many times. Today, find a practical way to return one of those favours.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
+    },
+    {
+      "id": "dap-511",
+      "text": "Contact an animal shelter and ask which item they currently need most. Bring it there yourself if you can.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Contact an animal shelter and ask which item they currently need most. Bring it there yourself if you can.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
     }
   ]
 }

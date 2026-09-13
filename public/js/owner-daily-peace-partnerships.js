@@ -318,7 +318,7 @@ const OwnerDailyPeacePartnerships = (() => {
     const { esc } = helpers;
     const form = state.dapForm || {};
     const isEdit = !!form.id;
-    const lib = state.dapLibrary || { catalogCount: 328, acts: [] };
+    const lib = state.dapLibrary || { catalogCount: 341, acts: [] };
     const catalogActs = (lib.acts || []).filter((a) => a.source === 'standard');
     const selectedActText = catalogActs.find((a) => a.actId === form.actId)?.text || form.companyAct?.text || 'Act title';
 
