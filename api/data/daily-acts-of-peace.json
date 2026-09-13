@@ -1,6 +1,6 @@
 {
-  "version": 6,
-  "total": 316,
+  "version": 7,
+  "total": 328,
   "acts": [
     {
       "id": "dap-001",
@@ -2755,6 +2755,102 @@
       "id": "dap-486",
       "text": "Before going to sleep tonight, pray for every person you met today.",
       "explanation": "Presence begins with one intentional moment. Today, try this: Before going to sleep tonight, pray for every person you met today.",
+      "category": "presence",
+      "active": true,
+      "reflectionPrompt": "What stayed with you after this moment?"
+    },
+    {
+      "id": "dap-487",
+      "text": "Choose one thing you're afraid to do because you might fail. Take the first real step today.",
+      "explanation": "Courage begins with one intentional moment. Today, try this: Choose one thing you're afraid to do because you might fail. Take the first real step today.",
+      "category": "courage",
+      "active": true,
+      "reflectionPrompt": "What felt brave about this moment?"
+    },
+    {
+      "id": "dap-488",
+      "text": "Do one workout today that challenges you more than your usual one.",
+      "explanation": "Courage begins with one intentional moment. Today, try this: Do one workout today that challenges you more than your usual one.",
+      "category": "courage",
+      "active": true,
+      "reflectionPrompt": "What felt brave about this moment?"
+    },
+    {
+      "id": "dap-489",
+      "text": "Ask someone you trust to tell you one thing they genuinely think you could improve. Don't defend yourself. Just listen.",
+      "explanation": "Courage begins with one intentional moment. Today, try this: Ask someone you trust to tell you one thing they genuinely think you could improve. Don't defend yourself. Just listen.",
+      "category": "courage",
+      "active": true,
+      "reflectionPrompt": "What felt brave about this moment?"
+    },
+    {
+      "id": "dap-490",
+      "text": "Record a one-minute video talking to yourself one year from now. Tell that person what you're working toward. Don't post it.",
+      "explanation": "Courage begins with one intentional moment. Today, try this: Record a one-minute video talking to yourself one year from now. Tell that person what you're working toward. Don't post it.",
+      "category": "courage",
+      "active": true,
+      "reflectionPrompt": "What felt brave about this moment?"
+    },
+    {
+      "id": "dap-491",
+      "text": "Spend 30 minutes learning something you've wanted to understand for a long time. At the end, write down what you learned.",
+      "explanation": "Understanding begins with one intentional moment. Today, try this: Spend 30 minutes learning something you've wanted to understand for a long time. At the end, write down what you learned.",
+      "category": "understanding",
+      "active": true,
+      "reflectionPrompt": "What did you learn from this act?"
+    },
+    {
+      "id": "dap-492",
+      "text": "Write down the three things taking up the most space in your mind right now. Decide what you can actually do about each one.",
+      "explanation": "Understanding begins with one intentional moment. Today, try this: Write down the three things taking up the most space in your mind right now. Decide what you can actually do about each one.",
+      "category": "understanding",
+      "active": true,
+      "reflectionPrompt": "What did you learn from this act?"
+    },
+    {
+      "id": "dap-493",
+      "text": "Choose one skill you want to have a year from now. Practice it until you master it.",
+      "explanation": "Understanding begins with one intentional moment. Today, try this: Choose one skill you want to have a year from now. Practice it until you master it.",
+      "category": "understanding",
+      "active": true,
+      "reflectionPrompt": "What did you learn from this act?"
+    },
+    {
+      "id": "dap-494",
+      "text": "Write down where you spent your time yesterday. Circle everything that actually moved your life forward.",
+      "explanation": "Understanding begins with one intentional moment. Today, try this: Write down where you spent your time yesterday. Circle everything that actually moved your life forward.",
+      "category": "understanding",
+      "active": true,
+      "reflectionPrompt": "What did you learn from this act?"
+    },
+    {
+      "id": "dap-495",
+      "text": "Go have lunch by yourself today. Use your phone as little as possible. Be present with yourself and your surroundings. Afterwards, write down how it made you feel.",
+      "explanation": "Presence begins with one intentional moment. Today, try this: Go have lunch by yourself today. Use your phone as little as possible. Be present with yourself and your surroundings. Afterwards, write down how it made you feel.",
+      "category": "presence",
+      "active": true,
+      "reflectionPrompt": "What stayed with you after this moment?"
+    },
+    {
+      "id": "dap-496",
+      "text": "Choose one bad habit you normally do automatically. Catch yourself once today and deliberately choose differently.",
+      "explanation": "Presence begins with one intentional moment. Today, try this: Choose one bad habit you normally do automatically. Catch yourself once today and deliberately choose differently.",
+      "category": "presence",
+      "active": true,
+      "reflectionPrompt": "What stayed with you after this moment?"
+    },
+    {
+      "id": "dap-497",
+      "text": "Put your phone in another room for one full hour. Use that hour to do something you've been saying you don't have time for.",
+      "explanation": "Presence begins with one intentional moment. Today, try this: Put your phone in another room for one full hour. Use that hour to do something you've been saying you don't have time for.",
+      "category": "presence",
+      "active": true,
+      "reflectionPrompt": "What stayed with you after this moment?"
+    },
+    {
+      "id": "dap-498",
+      "text": "Go for a run or walk today without music. Use the time to think about where you want your life to be one year from now.",
+      "explanation": "Presence begins with one intentional moment. Today, try this: Go for a run or walk today without music. Use the time to think about where you want your life to be one year from now.",
       "category": "presence",
       "active": true,
       "reflectionPrompt": "What stayed with you after this moment?"
