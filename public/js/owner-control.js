@@ -48,6 +48,7 @@ const OwnerControl = (() => {
     growthRangeOpen: false,
     citySort: 'voices',
     countrySort: 'voices',
+    communityView: 'main',
     foundationLayout: 'list',
     foundationQuery: '',
     foundationStatusFilter: 'all',
@@ -159,6 +160,10 @@ const OwnerControl = (() => {
     if (!parts.length) return;
     if (!SECTION_IDS.has(parts[0])) return;
     state.section = parts[0];
+    if (parts[0] === 'community') {
+      state.communityView = parts[1] === 'voice-activity' ? 'voice-activity' : 'main';
+      return;
+    }
     if (parts[0] !== 'daily-acts') return;
     const sub = parts[1];
     if (['library', 'engagement', 'partnerships'].includes(sub)) {
@@ -181,6 +186,9 @@ const OwnerControl = (() => {
     if (!state.authenticated) return '';
     const section = state.section || 'overview';
     const parts = [section];
+    if (section === 'community' && state.communityView === 'voice-activity') {
+      parts.push('voice-activity');
+    }
     if (section === 'daily-acts') {
       parts.push(state.dapView || 'library');
       if (state.dapView === 'partnerships' && state.dapPartnershipId) {
@@ -354,6 +362,9 @@ const OwnerControl = (() => {
     } finally {
       state.busy = false;
       render();
+      if (state.communityView === 'voice-activity' && typeof OwnerVoiceActivity !== 'undefined') {
+        OwnerVoiceActivity.load({ state, api, render });
+      }
     }
   }
 
@@ -415,6 +426,14 @@ const OwnerControl = (() => {
         state.sponsorFormMode = null;
         state.sponsorDetail = null;
         state.sponsorPendingLogo = null;
+        if (state.section !== 'community') {
+          state.communityView = 'main';
+          if (typeof OwnerVoiceActivity !== 'undefined') OwnerVoiceActivity.stopPolling();
+        } else if (state.communityView === 'voice-activity') {
+          // keep voice activity if already there; sidebar Community click resets to main
+          state.communityView = 'main';
+          if (typeof OwnerVoiceActivity !== 'undefined') OwnerVoiceActivity.stopPolling();
+        }
         if (typeof OwnerPassTheWorld !== 'undefined') OwnerPassTheWorld.stopPolling();
         setFlash(null);
         render();
@@ -427,6 +446,9 @@ const OwnerControl = (() => {
       render();
     });
     document.getElementById('owner-refresh')?.addEventListener('click', () => {
+      if (typeof OwnerVoiceActivity !== 'undefined' && OwnerVoiceActivity.onRefresh({ state, api, render })) {
+        return;
+      }
       if (state.section === 'world-chain-photo-book') {
         ensureWcpbLoaded(false).then(() => render());
         return;
@@ -891,6 +913,9 @@ const OwnerControl = (() => {
   /* ─── Community ─── */
 
   function renderCommunity() {
+    if (state.communityView === 'voice-activity' && typeof OwnerVoiceActivity !== 'undefined') {
+      return OwnerVoiceActivity.render({ state, api, render });
+    }
     const c = state.data.community;
     const cities = [...state.data.cities].sort((a, b) => {
       if (state.citySort === 'city') return a.city.localeCompare(b.city);
@@ -3243,8 +3268,13 @@ const OwnerControl = (() => {
       });
     });
     document.getElementById('owner-voice-activity')?.addEventListener('click', () => {
-      // Placeholder — Voice Activity panel wiring comes next.
+      if (typeof OwnerVoiceActivity === 'undefined') return;
+      window.history.pushState(null, '', `${window.location.pathname}${window.location.search}#community/voice-activity`);
+      OwnerVoiceActivity.open({ state, api, render });
     });
+    if (state.communityView === 'voice-activity' && typeof OwnerVoiceActivity !== 'undefined') {
+      OwnerVoiceActivity.bind({ state, api, render });
+    }
     root().querySelectorAll('[data-country-sort]').forEach((btn) => {
       btn.addEventListener('click', () => {
         state.countrySort = btn.getAttribute('data-country-sort');
@@ -4023,8 +4053,14 @@ const OwnerControl = (() => {
     document.addEventListener('click', onGrowthRangeDocumentClick);
     window.addEventListener('hashchange', () => {
       if (!state.authenticated || !state.data) return;
+      const prevView = state.communityView;
       applyOwnerRoute();
       render();
+      if (state.communityView === 'voice-activity' && typeof OwnerVoiceActivity !== 'undefined') {
+        OwnerVoiceActivity.load({ state, api, render });
+      } else if (prevView === 'voice-activity' && state.communityView !== 'voice-activity') {
+        if (typeof OwnerVoiceActivity !== 'undefined') OwnerVoiceActivity.stopPolling();
+      }
     });
 
     try {

@@ -25,6 +25,104 @@ const WorldChoirDB = (() => {
   let lastMetaSignature = null;
   let lastCitySnapshot = null;
   let lastVoiceCount = null;
+  let presenceStarted = false;
+  let presenceTimer = null;
+  let presenceInFlight = false;
+  let presenceTabId = null;
+
+  function getPresenceTabId() {
+    if (presenceTabId) return presenceTabId;
+    try {
+      presenceTabId = sessionStorage.getItem('wc_presence_tab_id');
+      if (!presenceTabId) {
+        presenceTabId = (crypto.randomUUID && crypto.randomUUID())
+          || `tab-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        sessionStorage.setItem('wc_presence_tab_id', presenceTabId);
+      }
+    } catch {
+      presenceTabId = `tab-${Date.now()}`;
+    }
+    return presenceTabId;
+  }
+
+  function presenceLocalDate() {
+    try {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(new Date());
+      const y = parts.find((p) => p.type === 'year')?.value;
+      const m = parts.find((p) => p.type === 'month')?.value;
+      const d = parts.find((p) => p.type === 'day')?.value;
+      if (y && m && d) return `${y}-${m}-${d}`;
+    } catch { /* ignore */ }
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  async function sendPresenceHeartbeat() {
+    if (document.hidden || presenceInFlight) return;
+    presenceInFlight = true;
+    try {
+      let timeZone = 'UTC';
+      try { timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { /* ignore */ }
+      await fetch('/api/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          action: 'heartbeat',
+          deviceId: getDeviceId(),
+          tabId: getPresenceTabId(),
+          timeZone,
+          localDate: presenceLocalDate(),
+        }),
+      });
+    } catch {
+      /* best-effort */
+    } finally {
+      presenceInFlight = false;
+    }
+  }
+
+  async function sendPresenceLeave() {
+    try {
+      await fetch('/api/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        keepalive: true,
+        body: JSON.stringify({
+          action: 'leave',
+          deviceId: getDeviceId(),
+          tabId: getPresenceTabId(),
+        }),
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function startPresenceHeartbeat(options = {}) {
+    const intervalMs = options.intervalMs ?? 20000;
+    if (presenceStarted) return;
+    presenceStarted = true;
+    const tick = () => { sendPresenceHeartbeat(); };
+    ready()
+      .then(() => {
+        tick();
+        presenceTimer = setInterval(tick, intervalMs);
+      })
+      .catch(() => {
+        presenceTimer = setInterval(tick, intervalMs);
+      });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) tick();
+      else sendPresenceLeave();
+    });
+    window.addEventListener('pagehide', () => { sendPresenceLeave(); });
+  }
 
   /** Poll often enough that new voices usually land within ~2–5s. */
   const LIVE_SYNC_INTERVAL_MS = 1500;
@@ -331,6 +429,7 @@ const WorldChoirDB = (() => {
     const intervalMs = options.intervalMs ?? LIVE_SYNC_INTERVAL_MS;
     if (liveSyncStarted) return;
     liveSyncStarted = true;
+    startPresenceHeartbeat();
 
     const tick = () => {
       if (document.hidden || liveSyncInFlight) return;
@@ -413,6 +512,7 @@ const WorldChoirDB = (() => {
         await syncMyPledge();
         seedLocalEvents();
         syncActiveEventStatus();
+        startPresenceHeartbeat();
         return remoteUser;
       })().catch((err) => {
         identityPromise = null;
@@ -1010,6 +1110,7 @@ const WorldChoirDB = (() => {
     startLiveSync,
     startMapAggregateSync,
     stopLiveSync,
+    startPresenceHeartbeat,
     syncMyPledge,
     getDeviceId,
     getOrCreateUser,

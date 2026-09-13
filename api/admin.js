@@ -17,6 +17,12 @@ const {
 } = require('./_lib/owner-intel');
 const { buildDailyPeaceOwnerIntel, purgeIncompleteArchivedAssignments } = require('./_lib/daily-peace');
 const {
+  buildVoiceActivityPage,
+  getVoiceActivityDetail,
+  listAvailableActivityDates,
+  dateKeyInTimeZone,
+} = require('./_lib/voice-activity');
+const {
   buildOwnerPartnershipsLibrary,
   getPartnershipDetail,
   createPartnership,
@@ -145,6 +151,49 @@ module.exports = async function handler(req, res) {
       if (!requireOwner(req, res)) return;
       await purgeIncompleteArchivedAssignments({ maxPages: 20 }).catch(() => {});
       const data = await buildDailyPeaceOwnerIntel();
+      return res.status(200).json(data);
+    }
+
+    if (action === 'voice-activity' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const timeZone = String(req.query.timeZone || 'UTC');
+      const todayDate = dateKeyInTimeZone(new Date(), timeZone);
+      const data = await buildVoiceActivityPage({
+        date: req.query.date || todayDate,
+        timeZone,
+        todayDate,
+        offset: Number(req.query.offset) || 0,
+        limit: Number(req.query.limit) || 2000,
+        country: req.query.country || '',
+        city: req.query.city || '',
+        activity: req.query.activity || 'all',
+        search: req.query.search || '',
+      });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'voice-activity-detail' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const timeZone = String(req.query.timeZone || 'UTC');
+      const todayDate = dateKeyInTimeZone(new Date(), timeZone);
+      const data = await getVoiceActivityDetail({
+        voiceNumber: req.query.voiceNumber,
+        date: req.query.date || todayDate,
+        timeZone,
+        todayDate,
+      });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'voice-activity-dates' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await listAvailableActivityDates({
+        timeZone: String(req.query.timeZone || 'UTC'),
+        limit: Number(req.query.limit) || 120,
+      });
       return res.status(200).json(data);
     }
 
