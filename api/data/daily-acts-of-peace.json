@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "total": 233,
+  "version": 6,
+  "total": 316,
   "acts": [
     {
       "id": "dap-001",
@@ -2094,6 +2094,670 @@
         "label": "VIEW YOUR PROFILE"
       },
       "reflectionPrompt": "What did you notice about the world today?"
+    },
+    {
+      "id": "dap-404",
+      "text": "Share a meal with someone today.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Share a meal with someone today.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-405",
+      "text": "Get a few people together to play a sport.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Get a few people together to play a sport.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-406",
+      "text": "Invite someone to join something you already have planned.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Invite someone to join something you already have planned.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-407",
+      "text": "Spend time with someone you haven’t seen in a while.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Spend time with someone you haven’t seen in a while.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-408",
+      "text": "Cook something together with someone.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Cook something together with someone.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-409",
+      "text": "Get your family together for some quality time.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Get your family together for some quality time.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-410",
+      "text": "Invite someone outside your usual circle to join your group.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Invite someone outside your usual circle to join your group.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-411",
+      "text": "Do something fun with someone you care about.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Do something fun with someone you care about.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-412",
+      "text": "Ask someone to teach you something they enjoy doing.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone to teach you something they enjoy doing.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-413",
+      "text": "Play a game together.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Play a game together.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-414",
+      "text": "Go outside with someone and spend time together.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Go outside with someone and spend time together.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-415",
+      "text": "Ask someone you usually only message to meet in person.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone you usually only message to meet in person.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-416",
+      "text": "Spend time with an older person in your life.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Spend time with an older person in your life.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-417",
+      "text": "Spend time with someone younger than you.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Spend time with someone younger than you.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-418",
+      "text": "Make room for one more person in today’s plans.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Make room for one more person in today’s plans.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-419",
+      "text": "Do something you loved as a child with someone else.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Do something you loved as a child with someone else.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-420",
+      "text": "Start a simple tradition that gives people a reason to meet again.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Start a simple tradition that gives people a reason to meet again.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-421",
+      "text": "When you wake up, choose one person you will make time for today.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: When you wake up, choose one person you will make time for today.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-422",
+      "text": "Make the first person you speak to today feel noticed.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Make the first person you speak to today feel noticed.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-423",
+      "text": "If you see someone eating alone today, and it feels appropriate, ask if they'd like some company.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: If you see someone eating alone today, and it feels appropriate, ask if they'd like some company.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-424",
+      "text": "Find someone who has recently moved to your school, workplace, building, or neighbourhood and help them feel more at home.",
+      "explanation": "Connection begins with one intentional moment. Today, try this: Find someone who has recently moved to your school, workplace, building, or neighbourhood and help them feel more at home.",
+      "category": "connection",
+      "active": true,
+      "reflectionPrompt": "How did connecting with someone feel?"
+    },
+    {
+      "id": "dap-425",
+      "text": "Offer to carry something heavy for someone who seems to need help.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Offer to carry something heavy for someone who seems to need help.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-426",
+      "text": "Help someone improve their CV or job application.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Help someone improve their CV or job application.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-427",
+      "text": "Ask someone in your community, “Is there anything I can help you with today?”",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Ask someone in your community, “Is there anything I can help you with today?”",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-428",
+      "text": "Buy something someone genuinely needs, if you can.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Buy something someone genuinely needs, if you can.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-429",
+      "text": "Before checking social media this morning, send someone a message that will make them smile.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Before checking social media this morning, send someone a message that will make them smile.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-430",
+      "text": "Make the first words you say to someone today kind ones.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Make the first words you say to someone today kind ones.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-431",
+      "text": "Before leaving home today, do one thing that makes someone else's morning easier.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Before leaving home today, do one thing that makes someone else's morning easier.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-432",
+      "text": "Choose someone this morning whose day you will quietly make easier. Don't tell them.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Choose someone this morning whose day you will quietly make easier. Don't tell them.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-433",
+      "text": "Find one person doing an essential job today and make their shift noticeably easier somehow.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Find one person doing an essential job today and make their shift noticeably easier somehow.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-434",
+      "text": "Ask someone to give you one small task from their to-do list, and complete it for them today.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Ask someone to give you one small task from their to-do list, and complete it for them today.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-435",
+      "text": "Take a different route today and find one opportunity to help along the way.",
+      "explanation": "Kindness begins with one intentional moment. Today, try this: Take a different route today and find one opportunity to help along the way.",
+      "category": "kindness",
+      "active": true,
+      "reflectionPrompt": "What would you like to remember about this act?"
+    },
+    {
+      "id": "dap-436",
+      "text": "Give a meal to someone who is hungry.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Give a meal to someone who is hungry.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-437",
+      "text": "Offer food or water to someone experiencing homelessness.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Offer food or water to someone experiencing homelessness.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-438",
+      "text": "Help serve or distribute food to people who need it.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Help serve or distribute food to people who need it.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-439",
+      "text": "Volunteer to help older people in your community.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Volunteer to help older people in your community.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-440",
+      "text": "Pay for a meal for someone who needs one, if you can.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Pay for a meal for someone who needs one, if you can.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-441",
+      "text": "Before breakfast, decide on one person you will help today, then find a way to do it.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Before breakfast, decide on one person you will help today, then find a way to do it.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-442",
+      "text": "Find someone working today and bring them a bottle of water.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Find someone working today and bring them a bottle of water.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-443",
+      "text": "Leave home with one extra snack or drink and give it to someone who needs it before you return.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Leave home with one extra snack or drink and give it to someone who needs it before you return.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-444",
+      "text": "Sit somewhere public for 10 minutes without your phone. If someone needs a hand, be the person who notices.",
+      "explanation": "Compassion begins with one intentional moment. Today, try this: Sit somewhere public for 10 minutes without your phone. If someone needs a hand, be the person who notices.",
+      "category": "compassion",
+      "active": true,
+      "reflectionPrompt": "How did this act of care feel?"
+    },
+    {
+      "id": "dap-445",
+      "text": "Buy an essential item for someone who cannot afford it, if you can.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Buy an essential item for someone who cannot afford it, if you can.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
+    },
+    {
+      "id": "dap-446",
+      "text": "Collect useful items from friends or family and donate them together.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Collect useful items from friends or family and donate them together.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
+    },
+    {
+      "id": "dap-447",
+      "text": "Give directly to a food bank or food-support organisation, if one exists near you.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Give directly to a food bank or food-support organisation, if one exists near you.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
+    },
+    {
+      "id": "dap-448",
+      "text": "Contribute to someone's education or learning, if you can.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Contribute to someone's education or learning, if you can.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
+    },
+    {
+      "id": "dap-449",
+      "text": "Help fund someone's essential need, if you can.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Help fund someone's essential need, if you can.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
+    },
+    {
+      "id": "dap-450",
+      "text": "Support a local organisation doing meaningful work, if you can.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Support a local organisation doing meaningful work, if you can.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
+    },
+    {
+      "id": "dap-451",
+      "text": "Give yourself a budget and use it only to improve someone else's day.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Give yourself a budget and use it only to improve someone else's day.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
+    },
+    {
+      "id": "dap-452",
+      "text": "Find something you were going to spend money on today that you don't actually need. Use part of that money to help someone instead.",
+      "explanation": "Generosity begins with one intentional moment. Today, try this: Find something you were going to spend money on today that you don't actually need. Use part of that money to help someone instead.",
+      "category": "generosity",
+      "active": true,
+      "reflectionPrompt": "What did giving make possible today?"
+    },
+    {
+      "id": "dap-453",
+      "text": "Register as a blood donor, if possible where you live.",
+      "explanation": "Courage begins with one intentional moment. Today, try this: Register as a blood donor, if possible where you live.",
+      "category": "courage",
+      "active": true,
+      "reflectionPrompt": "What felt brave about this moment?"
+    },
+    {
+      "id": "dap-454",
+      "text": "Learn basic first aid or CPR.",
+      "explanation": "Courage begins with one intentional moment. Today, try this: Learn basic first aid or CPR.",
+      "category": "courage",
+      "active": true,
+      "reflectionPrompt": "What felt brave about this moment?"
+    },
+    {
+      "id": "dap-455",
+      "text": "Encourage someone eligible to donate blood with you.",
+      "explanation": "Courage begins with one intentional moment. Today, try this: Encourage someone eligible to donate blood with you.",
+      "category": "courage",
+      "active": true,
+      "reflectionPrompt": "What felt brave about this moment?"
+    },
+    {
+      "id": "dap-456",
+      "text": "Pray to God today for someone you are struggling to forgive.",
+      "explanation": "Courage begins with one intentional moment. Today, try this: Pray to God today for someone you are struggling to forgive.",
+      "category": "courage",
+      "active": true,
+      "reflectionPrompt": "What felt brave about this moment?"
+    },
+    {
+      "id": "dap-457",
+      "text": "Pray for someone you don't get along with, and genuinely wish them well.",
+      "explanation": "Courage begins with one intentional moment. Today, try this: Pray for someone you don't get along with, and genuinely wish them well.",
+      "category": "courage",
+      "active": true,
+      "reflectionPrompt": "What felt brave about this moment?"
+    },
+    {
+      "id": "dap-458",
+      "text": "Volunteer for a cause in your community, if you can.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Volunteer for a cause in your community, if you can.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-459",
+      "text": "Sign up for a future volunteering opportunity.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Sign up for a future volunteering opportunity.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-460",
+      "text": "Help at a local community organisation.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Help at a local community organisation.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-461",
+      "text": "Join a cleanup of a shared or public space.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Join a cleanup of a shared or public space.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-462",
+      "text": "Offer to help at a community event.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Offer to help at a community event.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-463",
+      "text": "Pick up litter in a public place.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Pick up litter in a public place.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-464",
+      "text": "Clean up a shared space with other people.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Clean up a shared space with other people.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-465",
+      "text": "Support a community project with your time.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Support a community project with your time.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-466",
+      "text": "Ask a friend to volunteer with you.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Ask a friend to volunteer with you.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-467",
+      "text": "Get your friends together to help someone who needs it.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Get your friends together to help someone who needs it.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-468",
+      "text": "Get your family together to help someone in your community.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Get your family together to help someone in your community.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-469",
+      "text": "Invite your friends to clean up a shared public space together.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Invite your friends to clean up a shared public space together.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-470",
+      "text": "Choose one local problem and get a few people together to do something about it.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Choose one local problem and get a few people together to do something about it.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-471",
+      "text": "Ask someone you know to join you in today's Act of Peace.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Ask someone you know to join you in today's Act of Peace.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-472",
+      "text": "Share the App with 3 Friends.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Share the App with 3 Friends.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-473",
+      "text": "Share the App in your Family Group Chat.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Share the App in your Family Group Chat.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-474",
+      "text": "Pray today for peace somewhere in the world where people are suffering.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Pray today for peace somewhere in the world where people are suffering.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-475",
+      "text": "Do one helpful thing for someone today and ask them to pass a good deed forward to someone else.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Do one helpful thing for someone today and ask them to pass a good deed forward to someone else.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-476",
+      "text": "Gather three people and complete one Act of Peace together before the day ends.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Gather three people and complete one Act of Peace together before the day ends.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-477",
+      "text": "Send a message to a group chat with one purpose: organise one good thing you can actually complete together this week.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Send a message to a group chat with one purpose: organise one good thing you can actually complete together this week.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-478",
+      "text": "Ask three people, “What is one small problem around here we could fix?” Pick one answer and act on it.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Ask three people, “What is one small problem around here we could fix?” Pick one answer and act on it.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-479",
+      "text": "Find one good deed someone else is already doing and join them instead of starting your own.",
+      "explanation": "Community begins with one intentional moment. Today, try this: Find one good deed someone else is already doing and join them instead of starting your own.",
+      "category": "community",
+      "active": true,
+      "reflectionPrompt": "How did this strengthen your community?"
+    },
+    {
+      "id": "dap-480",
+      "text": "Ask a local organisation what kind of help they actually need — then help if you can.",
+      "explanation": "Understanding begins with one intentional moment. Today, try this: Ask a local organisation what kind of help they actually need — then help if you can.",
+      "category": "understanding",
+      "active": true,
+      "reflectionPrompt": "What did you learn from this act?"
+    },
+    {
+      "id": "dap-481",
+      "text": "Ask someone much older or younger than you for one piece of advice, then actually try it today.",
+      "explanation": "Understanding begins with one intentional moment. Today, try this: Ask someone much older or younger than you for one piece of advice, then actually try it today.",
+      "category": "understanding",
+      "active": true,
+      "reflectionPrompt": "What did you learn from this act?"
+    },
+    {
+      "id": "dap-482",
+      "text": "Ask someone what task they've been avoiding, and offer to do it together.",
+      "explanation": "Understanding begins with one intentional moment. Today, try this: Ask someone what task they've been avoiding, and offer to do it together.",
+      "category": "understanding",
+      "active": true,
+      "reflectionPrompt": "What did you learn from this act?"
+    },
+    {
+      "id": "dap-483",
+      "text": "Turn your next gathering with friends into an opportunity to help someone.",
+      "explanation": "Presence begins with one intentional moment. Today, try this: Turn your next gathering with friends into an opportunity to help someone.",
+      "category": "presence",
+      "active": true,
+      "reflectionPrompt": "What stayed with you after this moment?"
+    },
+    {
+      "id": "dap-484",
+      "text": "When you first see someone this morning, give them your full attention.",
+      "explanation": "Presence begins with one intentional moment. Today, try this: When you first see someone this morning, give them your full attention.",
+      "category": "presence",
+      "active": true,
+      "reflectionPrompt": "What stayed with you after this moment?"
+    },
+    {
+      "id": "dap-485",
+      "text": "Take one quiet minute this morning to thank God for the people in your life.",
+      "explanation": "Presence begins with one intentional moment. Today, try this: Take one quiet minute this morning to thank God for the people in your life.",
+      "category": "presence",
+      "active": true,
+      "reflectionPrompt": "What stayed with you after this moment?"
+    },
+    {
+      "id": "dap-486",
+      "text": "Before going to sleep tonight, pray for every person you met today.",
+      "explanation": "Presence begins with one intentional moment. Today, try this: Before going to sleep tonight, pray for every person you met today.",
+      "category": "presence",
+      "active": true,
+      "reflectionPrompt": "What stayed with you after this moment?"
     }
   ]
 }
