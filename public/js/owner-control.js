@@ -904,7 +904,10 @@ const OwnerControl = (() => {
     return `
       <section class="owner-section">
         <p class="owner-section__label">Community</p>
-        <h2 class="owner-h1" style="font-size:1.35rem;margin-bottom:8px">People & participation</h2>
+        <div class="owner-community-head">
+          <h2 class="owner-h1 owner-community-head__title">People & participation</h2>
+          <button type="button" class="owner-btn-ghost owner-btn-ghost--wide" id="owner-voice-activity">Voice Activity</button>
+        </div>
         <p class="owner-sub">Registered users, Voices pledged, and geographic intelligence from real participation data.</p>
       </section>
 
@@ -3238,6 +3241,9 @@ const OwnerControl = (() => {
         state.citySort = btn.getAttribute('data-city-sort');
         render();
       });
+    });
+    document.getElementById('owner-voice-activity')?.addEventListener('click', () => {
+      // Placeholder — Voice Activity panel wiring comes next.
     });
     root().querySelectorAll('[data-country-sort]').forEach((btn) => {
       btn.addEventListener('click', () => {
