@@ -1234,6 +1234,14 @@ async function uploadPartnershipLogo(partnershipId, dataUrl, fileName = '') {
 }
 
 async function buildOwnerPartnershipsLibrary() {
+  // Ensure catalog-trim purge progresses whenever Owner opens Daily Acts.
+  try {
+    const { purgeIncompleteArchivedAssignments } = require('./daily-peace');
+    await purgeIncompleteArchivedAssignments({ maxPages: 20 });
+  } catch (err) {
+    console.error('owner library purge:', err);
+  }
+
   const catalog = loadCatalogActs();
   const partnerships = await loadAllPartnerships({ fresh: true });
   const partnershipByAct = new Map();

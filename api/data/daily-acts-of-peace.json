@@ -1,6 +1,6 @@
 {
-  "version": 4,
-  "total": 403,
+  "version": 5,
+  "total": 233,
   "acts": [
     {
       "id": "dap-001",
@@ -14,22 +14,6 @@
       "id": "dap-002",
       "text": "Tell someone one thing you genuinely appreciate about them.",
       "explanation": "Connection begins with one intentional moment. Today, try this: Tell someone one thing you genuinely appreciate about them.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-003",
-      "text": "Hold the door for someone.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Hold the door for someone.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-004",
-      "text": "Let someone go ahead of you.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Let someone go ahead of you.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -49,14 +33,6 @@
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What are you grateful for after this act?"
-    },
-    {
-      "id": "dap-007",
-      "text": "Smile at three people today.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Smile at three people today.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What joy did you create or receive?"
     },
     {
       "id": "dap-008",
@@ -91,14 +67,6 @@
       "reflectionPrompt": "How did you help?"
     },
     {
-      "id": "dap-012",
-      "text": "Say “thank you” with real intention.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Say “thank you” with real intention.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What are you grateful for after this act?"
-    },
-    {
       "id": "dap-013",
       "text": "Tell a family member you love them.",
       "explanation": "Connection begins with one intentional moment. Today, try this: Tell a family member you love them.",
@@ -110,38 +78,6 @@
       "id": "dap-014",
       "text": "Send an old photo to someone who would appreciate the memory.",
       "explanation": "Connection begins with one intentional moment. Today, try this: Send an old photo to someone who would appreciate the memory.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-015",
-      "text": "Make someone laugh today.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Make someone laugh today.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What joy did you create or receive?"
-    },
-    {
-      "id": "dap-016",
-      "text": "Ask someone if they need help.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone if they need help.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-017",
-      "text": "Offer your seat to someone.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Offer your seat to someone.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-018",
-      "text": "Let someone merge in front of you in traffic.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Let someone merge in front of you in traffic.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -179,14 +115,6 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-023",
-      "text": "Give someone your full attention for five minutes.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Give someone your full attention for five minutes.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-024",
       "text": "Leave a positive review for a small business you love.",
       "explanation": "Connection begins with one intentional moment. Today, try this: Leave a positive review for a small business you love.",
@@ -219,52 +147,12 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-028",
-      "text": "Let someone finish speaking without interrupting.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Let someone finish speaking without interrupting.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-029",
-      "text": "Say something kind about someone when they are not there.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Say something kind about someone when they are not there.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-030",
-      "text": "Forgive a small mistake without making a big deal out of it.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Forgive a small mistake without making a big deal out of it.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What took courage for you today?"
-    },
-    {
-      "id": "dap-031",
-      "text": "Share something useful with someone who might need it.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Share something useful with someone who might need it.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-032",
       "text": "Ask an older person to tell you a story from their life.",
       "explanation": "Connection begins with one intentional moment. Today, try this: Ask an older person to tell you a story from their life.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-033",
-      "text": "Help someone carry something.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Help someone carry something.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
     },
     {
       "id": "dap-034",
@@ -283,70 +171,6 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-036",
-      "text": "Welcome someone who seems left out.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Welcome someone who seems left out.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-037",
-      "text": "Give someone the benefit of the doubt.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Give someone the benefit of the doubt.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-038",
-      "text": "Make eye contact and say hello.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Make eye contact and say hello.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-039",
-      "text": "Thank someone by name.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Thank someone by name.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What are you grateful for after this act?"
-    },
-    {
-      "id": "dap-040",
-      "text": "Write a short note of appreciation.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Write a short note of appreciation.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-041",
-      "text": "Offer to help someone before they ask.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Offer to help someone before they ask.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-042",
-      "text": "Celebrate someone else’s success.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Celebrate someone else’s success.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-043",
-      "text": "Send a message saying, “I’m thinking about you.”",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Send a message saying, “I’m thinking about you.”.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "How did that conversation make you feel?"
-    },
-    {
       "id": "dap-044",
       "text": "Ask someone what they need today.",
       "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone what they need today.",
@@ -363,33 +187,9 @@
       "reflectionPrompt": "What took courage for you today?"
     },
     {
-      "id": "dap-046",
-      "text": "Reply kindly, even when you are busy.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Reply kindly, even when you are busy.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-047",
-      "text": "Let someone else choose today.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Let someone else choose today.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-048",
       "text": "Tell someone about a positive impact they had on you.",
       "explanation": "Connection begins with one intentional moment. Today, try this: Tell someone about a positive impact they had on you.",
-      "category": "connection-kindness",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-049",
-      "text": "Make space for someone’s opinion.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Make space for someone’s opinion.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -435,14 +235,6 @@
       "reflectionPrompt": "How did you help?"
     },
     {
-      "id": "dap-055",
-      "text": "Cook something for someone you love.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Cook something for someone you love.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-056",
       "text": "Tell a sibling or close friend a favorite memory you have with them.",
       "explanation": "The people closest to you feel peace through presence. Today, try this: Tell a sibling or close friend a favorite memory you have with them.",
@@ -451,28 +243,12 @@
       "reflectionPrompt": "How did connecting with someone you love feel?"
     },
     {
-      "id": "dap-057",
-      "text": "Put your phone away during a conversation.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Put your phone away during a conversation.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "How did that conversation make you feel?"
-    },
-    {
       "id": "dap-058",
       "text": "Ask someone, “How can I support you today?”",
       "explanation": "The people closest to you feel peace through presence. Today, try this: Ask someone, “How can I support you today?”.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-059",
-      "text": "Do something thoughtful for someone at home.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Do something thoughtful for someone at home.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "How did connecting with someone you love feel?"
     },
     {
       "id": "dap-060",
@@ -523,62 +299,6 @@
       "reflectionPrompt": "How did connecting with someone you love feel?"
     },
     {
-      "id": "dap-066",
-      "text": "Let a loved one talk without trying to fix everything.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Let a loved one talk without trying to fix everything.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "How did that conversation make you feel?"
-    },
-    {
-      "id": "dap-067",
-      "text": "Plan something simple for someone you care about.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Plan something simple for someone you care about.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-068",
-      "text": "Help an older family member with technology.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Help an older family member with technology.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-069",
-      "text": "Ask someone to teach you something they know.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Ask someone to teach you something they know.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-070",
-      "text": "Say “I’m sorry” without adding an excuse.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Say “I’m sorry” without adding an excuse.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "What took courage for you today?"
-    },
-    {
-      "id": "dap-071",
-      "text": "Put away something that someone else usually has to deal with.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Put away something that someone else usually has to deal with.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-072",
-      "text": "Make someone at home a drink or snack.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Make someone at home a drink or snack.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "How did connecting with someone you love feel?"
-    },
-    {
       "id": "dap-073",
       "text": "Look through old photos with someone.",
       "explanation": "The people closest to you feel peace through presence. Today, try this: Look through old photos with someone.",
@@ -603,41 +323,9 @@
       "reflectionPrompt": "What joy did you create or receive?"
     },
     {
-      "id": "dap-076",
-      "text": "Tell someone you notice their effort.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Tell someone you notice their effort.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-077",
-      "text": "Give someone a break from a responsibility.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Give someone a break from a responsibility.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-078",
       "text": "Write down five things you love about someone.",
       "explanation": "The people closest to you feel peace through presence. Today, try this: Write down five things you love about someone.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-079",
-      "text": "Listen to a family member tell the same story again.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Listen to a family member tell the same story again.",
-      "category": "family",
-      "active": true,
-      "reflectionPrompt": "How did connecting with someone you love feel?"
-    },
-    {
-      "id": "dap-080",
-      "text": "Spend an hour with someone you love without multitasking.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Spend an hour with someone you love without multitasking.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -689,14 +377,6 @@
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-087",
-      "text": "Let go of one old grudge.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Let go of one old grudge.",
-      "category": "reconnecting",
-      "active": true,
-      "reflectionPrompt": "How did it feel to let that go?"
     },
     {
       "id": "dap-088",
@@ -771,22 +451,6 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-097",
-      "text": "Stop avoiding a conversation that could bring peace.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Stop avoiding a conversation that could bring peace.",
-      "category": "reconnecting",
-      "active": true,
-      "reflectionPrompt": "How did that conversation make you feel?"
-    },
-    {
-      "id": "dap-098",
-      "text": "Send forgiveness, even if only privately.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Send forgiveness, even if only privately.",
-      "category": "reconnecting",
-      "active": true,
-      "reflectionPrompt": "What took courage for you today?"
-    },
-    {
       "id": "dap-099",
       "text": "Tell someone from your past that you hope they are doing well.",
       "explanation": "Reaching out can reopen a door that still matters. Today, try this: Tell someone from your past that you hope they are doing well.",
@@ -799,22 +463,6 @@
       "text": "Reach out to someone who might be feeling alone.",
       "explanation": "Reaching out can reopen a door that still matters. Today, try this: Reach out to someone who might be feeling alone.",
       "category": "reconnecting",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-101",
-      "text": "Pick up five pieces of litter.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Pick up five pieces of litter.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "How did caring for the planet feel?"
-    },
-    {
-      "id": "dap-102",
-      "text": "Return something you borrowed.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Return something you borrowed.",
-      "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
     },
@@ -867,22 +515,6 @@
       "reflectionPrompt": "How did you help?"
     },
     {
-      "id": "dap-109",
-      "text": "Offer directions to someone who looks lost.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Offer directions to someone who looks lost.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-110",
-      "text": "Return a shopping cart.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Return a shopping cart.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-111",
       "text": "Leave a place cleaner than you found it.",
       "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Leave a place cleaner than you found it.",
@@ -915,22 +547,6 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-115",
-      "text": "Offer to help a neighbor.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Offer to help a neighbor.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-116",
-      "text": "Say hello to someone in your neighborhood.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Say hello to someone in your neighborhood.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-117",
       "text": "Support a local cause.",
       "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Support a local cause.",
@@ -939,60 +555,12 @@
       "reflectionPrompt": "What stayed with you after exploring this?"
     },
     {
-      "id": "dap-118",
-      "text": "Volunteer one hour of your time.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Volunteer one hour of your time.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-119",
-      "text": "Help someone who is new to your community.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Help someone who is new to your community.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
       "id": "dap-120",
       "text": "Donate books you no longer read.",
       "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Donate books you no longer read.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What did you learn?"
-    },
-    {
-      "id": "dap-121",
-      "text": "Leave water out for animals on a hot day.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Leave water out for animals on a hot day.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-122",
-      "text": "Thank someone working a difficult job.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Thank someone working a difficult job.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "What are you grateful for after this act?"
-    },
-    {
-      "id": "dap-123",
-      "text": "Pick up litter somewhere you did not create.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Pick up litter somewhere you did not create.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "How did caring for the planet feel?"
-    },
-    {
-      "id": "dap-124",
-      "text": "Share information about a local cause you believe in.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Share information about a local cause you believe in.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "What stayed with you after exploring this?"
     },
     {
       "id": "dap-125",
@@ -1043,14 +611,6 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-131",
-      "text": "Buy something from a small local business instead of a large chain.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Buy something from a small local business instead of a large chain.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-132",
       "text": "Leave a kind note for someone to find.",
       "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Leave a kind note for someone to find.",
@@ -1091,52 +651,12 @@
       "reflectionPrompt": "What are you grateful for after this act?"
     },
     {
-      "id": "dap-137",
-      "text": "Help someone who seems confused.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Help someone who seems confused.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-138",
-      "text": "Give directions patiently.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Give directions patiently.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-139",
-      "text": "Make your neighborhood slightly better today.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Make your neighborhood slightly better today.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-140",
-      "text": "Do something helpful without being asked.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Do something helpful without being asked.",
-      "category": "community",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
       "id": "dap-141",
       "text": "Take a walk and pick up litter along the way.",
       "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take a walk and pick up litter along the way.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "How did caring for the planet feel?"
-    },
-    {
-      "id": "dap-142",
-      "text": "Use a reusable bottle today.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Use a reusable bottle today.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
       "id": "dap-143",
@@ -1147,33 +667,9 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-144",
-      "text": "Turn off lights you do not need.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Turn off lights you do not need.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-145",
       "text": "Take a shorter shower.",
       "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take a shorter shower.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-146",
-      "text": "Avoid buying something you do not really need.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Avoid buying something you do not really need.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-147",
-      "text": "Repair something instead of replacing it.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Repair something instead of replacing it.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1203,49 +699,9 @@
       "reflectionPrompt": "How did caring for the planet feel?"
     },
     {
-      "id": "dap-151",
-      "text": "Spend ten minutes outside.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Spend ten minutes outside.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-152",
-      "text": "Learn the name of a tree, plant, or bird near you.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Learn the name of a tree, plant, or bird near you.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What did you learn?"
-    },
-    {
       "id": "dap-153",
       "text": "Take your own bag when shopping.",
       "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take your own bag when shopping.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-154",
-      "text": "Avoid single-use plastic for one day.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Avoid single-use plastic for one day.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-155",
-      "text": "Eat one meal with less waste.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Eat one meal with less waste.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-156",
-      "text": "Save food that would otherwise be thrown away.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Save food that would otherwise be thrown away.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1259,28 +715,12 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-158",
-      "text": "Turn off unnecessary devices.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Turn off unnecessary devices.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-159",
       "text": "Spend time in nature without your phone.",
       "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Spend time in nature without your phone.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "How did caring for the planet feel?"
-    },
-    {
-      "id": "dap-160",
-      "text": "Notice five beautiful things in the natural world.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Notice five beautiful things in the natural world.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
       "id": "dap-161",
@@ -1304,78 +744,6 @@
       "reflectionPrompt": "What stayed with you after exploring this?"
     },
     {
-      "id": "dap-163",
-      "text": "Choose to reuse something today.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Choose to reuse something today.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-164",
-      "text": "Take care of a public space.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take care of a public space.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-165",
-      "text": "Do not leave anything behind when you visit nature.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Do not leave anything behind when you visit nature.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "How did caring for the planet feel?"
-    },
-    {
-      "id": "dap-166",
-      "text": "Learn one thing about your local environment.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Learn one thing about your local environment.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What did you learn?"
-    },
-    {
-      "id": "dap-167",
-      "text": "Reduce waste in one part of your daily routine.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Reduce waste in one part of your daily routine.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-168",
-      "text": "Walk somewhere slowly enough to notice your surroundings.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Walk somewhere slowly enough to notice your surroundings.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-169",
-      "text": "Take care of an animal today.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take care of an animal today.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-170",
-      "text": "Leave the world a little cleaner than you found it.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Leave the world a little cleaner than you found it.",
-      "category": "planet",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-171",
-      "text": "Take ten minutes without your phone.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Take ten minutes without your phone.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-172",
       "text": "Go for a walk without listening to anything.",
       "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Go for a walk without listening to anything.",
@@ -1392,44 +760,12 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-174",
-      "text": "Forgive yourself for one past mistake.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Forgive yourself for one past mistake.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What took courage for you today?"
-    },
-    {
-      "id": "dap-175",
-      "text": "Stop working when you genuinely need rest.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Stop working when you genuinely need rest.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-176",
       "text": "Get enough sleep tonight.",
       "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Get enough sleep tonight.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-177",
-      "text": "Take a slow breath before reacting to something.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Take a slow breath before reacting to something.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-178",
-      "text": "Do something just because you enjoy it.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Do something just because you enjoy it.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What stayed with you after exploring this?"
     },
     {
       "id": "dap-179",
@@ -1443,38 +779,6 @@
       "id": "dap-180",
       "text": "Spend time alone without distracting yourself.",
       "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Spend time alone without distracting yourself.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-181",
-      "text": "Let yourself change your mind.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Let yourself change your mind.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-182",
-      "text": "Take a break without feeling guilty.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Take a break without feeling guilty.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-183",
-      "text": "Say no to something you do not have the energy for.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Say no to something you do not have the energy for.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-184",
-      "text": "Spend one hour away from social media.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Spend one hour away from social media.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1496,14 +800,6 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-187",
-      "text": "Take care of your body.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Take care of your body.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-188",
       "text": "Do something you have been putting off that will make you feel better.",
       "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Do something you have been putting off that will make you feel better.",
@@ -1515,30 +811,6 @@
       "id": "dap-189",
       "text": "Clean a space that has been bothering you.",
       "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Clean a space that has been bothering you.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-190",
-      "text": "Finish one small task.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Finish one small task.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-191",
-      "text": "Listen to your favorite song with no distractions.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Listen to your favorite song with no distractions.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-192",
-      "text": "Sit quietly for five minutes.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Sit quietly for five minutes.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1568,380 +840,12 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-196",
-      "text": "Replace one negative thought with a fairer one.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Replace one negative thought with a fairer one.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-197",
-      "text": "Spend time doing something creative.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Spend time doing something creative.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-198",
-      "text": "Put your phone in another room for an hour.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Put your phone in another room for an hour.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-199",
-      "text": "Take a proper lunch break.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Take a proper lunch break.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-200",
-      "text": "Give yourself permission to have an imperfect day.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Give yourself permission to have an imperfect day.",
-      "category": "self",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-201",
-      "text": "Pause before responding when you are angry.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Pause before responding when you are angry.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-202",
-      "text": "Listen to understand, not just to reply.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Listen to understand, not just to reply.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-203",
-      "text": "Ask a question instead of making an assumption.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Ask a question instead of making an assumption.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-204",
-      "text": "Admit when you do not know something.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Admit when you do not know something.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-205",
-      "text": "Say “I was wrong” when you were.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Say “I was wrong” when you were.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-206",
-      "text": "Have a difficult conversation calmly.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Have a difficult conversation calmly.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "How did that conversation make you feel?"
-    },
-    {
-      "id": "dap-207",
-      "text": "Let someone disagree with you.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Let someone disagree with you.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-208",
       "text": "Avoid gossip for one day.",
       "explanation": "How we speak can either harden or heal a moment. Today, try this: Avoid gossip for one day.",
       "category": "communication",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-209",
-      "text": "Stop yourself from spreading a negative rumor.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Stop yourself from spreading a negative rumor.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What did you learn?"
-    },
-    {
-      "id": "dap-210",
-      "text": "Ask someone what they meant before assuming the worst.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Ask someone what they meant before assuming the worst.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-211",
-      "text": "Speak about someone with the same respect you would use in front of them.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Speak about someone with the same respect you would use in front of them.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-212",
-      "text": "Do not interrupt someone today.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Do not interrupt someone today.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-213",
-      "text": "Let someone finish their point.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Let someone finish their point.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-214",
-      "text": "Disagree without attacking.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Disagree without attacking.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-215",
-      "text": "Say what you mean clearly and kindly.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Say what you mean clearly and kindly.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-216",
-      "text": "Avoid responding immediately when emotional.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Avoid responding immediately when emotional.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-217",
-      "text": "Thank someone for being honest with you.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Thank someone for being honest with you.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What took courage for you today?"
-    },
-    {
-      "id": "dap-218",
-      "text": "Ask for feedback and listen without defending yourself.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Ask for feedback and listen without defending yourself.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-219",
-      "text": "Say something kind in a conversation where negativity would be easier.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Say something kind in a conversation where negativity would be easier.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "How did that conversation make you feel?"
-    },
-    {
-      "id": "dap-220",
-      "text": "Choose curiosity over judgment.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Choose curiosity over judgment.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-221",
-      "text": "Avoid complaining about someone who cannot respond.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Avoid complaining about someone who cannot respond.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-222",
-      "text": "Ask someone to explain their perspective.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Ask someone to explain their perspective.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-223",
-      "text": "Apologize for interrupting someone.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Apologize for interrupting someone.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-224",
-      "text": "Give someone space to speak.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Give someone space to speak.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-225",
-      "text": "End one unnecessary argument.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: End one unnecessary argument.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-226",
-      "text": "Replace criticism with a useful suggestion.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Replace criticism with a useful suggestion.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-227",
-      "text": "Tell the truth kindly.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Tell the truth kindly.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-228",
-      "text": "Refuse to join in making fun of someone.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Refuse to join in making fun of someone.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-229",
-      "text": "Let a minor disagreement go.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Let a minor disagreement go.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-230",
-      "text": "Respond with patience when someone is difficult.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Respond with patience when someone is difficult.",
-      "category": "communication",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-231",
-      "text": "Help someone with something they find difficult.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone with something they find difficult.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-232",
-      "text": "Teach someone something you know.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Teach someone something you know.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-233",
-      "text": "Offer your skills to someone who could benefit.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Offer your skills to someone who could benefit.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-234",
-      "text": "Help someone prepare for an important moment.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone prepare for an important moment.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-235",
-      "text": "Share useful advice when someone asks for it.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Share useful advice when someone asks for it.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-236",
-      "text": "Help someone understand something without making them feel stupid.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone understand something without making them feel stupid.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-237",
-      "text": "Offer to proofread or review someone’s work.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Offer to proofread or review someone’s work.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-238",
-      "text": "Help someone move something heavy.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone move something heavy.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-239",
-      "text": "Help a child learn something.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help a child learn something.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-240",
-      "text": "Teach an older person how to use a piece of technology.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Teach an older person how to use a piece of technology.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-241",
-      "text": "Offer someone a ride if they need one.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Offer someone a ride if they need one.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-242",
-      "text": "Help someone organize something overwhelming.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone organize something overwhelming.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
     },
     {
       "id": "dap-243",
@@ -1960,36 +864,12 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-245",
-      "text": "Share knowledge instead of keeping it to yourself.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Share knowledge instead of keeping it to yourself.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-246",
       "text": "Help someone feel more confident.",
       "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone feel more confident.",
       "category": "helping",
       "active": true,
       "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-247",
-      "text": "Give someone time when that is what they need.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Give someone time when that is what they need.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-248",
-      "text": "Ask someone, “What would make this easier?”",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Ask someone, “What would make this easier?”.",
-      "category": "helping",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
       "id": "dap-249",
@@ -2008,70 +888,6 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-251",
-      "text": "Say sorry first.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Say sorry first.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What took courage for you today?"
-    },
-    {
-      "id": "dap-252",
-      "text": "Tell someone how you really feel.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Tell someone how you really feel.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-253",
-      "text": "Reach out even if you are afraid they might not reply.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Reach out even if you are afraid they might not reply.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-254",
-      "text": "Defend someone being treated unfairly.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Defend someone being treated unfairly.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-255",
-      "text": "Include someone others are excluding.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Include someone others are excluding.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-256",
-      "text": "Speak up when a joke is cruel.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Speak up when a joke is cruel.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What joy did you create or receive?"
-    },
-    {
-      "id": "dap-257",
-      "text": "Admit a mistake publicly.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Admit a mistake publicly.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-258",
-      "text": "Tell someone you appreciate them before it is too late.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Tell someone you appreciate them before it is too late.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-259",
       "text": "Start a conversation with someone you normally would not approach.",
       "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Start a conversation with someone you normally would not approach.",
@@ -2080,68 +896,12 @@
       "reflectionPrompt": "How did that conversation make you feel?"
     },
     {
-      "id": "dap-260",
-      "text": "Forgive someone for a small hurt.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Forgive someone for a small hurt.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What took courage for you today?"
-    },
-    {
-      "id": "dap-261",
-      "text": "Ask for forgiveness.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Ask for forgiveness.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What took courage for you today?"
-    },
-    {
-      "id": "dap-262",
-      "text": "Thank someone face-to-face.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Thank someone face-to-face.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What are you grateful for after this act?"
-    },
-    {
       "id": "dap-263",
       "text": "Tell someone you love them.",
       "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Tell someone you love them.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-264",
-      "text": "Say no when you need to protect your peace.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Say no when you need to protect your peace.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-265",
-      "text": "Walk away from an argument you do not need to win.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Walk away from an argument you do not need to win.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-266",
-      "text": "Ask for help when you need it.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Ask for help when you need it.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-267",
-      "text": "Be honest about something small instead of avoiding it.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Be honest about something small instead of avoiding it.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What took courage for you today?"
     },
     {
       "id": "dap-268",
@@ -2160,41 +920,9 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-270",
-      "text": "Take responsibility without blaming someone else.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Take responsibility without blaming someone else.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-271",
       "text": "Reach out to someone you had an argument with.",
       "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Reach out to someone you had an argument with.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-272",
-      "text": "Admit when someone else had a better idea.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Admit when someone else had a better idea.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-273",
-      "text": "Say something positive about someone you usually compete with.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Say something positive about someone you usually compete with.",
-      "category": "courage",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-274",
-      "text": "Ask someone for their perspective when you disagree.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Ask someone for their perspective when you disagree.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2227,14 +955,6 @@
       "id": "dap-278",
       "text": "Play a song that makes someone smile.",
       "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Play a song that makes someone smile.",
-      "category": "joy",
-      "active": true,
-      "reflectionPrompt": "What joy did you create or receive?"
-    },
-    {
-      "id": "dap-279",
-      "text": "Make someone laugh.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Make someone laugh.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What joy did you create or receive?"
@@ -2320,14 +1040,6 @@
       "reflectionPrompt": "What joy did you create or receive?"
     },
     {
-      "id": "dap-290",
-      "text": "Make someone feel included.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Make someone feel included.",
-      "category": "joy",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-291",
       "text": "Ask someone to join you instead of doing something alone.",
       "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Ask someone to join you instead of doing something alone.",
@@ -2342,22 +1054,6 @@
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-293",
-      "text": "Tell a joke.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Tell a joke.",
-      "category": "joy",
-      "active": true,
-      "reflectionPrompt": "What joy did you create or receive?"
-    },
-    {
-      "id": "dap-294",
-      "text": "Share something beautiful you discovered today.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Share something beautiful you discovered today.",
-      "category": "joy",
-      "active": true,
-      "reflectionPrompt": "What did you learn?"
     },
     {
       "id": "dap-295",
@@ -2504,28 +1200,12 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-313",
-      "text": "Ask before judging something you do not understand.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Ask before judging something you do not understand.",
-      "category": "beyond",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-314",
       "text": "Read an article from a country outside your own.",
       "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Read an article from a country outside your own.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you learn?"
-    },
-    {
-      "id": "dap-315",
-      "text": "Listen to music in a language you do not speak.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Listen to music in a language you do not speak.",
-      "category": "beyond",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
       "id": "dap-316",
@@ -2558,14 +1238,6 @@
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you learn?"
-    },
-    {
-      "id": "dap-320",
-      "text": "Remember that everyone you meet has a story you do not know.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Remember that everyone you meet has a story you do not know.",
-      "category": "beyond",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
       "id": "dap-321",
@@ -2680,22 +1352,6 @@
       "reflectionPrompt": "What would you like to remember about this act?"
     },
     {
-      "id": "dap-335",
-      "text": "Help someone who cannot easily help themselves.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Help someone who cannot easily help themselves.",
-      "category": "bigger",
-      "active": true,
-      "reflectionPrompt": "How did you help?"
-    },
-    {
-      "id": "dap-336",
-      "text": "Spend an hour doing something entirely for someone else.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Spend an hour doing something entirely for someone else.",
-      "category": "bigger",
-      "active": true,
-      "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
       "id": "dap-337",
       "text": "Support a friend’s dream in a practical way.",
       "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Support a friend’s dream in a practical way.",
@@ -2710,14 +1366,6 @@
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
-    },
-    {
-      "id": "dap-339",
-      "text": "Start a conversation that brings understanding instead of division.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Start a conversation that brings understanding instead of division.",
-      "category": "bigger",
-      "active": true,
-      "reflectionPrompt": "How did that conversation make you feel?"
     },
     {
       "id": "dap-340",
@@ -2770,14 +1418,6 @@
       "category": "special-choir",
       "active": true,
       "reflectionPrompt": "What did you notice about the world today?"
-    },
-    {
-      "id": "dap-346",
-      "text": "Sing for someone who needs a smile.",
-      "explanation": "Music has always been a language of togetherness. Today, try this: Sing for someone who needs a smile.",
-      "category": "special-choir",
-      "active": true,
-      "reflectionPrompt": "What joy did you create or receive?"
     },
     {
       "id": "dap-347",

@@ -4,6 +4,7 @@ const { readBlobJson, writeJson, findUserByDevice, assertBlobConfigured } = requ
 
 const ROOT = 'wc-data/daily-peace';
 const AGGREGATES_PATH = `${ROOT}/aggregates.json`;
+const PURGE_MIGRATION_PATH = `${ROOT}/migrations/purge-archived-incomplete-v5.json`;
 const RECENT_ACT_LIMIT = 90;
 const HISTORY_LIST_LIMIT = 400;
 const FUTURE_PLACEHOLDER_DAYS = 7;
@@ -74,12 +75,47 @@ const CATALOG_TO_THEME = {
 };
 
 let catalogCache = null;
+let archiveCache = null;
 
 function loadCatalog() {
   if (!catalogCache) {
     catalogCache = require(path.join(__dirname, '../data/daily-acts-of-peace.json'));
   }
   return catalogCache.acts.filter((act) => act.active !== false);
+}
+
+/** Removed acts kept only so completed history can still resolve text/theme. */
+function loadArchivedCatalog() {
+  if (!archiveCache) {
+    try {
+      archiveCache = require(path.join(__dirname, '../data/daily-acts-of-peace-archive.json'));
+    } catch {
+      archiveCache = { acts: [] };
+    }
+  }
+  return Array.isArray(archiveCache.acts) ? archiveCache.acts : [];
+}
+
+function loadArchivedActsById() {
+  return new Map(loadArchivedCatalog().map((act) => [act.id, act]));
+}
+
+function resolveActDefinition(actId, liveActsById) {
+  if (!actId) return null;
+  if (liveActsById && typeof liveActsById.get === 'function') {
+    const live = liveActsById.get(actId);
+    if (live) return live;
+  }
+  return loadArchivedActsById().get(actId) || null;
+}
+
+/** Live catalog for assignable acts; archive only for already-completed history. */
+function resolveActForAssignmentRow(row, liveActsById) {
+  if (!row?.act_id) return null;
+  const live = liveActsById?.get?.(row.act_id) || null;
+  if (live) return live;
+  if (row.completed) return resolveActDefinition(row.act_id, liveActsById);
+  return null;
 }
 
 function getUtcDateString(date = new Date()) {
@@ -140,10 +176,11 @@ async function readUserDailyAct(userId, date) {
 }
 
 async function listUserAssignmentRows(userId, { limit = HISTORY_LIST_LIMIT } = {}) {
-  const { list } = require('@vercel/blob');
+  const { list, del } = require('@vercel/blob');
   assertBlobConfigured();
   const prefix = userHistoryPrefix(userId);
   const { blobs } = await list({ prefix, limit });
+  const deletedIds = new Set(loadArchivedCatalog().map((act) => act.id));
   const entries = await Promise.all(
     blobs
       .filter((b) => b.pathname.endsWith('.json'))
@@ -153,6 +190,15 @@ async function listUserAssignmentRows(userId, { limit = HISTORY_LIST_LIMIT } = {
           if (!row) return null;
           const pathDate = assignmentDateFromPath(blob.pathname);
           if (pathDate) row.date = pathDate;
+          // Incomplete assignments for removed catalog acts must not linger.
+          if (deletedIds.has(row.act_id) && row.completed !== true) {
+            try {
+              await del(blob.pathname);
+            } catch {
+              /* ignore */
+            }
+            return null;
+          }
           return row;
         } catch {
           return null;
@@ -162,6 +208,115 @@ async function listUserAssignmentRows(userId, { limit = HISTORY_LIST_LIMIT } = {
   return entries
     .filter(Boolean)
     .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+}
+
+/**
+ * One-shot (resumable) purge: delete incomplete assignments whose act lives only
+ * in the archive; keep completed history. Also pause partnerships tied to those acts.
+ */
+async function purgeIncompleteArchivedAssignments({ maxPages = 8 } = {}) {
+  assertBlobConfigured();
+  const deletedIds = new Set(loadArchivedCatalog().map((act) => act.id));
+  if (!deletedIds.size) {
+    return { status: 'done', deletedIncomplete: 0, keptCompleted: 0, partnershipsUpdated: 0 };
+  }
+
+  let state = null;
+  try {
+    state = await readBlobJson(PURGE_MIGRATION_PATH);
+  } catch {
+    state = null;
+  }
+  if (state?.status === 'done') {
+    return state;
+  }
+
+  const { list, del } = require('@vercel/blob');
+  let cursor = state?.cursor || undefined;
+  let deletedIncomplete = Number(state?.deletedIncomplete) || 0;
+  let keptCompleted = Number(state?.keptCompleted) || 0;
+  let pages = 0;
+
+  do {
+    const page = await list({
+      prefix: `${ROOT}/assignments/`,
+      limit: 1000,
+      cursor,
+    });
+    pages += 1;
+    for (const blob of page.blobs || []) {
+      if (!blob.pathname.endsWith('.json')) continue;
+      let row;
+      try {
+        row = await readBlobJson(blob.pathname);
+      } catch {
+        continue;
+      }
+      if (!deletedIds.has(row?.act_id)) continue;
+      if (row.completed === true) {
+        keptCompleted += 1;
+        continue;
+      }
+      try {
+        await del(blob.pathname);
+        deletedIncomplete += 1;
+      } catch {
+        /* keep going */
+      }
+    }
+    cursor = page.cursor || null;
+  } while (cursor && pages < maxPages);
+
+  let partnershipsUpdated = Number(state?.partnershipsUpdated) || 0;
+  if (!cursor) {
+    // Final page: clean Owner partnerships that still reference archived acts.
+    const { loadAllPartnerships, invalidatePartnershipsCache } = require('./daily-peace-partnerships');
+    const partnerships = await loadAllPartnerships({ fresh: true }).catch(() => []);
+    for (const p of partnerships || []) {
+      if (!p?.actId || !deletedIds.has(p.actId)) continue;
+      if (p.partnershipType === 'company_created') continue;
+      const updated = {
+        ...p,
+        status: p.status === 'cancelled' ? p.status : 'paused',
+        actId: null,
+        notes: [p.notes, `Catalog act removed; partnership paused ${new Date().toISOString().slice(0, 10)}.`]
+          .filter(Boolean)
+          .join('\n'),
+        updatedAt: new Date().toISOString(),
+      };
+      await writeJson(`${ROOT}/partnerships/${p.id}.json`, updated, { overwrite: true });
+      partnershipsUpdated += 1;
+    }
+    if (partnershipsUpdated) {
+      await invalidatePartnershipsCache().catch(() => {});
+    }
+  }
+
+  const next = {
+    status: cursor ? 'pending' : 'done',
+    cursor: cursor || null,
+    deletedIncomplete,
+    keptCompleted,
+    partnershipsUpdated,
+    updatedAt: new Date().toISOString(),
+  };
+  await writeJson(PURGE_MIGRATION_PATH, next, { overwrite: true });
+  return next;
+}
+
+let purgeKickoff = null;
+function kickArchivedAssignmentPurge() {
+  if (purgeKickoff) return purgeKickoff;
+  purgeKickoff = purgeIncompleteArchivedAssignments({ maxPages: 12 })
+    .catch((err) => {
+      console.error('archived daily-act purge failed:', err);
+      return null;
+    })
+    .finally(() => {
+      // Allow another pass if still pending.
+      purgeKickoff = null;
+    });
+  return purgeKickoff;
 }
 
 async function listRecentUserActIds(userId, beforeDate, limit = RECENT_ACT_LIMIT) {
@@ -353,10 +508,11 @@ async function assignFreshDailyAct(user, date, actsById, recentExtraIds = []) {
   } catch {
     const raced = await readUserDailyAct(user.id, date);
     if (raced) {
-      const racedAct = actsById.get(raced.act_id);
+      const racedNorm = normalizeRow(raced);
+      const racedAct = resolveActForAssignmentRow(racedNorm, actsById);
       if (racedAct) {
-        const mapped = mapUserDailyAct(raced, racedAct, { todayDate: date });
-        return attachSponsorshipToMapped(mapped, normalizeRow(raced));
+        const mapped = mapUserDailyAct(racedNorm, racedAct, { todayDate: date });
+        return attachSponsorshipToMapped(mapped, racedNorm);
       }
     }
     throw new Error('Could not assign daily act. Please try again.');
@@ -447,6 +603,7 @@ async function emitSponsorEvent(row, user, eventType) {
 
 async function getOrAssignDailyAct(deviceId, dateInput) {
   assertBlobConfigured();
+  kickArchivedAssignmentPurge();
   const date = resolveDate(dateInput);
   const user = await findUserByDevice(deviceId);
   if (!user) throw new Error('user not found');
@@ -456,10 +613,15 @@ async function getOrAssignDailyAct(deviceId, dateInput) {
   const actsById = await getAllActsById();
 
   if (existing) {
-    const act = actsById.get(existing.act_id);
-    if (!act) {
-      const mapped = await assignFreshDailyAct(user, date, actsById, [existing.act_id]);
-      return mapped;
+    const liveAct = actsById.get(existing.act_id);
+    if (!liveAct) {
+      // Incomplete assignment pointing at a removed act — give them a live one.
+      if (!existing.completed) {
+        return assignFreshDailyAct(user, date, actsById, [existing.act_id]);
+      }
+      // Completed rows keep history via the archive.
+      const archived = resolveActDefinition(existing.act_id, actsById);
+      return mapUserDailyAct(normalizeRow(existing), archived, { todayDate: date });
     }
     const patched = normalizeRow({
       ...existing,
@@ -471,7 +633,7 @@ async function getOrAssignDailyAct(deviceId, dateInput) {
       await writeJson(userDailyActPath(user.id, date), patched, { overwrite: true });
     }
     const linked = await bindLiveSponsorship(patched, user);
-    const mapped = mapUserDailyAct(linked, act, { todayDate: date });
+    const mapped = mapUserDailyAct(linked, liveAct, { todayDate: date });
     return attachSponsorshipToMapped(mapped, linked);
   }
 
@@ -553,8 +715,12 @@ async function getImpact(deviceId, todayInput) {
 
   for (const raw of rows) {
     const row = normalizeRow(raw);
-    const act = actsById.get(row.act_id);
-    if (!act) continue;
+    const act = resolveActDefinition(row.act_id, actsById);
+    if (!act) {
+      // Incomplete past assignments for deleted acts are purged by migration;
+      // skip orphans that cannot be resolved.
+      continue;
+    }
 
     const mapped = mapUserDailyAct(row, act, { todayDate });
     if (row.completed) {
@@ -564,6 +730,8 @@ async function getImpact(deviceId, todayInput) {
       if (knownThemeIds.has(themeId)) experiencedThemes.add(themeId);
       if (row.partnership_id) partnerDailyActsCompleted += 1;
     } else if (row.date < todayDate) {
+      // Only keep still-open rows whose act is still in the live catalog.
+      if (!actsById.get(row.act_id)) continue;
       stillOpen.push(mapped);
     }
   }
@@ -610,7 +778,7 @@ async function getCalendarMonth(deviceId, monthInput, todayInput) {
     const row = normalizeRow(raw);
     if (!row.date || !row.date.startsWith(month)) continue;
     if (!row.completed) continue;
-    const act = actsById.get(row.act_id);
+    const act = resolveActDefinition(row.act_id, actsById);
     days[row.date] = mapUserDailyAct(row, act, { todayDate });
   }
 
@@ -629,14 +797,18 @@ async function completeAssignment(deviceId, assignmentDateInput, todayInput, { s
 
   const { getAllActsById } = require('./daily-peace-partnerships');
   const actsById = await getAllActsById();
-  const act = actsById.get(row.act_id);
-  if (!act) throw new Error('assigned act not found in catalog');
-
   const linked = await bindLiveSponsorship(normalizeRow(row), user);
+  const act = resolveActForAssignmentRow(linked, actsById);
+  if (!act) throw new Error('assigned act not found in catalog');
 
   if (linked.completed) {
     const mapped = mapUserDailyAct(linked, act, { todayDate });
     return attachSponsorshipToMapped(mapped, linked);
+  }
+
+  // Incomplete rows must use a live catalog act — archived acts cannot be newly completed.
+  if (!actsById.get(linked.act_id)) {
+    throw new Error('assigned act not found in catalog');
   }
 
   const now = new Date().toISOString();
@@ -678,14 +850,15 @@ async function dismissDailyActNotification(deviceId, dateInput) {
   if (!row) throw new Error('no daily act assigned for today');
 
   const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
-  const act = actsById.get(row.act_id);
-  if (!act) {
-    await assignFreshDailyAct(user, date, actsById, [row.act_id]);
+  const normalized = normalizeRow(row);
+  let act = resolveActForAssignmentRow(normalized, actsById);
+  if (!act || (!normalized.completed && !actsById.get(normalized.act_id))) {
+    await assignFreshDailyAct(user, date, actsById, [normalized.act_id]);
     throw new Error('Today’s act was updated. Please open it again.');
   }
 
-  if (row.notification_dismissed || row.completed) {
-    return mapUserDailyAct(normalizeRow(row), act, { todayDate: date });
+  if (normalized.notification_dismissed || normalized.completed) {
+    return mapUserDailyAct(normalized, act, { todayDate: date });
   }
 
   const updated = normalizeRow({
@@ -710,27 +883,31 @@ async function saveReflection(deviceId, assignmentDateInput, todayInput, reflect
 
   const { getAllActsById } = require('./daily-peace-partnerships');
   const actsById = await getAllActsById();
-  const act = actsById.get(row.act_id);
+  const normalized = normalizeRow(row);
+  const act = resolveActForAssignmentRow(normalized, actsById);
   if (!act) throw new Error('assigned act not found in catalog');
+  if (!normalized.completed && !actsById.get(normalized.act_id)) {
+    throw new Error('assigned act not found in catalog');
+  }
 
   const text = String(reflectionText || '').trim().slice(0, 4000);
   const now = new Date().toISOString();
-  const alreadyCompleted = !!row.completed;
+  const alreadyCompleted = !!normalized.completed;
   const completedOnAssignedDay = alreadyCompleted
-    ? !!row.completed_on_assigned_day
+    ? !!normalized.completed_on_assigned_day
     : todayDate === assignmentDate;
 
   // Reflection UI only appears after the user completes an act.
   // If the completion write has not propagated yet, complete + save in one write.
   const updated = normalizeRow({
-    ...row,
+    ...normalized,
     completed: true,
-    completed_at: row.completed_at || now,
+    completed_at: normalized.completed_at || now,
     completed_on_assigned_day: completedOnAssignedDay,
-    completion_source: row.completion_source
+    completion_source: normalized.completion_source
       || (completedOnAssignedDay ? 'daily' : 'still_open'),
     notification_dismissed: true,
-    notification_dismissed_at: row.notification_dismissed_at || now,
+    notification_dismissed_at: normalized.notification_dismissed_at || now,
     reflection: text || null,
     reflection_at: text ? now : null,
   });
@@ -754,7 +931,7 @@ async function markViewed(deviceId, assignmentDateInput, todayInput) {
 
   const { getAllActsById } = require('./daily-peace-partnerships');
   const actsById = await getAllActsById();
-  const act = actsById.get(row.act_id);
+  const act = resolveActForAssignmentRow(normalizeRow(row), actsById);
   if (!act) throw new Error('assigned act not found in catalog');
 
   const linked = await bindLiveSponsorship(normalizeRow(row), user);
@@ -791,7 +968,7 @@ async function trackInteraction(deviceId, assignmentDateInput, todayInput, inter
   if (!row) throw new Error('no daily act found');
 
   const actsById = new Map(loadCatalog().map((act) => [act.id, act]));
-  const act = actsById.get(row.act_id);
+  const act = resolveActForAssignmentRow(normalizeRow(row), actsById);
   if (!act) throw new Error('assigned act not found in catalog');
 
   const interactions = {
@@ -822,7 +999,7 @@ async function getAssignment(deviceId, assignmentDateInput, todayInput) {
 
   const { getAllActsById } = require('./daily-peace-partnerships');
   const actsById = await getAllActsById();
-  const act = actsById.get(row.act_id);
+  const act = resolveActForAssignmentRow(normalizeRow(row), actsById);
   if (!act) throw new Error('assigned act not found in catalog');
 
   const linked = await bindLiveSponsorship(normalizeRow(row), user);
@@ -849,7 +1026,7 @@ async function trackSponsorLogoImpression(deviceId, assignmentDateInput, todayIn
 
   const { getAllActsById, recordSponsorEvent } = require('./daily-peace-partnerships');
   const actsById = await getAllActsById();
-  const act = actsById.get(row.act_id);
+  const act = resolveActForAssignmentRow(row, actsById);
   if (!act) throw new Error('assigned act not found in catalog');
 
   await recordSponsorEvent({
@@ -881,7 +1058,7 @@ async function trackSponsorLogoClick(deviceId, assignmentDateInput, todayInput, 
 
   const { getAllActsById, recordSponsorEvent, getPartnershipById } = require('./daily-peace-partnerships');
   const actsById = await getAllActsById();
-  const act = actsById.get(row.act_id);
+  const act = resolveActForAssignmentRow(row, actsById);
   if (!act) throw new Error('assigned act not found in catalog');
 
   await recordSponsorEvent({
@@ -925,7 +1102,7 @@ async function updateReflection(deviceId, assignmentDateInput, todayInput, refle
 
   const { getAllActsById } = require('./daily-peace-partnerships');
   const actsById = await getAllActsById();
-  const act = actsById.get(row.act_id);
+  const act = resolveActForAssignmentRow(normalizeRow(row), actsById);
   if (!act) throw new Error('assigned act not found in catalog');
 
   const text = String(reflectionText || '').trim().slice(0, 4000);
@@ -1081,6 +1258,49 @@ async function getJourney(deviceId, todayInput) {
     journey.push(journeyItem);
   }
 
+  // Keep completed history for acts removed from the live catalog.
+  for (const [actId, row] of byActId) {
+    if (actsById.has(actId) || !row.completed) continue;
+    const act = resolveActDefinition(actId, actsById);
+    if (!act) continue;
+    sequence += 1;
+    momentsOfPeace += 1;
+    const theme = resolveTheme(act.category);
+    const journeyItem = {
+      key: act.id,
+      actId: act.id,
+      date: row.date,
+      sequence,
+      status: 'completed',
+      isToday: row.date === todayDate,
+      category: theme.category,
+      categoryLabel: theme.categoryLabel,
+      assignment: {
+        id: row.id,
+        revealedAt: row.date,
+        completedAt: row.completed_at,
+        reflection: row.reflection,
+        reflectionAt: row.reflection_at,
+        partnershipId: row.partnership_id || null,
+      },
+      act: mapAct(act),
+      archived: true,
+    };
+    const linked = row.partnership_id ? partnershipById.get(row.partnership_id) : null;
+    const historical = linked && linked.status !== 'draft' ? sponsorshipRecord(linked) : null;
+    if (historical) {
+      journeyItem.sponsorship = {
+        partnershipId: historical.partnershipId,
+        companyName: historical.companyName,
+        companyLogoUrl: historical.companyLogoUrl || null,
+        companyWebsiteUrl: historical.companyWebsiteUrl || null,
+        partnershipType: historical.partnershipType,
+        assignmentMethod: historical.assignmentMethod,
+      };
+    }
+    journey.push(journeyItem);
+  }
+
   const themeCounts = Object.fromEntries(THEMES.map((t) => [t.id, 0]));
   for (const act of catalog) {
     const theme = resolveTheme(act.category);
@@ -1146,7 +1366,7 @@ async function buildDailyPeaceOwnerIntel() {
       });
     }
     const u = byUser.get(userId);
-    const act = actsById.get(row.act_id);
+    const act = resolveActDefinition(row.act_id, actsById);
     const partnership = row.partnership_id ? partnershipById.get(row.partnership_id) : null;
     const entry = {
       assignmentDate: row.date,
@@ -1290,6 +1510,9 @@ module.exports = {
   getJourney,
   updateReflection,
   loadCatalog,
+  loadArchivedCatalog,
+  resolveActDefinition,
+  purgeIncompleteArchivedAssignments,
   buildDailyPeaceOwnerIntel,
   localDateFromIso,
   resolveTheme,

@@ -15,7 +15,7 @@ const {
   buildOwnerControlCenter,
   searchOwnerControlCenter,
 } = require('./_lib/owner-intel');
-const { buildDailyPeaceOwnerIntel } = require('./_lib/daily-peace');
+const { buildDailyPeaceOwnerIntel, purgeIncompleteArchivedAssignments } = require('./_lib/daily-peace');
 const {
   buildOwnerPartnershipsLibrary,
   getPartnershipDetail,
@@ -143,6 +143,7 @@ module.exports = async function handler(req, res) {
     if (action === 'daily-peace' && req.method === 'GET') {
       res.setHeader('Cache-Control', 'no-store');
       if (!requireOwner(req, res)) return;
+      await purgeIncompleteArchivedAssignments({ maxPages: 20 }).catch(() => {});
       const data = await buildDailyPeaceOwnerIntel();
       return res.status(200).json(data);
     }
