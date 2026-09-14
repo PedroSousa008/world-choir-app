@@ -8,6 +8,7 @@ const {
   writeJson,
   findUserByDevice,
   readPledge,
+  updatePledgeLocation,
   assertBlobConfigured,
   listBlobs,
 } = require('./store');
@@ -229,7 +230,7 @@ const COUNTRY_NAME_TO_ISO2 = {
   argentina: 'AR', armenia: 'AM', australia: 'AU', austria: 'AT', azerbaijan: 'AZ',
   bahrain: 'BH', bangladesh: 'BD', belarus: 'BY', belgium: 'BE', belize: 'BZ',
   benin: 'BJ', bhutan: 'BT', bolivia: 'BO', 'bosnia and herzegovina': 'BA',
-  botswana: 'BW', brazil: 'BR', brunei: 'BN', bulgaria: 'BG', 'burkina faso': 'BF',
+  botswana: 'BW', brazil: 'BR', brasil: 'BR', brunei: 'BN', bulgaria: 'BG', 'burkina faso': 'BF',
   burundi: 'BI', 'cabo verde': 'CV', cambodia: 'KH', cameroon: 'CM', canada: 'CA',
   'central african republic': 'CF', chad: 'TD', chile: 'CL', china: 'CN',
   colombia: 'CO', comoros: 'KM', congo: 'CG', 'costa rica': 'CR', croatia: 'HR',
@@ -284,6 +285,29 @@ function countriesMatch(a, b) {
   const codeB = resolveCountryCode(b);
   if (codeA && codeB) return codeA === codeB;
   return Boolean(normalizeCountry(a) && normalizeCountry(a) === normalizeCountry(b));
+}
+
+/** Server-side Nominatim lookup when join saved city without lat/lng. */
+async function geocodeCityCountry(city, country) {
+  const q = encodeURIComponent(`${String(city || '').trim()}, ${String(country || '').trim()}`);
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`,
+    {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'WorldChoirApp/1.0 (pass-the-world; https://world-choir-app.vercel.app)',
+      },
+    }
+  );
+  if (!res.ok) throw new Error('Geocoding failed');
+  const data = await res.json();
+  if (!Array.isArray(data) || !data.length) throw new Error('City not found');
+  const latitude = Number.parseFloat(data[0].lat);
+  const longitude = Number.parseFloat(data[0].lon);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error('Invalid geocode result');
+  }
+  return { latitude, longitude };
 }
 
 /** Invites and destinations must be in a different country than where the World currently is. */
@@ -1392,12 +1416,13 @@ function buildPublicState(state, itinerary, now, viewer = {}) {
   const sameCountry = Boolean(
     countryLoaded && worldCountryCode && viewerCountryCode && worldCountryCode === viewerCountryCode
   );
+  const hasRegisteredCity = Boolean(viewer.userId && viewer.city && countryLoaded);
+  const missingCoords = Boolean(
+    hasRegisteredCity && (viewer.latitude == null || viewer.longitude == null)
+  );
   const countryEligible = Boolean(
-    viewer.userId
-    && viewer.city
-    && countryLoaded
-    && viewer.latitude != null
-    && viewer.longitude != null
+    hasRegisteredCity
+    && !missingCoords
     && !sameCountry
   );
   const windowOpen = state.status === STATUS.INVITATION_OPEN
@@ -1438,6 +1463,7 @@ function buildPublicState(state, itinerary, now, viewer = {}) {
       country: viewer.country || null,
       voiceNumber: viewer.voiceNumber ?? null,
       sameCountry,
+      missingCoords,
       countryEligible,
       canInviteNow,
       // legacy aliases
@@ -1463,9 +1489,29 @@ async function getViewerContext(deviceId, eventId) {
   // Prefer pledge location (authoritative registered World Choir city/country).
   const city = (pledge?.city || user.city || null);
   const country = (pledge?.country || user.country || null);
-  const latitude = pledge?.latitude ?? user.latitude ?? null;
-  const longitude = pledge?.longitude ?? user.longitude ?? null;
+  let latitude = pledge?.latitude ?? user.latitude ?? null;
+  let longitude = pledge?.longitude ?? user.longitude ?? null;
   const voiceNumber = pledge?.voice_number ?? null;
+
+  // Join can succeed without coords when client geocode fails — heal here so invites work.
+  if (city && country && (latitude == null || longitude == null)) {
+    try {
+      const coords = await geocodeCityCountry(String(city).trim(), String(country).trim());
+      latitude = coords.latitude;
+      longitude = coords.longitude;
+      try {
+        await updatePledgeLocation({
+          deviceId,
+          eventId,
+          city: String(city).trim(),
+          country: String(country).trim(),
+          latitude,
+          longitude,
+        });
+      } catch { /* non-blocking — still return healed coords for this request */ }
+    } catch { /* keep null; client will explain locating */ }
+  }
+
   return {
     userId: user.id,
     city: city ? String(city).trim() : null,
@@ -1553,7 +1599,7 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     throw err;
   }
   if (viewer.latitude == null || viewer.longitude == null) {
-    const err = new Error('Your city could not be located on the map yet.');
+    const err = new Error('Your city could not be located on the map yet. Open Pass the World again in a moment.');
     err.statusCode = 400;
     throw err;
   }

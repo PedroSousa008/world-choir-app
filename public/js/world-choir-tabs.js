@@ -149,7 +149,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — The World Sang',
       css: [
         'css/donate.css?v=20260912fpText2',
-        'css/passport.css?v=20260912ptwDarkCard',
+        'css/passport.css?v=20260914ptwInvite',
         'css/profile.css?v=20260912themeSlot',
         'css/daily-peace.css?v=20260810e',
         'css/memory-page.css?v=20260911theme',

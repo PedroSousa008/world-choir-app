@@ -27,6 +27,7 @@ const PassTheWorld = (() => {
   let mounted = false;
   let arrivalRefreshScheduled = false;
   let revealRefreshTimer = null;
+  let inviteOpenRefreshTimer = null;
   let itineraryPage = 0;
   let itineraryPanelHome = null;
   let itineraryScrollLockHandler = null;
@@ -164,7 +165,7 @@ const PassTheWorld = (() => {
   function ctaKey(journey) {
     if (!journey) return 'empty';
     const v = journey.viewer || {};
-    return `${journey.status}|${v.sameCountry}|${v.countryLoaded}|${v.hasInvited}|${v.canInviteNow}|${v.countryEligible}|${journey.invitationCount || 0}|${shouldShowVisitButton(journey)}`;
+    return `${journey.status}|${v.sameCountry}|${v.countryLoaded}|${v.hasInvited}|${v.canInviteNow}|${v.countryEligible}|${v.missingCoords || false}|${journey.invitationCount || 0}|${journey.nextInvitationAt || ''}|${shouldShowVisitButton(journey)}`;
   }
 
   function revealKey(journey) {
@@ -379,6 +380,26 @@ const PassTheWorld = (() => {
     return journey?.viewer?.canInviteNow === true;
   }
 
+  function formatNextInvitationNote(journey) {
+    const at = journey?.nextInvitationAt;
+    if (!at) {
+      const c = journey?.constants || {};
+      return `Invitations open daily at ${formatUtcHm(c.invitationHourUtc ?? 16, c.invitationMinuteUtc ?? 0)}.`;
+    }
+    try {
+      const d = new Date(at);
+      const utc = d.toLocaleTimeString('en-GB', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'UTC',
+      });
+      return `Next invitation opens at ${utc} UTC.`;
+    } catch {
+      return 'Invitations open daily at 16:00 UTC.';
+    }
+  }
+
   function shouldShowVisitButton(journey) {
     if (!journey) return false;
     const viewer = journey.viewer || {};
@@ -387,16 +408,22 @@ const PassTheWorld = (() => {
     if (status === 'TRAVELLING' || status === 'REVEAL_PENDING') return false;
     if (viewer.sameCountry && viewer.countryLoaded) return false;
     if (!viewer.countryEligible) return false;
-    if (status !== 'INVITATION_OPEN' && status !== 'WAITING_FOR_FIRST_CALL') return false;
-    return isVisitButtonActive(journey);
+    // Active during open / first-call; muted preview while waiting for today's ritual.
+    if (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL') {
+      return isVisitButtonActive(journey) || viewer.hasInvited !== true;
+    }
+    if (status === 'ARRIVED' || status === 'INITIAL') return true;
+    return false;
   }
 
   function renderVisitButton(journey, { showRing = false } = {}) {
     if (!shouldShowVisitButton(journey)) return '';
     const active = isVisitButtonActive(journey);
-    const classes = 'ptw-visit-btn ptw-visit-btn--primary';
+    const classes = active
+      ? 'ptw-visit-btn ptw-visit-btn--primary'
+      : 'ptw-visit-btn ptw-visit-btn--muted';
     return `
-      <button type="button" class="${classes}" data-ptw-invite aria-label="Visit my city">
+      <button type="button" class="${classes}" data-ptw-invite aria-label="Visit my city"${active ? '' : ' disabled'}>
         ${showRing && active ? '<span class="ptw-visit-ring" aria-hidden="true"></span>' : ''}
         <span class="ptw-visit-label">VISIT MY CITY</span>
       </button>`;
@@ -408,7 +435,7 @@ const PassTheWorld = (() => {
     const status = journey.status;
     const active = isVisitButtonActive(journey);
     const showVisit = shouldShowVisitButton(journey);
-    const showRing = status === 'INVITATION_OPEN' && showVisit;
+    const showRing = status === 'INVITATION_OPEN' && showVisit && active;
     const hasInvited = viewer.hasInvited === true;
 
     let lead = '';
@@ -424,12 +451,35 @@ const PassTheWorld = (() => {
     } else if (status === 'INVITATION_OPEN' && active) {
       lead = 'WHERE SHOULD THE WORLD GO NEXT?';
       note = 'Invite it to your city.';
+    } else if (status === 'WAITING_FOR_FIRST_CALL' && active) {
+      lead = 'WAITING FOR ITS NEXT INVITATION';
+      note = 'Invite it to your city.';
     } else if (status === 'REVEAL_PENDING') {
       lead = 'THE WORLD IS CHOOSING';
       note = 'Where will the journey go next?';
+    } else if (status === 'ARRIVED' || status === 'INITIAL') {
+      if (viewer.sameCountry && viewer.countryLoaded) {
+        lead = 'THE WORLD HAS ARRIVED';
+        note = 'The journey is currently in your country. You can invite when it travels elsewhere.';
+      } else if (viewer.missingCoords) {
+        lead = 'THE WORLD HAS ARRIVED';
+        note = 'We are still locating your city on the map. Open this page again in a moment.';
+      } else if (!viewer.countryLoaded) {
+        note = 'Loading your World Choir city…';
+      } else if (!viewer.countryEligible) {
+        lead = 'THE WORLD HAS ARRIVED';
+        note = 'Join World Choir with your city to invite the World.';
+      } else {
+        lead = 'THE WORLD HAS ARRIVED';
+        note = formatNextInvitationNote(journey);
+      }
     } else if (!viewer.countryLoaded) {
       note = 'Loading your World Choir city…';
-    } else if (!viewer.countryEligible && viewer.countryLoaded && !viewer.sameCountry) {
+    } else if (viewer.missingCoords) {
+      note = 'We are still locating your city on the map. Open this page again in a moment.';
+    } else if (viewer.sameCountry && viewer.countryLoaded) {
+      note = 'The journey is currently in your country. You can invite when it travels elsewhere.';
+    } else if (!viewer.countryEligible && viewer.countryLoaded) {
       note = 'Join World Choir with your city to invite the World.';
     }
 
@@ -694,6 +744,27 @@ const PassTheWorld = (() => {
 
     updateCountdown(journey);
     scheduleRevealRefresh(journey);
+    scheduleInviteOpenRefresh(journey);
+  }
+
+  function scheduleInviteOpenRefresh(journey) {
+    if (inviteOpenRefreshTimer) {
+      clearTimeout(inviteOpenRefreshTimer);
+      inviteOpenRefreshTimer = null;
+    }
+    if (journey?.status !== 'ARRIVED' && journey?.status !== 'INITIAL') return;
+    if (!journey.nextInvitationAt) return;
+    const serverSkew = journey.serverNow
+      ? Date.now() - new Date(journey.serverNow).getTime()
+      : 0;
+    const openMs = new Date(journey.nextInvitationAt).getTime();
+    const delay = openMs - (Date.now() - serverSkew) + 120;
+    if (delay > 0 && delay < 6 * 60 * 60 * 1000) {
+      inviteOpenRefreshTimer = setTimeout(async () => {
+        inviteOpenRefreshTimer = null;
+        try { await refresh(); } catch { /* keep */ }
+      }, delay);
+    }
   }
 
   function scheduleRevealRefresh(journey) {
@@ -1058,11 +1129,19 @@ const PassTheWorld = (() => {
     stopPolling();
     const tick = async () => {
       try { await refresh(); } catch { /* keep last */ }
-      const status = lastPayload?.journey?.status;
+      const journey = lastPayload?.journey;
+      const status = journey?.status;
       let ms = POLL_MS;
       if (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL') ms = 2000;
       else if (status === 'REVEAL_PENDING') ms = 800;
       else if (status === 'TRAVELLING') ms = TRAVEL_POLL_MS;
+      else if ((status === 'ARRIVED' || status === 'INITIAL') && journey?.nextInvitationAt) {
+        const serverSkew = journey.serverNow
+          ? Date.now() - new Date(journey.serverNow).getTime()
+          : 0;
+        const untilOpen = new Date(journey.nextInvitationAt).getTime() - (Date.now() - serverSkew);
+        if (untilOpen > 0 && untilOpen < 90 * 1000) ms = 1500;
+      }
       pollTimer = setTimeout(tick, ms);
     };
     pollTimer = setTimeout(tick, POLL_MS);
@@ -1075,6 +1154,8 @@ const PassTheWorld = (() => {
     countdownTimer = null;
     if (revealRefreshTimer) clearTimeout(revealRefreshTimer);
     revealRefreshTimer = null;
+    if (inviteOpenRefreshTimer) clearTimeout(inviteOpenRefreshTimer);
+    inviteOpenRefreshTimer = null;
   }
 
   function bindDev() {

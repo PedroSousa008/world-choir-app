@@ -2165,6 +2165,10 @@
   box-shadow: none;
 }
 
+.ptw-visit-btn--muted:disabled {
+  opacity: 1;
+}
+
 .ptw-visit-ring {
   position: absolute;
   inset: -5px;
