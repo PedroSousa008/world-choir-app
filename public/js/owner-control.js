@@ -1969,28 +1969,69 @@ const OwnerControl = (() => {
       metric.blurb = 'Total verified donation volume completed through World Choir.';
     }
     const bounds = growthRangeBounds(raw);
-    const inRange = raw.filter((p) => p.date >= bounds.from && p.date <= bounds.to);
+    if (!raw.length) {
+      return {
+        metric,
+        useAmount,
+        bounds,
+        points: [],
+        periodGrowth: 0,
+        endTotal: 0,
+        calendarDays: inclusiveDaySpan(bounds.from, bounds.to),
+        recordedDays: 0,
+        avgDaily: null,
+        comparison: null,
+        projection: null,
+        empty: true,
+      };
+    }
+    const byDate = new Map(raw.map((p) => [p.date, growthPointValue(p, useAmount)]));
+
+    // Cumulative total through end of range (for hero / projection summary only).
     let running = 0;
-    const allCumulative = raw.map((p) => {
+    let endTotal = 0;
+    raw.forEach((p) => {
       running += growthPointValue(p, useAmount);
-      return { date: p.date, increment: growthPointValue(p, useAmount), total: running };
+      if (p.date <= bounds.to) endTotal = running;
     });
+
+    // Every calendar day in the selected range, including zero-activity days.
     const points = [];
-    allCumulative.forEach((p, idx) => {
-      if (p.date < bounds.from || p.date > bounds.to) return;
-      const prev = idx > 0 ? allCumulative[idx - 1] : null;
-      points.push({
-        ...p,
-        prevTotal: prev ? prev.total : null,
-        prevDate: prev ? prev.date : null,
-      });
-    });
-    const periodGrowth = inRange.reduce((sum, p) => sum + growthPointValue(p, useAmount), 0);
-    const endTotal = points.length
-      ? points[points.length - 1].total
-      : allCumulative.filter((p) => p.date <= bounds.to).pop()?.total || 0;
+    if (bounds.from && bounds.to && bounds.from <= bounds.to) {
+      let cursor = bounds.from;
+      let prevValue = null;
+      // Seed previous-day value from the day before the range (for first-day %).
+      if (byDate.has(shiftUtcDay(bounds.from, -1))) {
+        prevValue = byDate.get(shiftUtcDay(bounds.from, -1));
+      } else {
+        const before = raw.filter((p) => p.date < bounds.from);
+        if (before.length) {
+          // Prefer the immediate previous calendar day's activity if present in series;
+          // otherwise leave null so we don't invent a fake prior day.
+          const prevDay = shiftUtcDay(bounds.from, -1);
+          const hit = before.find((p) => p.date === prevDay);
+          prevValue = hit ? growthPointValue(hit, useAmount) : null;
+        }
+      }
+      while (cursor <= bounds.to) {
+        const value = byDate.has(cursor) ? byDate.get(cursor) : 0;
+        points.push({
+          date: cursor,
+          value,
+          increment: value,
+          total: value, // chart/tooltip plot daily activity (not cumulative)
+          prevValue,
+          prevTotal: prevValue,
+          prevDate: prevValue == null ? null : shiftUtcDay(cursor, -1),
+        });
+        prevValue = value;
+        cursor = shiftUtcDay(cursor, 1);
+      }
+    }
+
+    const periodGrowth = points.reduce((sum, p) => sum + p.value, 0);
     const calendarDays = inclusiveDaySpan(bounds.from, bounds.to);
-    const recordedDays = points.length;
+    const recordedDays = points.filter((p) => p.value > 0).length;
     const avgDaily = calendarDays > 0 ? periodGrowth / calendarDays : null;
 
     const spanDays = calendarDays;
@@ -2084,7 +2125,8 @@ const OwnerControl = (() => {
     const pad = { t: 18, r: 16, b: 16, l: 16 };
     const innerW = w - pad.l - pad.r;
     const innerH = h - pad.t - pad.b;
-    const values = points.map((p) => p.total);
+    // Plot day-by-day activity (can rise and fall).
+    const values = points.map((p) => Number(p.value != null ? p.value : p.total) || 0);
     const dataMin = Math.min(...values);
     const dataMax = Math.max(...values);
     const spread = dataMax - dataMin;
@@ -2093,16 +2135,18 @@ const OwnerControl = (() => {
     const maxY = dataMax + padAmt || 1;
     const ySpan = maxY - minY || 1;
     const coords = points.map((p, i) => {
+      const value = Number(p.value != null ? p.value : p.total) || 0;
       const x = points.length === 1
         ? pad.l + innerW / 2
         : pad.l + (i / (points.length - 1)) * innerW;
-      const y = pad.t + innerH - ((p.total - minY) / ySpan) * innerH;
-      return { x, y, ...p };
+      const y = pad.t + innerH - ((value - minY) / ySpan) * innerH;
+      return { x, y, ...p, value, total: value };
     });
     const line = growthLinePath(coords);
     const bottom = pad.t + innerH;
     const area = `${line} L ${coords[coords.length - 1].x} ${bottom} L ${coords[0].x} ${bottom} Z`;
     const yTicks = [maxY, minY + ySpan / 2, minY];
+    // Keep at most 3 X-axis date labels.
     const xTicks = coords.length === 1
       ? [coords[0]]
       : [coords[0], coords[Math.floor(coords.length / 2)], coords[coords.length - 1]]
@@ -2115,9 +2159,11 @@ const OwnerControl = (() => {
         x: c.x,
         y: c.y,
         date: c.date,
-        total: c.total,
-        increment: c.increment,
-        prevTotal: c.prevTotal,
+        value: c.value,
+        total: c.value,
+        increment: c.value,
+        prevValue: c.prevValue,
+        prevTotal: c.prevValue,
         prevDate: c.prevDate,
       }))))}">
         <div class="owner-growth-chart__plot">
@@ -3198,20 +3244,28 @@ const OwnerControl = (() => {
     function show(ev) {
       const p = nearest(ev);
       if (!p) return;
+      const value = Number(p.value != null ? p.value : p.total) || 0;
+      const prevValue = p.prevValue != null ? Number(p.prevValue) : (p.prevTotal != null ? Number(p.prevTotal) : null);
       const changeBits = [];
-      if (Number.isFinite(Number(p.increment))) {
-        changeBits.push(esc(formatGrowthValue(p.increment, view, { signed: true })));
-      }
-      if (p.prevTotal != null && Number(p.prevTotal) > 0 && Number.isFinite(Number(p.total))) {
-        const dayPct = Math.round(((Number(p.total) - Number(p.prevTotal)) / Number(p.prevTotal)) * 1000) / 10;
-        if (Number.isFinite(dayPct)) {
-          changeBits.push(`${dayPct > 0 ? '+' : ''}${dayPct.toFixed(1)}% vs previous recorded day`);
+      let changeClass = 'is-flat';
+      if (prevValue != null && Number.isFinite(prevValue)) {
+        const delta = value - prevValue;
+        if (prevValue > 0) {
+          const dayPct = Math.round((delta / prevValue) * 1000) / 10;
+          if (Number.isFinite(dayPct)) {
+            changeBits.push(`${dayPct > 0 ? '+' : ''}${dayPct.toFixed(1)}% vs previous day`);
+            changeClass = dayPct > 0 ? 'is-up' : dayPct < 0 ? 'is-down' : 'is-flat';
+          }
+        } else if (delta !== 0) {
+          changeBits.push(`${esc(formatGrowthValue(delta, view, { signed: true }))} vs previous day`);
+          changeClass = delta > 0 ? 'is-up' : 'is-down';
+        } else {
+          changeBits.push('0.0% vs previous day');
         }
       }
-      const changeClass = Number(p.increment) < 0 ? 'is-down' : Number(p.increment) > 0 ? 'is-up' : 'is-flat';
       tip.innerHTML = `
         <p class="owner-growth-tip__date">${esc(formatGrowthDay(p.date, true))}</p>
-        <p class="owner-growth-tip__value">${esc(formatGrowthValue(p.total, view))}</p>
+        <p class="owner-growth-tip__value">${esc(formatGrowthValue(value, view))}</p>
         ${changeBits.length ? `<p class="owner-growth-tip__change ${changeClass}">${changeBits.join(' · ')}</p>` : ''}
       `;
       tip.hidden = false;
