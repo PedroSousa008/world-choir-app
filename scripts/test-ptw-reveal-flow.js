@@ -67,6 +67,7 @@ require.cache[storePath] = {
     },
     findUserByDevice: async () => null,
     readPledge: async () => null,
+    updatePledgeLocation: async () => null,
   },
 };
 
@@ -157,17 +158,19 @@ async function main() {
   const revealEndIso = new Date(closeDate.getTime() + REV_MS).toISOString();
   const roundId = roundIdFor(day);
 
-  // 1 minute before open: landed, button closed
+  // 1 minute before open: first-call is already open if nobody invited yet
   await seedArrived(day);
   let r = await ptw.advanceStateMachine(utcOn(day, ARR_H, ARR_M, 0));
-  assert(r.state.status === 'ARRIVED', 'arrival minute stays ARRIVED — button closed');
-  assert(!r.state.activeRoundId, 'no round attached before invitation open');
+  const preRoundId = `round-pre-${openIso}`;
+  assert(r.state.status === 'WAITING_FOR_FIRST_CALL', 'before open: waiting for first call');
+  assert(r.state.activeRoundId === preRoundId, 'pre-ritual round attached');
 
   await seedArrived(day);
   mem.state.status = 'WAITING_FOR_FIRST_CALL';
   mem.state.activeRoundId = roundIdFor(day - 1 >= 1 ? day - 1 : 31);
   r = await ptw.advanceStateMachine(utcOn(day, ARR_H, ARR_M, 30));
-  assert(r.state.status === 'ARRIVED', 'pre-open clears stale WAITING');
+  assert(r.state.status === 'WAITING_FOR_FIRST_CALL', 'pre-open replaces stale WAITING with today pre-round');
+  assert(r.state.activeRoundId === preRoundId, 'stale round upgraded to pre-round');
 
   await seedArrived(day);
   r = await ptw.advanceStateMachine(utcOn(day, INV_H, INV_M, 0, 0));

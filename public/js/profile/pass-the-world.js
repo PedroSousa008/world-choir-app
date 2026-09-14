@@ -452,8 +452,9 @@ const PassTheWorld = (() => {
       lead = 'WHERE SHOULD THE WORLD GO NEXT?';
       note = 'Invite it to your city.';
     } else if (status === 'WAITING_FOR_FIRST_CALL' && active) {
-      lead = 'WAITING FOR ITS NEXT INVITATION';
-      note = 'Invite it to your city.';
+      // First invite of the day sends the plane — keep the CTA button-first.
+      lead = '';
+      note = '';
     } else if (status === 'REVEAL_PENDING') {
       lead = 'THE WORLD IS CHOOSING';
       note = 'Where will the journey go next?';

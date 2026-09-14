@@ -1,6 +1,7 @@
 /**
  * Pass the World — shared global journey (Vercel Blob).
- * Ritual at INVITATION_HOUR:MINUTE UTC · 120s window · World never moves by itself.
+ * Daily 16:00 UTC competitive window (120s). If nobody has invited yet,
+ * Visit My City stays open (first click sends the plane — may be a faster trip).
  */
 const { randomUUID } = require('crypto');
 const {
@@ -361,6 +362,12 @@ function todayInvitationOpenAt(now = new Date()) {
     now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
     INVITATION_HOUR_UTC, INVITATION_MINUTE_UTC, 0, 0
   ));
+}
+
+/** Pre-ritual first-call round — used when nobody has invited yet before 16:00 UTC. */
+function earlyFirstCallRoundId(todayOpen) {
+  const open = todayOpen instanceof Date ? todayOpen : todayInvitationOpenAt(todayOpen);
+  return `round-pre-${open.toISOString()}`;
 }
 
 /**
@@ -1023,10 +1030,11 @@ async function openInvitationRound(state, now) {
   const openAt = latestInvitationOpenAt(now);
   const closeAt = new Date(openAt.getTime() + INVITATION_WINDOW_MS);
   const roundId = `round-${openAt.toISOString()}`;
-  if (state.activeRoundId === roundId
-    && (state.status === STATUS.INVITATION_OPEN || state.status === STATUS.WAITING_FOR_FIRST_CALL)) {
+  // Already in the competitive window for this round.
+  if (state.activeRoundId === roundId && state.status === STATUS.INVITATION_OPEN) {
     return state;
   }
+  // Upgrade empty early-WAITING (or ARRIVED) into the daily competitive window.
   const next = await writeState({
     ...state,
     status: STATUS.INVITATION_OPEN,
@@ -1197,25 +1205,85 @@ async function advanceStateMachine(nowInput) {
     return { state, itinerary, now };
   }
 
-  // Ritual clock is always TODAY's invitation open — never open WAITING from yesterday before that.
+  // Ritual clock is always TODAY's invitation open.
   const todayOpen = todayInvitationOpenAt(now);
   const todayClose = new Date(todayOpen.getTime() + INVITATION_WINDOW_MS);
   const todayRoundId = `round-${todayOpen.toISOString()}`;
+  const preRoundId = earlyFirstCallRoundId(todayOpen);
 
-  // Before today's invitation open: World stays ARRIVED. Button must not appear.
+  // Before today's competitive window: if nobody has invited yet, keep Visit My City
+  // open (WAITING). First click sends the plane early (lands at the next 15:59 UTC).
   if (now.getTime() < todayOpen.getTime()) {
-    if (state.status === STATUS.WAITING_FOR_FIRST_CALL
-      || state.status === STATUS.INVITATION_OPEN) {
-      state = await writeState({
+    const allInvitations = await readRoundInvites(preRoundId);
+    const invitations = filterInvitesForWorld(allInvitations, state);
+    const winner = await readWinner(preRoundId);
+    const hasRealWinner = Boolean(
+      winner?.invitationId
+      && invitations.length
+      && winnerEligibleForWorld(winner, state)
+    );
+
+    if (hasRealWinner) {
+      const waitingState = {
         ...state,
-        status: STATUS.ARRIVED,
-        activeRoundId: null,
-        invitationOpenAt: null,
-        invitationCloseAt: null,
-        invitationCount: 0,
-        invitedCities: [],
-        version: (Number(state.version) || 1) + 1,
-      });
+        status: STATUS.WAITING_FOR_FIRST_CALL,
+        activeRoundId: preRoundId,
+        invitationOpenAt: state.invitationOpenAt || todayOpen.toISOString(),
+        invitationCloseAt: state.invitationCloseAt || todayClose.toISOString(),
+      };
+      const healed = await resolveFirstCallIfPending(waitingState, itinerary, now);
+      if (healed) return { ...healed, now };
+
+      // Early trip already finished (World is at the invited city) — wait for the ritual.
+      const alreadyThere = citiesMatch(winner.city, state.currentCity)
+        && countriesMatch(
+          winner.countryCode || winner.country,
+          state.currentCountryCode || state.currentCountry
+        );
+      if (alreadyThere
+        && (state.status === STATUS.WAITING_FOR_FIRST_CALL
+          || state.status === STATUS.INVITATION_OPEN)) {
+        state = await writeState({
+          ...state,
+          status: STATUS.ARRIVED,
+          activeRoundId: null,
+          invitationOpenAt: null,
+          invitationCloseAt: null,
+          invitationCount: 0,
+          invitedCities: [],
+          version: (Number(state.version) || 1) + 1,
+        });
+      }
+      return { state, itinerary, now };
+    }
+
+    // Nobody has invited yet today — open first-call immediately.
+    if (
+      state.status === STATUS.ARRIVED
+      || state.status === STATUS.INITIAL
+      || state.status === STATUS.WAITING_FOR_FIRST_CALL
+      || state.status === STATUS.INVITATION_OPEN
+    ) {
+      if (
+        state.status !== STATUS.WAITING_FOR_FIRST_CALL
+        || state.activeRoundId !== preRoundId
+      ) {
+        state = await writeState({
+          ...state,
+          status: STATUS.WAITING_FOR_FIRST_CALL,
+          activeRoundId: preRoundId,
+          invitationOpenAt: todayOpen.toISOString(),
+          invitationCloseAt: todayClose.toISOString(),
+          invitationCount: 0,
+          invitedCities: [],
+          version: (Number(state.version) || 1) + 1,
+        });
+      }
+    }
+
+    if (state.status === STATUS.WAITING_FOR_FIRST_CALL && state.activeRoundId) {
+      const healed = await resolveFirstCallIfPending(state, itinerary, now);
+      if (healed) return { ...healed, now };
     }
     return { state, itinerary, now };
   }
@@ -1620,13 +1688,17 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
   }
 
   if (!state.activeRoundId) {
-    const openAt = latestInvitationOpenAt(clock);
+    const todayOpen = todayInvitationOpenAt(clock);
+    const useEarly = clock.getTime() < todayOpen.getTime();
+    const roundId = useEarly
+      ? earlyFirstCallRoundId(todayOpen)
+      : `round-${todayOpen.toISOString()}`;
     state = await writeState({
       ...state,
-      activeRoundId: `round-${openAt.toISOString()}`,
-      invitationOpenAt: state.invitationOpenAt || openAt.toISOString(),
+      activeRoundId: roundId,
+      invitationOpenAt: state.invitationOpenAt || todayOpen.toISOString(),
       invitationCloseAt: state.invitationCloseAt
-        || new Date(openAt.getTime() + INVITATION_WINDOW_MS).toISOString(),
+        || new Date(todayOpen.getTime() + INVITATION_WINDOW_MS).toISOString(),
       status: STATUS.WAITING_FOR_FIRST_CALL,
       version: (Number(state.version) || 1) + 1,
     });
