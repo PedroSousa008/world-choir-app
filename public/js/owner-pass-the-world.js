@@ -11,7 +11,7 @@ const OwnerPassTheWorld = (() => {
   ];
 
   const POSSIBLE_STATES = [
-    { id: 'idle', label: 'Waiting for 16:00 UTC', statuses: ['ARRIVED', 'INITIAL'] },
+    { id: 'idle', label: 'Arrived (awaiting invite)', statuses: ['ARRIVED', 'INITIAL'] },
     { id: 'open', label: 'Invitation Window Open', statuses: ['INVITATION_OPEN'], live: true },
     { id: 'reveal', label: '10-Second Destination Reveal', statuses: ['REVEAL_PENDING'], live: true },
     { id: 'travel', label: 'Travelling', statuses: ['TRAVELLING'] },
@@ -85,7 +85,7 @@ const OwnerPassTheWorld = (() => {
 
   function selectionLabel(method) {
     if (method === 'window') return 'Random 120-second selection';
-    if (method === 'first_call') return 'First invitation after empty window';
+    if (method === 'first_call') return 'First invitation of the day';
     return '—';
   }
 

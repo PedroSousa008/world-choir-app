@@ -93,6 +93,7 @@ const OwnerControl = (() => {
     },
     ptwData: null,
     ptwBusy: false,
+    ptwError: null,
     ptwRange: '30d',
     ptwRoundId: null,
     ptwMapMode: 'invitations',
@@ -2351,20 +2352,33 @@ const OwnerControl = (() => {
   async function ensurePtwLoaded(silent = false) {
     if (state.ptwBusy) return;
     state.ptwBusy = true;
+    state.ptwError = null;
     if (!silent) render();
     try {
       const q = new URLSearchParams({ range: state.ptwRange || '30d' });
       if (state.ptwRoundId) q.set('roundId', state.ptwRoundId);
       state.ptwData = await api('pass-the-world', { query: `&${q.toString()}` });
+      state.ptwError = null;
     } catch (err) {
-      if (!silent) setFlash(err.message || 'Could not load Pass the World analytics.', 'err');
+      state.ptwError = err.message || 'Could not load Pass the World analytics.';
+      if (!silent) setFlash(state.ptwError, 'err');
     } finally {
       state.ptwBusy = false;
     }
   }
 
   function renderPassTheWorld() {
-    if (!state.ptwData && !state.ptwBusy) {
+    if (state.ptwBusy && !state.ptwData) {
+      return `<section class="owner-section"><p class="owner-muted">Loading Pass the World…</p></section>`;
+    }
+    if (!state.ptwData && state.ptwError) {
+      return `
+        <section class="owner-section">
+          <p class="owner-muted">${esc(state.ptwError)}</p>
+          <button type="button" class="owner-btn-ghost" data-ptw-retry>Retry</button>
+        </section>`;
+    }
+    if (!state.ptwData) {
       ensurePtwLoaded().then(() => render());
       return `<section class="owner-section"><p class="owner-muted">Loading Pass the World…</p></section>`;
     }
@@ -3813,6 +3827,11 @@ const OwnerControl = (() => {
       });
     });
     if (typeof OwnerPassTheWorld !== 'undefined' && state.section === 'pass-the-world') {
+      root().querySelector('[data-ptw-retry]')?.addEventListener('click', async () => {
+        state.ptwError = null;
+        await ensurePtwLoaded();
+        render();
+      });
       OwnerPassTheWorld.bind(root(), state, { esc, money, num, when }, {
         api,
         onRender: () => render(),

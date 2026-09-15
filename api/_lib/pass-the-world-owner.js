@@ -43,7 +43,25 @@ function resolveCountryCode(input) {
 
 function utcDate(iso) {
   if (!iso) return null;
-  try { return new Date(iso).toISOString().slice(0, 10); } catch { return null; }
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+/** Extract ritual open ISO from round-… or round-pre-… ids. */
+function openAtFromRoundId(roundId) {
+  const id = String(roundId || '');
+  let iso = null;
+  if (id.startsWith('round-pre-')) iso = id.slice('round-pre-'.length);
+  else if (id.startsWith('round-')) iso = id.slice('round-'.length);
+  if (!iso) return null;
+  return Number.isFinite(Date.parse(iso)) ? iso : null;
+}
+
+function safeOpenMs(iso) {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : null;
 }
 
 function daysAgo(n, from = new Date()) {
@@ -116,9 +134,9 @@ function worldAtTime(itinerary, atMs) {
 }
 
 function buildRoundFromData(roundId, meta, invites, winner, itinerary) {
-  const openAt = meta?.openAt || (roundId.startsWith('round-') ? roundId.slice(6) : null);
+  const openAt = meta?.openAt || openAtFromRoundId(roundId);
   const date = meta?.date || utcDate(openAt);
-  const openMs = openAt ? new Date(openAt).getTime() : null;
+  const openMs = safeOpenMs(openAt);
 
   const cityMap = new Map();
   const countryMap = new Map();
@@ -227,7 +245,9 @@ function buildRoundFromData(roundId, meta, invites, winner, itinerary) {
     roundId,
     date,
     openAt,
-    closeAt: meta?.closeAt || (openMs != null ? new Date(openMs + INVITATION_WINDOW_MS).toISOString() : null),
+    closeAt: meta?.closeAt || (openMs != null
+      ? new Date(openMs + INVITATION_WINDOW_MS).toISOString()
+      : null),
     startingCity: meta?.startingCity || null,
     startingCountry: meta?.startingCountry || null,
     startingCountryCode: meta?.startingCountryCode || null,
@@ -266,7 +286,7 @@ function statusLabel(status, state) {
       return { label: 'Waiting for First Invitation', tone: 'waiting' };
     case STATUS.ARRIVED:
     case STATUS.INITIAL:
-      return { label: 'Waiting for 16:00 UTC', tone: 'idle' };
+      return { label: 'Arrived — invitation open if nobody invited yet', tone: 'idle' };
     default:
       return { label: String(status || 'Unknown'), tone: 'idle' };
   }
@@ -398,8 +418,8 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
   const participationOverTime = rounds
     .filter((r) => r.date && !r.wasEmpty)
     .map((r) => {
-      const atMs = r.openAt ? new Date(r.openAt).getTime() : null;
-      const worldEntry = atMs ? worldAtTime(itinerary, atMs) : null;
+      const atMs = safeOpenMs(r.openAt);
+      const worldEntry = atMs != null ? worldAtTime(itinerary, atMs) : null;
       const wCode = resolveCountryCode(
         r.startingCountryCode || worldEntry?.countryCode || worldEntry?.country
       );
@@ -457,8 +477,8 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
     .filter((r) => r.firstInvitationSecondsAfterOpen != null)
     .map((r) => r.firstInvitationSecondsAfterOpen);
   const timeToDestination = rounds
-    .filter((r) => r.selectedAt && r.openAt)
-    .map((r) => Math.max(0, Math.round((new Date(r.selectedAt).getTime() - new Date(r.openAt).getTime()) / 1000)));
+    .filter((r) => r.selectedAt && safeOpenMs(r.openAt) != null)
+    .map((r) => Math.max(0, Math.round((new Date(r.selectedAt).getTime() - safeOpenMs(r.openAt)) / 1000)));
 
   const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null);
   const median = (arr) => {
