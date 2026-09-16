@@ -144,8 +144,13 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--bg-primary);
-  overflow-x: clip;
+  /*
+   * Never overflow-x clip/hidden on html OR body — on iOS Safari that turns
+   * position:fixed into document-relative positioning, so the tab bar floats
+   * mid-screen while scrolling. Horizontal lock lives on .page / tab panels.
+   */
   max-width: 100%;
+  overscroll-behavior-x: none;
 }
 
 body {
@@ -153,14 +158,9 @@ body {
   background: var(--bg-void);
   color: var(--text-primary);
   min-height: 100vh;
-  /*
-   * Do NOT set overflow-x: clip/hidden on body.
-   * Mixed overflow (clip + visible) makes body a scroll container and breaks
-   * position:fixed bottom tabs on WebKit/Safari — the tab bar scrolls away.
-   * Horizontal clip stays on html + .page wrappers.
-   */
   overflow-x: visible;
   max-width: 100%;
+  overscroll-behavior-x: none;
   line-height: 1.5;
 }
 
@@ -581,6 +581,8 @@ body.wc-tab-shell {
   flex: 1 1 auto;
   width: 100%;
   min-height: 0;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .wc-tab-panel {
@@ -615,23 +617,22 @@ body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
 }
 
 /*
- * Bottom tab bar — ALWAYS viewport-fixed. Never sticky, never in-flow.
- * #nav-root is the fixed shell; .bottom-nav fills it. Do not put transforms,
- * filters, or overflow clipping on ancestors of #nav-root.
+ * Bottom tab bar — ALWAYS glued to the visible screen bottom on mobile.
+ * Position is enforced by WorldChoirNav.pinNavToVisualViewport() (iOS Safari
+ * cannot be trusted with CSS position:fixed alone while the URL bar moves).
  */
 #nav-root {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
+  top: auto;
   width: 100%;
   max-width: 100%;
   z-index: 100;
   pointer-events: none;
-  /* Keep out of document flow so page scroll can never drag the tabs. */
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 #nav-root[hidden] {

@@ -271,6 +271,7 @@ const WorldChoirNav = (() => {
       // Soft secondary surfaces (World Chain, Daily Acts) — no bottom-tab match.
       indicatorEl.classList.remove('is-visible');
     }
+    scheduleNavPin();
   }
 
   function pageIdFromPathname(pathname) {
@@ -799,20 +800,61 @@ const WorldChoirNav = (() => {
     return nav;
   }
 
-  /** Keep tab chrome on body + viewport-fixed — never inside a scrolling panel. */
-  function ensureNavRootFixed(root) {
-    if (!root) return;
+  let navPinBound = false;
+  let navPinRaf = 0;
+
+  /**
+   * Glue #nav-root to the visible bottom of the screen on iOS Safari.
+   * CSS position:fixed alone fails when html/body become scroll containers —
+   * the bar then scrolls mid-page. Re-pin on scroll / visualViewport changes.
+   */
+  function pinNavToVisualViewport() {
+    const root = document.getElementById('nav-root');
+    if (!root || root.hasAttribute('hidden')) return;
     if (root.parentElement !== document.body) {
       document.body.appendChild(root);
     }
-    // Inline lock beats accidental stylesheet regressions.
-    root.style.position = 'fixed';
+
+    const height = root.offsetHeight || 0;
+    if (!height) return;
+
+    const vv = window.visualViewport;
+    // Prefer visual viewport (iOS URL bar). Fall back to layout viewport.
+    const viewTop = vv ? vv.offsetTop : 0;
+    const viewHeight = vv ? vv.height : window.innerHeight;
+    // absolute + scrollY survives WebKit “fixed becomes document-relative”.
+    const top = Math.round(window.scrollY + viewTop + viewHeight - height);
+
+    root.style.position = 'absolute';
     root.style.left = '0';
     root.style.right = '0';
-    root.style.bottom = '0';
     root.style.width = '100%';
+    root.style.bottom = 'auto';
+    root.style.top = `${Math.max(0, top)}px`;
     root.style.zIndex = '100';
     root.style.pointerEvents = 'none';
+    root.style.transform = 'none';
+    root.style.margin = '0';
+  }
+
+  function scheduleNavPin() {
+    if (navPinRaf) return;
+    navPinRaf = requestAnimationFrame(() => {
+      navPinRaf = 0;
+      pinNavToVisualViewport();
+    });
+  }
+
+  function bindNavViewportPin() {
+    if (navPinBound) return;
+    navPinBound = true;
+    const vv = window.visualViewport;
+    window.addEventListener('scroll', scheduleNavPin, { passive: true, capture: true });
+    window.addEventListener('resize', scheduleNavPin, { passive: true });
+    window.addEventListener('orientationchange', scheduleNavPin, { passive: true });
+    vv?.addEventListener('resize', scheduleNavPin, { passive: true });
+    vv?.addEventListener('scroll', scheduleNavPin, { passive: true });
+    document.addEventListener('visibilitychange', scheduleNavPin);
   }
 
   function mount(activePage) {
@@ -821,7 +863,7 @@ const WorldChoirNav = (() => {
     }
     const root = document.getElementById('nav-root');
     if (!root) return;
-    ensureNavRootFixed(root);
+    bindNavViewportPin();
     clearPendingNavigation();
     clearArrivalTimer();
     indicatorReady = false;
@@ -834,6 +876,9 @@ const WorldChoirNav = (() => {
     }
     root.innerHTML = '';
     root.appendChild(renderWorldChoirNav(activePage, handoff && handoff.to === activePage ? handoff : null));
+    scheduleNavPin();
+    // Second pass after layout (safe-area / font metrics).
+    requestAnimationFrame(scheduleNavPin);
   }
 
   function startWatcher(activePage) {
@@ -895,6 +940,7 @@ const WorldChoirNav = (() => {
     navigateToPrimaryTab,
     openWorldChain,
     openDailyActs,
+    pinNavToVisualViewport,
     getNavIconSvg: (key) => NAV_ICON_SVGS[key] || '',
     getNavGlyph: (pageId) => {
       const page = ALL_PAGES.find((p) => p.id === pageId);
