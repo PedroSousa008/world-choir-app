@@ -6781,22 +6781,24 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   background: rgba(255, 255, 255, 0.015);
   color: #f2efe8;
   font: inherit;
-  min-height: 84px;
+  min-height: 96px;
   border-radius: 10px;
   padding: 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-start;
+  gap: 0;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
+  position: relative;
 }
 
 .owner-ptw-p-cal__cell.is-empty {
   border: 0;
   background: transparent;
   pointer-events: none;
-  min-height: 84px;
+  min-height: 96px;
 }
 
 .owner-ptw-p-cal__cell.is-off {
@@ -6828,23 +6830,28 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   font-size: 0.78rem;
   font-weight: 500;
   align-self: flex-start;
+  position: relative;
+  z-index: 1;
+  line-height: 1;
 }
 
 .owner-ptw-p-cal__logos {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  flex: 1;
-  min-height: 42px;
+  gap: 4px;
+  pointer-events: none;
+  min-height: 0;
 }
 
 .owner-ptw-p-cal__logo {
-  width: 33px;
-  height: 33px;
+  width: 66px;
+  height: 66px;
   object-fit: contain;
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.25);
+  border-radius: 0;
+  background: none;
 }
 
 .owner-ptw-p-cal__legend {
