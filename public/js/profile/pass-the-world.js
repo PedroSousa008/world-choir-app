@@ -912,12 +912,12 @@ const PassTheWorld = (() => {
       root?.querySelector('[data-ptw-partner-link]')?.remove();
     }
 
-    // Card height changes when partner chrome mounts — keep map sized correctly.
-    if (typeof PassTheWorldMap !== 'undefined') {
-      requestAnimationFrame(() => {
+    // Card height changes when partnership chrome mounts — keep map framed.
+    requestAnimationFrame(() => {
+      if (typeof PassTheWorldMap !== 'undefined') {
         PassTheWorldMap.invalidateSize?.();
-      });
-    }
+      }
+    });
   }
 
   function paintBody(payload) {
