@@ -32,8 +32,10 @@ Never put `overflow-x: clip/hidden` on `html` or `body` (breaks fixed tabs on iO
 `WorldChoirNav.pinNavToVisualViewport` must:
 1. Keep `#nav-root` on `document.body`
 2. Keep `position: fixed` (important)
-3. Only adjust `bottom` for `visualViewport` (iOS URL bar / keyboard)
-4. Re-run on scroll / wheel / touchmove / resize / `visualViewport` events (including a short rAF loop while scrolling)
+3. Keep `bottom: 0` during page scroll — **never** chase `visualViewport.offsetTop` / height while scrolling (iOS URL-bar collapse will slide the bar)
+4. Only lift `bottom` for a real keyboard (text field focused + large inset); ignore URL-bar jitter
+5. On scroll / wheel / touchmove: ensure body parent + freeze keyboard lift — do **not** rewrite styles every animation frame
+6. Listen to `visualViewport` **resize** for keyboard only — never `visualViewport` **scroll** for the tab bar
 
 ## Permission
 

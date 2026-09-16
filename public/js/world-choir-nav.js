@@ -802,14 +802,27 @@ const WorldChoirNav = (() => {
 
   let navPinBound = false;
   let navPinRaf = 0;
-  let navPinLoopOn = false;
-  let navPinLoopStopTimer = null;
+  let navPinScrolling = false;
+  let navPinScrollStopTimer = null;
+  let navPinLastBottom = null;
+
+  function isTextFieldFocused() {
+    const el = document.activeElement;
+    if (!el || el === document.body) return false;
+    const tag = String(el.tagName || '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    return Boolean(el.isContentEditable);
+  }
 
   /**
-   * Glue #nav-root to the visible screen bottom at all times.
-   * Always uses position:fixed (never absolute). Absolute + scrollY caused the
-   * bar to drift mid-scroll when updates lagged. visualViewport only adjusts
-   * the bottom inset for iOS URL-bar / keyboard.
+   * Keep #nav-root glued to the screen bottom with CSS position:fixed.
+   * Never use absolute + scrollY (that drifts mid-scroll).
+   *
+   * Critical: do NOT chase visualViewport.offsetTop / height while the page
+   * scrolls. On iOS that updates every frame as the URL bar expands/collapses
+   * and made the tab bar visibly slide during fast scroll-up. Stay at
+   * bottom:0 (stylesheet) unless a text field is focused and the keyboard
+   * is clearly open.
    */
   function pinNavToVisualViewport() {
     const root = document.getElementById('nav-root');
@@ -818,23 +831,34 @@ const WorldChoirNav = (() => {
       document.body.appendChild(root);
     }
 
-    const vv = window.visualViewport;
-    let bottom = 0;
-    if (vv) {
-      bottom = Math.max(0, Math.round(window.innerHeight - (vv.offsetTop + vv.height)));
-    }
-
     root.style.setProperty('position', 'fixed', 'important');
     root.style.setProperty('left', '0px', 'important');
     root.style.setProperty('right', '0px', 'important');
     root.style.setProperty('top', 'auto', 'important');
-    root.style.setProperty('bottom', `${bottom}px`, 'important');
     root.style.setProperty('width', '100%', 'important');
     root.style.setProperty('max-width', '100%', 'important');
+    root.style.setProperty('transform', 'none', 'important');
     root.style.zIndex = '100';
     root.style.pointerEvents = 'none';
-    root.style.transform = 'none';
     root.style.margin = '0';
+
+    let bottom = 0;
+    const vv = window.visualViewport;
+    if (vv && !navPinScrolling && isTextFieldFocused()) {
+      const layoutH = document.documentElement.clientHeight || window.innerHeight;
+      const inset = Math.max(0, Math.round(layoutH - vv.height - vv.offsetTop));
+      // Ignore URL-bar jitter; only lift for a real keyboard.
+      if (inset >= 80) bottom = inset;
+    }
+
+    if (bottom === navPinLastBottom) return;
+    navPinLastBottom = bottom;
+    if (bottom > 0) {
+      root.style.setProperty('bottom', `${bottom}px`, 'important');
+    } else {
+      // Let stylesheet `bottom: 0 !important` win — no inline fighting compositor.
+      root.style.removeProperty('bottom');
+    }
   }
 
   function scheduleNavPin() {
@@ -845,44 +869,61 @@ const WorldChoirNav = (() => {
     });
   }
 
-  /** Keep pinning every frame while the user is scrolling so the bar never drifts. */
-  function kickNavPinLoop() {
-    scheduleNavPin();
-    if (!navPinLoopOn) {
-      navPinLoopOn = true;
-      const tick = () => {
-        pinNavToVisualViewport();
-        if (navPinLoopOn) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
+  /**
+   * Mark an active scroll gesture so keyboard inset logic stays frozen.
+   * Do not rewrite styles every frame — that thrash was part of the drift.
+   */
+  function markNavScrolling() {
+    const root = document.getElementById('nav-root');
+    if (root && root.parentElement !== document.body) {
+      document.body.appendChild(root);
     }
-    if (navPinLoopStopTimer) clearTimeout(navPinLoopStopTimer);
-    navPinLoopStopTimer = setTimeout(() => {
-      navPinLoopOn = false;
+    if (!navPinScrolling) {
+      navPinScrolling = true;
+      // Snap to bottom:0 for the whole gesture (drop any keyboard lift).
+      navPinLastBottom = null;
       pinNavToVisualViewport();
-    }, 160);
+    }
+    if (navPinScrollStopTimer) clearTimeout(navPinScrollStopTimer);
+    // iOS momentum / rubber-band can outlast a short window.
+    navPinScrollStopTimer = setTimeout(() => {
+      navPinScrolling = false;
+      navPinLastBottom = null;
+      pinNavToVisualViewport();
+    }, 480);
   }
 
   function bindNavViewportPin() {
     if (navPinBound) return;
     navPinBound = true;
     const vv = window.visualViewport;
-    const onMove = () => kickNavPinLoop();
-    window.addEventListener('scroll', onMove, { passive: true, capture: true });
-    window.addEventListener('wheel', onMove, { passive: true, capture: true });
-    window.addEventListener('touchmove', onMove, { passive: true, capture: true });
+    const onScrollGesture = () => markNavScrolling();
+    window.addEventListener('scroll', onScrollGesture, { passive: true, capture: true });
+    window.addEventListener('wheel', onScrollGesture, { passive: true, capture: true });
+    window.addEventListener('touchmove', onScrollGesture, { passive: true, capture: true });
+    window.addEventListener('touchstart', onScrollGesture, { passive: true, capture: true });
     window.addEventListener('resize', scheduleNavPin, { passive: true });
     window.addEventListener('orientationchange', scheduleNavPin, { passive: true });
-    document.addEventListener('scroll', onMove, { passive: true, capture: true });
+    document.addEventListener('scroll', onScrollGesture, { passive: true, capture: true });
     document.addEventListener('visibilitychange', scheduleNavPin);
+    document.addEventListener('focusin', scheduleNavPin, true);
+    document.addEventListener('focusout', scheduleNavPin, true);
+    if (typeof window !== 'undefined' && 'onscrollend' in window) {
+      window.addEventListener('scrollend', () => {
+        navPinScrolling = false;
+        navPinLastBottom = null;
+        pinNavToVisualViewport();
+      }, { passive: true });
+    }
+    // Keyboard open/close only — never visualViewport.scroll (that moves the bar).
     vv?.addEventListener('resize', scheduleNavPin, { passive: true });
-    vv?.addEventListener('scroll', onMove, { passive: true });
 
     const root = document.getElementById('nav-root');
     if (root && typeof MutationObserver === 'function') {
+      // Do not observe `style` — pin writes styles and that would feedback-loop.
       new MutationObserver(scheduleNavPin).observe(root, {
         attributes: true,
-        attributeFilter: ['hidden', 'style', 'class'],
+        attributeFilter: ['hidden', 'class'],
       });
     }
     // If any code moves #nav-root off <body>, put it back immediately.

@@ -618,8 +618,10 @@ body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
 
 /*
  * Bottom tab bar — ALWAYS glued to the visible screen bottom.
- * CSS position:fixed is the source of truth. WorldChoirNav.pinNavToVisualViewport()
- * only adjusts the bottom inset for iOS visualViewport (URL bar / keyboard).
+ * CSS position:fixed + bottom:0 is the source of truth during page scroll.
+ * WorldChoirNav.pinNavToVisualViewport() must NOT chase visualViewport while
+ * scrolling (that slides the bar with the iOS URL chrome). It only lifts
+ * bottom for a real keyboard when a text field is focused.
  * Never switch #nav-root to absolute/sticky/relative.
  */
 #nav-root {
@@ -635,6 +637,8 @@ body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
   margin: 0 !important;
   padding: 0;
   transform: none !important;
+  /* Stay out of body.wc-tab-shell flex sizing; fixed already leaves flow. */
+  flex-shrink: 0;
 }
 
 #nav-root[hidden] {
