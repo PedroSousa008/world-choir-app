@@ -155,11 +155,12 @@ const PassTheWorld = (() => {
 
   function statusKey(journey, itinerary) {
     if (!journey) return 'empty';
+    const partner = lastPayload?.partnership?.enabled ? '1' : '0';
     if (journey.status === 'TRAVELLING' && journey.destination) {
-      return `T|${journey.destination.city}|${journey.destination.country}`;
+      return `T|${journey.destination.city}|${journey.destination.country}|${partner}`;
     }
     const v = journey.viewer || {};
-    return `${journey.status}|${itinerary?.length || 0}|${v.sameCountry}|${v.countryLoaded}|${journey.nextInvitationAt || ''}`;
+    return `${journey.status}|${itinerary?.length || 0}|${v.sameCountry}|${v.countryLoaded}|${journey.nextInvitationAt || ''}|${partner}`;
   }
 
   function ctaKey(journey) {
@@ -287,11 +288,53 @@ const PassTheWorld = (() => {
     return lines;
   }
 
+  function formatEstFlightTime(journey) {
+    const start = journey?.departureAt ? new Date(journey.departureAt).getTime() : NaN;
+    const end = journey?.arrivalAt ? new Date(journey.arrivalAt).getTime() : NaN;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+    const mins = Math.round((end - start) / 60000);
+    if (mins < 1) return '< 1m';
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h <= 0) return `${m}m`;
+    if (m <= 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  }
+
   function renderTravellingStatus(journey) {
     if (!journey?.destination) return '';
     const prog = journey.progress || {};
     const total = prog.totalKm ?? prog.distanceKm;
     const travelled = prog.travelledKm;
+    const partnerOn = Boolean(lastPayload?.partnership?.enabled);
+
+    if (partnerOn) {
+      const nextStop = esc(journey.destination.city || '—');
+      const distanceHtml = total != null
+        ? `<span class="ptw-stats-row__value" data-ptw-progress-km>${formatKm(travelled)}</span>
+           <span class="ptw-stats-row__sub">of ${formatKm(total)}</span>`
+        : '<span class="ptw-stats-row__value">—</span>';
+      const eta = formatEstFlightTime(journey);
+      return `
+        <div class="ptw-stats-row" role="group" aria-label="Journey progress">
+          <div class="ptw-stats-row__cell">
+            <span class="ptw-stats-row__label">Next Stop</span>
+            <span class="ptw-stats-row__value">${nextStop}</span>
+          </div>
+          <div class="ptw-stats-row__cell">
+            <span class="ptw-stats-row__label">Distance</span>
+            ${distanceHtml}
+          </div>
+          <div class="ptw-stats-row__cell">
+            <span class="ptw-stats-row__label">Est. Flight Time</span>
+            <span class="ptw-stats-row__value ptw-stats-row__value--eta">
+              ${eta ? esc(eta) : '—'}
+              <button type="button" class="ptw-status-info" data-ptw-status-info aria-label="Show arrival and invitation times" aria-expanded="false" aria-controls="ptw-status-modal"><span aria-hidden="true">!</span></button>
+            </span>
+          </div>
+        </div>`;
+    }
+
     let line = `Next Stop: ${esc(journey.destination.city)}`;
     if (total != null) {
       line += ` · <span data-ptw-progress-km>${formatKm(travelled)} of ${formatKm(total)}</span>`;
@@ -664,23 +707,14 @@ const PassTheWorld = (() => {
 
   function shellHtml() {
     return `
-      <section class="ptw" aria-labelledby="ptw-title">
+      <section class="ptw" aria-labelledby="ptw-title" data-ptw-root>
         <div class="ptw-map-wrap">
           <div id="ptw-map" class="ptw-map" role="img" aria-label="World map showing the Pass the World journey"></div>
-          <div class="ptw-partner-map-logo" data-ptw-partner-map hidden></div>
         </div>
 
         <header class="ptw-header">
-          <div class="ptw-header__brand" data-ptw-partner-tab hidden>
-            <img class="ptw-partner-tab-logo" data-ptw-partner-tab-img alt="">
-          </div>
           <h1 id="ptw-title" class="ptw-title">Pass the World</h1>
-          <p class="ptw-partner-subtitle" data-ptw-partner-subtitle hidden></p>
         </header>
-
-        <div class="ptw-partner-link" data-ptw-partner-link hidden>
-          <img data-ptw-partner-link-img alt="">
-        </div>
 
         <div class="ptw-body" data-ptw-body>
           <div class="ptw-skeleton" aria-hidden="true">
@@ -704,39 +738,108 @@ const PassTheWorld = (() => {
       </section>`;
   }
 
+  function clearPartnershipUi() {
+    const story = document.getElementById('passport-story-view');
+    story?.classList.remove('is-ptw-partner');
+    root?.classList.remove('is-ptw-partner');
+
+    const subtitle = document.querySelector('#passport-story-view [data-ptw-partner-subtitle]');
+    const tabWrap = document.querySelector('#passport-story-view [data-ptw-partner-tab]');
+    const tabImg = document.querySelector('#passport-story-view [data-ptw-partner-tab-img]');
+    const infoBtn = document.querySelector('#passport-story-view [data-ptw-partner-info]');
+
+    if (subtitle) {
+      subtitle.hidden = true;
+      subtitle.textContent = '';
+    }
+    if (tabWrap) tabWrap.hidden = true;
+    if (tabImg) {
+      tabImg.removeAttribute('src');
+      tabImg.alt = '';
+      tabImg.onload = null;
+      tabImg.onerror = null;
+    }
+    if (infoBtn) {
+      infoBtn.hidden = false;
+      infoBtn.removeAttribute('aria-hidden');
+      infoBtn.tabIndex = 0;
+    }
+
+    root?.querySelector('[data-ptw-partner-map]')?.remove();
+    root?.querySelector('[data-ptw-partner-link]')?.remove();
+  }
+
+  function ensureMapLogoEl() {
+    const wrap = root?.querySelector('.ptw-map-wrap');
+    if (!wrap) return null;
+    let el = wrap.querySelector('[data-ptw-partner-map]');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'ptw-partner-map-logo';
+      el.setAttribute('data-ptw-partner-map', '');
+      el.setAttribute('aria-hidden', 'true');
+      wrap.appendChild(el);
+    }
+    return el;
+  }
+
+  function ensureLinkImageEl() {
+    if (!root) return null;
+    let el = root.querySelector('[data-ptw-partner-link]');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'ptw-partner-link';
+      el.setAttribute('data-ptw-partner-link', '');
+      const actions = root.querySelector('.ptw-actions');
+      if (actions) actions.insertAdjacentElement('beforebegin', el);
+      else root.appendChild(el);
+    }
+    return el;
+  }
+
+  function bindSafeImage(img, url, onFail) {
+    if (!img) return;
+    img.onload = null;
+    img.onerror = () => {
+      img.removeAttribute('src');
+      img.alt = '';
+      if (typeof onFail === 'function') onFail();
+    };
+    img.src = url;
+  }
+
+  function isSafeHttpUrl(url) {
+    try {
+      const u = new URL(String(url || ''), window.location.origin);
+      return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
   function paintPartnership(payload) {
     const p = payload?.partnership;
     const enabled = Boolean(p?.enabled);
 
-    const tabWrap = root?.querySelector('[data-ptw-partner-tab]');
-    const tabImg = root?.querySelector('[data-ptw-partner-tab-img]');
-    const subtitle = root?.querySelector('[data-ptw-partner-subtitle]');
-    const mapLogo = root?.querySelector('[data-ptw-partner-map]');
-    const linkWrap = root?.querySelector('[data-ptw-partner-link]');
-    const linkImg = root?.querySelector('[data-ptw-partner-link-img]');
-
     if (!enabled) {
-      if (tabWrap) tabWrap.hidden = true;
-      if (subtitle) {
-        subtitle.hidden = true;
-        subtitle.textContent = '';
-      }
-      if (mapLogo) {
-        mapLogo.hidden = true;
-        mapLogo.innerHTML = '';
-      }
-      if (linkWrap) linkWrap.hidden = true;
+      clearPartnershipUi();
       return;
     }
 
-    if (tabWrap && tabImg) {
-      if (p.tabLogoUrl) {
-        tabImg.src = p.tabLogoUrl;
-        tabImg.alt = 'Partnership logo';
-        tabWrap.hidden = false;
-      } else {
-        tabWrap.hidden = true;
-      }
+    const story = document.getElementById('passport-story-view');
+    story?.classList.add('is-ptw-partner');
+    root?.classList.add('is-ptw-partner');
+
+    const subtitle = document.querySelector('#passport-story-view [data-ptw-partner-subtitle]');
+    const tabWrap = document.querySelector('#passport-story-view [data-ptw-partner-tab]');
+    const tabImg = document.querySelector('#passport-story-view [data-ptw-partner-tab-img]');
+    const infoBtn = document.querySelector('#passport-story-view [data-ptw-partner-info]');
+
+    // Reference Image 2: Tab Logo owns top-right. Keep info control accessible but not visible.
+    if (infoBtn) {
+      infoBtn.hidden = true;
+      infoBtn.setAttribute('aria-hidden', 'true');
+      infoBtn.tabIndex = -1;
     }
 
     if (subtitle) {
@@ -750,24 +853,59 @@ const PassTheWorld = (() => {
       }
     }
 
-    if (mapLogo) {
-      if (p.mapLogoUrl) {
-        mapLogo.innerHTML = `<img src="${esc(p.mapLogoUrl)}" alt="Partnership map logo">`;
-        mapLogo.hidden = false;
+    if (tabWrap && tabImg) {
+      if (p.tabLogoUrl) {
+        tabWrap.hidden = false;
+        tabImg.alt = '';
+        bindSafeImage(tabImg, p.tabLogoUrl, () => { tabWrap.hidden = true; });
       } else {
-        mapLogo.innerHTML = '';
-        mapLogo.hidden = true;
+        tabWrap.hidden = true;
+        tabImg.removeAttribute('src');
       }
     }
 
-    if (linkWrap && linkImg) {
-      if (p.linkImageUrl) {
-        linkImg.src = p.linkImageUrl;
-        linkImg.alt = String(p.subtitle || 'Partnership').trim() || 'Partnership';
-        linkWrap.hidden = false;
+    const mapLogo = ensureMapLogoEl();
+    if (mapLogo) {
+      if (p.mapLogoUrl) {
+        mapLogo.hidden = false;
+        mapLogo.innerHTML = '<img alt="" decoding="async">';
+        const img = mapLogo.querySelector('img');
+        bindSafeImage(img, p.mapLogoUrl, () => {
+          mapLogo.innerHTML = '';
+          mapLogo.hidden = true;
+          mapLogo.remove();
+        });
       } else {
-        linkWrap.hidden = true;
+        mapLogo.innerHTML = '';
+        mapLogo.hidden = true;
+        mapLogo.remove();
       }
+    }
+
+    const linkUrl = p.linkUrl || p.linkHref || null;
+    if (p.linkImageUrl) {
+      const linkWrap = ensureLinkImageEl();
+      if (linkWrap) {
+        linkWrap.hidden = false;
+        const safeUrl = isSafeHttpUrl(linkUrl) ? String(linkUrl) : null;
+        const label = String(p.subtitle || 'Partnership').trim() || 'Partnership';
+        if (safeUrl) {
+          linkWrap.innerHTML = `
+            <a class="ptw-partner-link__anchor" href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(label)}">
+              <img alt="" decoding="async">
+            </a>`;
+        } else {
+          linkWrap.innerHTML = '<img alt="" decoding="async">';
+        }
+        const img = linkWrap.querySelector('img');
+        bindSafeImage(img, p.linkImageUrl, () => {
+          linkWrap.innerHTML = '';
+          linkWrap.hidden = true;
+          linkWrap.remove();
+        });
+      }
+    } else {
+      root?.querySelector('[data-ptw-partner-link]')?.remove();
     }
   }
 
@@ -1186,7 +1324,13 @@ const PassTheWorld = (() => {
       const travelled = Math.round(total * progress);
       const el = root?.querySelector('[data-ptw-progress-km]');
       if (el && total > 0) {
-        el.textContent = `${formatKm(travelled)} of ${formatKm(total)}`;
+        if (el.classList.contains('ptw-stats-row__value')) {
+          el.textContent = formatKm(travelled);
+          const sub = el.parentElement?.querySelector('.ptw-stats-row__sub');
+          if (sub) sub.textContent = `of ${formatKm(total)}`;
+        } else {
+          el.textContent = `${formatKm(travelled)} of ${formatKm(total)}`;
+        }
       }
       if (typeof PassportPage !== 'undefined' && PassportPage.updateJourneyStatsKm) {
         const liveTotal = PassportPage.liveJourneyTotalKm
@@ -1324,6 +1468,7 @@ const PassTheWorld = (() => {
     stopPolling();
     closePanel();
     if (typeof PassTheWorldMap !== 'undefined') PassTheWorldMap.destroy();
+    clearPartnershipUi();
     if (root) {
       root.innerHTML = '';
       root.classList.remove('ptw-root');
