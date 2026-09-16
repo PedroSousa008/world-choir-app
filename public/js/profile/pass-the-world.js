@@ -23,6 +23,7 @@ const PassTheWorld = (() => {
   let countdownTimer = null;
   let lastPayload = null;
   let submitting = false;
+  let refreshInFlight = null;
   let mockNow = null;
   let mounted = false;
   let arrivalRefreshScheduled = false;
@@ -530,7 +531,7 @@ const PassTheWorld = (() => {
     const countdownHtml = showRing && active
       ? '<p class="ptw-countdown" data-ptw-countdown aria-live="polite"></p>'
       : '';
-    const revealCountdownHtml = status === 'REVEAL_PENDING'
+    const revealCountdownHtml = status === 'REVEAL_PENDING' && journey.invitationCloseAt && journey.revealEndAt
       ? '<p class="ptw-countdown" data-ptw-reveal-countdown aria-live="polite"></p>'
       : '';
     const inviteCountHtml = status === 'INVITATION_OPEN' && journey.invitationCount > 0 && (active || hasInvited)
@@ -1047,18 +1048,28 @@ const PassTheWorld = (() => {
     }
 
     const revealEl = root?.querySelector('[data-ptw-reveal-countdown]');
-    if (journey?.status === 'REVEAL_PENDING' && revealEl && journey.revealEndAt) {
+    if (journey?.status === 'REVEAL_PENDING' && revealEl && journey.revealEndAt && journey.invitationCloseAt) {
       const revealEnd = new Date(journey.revealEndAt).getTime();
+      const closeAt = new Date(journey.invitationCloseAt).getTime();
+      const revealWindowMs = journey.constants?.revealWindowMs || 10000;
       const revealTick = () => {
         const now = mockNow
           ? new Date(mockNow).getTime()
           : Date.now() - serverSkew;
+        // Only show the countdown inside the real post-16:00 suspense slice.
+        if (now < closeAt || now > closeAt + revealWindowMs + 5000) {
+          revealEl.textContent = '';
+          clearInterval(countdownTimer);
+          return;
+        }
         const left = Math.max(0, Math.ceil((revealEnd - now) / 1000));
         revealEl.textContent = left > 0 ? `Revealing in ${left}s` : 'The journey continues…';
         if (left <= 0) clearInterval(countdownTimer);
       };
       revealTick();
       countdownTimer = setInterval(revealTick, 250);
+    } else if (revealEl) {
+      revealEl.textContent = '';
     }
   }
 
@@ -1239,17 +1250,25 @@ const PassTheWorld = (() => {
 
   async function refresh() {
     if (guideDemoActive) return lastPayload;
-    const data = await fetchState();
-    lastPayload = data;
-    paintBody(data);
-    paintItineraryPanel();
-    if (typeof PassTheWorldMap !== 'undefined') {
-      PassTheWorldMap.renderJourney(data);
+    if (refreshInFlight) return refreshInFlight;
+    refreshInFlight = (async () => {
+      const data = await fetchState();
+      lastPayload = data;
+      paintBody(data);
+      paintItineraryPanel();
+      if (typeof PassTheWorldMap !== 'undefined') {
+        PassTheWorldMap.renderJourney(data);
+      }
+      if (typeof PassportPage !== 'undefined' && PassportPage.updateJourneyStats) {
+        PassportPage.updateJourneyStats(data.stats);
+      }
+      return data;
+    })();
+    try {
+      return await refreshInFlight;
+    } finally {
+      refreshInFlight = null;
     }
-    if (typeof PassportPage !== 'undefined' && PassportPage.updateJourneyStats) {
-      PassportPage.updateJourneyStats(data.stats);
-    }
-    return data;
   }
 
   /** Local presentation only — Braga / no destination / Visit my City visible. */

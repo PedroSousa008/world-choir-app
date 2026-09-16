@@ -433,7 +433,7 @@ function resolveWorldPresentLocation(state, itinerary, now = new Date()) {
 }
 
 /**
- * Next canonical landing (1 minute before invitation open) strictly after departure.
+ * Next canonical landing (1 minute before invitation open) strictly after `from`.
  * Closer cities therefore move slower; longer hops move faster — same arrival clock.
  */
 function nextArrivalAt(from = new Date()) {
@@ -448,6 +448,9 @@ function nextArrivalAt(from = new Date()) {
   return candidate;
 }
 
+/**
+ * Arrival for a departure clock — next canonical landing strictly after departure.
+ */
 function computeArrivalAt(departureAt) {
   return nextArrivalAt(new Date(departureAt));
 }
@@ -458,6 +461,32 @@ function isCanonicalArrivalAt(iso) {
   return d.getUTCHours() === ARRIVAL_HOUR_UTC
     && d.getUTCMinutes() === ARRIVAL_MINUTE_UTC
     && d.getUTCSeconds() === 0;
+}
+
+/** Prefer a stored landing only if it is still a valid future canonical arrival. */
+function pickArrivalAt(departureAt, preferredIso = null, now = new Date()) {
+  const depMs = new Date(departureAt).getTime();
+  const nowMs = (now instanceof Date ? now : new Date(now)).getTime();
+  const floor = Math.max(
+    Number.isFinite(depMs) ? depMs : nowMs,
+    Number.isFinite(nowMs) ? nowMs : depMs
+  );
+  if (preferredIso && isCanonicalArrivalAt(preferredIso)) {
+    const prefMs = new Date(preferredIso).getTime();
+    if (Number.isFinite(prefMs) && prefMs > floor) return new Date(prefMs);
+  }
+  // nextArrivalAt(floor) guarantees strictly after both departure and now.
+  return nextArrivalAt(new Date(floor));
+}
+
+/** True while the post-window suspense reveal may still run. */
+function isWithinRevealSlice(closeAtIso, now = new Date()) {
+  if (!closeAtIso) return false;
+  const closeMs = new Date(closeAtIso).getTime();
+  if (!Number.isFinite(closeMs)) return false;
+  const nowMs = (now instanceof Date ? now : new Date(now)).getTime();
+  // Allow a few seconds of clock skew past revealEndAt for the settle→reveal handoff.
+  return nowMs >= closeMs && nowMs < closeMs + REVEAL_WINDOW_MS + 5000;
 }
 
 function seedItinerary() {
@@ -678,6 +707,9 @@ async function repairInvalidJourney(state, itinerary) {
         destination: null,
         departureAt: null,
         arrivalAt: null,
+        activeRoundId: null,
+        invitationOpenAt: null,
+        invitationCloseAt: null,
         revealStartAt: null,
         revealEndAt: null,
         invitedCities: [],
@@ -705,6 +737,20 @@ async function readStateRaw() {
 }
 
 async function writeState(state) {
+  // Never let a stale reader clobber an in-flight journey (reveal / waiting / arrived).
+  if (state.status !== STATUS.TRAVELLING) {
+    const live = await readStateRaw();
+    if (live?.status === STATUS.TRAVELLING && live.destination && live.arrivalAt) {
+      const arrMs = new Date(live.arrivalAt).getTime();
+      if (Number.isFinite(arrMs) && arrMs > Date.now()) {
+        const completingSameFlight = state.status === STATUS.ARRIVED
+          && state.currentItineraryEntryId
+          && state.currentItineraryEntryId === live.currentItineraryEntryId
+          && !state.destination;
+        if (!completingSameFlight) return live;
+      }
+    }
+  }
   const next = { ...state, updatedAt: new Date().toISOString() };
   await writeJson(STATE_PATH, next, { overwrite: true });
   return next;
@@ -890,12 +936,13 @@ function publicReveal(winner, origin) {
   };
 }
 
-async function applyWinner(state, itinerary, winner, invitations) {
+async function applyWinner(state, itinerary, winner, invitations, nowInput = new Date()) {
   if (!winnerEligibleForWorld(winner, state)) {
     return { state, itinerary };
   }
 
-  const selectedAt = winner.selectedAt || new Date().toISOString();
+  const now = nowInput instanceof Date ? nowInput : new Date(nowInput);
+  const selectedAt = winner.selectedAt || now.toISOString();
 
   // Idempotent: heal/re-apply must not append duplicate itinerary stops.
   const already = itinerary.find((entry) => (
@@ -909,7 +956,14 @@ async function applyWinner(state, itinerary, winner, invitations) {
     )
   ));
   if (already) {
-    const arrivalAt = already.arrivedAt || computeArrivalAt(selectedAt).toISOString();
+    const departureAt = already.departedAt || selectedAt;
+    const arrivalAt = pickArrivalAt(departureAt, already.arrivedAt, now).toISOString();
+    if (already.arrivedAt !== arrivalAt) {
+      itinerary = itinerary.map((entry) => (
+        entry.id === already.id ? { ...entry, arrivedAt: arrivalAt, departedAt: departureAt } : entry
+      ));
+      await writeItinerary(itinerary);
+    }
     const nextState = await writeState({
       ...state,
       status: STATUS.TRAVELLING,
@@ -928,8 +982,9 @@ async function applyWinner(state, itinerary, winner, invitations) {
         longitude: already.longitude,
       },
       currentItineraryEntryId: already.id,
-      departureAt: already.departedAt || selectedAt,
+      departureAt,
       arrivalAt,
+      activeRoundId: null,
       invitationOpenAt: null,
       invitationCloseAt: null,
       revealStartAt: null,
@@ -956,7 +1011,7 @@ async function applyWinner(state, itinerary, winner, invitations) {
   const distanceKm = Math.round(haversineKm(
     origin.latitude, origin.longitude, winner.latitude, winner.longitude
   ));
-  const arrivalAt = computeArrivalAt(selectedAt).toISOString();
+  const arrivalAt = pickArrivalAt(selectedAt, null, now).toISOString();
   const entry = {
     id: randomUUID(),
     sequence: itinerary.length + 1,
@@ -1000,6 +1055,7 @@ async function applyWinner(state, itinerary, winner, invitations) {
     currentItineraryEntryId: entry.id,
     departureAt: selectedAt,
     arrivalAt,
+    activeRoundId: null,
     invitationOpenAt: null,
     invitationCloseAt: null,
     invitationCount: invitations.length,
@@ -1013,8 +1069,16 @@ async function applyWinner(state, itinerary, winner, invitations) {
 }
 
 async function beginRevealPhase(state, invitations, now) {
-  const revealStartAt = state.invitationCloseAt || now.toISOString();
+  const closeAt = state.invitationCloseAt;
+  if (!closeAt || !isWithinRevealSlice(closeAt, now)) {
+    // Outside the real post-16:00 suspense window — never invent a fresh 10s reveal.
+    return null;
+  }
+  const revealStartAt = closeAt;
   const revealEndAt = new Date(new Date(revealStartAt).getTime() + REVEAL_WINDOW_MS).toISOString();
+  if (now.getTime() >= new Date(revealEndAt).getTime()) {
+    return null;
+  }
   return writeState({
     ...state,
     status: STATUS.REVEAL_PENDING,
@@ -1109,8 +1173,52 @@ async function settleInvitationRound(state, itinerary, now) {
       wasEmpty: false,
     });
   } catch { /* non-blocking */ }
+
+  const closeAt = state.invitationCloseAt
+    || new Date(todayInvitationOpenAt(now).getTime() + INVITATION_WINDOW_MS).toISOString();
+
+  // Suspense reveal only inside the real post-window slice. Outside it (hours later /
+  // concurrent stale polls), start travel immediately — never invent a fresh 10s reveal.
+  if (!isWithinRevealSlice(closeAt, now)) {
+    const winner = await readWinner(roundId);
+    if (winner?.invitationId && winnerEligibleForWorld(winner, state)) {
+      return applyWinner(state, itinerary, {
+        ...winner,
+        selectedAt: winner.selectedAt || now.toISOString(),
+        selectionMode: winner.selectionMode || 'window',
+      }, allInvitations, now);
+    }
+    const next = await writeState({
+      ...state,
+      status: STATUS.WAITING_FOR_FIRST_CALL,
+      activeRoundId: roundId,
+      invitationOpenAt: state.invitationOpenAt || todayInvitationOpenAt(now).toISOString(),
+      invitationCloseAt: closeAt,
+      invitationCount: invitations.length,
+      invitedCities: buildInvitedCities(allInvitations, state),
+      revealStartAt: null,
+      revealEndAt: null,
+      version: (Number(state.version) || 1) + 1,
+    });
+    return { state: next, itinerary };
+  }
+
+  const revealed = await beginRevealPhase({
+    ...state,
+    invitationCloseAt: closeAt,
+  }, invitations, now);
+  if (!revealed) {
+    const winner = await readWinner(roundId);
+    if (winner?.invitationId && winnerEligibleForWorld(winner, state)) {
+      return applyWinner(state, itinerary, {
+        ...winner,
+        selectedAt: winner.selectedAt || now.toISOString(),
+      }, allInvitations, now);
+    }
+    return { state, itinerary };
+  }
   return {
-    state: await beginRevealPhase(state, invitations, now),
+    state: revealed,
     itinerary,
   };
 }
@@ -1122,26 +1230,30 @@ async function advanceStateMachine(nowInput) {
   ({ state, itinerary } = await repairInvalidJourney(state, itinerary));
   ({ state, itinerary } = await healWorldLocation(state, itinerary, now));
 
-  // Correct any in-flight arrival that is not the canonical landing
-  // (1 minute before invitation open).
-  if (
-    state.status === STATUS.TRAVELLING
-    && state.departureAt
-    && !isCanonicalArrivalAt(state.arrivalAt)
-  ) {
-    const arrivalAt = computeArrivalAt(state.departureAt).toISOString();
-    state = await writeState({
-      ...state,
-      arrivalAt,
-      version: (Number(state.version) || 1) + 1,
-    });
-    if (state.currentItineraryEntryId) {
-      itinerary = itinerary.map((entry) => (
-        entry.id === state.currentItineraryEntryId
-          ? { ...entry, arrivedAt: arrivalAt }
-          : entry
-      ));
-      await writeItinerary(itinerary);
+  // Correct any in-flight arrival that is not a valid future canonical landing
+  // (1 minute before invitation open, strictly after departure AND now).
+  if (state.status === STATUS.TRAVELLING && state.departureAt) {
+    const arrivalOk = state.arrivalAt
+      && isCanonicalArrivalAt(state.arrivalAt)
+      && new Date(state.arrivalAt).getTime() > Math.max(
+        new Date(state.departureAt).getTime(),
+        now.getTime()
+      );
+    if (!arrivalOk) {
+      const arrivalAt = pickArrivalAt(state.departureAt, state.arrivalAt, now).toISOString();
+      state = await writeState({
+        ...state,
+        arrivalAt,
+        version: (Number(state.version) || 1) + 1,
+      });
+      if (state.currentItineraryEntryId) {
+        itinerary = itinerary.map((entry) => (
+          entry.id === state.currentItineraryEntryId
+            ? { ...entry, arrivedAt: arrivalAt }
+            : entry
+        ));
+        await writeItinerary(itinerary);
+      }
     }
   }
 
@@ -1165,6 +1277,8 @@ async function advanceStateMachine(nowInput) {
       activeRoundId: null,
       invitationOpenAt: null,
       invitationCloseAt: null,
+      revealStartAt: null,
+      revealEndAt: null,
       invitationCount: 0,
       invitedCities: [],
       version: (Number(state.version) || 1) + 1,
@@ -1175,33 +1289,49 @@ async function advanceStateMachine(nowInput) {
 
   // 10-second reveal after invitations close — winner already chosen; travel starts at revealEndAt.
   if (state.status === STATUS.REVEAL_PENDING) {
-    if (state.revealEndAt && now.getTime() >= new Date(state.revealEndAt).getTime()) {
-      const roundId = state.activeRoundId;
-      const winner = roundId ? await readWinner(roundId) : null;
-      if (winner?.invitationId && winnerEligibleForWorld(winner, state)) {
-        const invitations = await readRoundInvites(roundId);
-        const applied = await applyWinner(state, itinerary, {
-          ...winner,
-          selectedAt: state.revealEndAt,
-        }, invitations);
-        if (applied.state.status === STATUS.TRAVELLING) {
-          return { ...applied, now };
-        }
-      }
-      state = await writeState({
-        ...state,
-        status: STATUS.ARRIVED,
-        origin: null,
-        destination: null,
-        departureAt: null,
-        arrivalAt: null,
-        revealStartAt: null,
-        revealEndAt: null,
-        invitedCities: [],
-        lastReveal: null,
-        version: (Number(state.version) || 1) + 1,
-      });
+    const endMs = state.revealEndAt ? new Date(state.revealEndAt).getTime() : 0;
+    const stillCounting = Boolean(
+      endMs
+      && now.getTime() < endMs
+      && state.invitationCloseAt
+      && isWithinRevealSlice(state.invitationCloseAt, now)
+    );
+    if (stillCounting) {
+      return { state, itinerary, now };
     }
+
+    // Reveal finished, or a rogue mid-day window — apply winner / clear. Never loop.
+    const roundId = state.activeRoundId;
+    const winner = roundId ? await readWinner(roundId) : null;
+    if (winner?.invitationId && winnerEligibleForWorld(winner, state)) {
+      const invitations = await readRoundInvites(roundId);
+      const selectedAt = endMs && now.getTime() >= endMs
+        ? state.revealEndAt
+        : (winner.selectedAt || now.toISOString());
+      const applied = await applyWinner(state, itinerary, {
+        ...winner,
+        selectedAt,
+      }, invitations, now);
+      if (applied.state.status === STATUS.TRAVELLING) {
+        return { ...applied, now };
+      }
+    }
+    state = await writeState({
+      ...state,
+      status: STATUS.ARRIVED,
+      origin: null,
+      destination: null,
+      departureAt: null,
+      arrivalAt: null,
+      activeRoundId: null,
+      invitationOpenAt: null,
+      invitationCloseAt: null,
+      revealStartAt: null,
+      revealEndAt: null,
+      invitedCities: [],
+      lastReveal: null,
+      version: (Number(state.version) || 1) + 1,
+    });
     return { state, itinerary, now };
   }
 
@@ -1393,7 +1523,7 @@ async function resolveFirstCallIfPending(state, itinerary, now) {
   }
 
   if (!winnerEligibleForWorld(winner, state)) return null;
-  return applyWinner(state, itinerary, winner, allInvites);
+  return applyWinner(state, itinerary, winner, allInvites, now);
 }
 
 function journeyProgress(state, now) {

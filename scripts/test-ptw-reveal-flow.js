@@ -427,6 +427,110 @@ async function main() {
   assert(inviteRes.journey.status === 'TRAVELLING', 'Spanish first call starts travel despite stale PT winner');
   assert(inviteRes.journey.destination?.city === 'Madrid', 'destination is Madrid');
 
+  // --- Regression: no rogue mid-day reveal / no instant land on past canonical arrival ---
+  delete require.cache[path.resolve(__dirname, '../api/_lib/pass-the-world.js')];
+  const ptw2 = require('../api/_lib/pass-the-world');
+
+  await seedArrived(16);
+  const evening = utcOn(16, 18, 7, 0);
+  const dayRound = roundIdFor(16);
+  const rioInvite = {
+    id: 'inv-rio',
+    roundId: dayRound,
+    userId: 'user-rio',
+    voiceNumber: 88,
+    city: 'Rio de Janeiro',
+    country: 'Brazil',
+    countryCode: 'BR',
+    latitude: -22.9068,
+    longitude: -43.1729,
+    submittedAt: evening.toISOString(),
+  };
+  await writeInvite(dayRound, rioInvite);
+  mem.roundWinner.set(`wc-data/pass-the-world/rounds/${dayRound}/winner.json`, {
+    ...rioInvite,
+    invitationId: rioInvite.id,
+    selectedAt: evening.toISOString(),
+    selectionMode: 'first_call',
+  });
+  mem.state.status = 'ARRIVED';
+  mem.state.activeRoundId = dayRound;
+  mem.state.invitationCloseAt = null;
+  r = await ptw2.advanceStateMachine(evening);
+  assert(r.state.status !== 'REVEAL_PENDING', 'evening ARRIVED+winner must not enter REVEAL_PENDING');
+  assert(r.state.status === 'TRAVELLING', 'evening winner starts travel immediately');
+  assert(
+    r.state.arrivalAt === isoOn(17, ARR_H, ARR_M),
+    'evening first-call lands at next canonical 15:59 UTC'
+  );
+  assert(r.state.activeRoundId == null, 'travel clears activeRoundId');
+
+  // Stale reveal must not clobber an in-flight journey
+  const travelSnap = { ...mem.state };
+  mem.state = {
+    version: 1,
+    status: 'ARRIVED',
+    currentCity: 'Braga',
+    currentCountry: 'Portugal',
+    currentCountryCode: 'PT',
+    currentLatitude: 41.5518,
+    currentLongitude: -8.4229,
+    currentItineraryEntryId: 'seed-braga',
+    activeRoundId: dayRound,
+    invitationCloseAt: null,
+    invitationCount: 0,
+    invitedCities: [],
+  };
+  r = await ptw2.advanceStateMachine(new Date(evening.getTime() + 2000));
+  assert(r.state.status === 'TRAVELLING', 'stale ARRIVED settle cannot clobber TRAVELLING');
+  assert(r.state.destination?.city === 'Rio de Janeiro', 'in-flight destination preserved');
+  assert(r.state.arrivalAt === travelSnap.arrivalAt, 'in-flight arrivalAt preserved');
+
+  // Past canonical arrival while travelling must be healed forward (not instant arrive)
+  await seedArrived(16);
+  const pastArrive = isoOn(16, ARR_H, ARR_M);
+  mem.itinerary.entries.push({
+    id: 'leg-rio-past',
+    sequence: 2,
+    city: 'Rio de Janeiro',
+    country: 'Brazil',
+    countryCode: 'BR',
+    latitude: -22.9068,
+    longitude: -43.1729,
+    originCity: 'Braga',
+    originCountry: 'Portugal',
+    departedAt: evening.toISOString(),
+    arrivedAt: pastArrive,
+    isSeed: false,
+  });
+  mem.state = {
+    version: 2,
+    status: 'TRAVELLING',
+    currentCity: 'Braga',
+    currentCountry: 'Portugal',
+    currentCountryCode: 'PT',
+    currentLatitude: 41.5518,
+    currentLongitude: -8.4229,
+    currentItineraryEntryId: 'leg-rio-past',
+    origin: {
+      city: 'Braga', country: 'Portugal', countryCode: 'PT',
+      latitude: 41.5518, longitude: -8.4229,
+    },
+    destination: {
+      city: 'Rio de Janeiro', country: 'Brazil', countryCode: 'BR',
+      latitude: -22.9068, longitude: -43.1729,
+    },
+    departureAt: evening.toISOString(),
+    arrivalAt: pastArrive,
+    activeRoundId: null,
+    invitationCount: 0,
+    invitedCities: [],
+  };
+  r = await ptw2.advanceStateMachine(evening);
+  assert(r.state.status === 'TRAVELLING', 'past arrivalAt does not instantly arrive');
+  assert(r.state.arrivalAt === isoOn(17, ARR_H, ARR_M), 'past arrivalAt healed to next landing');
+  assert(r.state.currentCity === 'Braga', 'still at origin until real landing');
+
   console.log('\nAll Pass the World tests passed.');
 }
 
