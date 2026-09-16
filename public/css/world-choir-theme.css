@@ -153,7 +153,13 @@ body {
   background: var(--bg-void);
   color: var(--text-primary);
   min-height: 100vh;
-  overflow-x: clip;
+  /*
+   * Do NOT set overflow-x: clip/hidden on body.
+   * Mixed overflow (clip + visible) makes body a scroll container and breaks
+   * position:fixed bottom tabs on WebKit/Safari — the tab bar scrolls away.
+   * Horizontal clip stays on html + .page wrappers.
+   */
+  overflow-x: visible;
   max-width: 100%;
   line-height: 1.5;
 }
@@ -608,14 +614,39 @@ body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
   min-height: 100%;
 }
 
+/*
+ * Bottom tab bar — ALWAYS viewport-fixed. Never sticky, never in-flow.
+ * #nav-root is the fixed shell; .bottom-nav fills it. Do not put transforms,
+ * filters, or overflow clipping on ancestors of #nav-root.
+ */
+#nav-root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 100%;
+  z-index: 100;
+  pointer-events: none;
+  /* Keep out of document flow so page scroll can never drag the tabs. */
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+#nav-root[hidden] {
+  display: none !important;
+}
+
 /* Bottom navigation */
 .bottom-nav {
   --nav-indicator-duration: 200ms;
   --nav-indicator-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  width: 100%;
   height: var(--nav-height);
   background: var(--nav-background);
   backdrop-filter: blur(24px);
@@ -626,6 +657,8 @@ body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
   align-items: center;
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom, 0);
+  pointer-events: auto;
+  box-sizing: border-box;
 }
 
 /* Single shared tab indicator — X is driven via translate3d in JS */

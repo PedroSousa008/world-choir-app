@@ -799,12 +799,29 @@ const WorldChoirNav = (() => {
     return nav;
   }
 
+  /** Keep tab chrome on body + viewport-fixed — never inside a scrolling panel. */
+  function ensureNavRootFixed(root) {
+    if (!root) return;
+    if (root.parentElement !== document.body) {
+      document.body.appendChild(root);
+    }
+    // Inline lock beats accidental stylesheet regressions.
+    root.style.position = 'fixed';
+    root.style.left = '0';
+    root.style.right = '0';
+    root.style.bottom = '0';
+    root.style.width = '100%';
+    root.style.zIndex = '100';
+    root.style.pointerEvents = 'none';
+  }
+
   function mount(activePage) {
     if (typeof WorldChoirA11y !== 'undefined') {
       WorldChoirA11y.bindOverlays?.();
     }
     const root = document.getElementById('nav-root');
     if (!root) return;
+    ensureNavRootFixed(root);
     clearPendingNavigation();
     clearArrivalTimer();
     indicatorReady = false;

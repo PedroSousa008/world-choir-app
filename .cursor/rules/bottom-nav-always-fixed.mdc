@@ -1,0 +1,30 @@
+---
+description: Bottom tab bar must always stay viewport-fixed; never move on scroll
+alwaysApply: true
+---
+
+# Bottom Tab Bar — Always Fixed (Absolute)
+
+The main bottom tab bar (`#nav-root` / `.bottom-nav` — Home, Map, Donate, Profile, Memory when unlocked) must **never** move when the page scrolls. It stays fixed at the bottom of the viewport at all times.
+
+## Required behavior
+
+- Tabs stay in the exact same on-screen place while scrolling up or down.
+- Not sticky. Not in document flow. Not inside a scrolling panel.
+- `#nav-root` must remain a direct child of `document.body` (see `WorldChoirTabs` `keepOutside` / `BODY_HOLD_IDS`).
+
+## Never do this
+
+- Do not put `overflow-x: clip`, `overflow: hidden`, `transform`, `filter`, `perspective`, or `contain: paint` on `html`, `body`, or any ancestor of `#nav-root` in a way that creates a scroll/containing block for fixed chrome (this makes the tab bar scroll away on Safari/WebKit).
+- Do not move `#nav-root` into `#wc-tab-host`, `.wc-tab-panel`, or any scrollable content.
+- Do not change `#nav-root` / `.bottom-nav` positioning to `static`, `relative` (except `.bottom-nav` inside the fixed `#nav-root` shell), `absolute`, or `sticky` without the user **explicitly** asking.
+- Do not “fix” other layout bugs by translating or animating the whole tab bar on scroll.
+- Do not ship CSS/JS that makes the tab bar rise, hide, or collapse on scroll.
+
+## Horizontal scroll lock
+
+Keep horizontal clipping on `html` and inner wrappers (`.page`, `.page-wide`, etc.) — **not** on `body`.
+
+## Permission
+
+Do not redesign, relocate, or restyle the bottom tab bar unless the user explicitly asks.
