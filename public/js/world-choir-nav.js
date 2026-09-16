@@ -802,11 +802,14 @@ const WorldChoirNav = (() => {
 
   let navPinBound = false;
   let navPinRaf = 0;
+  let navPinLoopOn = false;
+  let navPinLoopStopTimer = null;
 
   /**
-   * Glue #nav-root to the visible bottom of the screen on iOS Safari.
-   * CSS position:fixed alone fails when html/body become scroll containers —
-   * the bar then scrolls mid-page. Re-pin on scroll / visualViewport changes.
+   * Glue #nav-root to the visible screen bottom at all times.
+   * Always uses position:fixed (never absolute). Absolute + scrollY caused the
+   * bar to drift mid-scroll when updates lagged. visualViewport only adjusts
+   * the bottom inset for iOS URL-bar / keyboard.
    */
   function pinNavToVisualViewport() {
     const root = document.getElementById('nav-root');
@@ -815,22 +818,19 @@ const WorldChoirNav = (() => {
       document.body.appendChild(root);
     }
 
-    const height = root.offsetHeight || 0;
-    if (!height) return;
-
     const vv = window.visualViewport;
-    // Prefer visual viewport (iOS URL bar). Fall back to layout viewport.
-    const viewTop = vv ? vv.offsetTop : 0;
-    const viewHeight = vv ? vv.height : window.innerHeight;
-    // absolute + scrollY survives WebKit “fixed becomes document-relative”.
-    const top = Math.round(window.scrollY + viewTop + viewHeight - height);
+    let bottom = 0;
+    if (vv) {
+      bottom = Math.max(0, Math.round(window.innerHeight - (vv.offsetTop + vv.height)));
+    }
 
-    root.style.position = 'absolute';
-    root.style.left = '0';
-    root.style.right = '0';
-    root.style.width = '100%';
-    root.style.bottom = 'auto';
-    root.style.top = `${Math.max(0, top)}px`;
+    root.style.setProperty('position', 'fixed', 'important');
+    root.style.setProperty('left', '0px', 'important');
+    root.style.setProperty('right', '0px', 'important');
+    root.style.setProperty('top', 'auto', 'important');
+    root.style.setProperty('bottom', `${bottom}px`, 'important');
+    root.style.setProperty('width', '100%', 'important');
+    root.style.setProperty('max-width', '100%', 'important');
     root.style.zIndex = '100';
     root.style.pointerEvents = 'none';
     root.style.transform = 'none';
@@ -845,22 +845,55 @@ const WorldChoirNav = (() => {
     });
   }
 
+  /** Keep pinning every frame while the user is scrolling so the bar never drifts. */
+  function kickNavPinLoop() {
+    scheduleNavPin();
+    if (!navPinLoopOn) {
+      navPinLoopOn = true;
+      const tick = () => {
+        pinNavToVisualViewport();
+        if (navPinLoopOn) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+    if (navPinLoopStopTimer) clearTimeout(navPinLoopStopTimer);
+    navPinLoopStopTimer = setTimeout(() => {
+      navPinLoopOn = false;
+      pinNavToVisualViewport();
+    }, 160);
+  }
+
   function bindNavViewportPin() {
     if (navPinBound) return;
     navPinBound = true;
     const vv = window.visualViewport;
-    window.addEventListener('scroll', scheduleNavPin, { passive: true, capture: true });
+    const onMove = () => kickNavPinLoop();
+    window.addEventListener('scroll', onMove, { passive: true, capture: true });
+    window.addEventListener('wheel', onMove, { passive: true, capture: true });
+    window.addEventListener('touchmove', onMove, { passive: true, capture: true });
     window.addEventListener('resize', scheduleNavPin, { passive: true });
     window.addEventListener('orientationchange', scheduleNavPin, { passive: true });
-    vv?.addEventListener('resize', scheduleNavPin, { passive: true });
-    vv?.addEventListener('scroll', scheduleNavPin, { passive: true });
+    document.addEventListener('scroll', onMove, { passive: true, capture: true });
     document.addEventListener('visibilitychange', scheduleNavPin);
+    vv?.addEventListener('resize', scheduleNavPin, { passive: true });
+    vv?.addEventListener('scroll', onMove, { passive: true });
+
     const root = document.getElementById('nav-root');
     if (root && typeof MutationObserver === 'function') {
       new MutationObserver(scheduleNavPin).observe(root, {
         attributes: true,
         attributeFilter: ['hidden', 'style', 'class'],
       });
+    }
+    // If any code moves #nav-root off <body>, put it back immediately.
+    if (typeof MutationObserver === 'function') {
+      new MutationObserver(() => {
+        const el = document.getElementById('nav-root');
+        if (el && el.parentElement !== document.body) {
+          document.body.appendChild(el);
+          scheduleNavPin();
+        }
+      }).observe(document.body, { childList: true });
     }
   }
 

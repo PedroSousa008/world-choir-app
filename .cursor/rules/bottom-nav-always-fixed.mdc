@@ -12,22 +12,28 @@ The main bottom tab bar (`#nav-root` / `.bottom-nav` — Home, Map, Donate, Prof
 - Tabs stay in the exact same on-screen place while scrolling up or down.
 - Not sticky. Not in document flow. Not inside a scrolling panel.
 - `#nav-root` must remain a direct child of `document.body` (see `WorldChoirTabs` `keepOutside` / `BODY_HOLD_IDS`).
+- `#nav-root` must use **`position: fixed`** (with `bottom` inset). Never `absolute`, `sticky`, or `relative` for the shell.
 
 ## Never do this
 
 - Do not put `overflow-x: clip`, `overflow: hidden`, `transform`, `filter`, `perspective`, or `contain: paint` on `html`, `body`, or any ancestor of `#nav-root` in a way that creates a scroll/containing block for fixed chrome (this makes the tab bar scroll away on Safari/WebKit).
 - Do not move `#nav-root` into `#wc-tab-host`, `.wc-tab-panel`, or any scrollable content.
-- Do not change `#nav-root` / `.bottom-nav` positioning to `static`, `relative` (except `.bottom-nav` inside the fixed `#nav-root` shell), `absolute`, or `sticky` without the user **explicitly** asking.
+- Do not change `#nav-root` / `.bottom-nav` positioning to `static`, `relative` (except `.bottom-nav` inside the fixed `#nav-root` shell), `absolute`, or `sticky` unless the user **explicitly** asks.
 - Do not “fix” other layout bugs by translating or animating the whole tab bar on scroll.
 - Do not ship CSS/JS that makes the tab bar rise, hide, or collapse on scroll.
+- Do **not** reintroduce `position: absolute` + `top: scrollY + …` pinning — that drifts mid-scroll.
 
 ## Horizontal scroll lock
 
 Never put `overflow-x: clip/hidden` on `html` or `body` (breaks fixed tabs on iOS Safari). Clip on `.page`, `.page-wide`, `#wc-tab-host`, panels only.
 
-## Mobile pin
+## Mobile / visualViewport pin
 
-`WorldChoirNav` must keep calling `pinNavToVisualViewport` on scroll / `visualViewport` changes so the bar stays on the visible bottom even if WebKit demotes `position: fixed`.
+`WorldChoirNav.pinNavToVisualViewport` must:
+1. Keep `#nav-root` on `document.body`
+2. Keep `position: fixed` (important)
+3. Only adjust `bottom` for `visualViewport` (iOS URL bar / keyboard)
+4. Re-run on scroll / wheel / touchmove / resize / `visualViewport` events (including a short rAF loop while scrolling)
 
 ## Permission
 
