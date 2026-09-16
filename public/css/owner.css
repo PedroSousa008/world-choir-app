@@ -6353,3 +6353,38 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   .owner-va-kpi-row { grid-template-columns: 1fr; }
   .owner-va-matrix { --va-cols: 25; }
 }
+
+/* ── Pass the World → Partnership (placeholder shell) ── */
+.owner-ptw-partnership {
+  position: relative;
+  min-height: calc(100vh - 140px);
+  margin: -8px 0 0;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.owner-ptw-partnership__back {
+  appearance: none;
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+  border: 0;
+  background: transparent;
+  color: rgba(242, 239, 232, 0.55);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  padding: 6px 4px;
+}
+
+.owner-ptw-partnership__back:hover {
+  color: #f2efe8;
+}
+
+.owner-ptw-partnership__canvas {
+  min-height: calc(100vh - 140px);
+  width: 100%;
+  background: #000;
+}

@@ -49,6 +49,7 @@ const OwnerControl = (() => {
     citySort: 'voices',
     countrySort: 'voices',
     communityView: 'main',
+    ptwView: 'main',
     foundationLayout: 'list',
     foundationQuery: '',
     foundationStatusFilter: 'all',
@@ -186,6 +187,10 @@ const OwnerControl = (() => {
       state.communityView = parts[1] === 'voice-activity' ? 'voice-activity' : 'main';
       return true;
     }
+    if (parts[0] === 'pass-the-world') {
+      state.ptwView = parts[1] === 'partnership' ? 'partnership' : 'main';
+      return true;
+    }
     if (parts[0] === 'daily-acts') {
       const sub = parts[1];
       if (['library', 'engagement', 'partnerships'].includes(sub)) {
@@ -224,6 +229,9 @@ const OwnerControl = (() => {
     const parts = [section];
     if (section === 'community' && state.communityView === 'voice-activity') {
       parts.push('voice-activity');
+    }
+    if (section === 'pass-the-world' && state.ptwView === 'partnership') {
+      parts.push('partnership');
     }
     if (section === 'daily-acts') {
       parts.push(state.dapView || 'library');
@@ -481,6 +489,12 @@ const OwnerControl = (() => {
           // keep voice activity if already there; sidebar Community click resets to main
           state.communityView = 'main';
           if (typeof OwnerVoiceActivity !== 'undefined') OwnerVoiceActivity.stopPolling();
+        }
+        if (state.section !== 'pass-the-world') {
+          state.ptwView = 'main';
+        } else if (state.ptwView === 'partnership') {
+          // sidebar Pass the World click resets to main analytics
+          state.ptwView = 'main';
         }
         if (typeof OwnerPassTheWorld !== 'undefined') OwnerPassTheWorld.stopPolling();
         setFlash(null);
@@ -2674,6 +2688,9 @@ const OwnerControl = (() => {
   }
 
   function renderPassTheWorld() {
+    if (state.ptwView === 'partnership' && typeof OwnerPtwPartnership !== 'undefined') {
+      return OwnerPtwPartnership.render({ state, api, render });
+    }
     if (state.ptwBusy && !state.ptwData) {
       return `<section class="owner-section"><p class="owner-muted">Loading Pass the World…</p></section>`;
     }
@@ -4136,19 +4153,24 @@ const OwnerControl = (() => {
       });
     });
     if (typeof OwnerPassTheWorld !== 'undefined' && state.section === 'pass-the-world') {
-      root().querySelector('[data-ptw-retry]')?.addEventListener('click', async () => {
-        state.ptwError = null;
-        await ensurePtwLoaded();
-        render();
-      });
-      OwnerPassTheWorld.bind(root(), state, { esc, money, num, when }, {
-        api,
-        onRender: () => render(),
-        loadData: async (silent) => {
-          await ensurePtwLoaded(silent);
+      if (state.ptwView === 'partnership' && typeof OwnerPtwPartnership !== 'undefined') {
+        OwnerPassTheWorld.stopPolling();
+        OwnerPtwPartnership.bind({ state, api, render });
+      } else {
+        root().querySelector('[data-ptw-retry]')?.addEventListener('click', async () => {
+          state.ptwError = null;
+          await ensurePtwLoaded();
           render();
-        },
-      });
+        });
+        OwnerPassTheWorld.bind(root(), state, { esc, money, num, when }, {
+          api,
+          onRender: () => render(),
+          loadData: async (silent) => {
+            await ensurePtwLoaded(silent);
+            render();
+          },
+        });
+      }
     } else if (typeof OwnerPassTheWorld !== 'undefined') {
       OwnerPassTheWorld.stopPolling();
     }

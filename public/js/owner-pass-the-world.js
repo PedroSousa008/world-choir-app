@@ -271,6 +271,7 @@ const OwnerPassTheWorld = (() => {
             <p class="owner-ptw-sub">Complete performance, engagement and history of Pass the World. <span class="owner-ptw-lock" aria-hidden="true">🔒</span> Owner Mode Only</p>
           </div>
           <div class="owner-ptw-header__actions">
+            <button type="button" class="owner-ptw-btn-ghost" data-ptw-partnership aria-label="Partnership">Partnership</button>
             <button type="button" class="owner-ptw-btn-ghost" data-ptw-refresh aria-label="Refresh">Refresh</button>
             <div class="owner-ptw-range-select">
               ${renderRangeChips(state)}
@@ -617,6 +618,11 @@ const OwnerPassTheWorld = (() => {
         state.ptwMapMode = btn.getAttribute('data-ptw-map-mode');
         mountMap(state.ptwData, state.ptwMapMode);
       });
+    });
+
+    root.querySelector('[data-ptw-partnership]')?.addEventListener('click', () => {
+      if (typeof OwnerPtwPartnership === 'undefined') return;
+      OwnerPtwPartnership.open({ state, render: onRender });
     });
 
     root.querySelector('[data-ptw-refresh]')?.addEventListener('click', () => loadData());
