@@ -891,11 +891,11 @@ const PassTheWorld = (() => {
       const linkWrap = ensureLinkImageEl();
       if (linkWrap) {
         linkWrap.hidden = false;
-        const safeUrl = isSafeHttpUrl(linkUrl) ? String(linkUrl) : null;
+        const safeUrl = isSafeHttpUrl(linkUrl) ? String(linkUrl).trim() : null;
         const label = String(p.subtitle || 'Partnership').trim() || 'Partnership';
         if (safeUrl) {
           linkWrap.innerHTML = `
-            <a class="ptw-partner-link__anchor" href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(label)}">
+            <a class="ptw-partner-link__anchor" href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(label)} website">
               <img alt="" decoding="async">
             </a>`;
         } else {

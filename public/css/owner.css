@@ -6547,6 +6547,17 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   flex: 1 1 auto;
 }
 
+.owner-ptw-p-linkurl-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.owner-ptw-p-linkurl {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
 .owner-ptw-p-counter {
   flex: 0 0 auto;
   font-size: 0.78rem;
@@ -6770,7 +6781,7 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   background: rgba(255, 255, 255, 0.015);
   color: #f2efe8;
   font: inherit;
-  min-height: 72px;
+  min-height: 84px;
   border-radius: 10px;
   padding: 6px;
   display: flex;
@@ -6785,7 +6796,7 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   border: 0;
   background: transparent;
   pointer-events: none;
-  min-height: 72px;
+  min-height: 84px;
 }
 
 .owner-ptw-p-cal__cell.is-off {
@@ -6825,12 +6836,12 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   justify-content: center;
   gap: 3px;
   flex: 1;
-  min-height: 28px;
+  min-height: 42px;
 }
 
 .owner-ptw-p-cal__logo {
-  width: 22px;
-  height: 22px;
+  width: 33px;
+  height: 33px;
   object-fit: contain;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.25);
@@ -7022,6 +7033,21 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   color: #8a8d97;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.owner-ptw-p-day-seg__link {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.owner-ptw-p-day-seg__link a {
+  color: #7ec8ff;
+  text-decoration: none;
+}
+
+.owner-ptw-p-day-seg__link a:hover {
+  text-decoration: underline;
 }
 
 .owner-ptw-p-toast {

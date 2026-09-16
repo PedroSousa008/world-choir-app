@@ -10,6 +10,7 @@ const OwnerPtwPartnership = (() => {
     tabLogo: 'Tab Logo',
     mapLogo: 'Map Logo',
     linkImage: 'Link Image',
+    linkUrl: 'Link Image website',
   };
 
   function ensureState(state) {
@@ -51,6 +52,7 @@ const OwnerPtwPartnership = (() => {
   function limits(ps) {
     return ps.data?.limits || {
       subtitleMaxChars: 120,
+      linkUrlMaxChars: 2048,
       tabLogoRecommended: { width: 512, height: 512 },
       mapLogoRecommended: { width: 512, height: 512 },
       linkImageRecommended: { width: 1200, height: 630 },
@@ -64,6 +66,7 @@ const OwnerPtwPartnership = (() => {
       tabLogo: d.tabLogo || null,
       mapLogo: d.mapLogo || null,
       linkImage: d.linkImage || null,
+      linkUrl: String(d.linkUrl || ''),
     };
   }
 
@@ -175,6 +178,10 @@ const OwnerPtwPartnership = (() => {
     if (!ps.form) return;
     const input = root.querySelector('[data-ptw-p-subtitle]');
     if (input) ps.form.subtitle = String(input.value || '').slice(0, limits(ps).subtitleMaxChars);
+    const linkInput = root.querySelector('[data-ptw-p-link-url]');
+    if (linkInput) {
+      ps.form.linkUrl = String(linkInput.value || '').slice(0, limits(ps).linkUrlMaxChars || 2048);
+    }
   }
 
   function renderUpload(field, label, hint, image, recommended, uploading, isMissing) {
@@ -285,6 +292,7 @@ const OwnerPtwPartnership = (() => {
             ${seg.mapLogoUrl ? `<figure><img src="${esc(seg.mapLogoUrl)}" alt="Map logo"><figcaption>Map</figcaption></figure>` : ''}
             ${seg.linkImageUrl ? `<figure><img src="${esc(seg.linkImageUrl)}" alt="Link image"><figcaption>Link</figcaption></figure>` : ''}
           </div>
+          ${seg.linkUrl ? `<p class="owner-ptw-p-day-seg__link"><a href="${esc(seg.linkUrl)}" target="_blank" rel="noopener noreferrer">${esc(seg.linkUrl)}</a></p>` : ''}
         </article>
       `).join('');
       body = `
@@ -551,6 +559,22 @@ const OwnerPtwPartnership = (() => {
             missingSet.has('linkImage'),
           )}
 
+          <section class="owner-ptw-p-card">
+            <h3 class="owner-ptw-p-card__title">Link Image website</h3>
+            <p class="owner-ptw-p-card__sub">When set, tapping the Link Image on Pass the World opens this website in a new tab.</p>
+            <div class="owner-ptw-p-linkurl-row">
+              <input class="owner-input owner-ptw-p-linkurl"
+                     type="url"
+                     inputmode="url"
+                     autocomplete="url"
+                     maxlength="${lim.linkUrlMaxChars || 2048}"
+                     placeholder="https://example.com"
+                     value="${esc(form.linkUrl || '')}"
+                     data-ptw-p-link-url
+                     aria-label="Link Image website">
+            </div>
+          </section>
+
           <div class="owner-ptw-p-actions">
             <button type="button" class="owner-btn-ghost" data-ptw-p-cancel ${ps.saving ? 'disabled' : ''}>Cancel</button>
             <button type="button" class="owner-btn" data-ptw-p-save ${ps.saving ? 'disabled' : ''}>
@@ -618,6 +642,14 @@ const OwnerPtwPartnership = (() => {
       if (ps.missing?.includes('subtitle') && ps.form.subtitle.trim()) {
         ps.missing = ps.missing.filter((m) => m !== 'subtitle');
       }
+    });
+
+    const linkUrlInput = root.querySelector('[data-ptw-p-link-url]');
+    linkUrlInput?.addEventListener('input', () => {
+      const max = limits(ps).linkUrlMaxChars || 2048;
+      ps.form = ps.form || formFromData(ps.data);
+      ps.form.linkUrl = String(linkUrlInput.value || '').slice(0, max);
+      markDirty(ps);
     });
 
     root.querySelectorAll('[data-ptw-p-file]').forEach((input) => {
@@ -853,6 +885,7 @@ const OwnerPtwPartnership = (() => {
             tabLogo: ps.form?.tabLogo || null,
             mapLogo: ps.form?.mapLogo || null,
             linkImage: ps.form?.linkImage || null,
+            linkUrl: ps.form?.linkUrl || '',
           },
           confirmLiveUpdate: Boolean(confirmLiveUpdate),
         },
@@ -902,6 +935,7 @@ const OwnerPtwPartnership = (() => {
               tabLogo: ps.form?.tabLogo || null,
               mapLogo: ps.form?.mapLogo || null,
               linkImage: ps.form?.linkImage || null,
+              linkUrl: ps.form?.linkUrl || '',
             },
             confirmLiveUpdate: false,
           },

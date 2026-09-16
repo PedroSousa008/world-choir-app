@@ -24,6 +24,7 @@ const INDEX_PATH = `${ROOT}/index.json`;
 const HISTORY_TIMEZONE = 'UTC';
 
 const SUBTITLE_MAX_CHARS = 120;
+const LINK_URL_MAX_CHARS = 2048;
 const TAB_LOGO_RECOMMENDED = { width: 512, height: 512 };
 const MAP_LOGO_RECOMMENDED = { width: 512, height: 512 };
 const LINK_IMAGE_RECOMMENDED = { width: 1200, height: 630 };
@@ -53,8 +54,40 @@ function emptyDraft() {
     tabLogo: emptyImage(),
     mapLogo: emptyImage(),
     linkImage: emptyImage(),
+    linkUrl: '',
     updatedAt: null,
   };
+}
+
+/**
+ * Normalize optional Link Image website. Empty is allowed.
+ * Accepts bare domains (adds https://). Only http/https.
+ */
+function normalizeLinkUrl(raw) {
+  let value = String(raw || '').trim();
+  if (!value) return '';
+  if (value.length > LINK_URL_MAX_CHARS) {
+    value = value.slice(0, LINK_URL_MAX_CHARS);
+  }
+  if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) {
+    value = `https://${value}`;
+  }
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw Object.assign(new Error('Link Image website must be a valid http or https URL'), {
+      statusCode: 400,
+      code: 'INVALID_LINK_URL',
+    });
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw Object.assign(new Error('Link Image website must start with http:// or https://'), {
+      statusCode: 400,
+      code: 'INVALID_LINK_URL',
+    });
+  }
+  return parsed.toString();
 }
 
 function emptyState() {
@@ -93,12 +126,21 @@ function normalizeImage(raw) {
   };
 }
 
-function normalizeDraft(raw = {}) {
+function normalizeDraft(raw = {}, { strictLinkUrl = false } = {}) {
+  let linkUrl = '';
+  try {
+    linkUrl = normalizeLinkUrl(raw.linkUrl);
+  } catch (err) {
+    if (strictLinkUrl) throw err;
+    // Lenient read of stored/legacy drafts — keep empty rather than crash Owner UI.
+    linkUrl = '';
+  }
   return {
     subtitle: String(raw.subtitle || '').slice(0, SUBTITLE_MAX_CHARS),
     tabLogo: normalizeImage(raw.tabLogo),
     mapLogo: normalizeImage(raw.mapLogo),
     linkImage: normalizeImage(raw.linkImage),
+    linkUrl,
     updatedAt: raw.updatedAt || null,
   };
 }
@@ -121,6 +163,12 @@ function normalizeConfig(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const id = String(raw.id || '').trim();
   if (!id) return null;
+  let linkUrl = '';
+  try {
+    linkUrl = normalizeLinkUrl(raw.linkUrl);
+  } catch {
+    linkUrl = '';
+  }
   return {
     id,
     version: Number(raw.version) || 1,
@@ -128,6 +176,7 @@ function normalizeConfig(raw) {
     tabLogo: normalizeImage(raw.tabLogo),
     mapLogo: normalizeImage(raw.mapLogo),
     linkImage: normalizeImage(raw.linkImage),
+    linkUrl,
     createdAt: raw.createdAt || null,
     createdBy: raw.createdBy || null,
   };
@@ -172,6 +221,7 @@ function draftsEqual(a, b) {
   const imgKey = (img) => (img?.pathname || img?.url || '');
   return (
     String(x.subtitle || '') === String(y.subtitle || '')
+    && String(x.linkUrl || '') === String(y.linkUrl || '')
     && imgKey(x.tabLogo) === imgKey(y.tabLogo)
     && imgKey(x.mapLogo) === imgKey(y.mapLogo)
     && imgKey(x.linkImage) === imgKey(y.linkImage)
@@ -179,7 +229,7 @@ function draftsEqual(a, b) {
 }
 
 function configFromDraft(draft, { createdBy, createdAt, version = 1 } = {}) {
-  const d = normalizeDraft(draft);
+  const d = normalizeDraft(draft, { strictLinkUrl: true });
   return {
     id: `cfg_${randomUUID().replace(/-/g, '').slice(0, 16)}`,
     version,
@@ -187,6 +237,7 @@ function configFromDraft(draft, { createdBy, createdAt, version = 1 } = {}) {
     tabLogo: d.tabLogo,
     mapLogo: d.mapLogo,
     linkImage: d.linkImage,
+    linkUrl: d.linkUrl || '',
     createdAt: createdAt || nowIso(),
     createdBy: createdBy || null,
   };
@@ -200,6 +251,7 @@ function publicConfigProjection(config) {
     tabLogoUrl: config.tabLogo?.url || null,
     mapLogoUrl: config.mapLogo?.url || null,
     linkImageUrl: config.linkImage?.url || null,
+    linkUrl: config.linkUrl || '',
   };
 }
 
@@ -354,6 +406,7 @@ function ownerSnapshot(state, extras = {}) {
     revision: state.revision,
     limits: {
       subtitleMaxChars: SUBTITLE_MAX_CHARS,
+      linkUrlMaxChars: LINK_URL_MAX_CHARS,
       tabLogoRecommended: TAB_LOGO_RECOMMENDED,
       mapLogoRecommended: MAP_LOGO_RECOMMENDED,
       linkImageRecommended: LINK_IMAGE_RECOMMENDED,
@@ -392,8 +445,11 @@ async function savePartnershipDraft({ draft, actor = null, confirmLiveUpdate = f
     linkImage: draft && Object.prototype.hasOwnProperty.call(draft, 'linkImage')
       ? normalizeImage(draft.linkImage)
       : state.draft.linkImage,
+    linkUrl: draft && Object.prototype.hasOwnProperty.call(draft, 'linkUrl')
+      ? draft.linkUrl
+      : state.draft.linkUrl,
     updatedAt: nowIso(),
-  });
+  }, { strictLinkUrl: true });
 
   if (String(nextDraft.subtitle || '').length > SUBTITLE_MAX_CHARS) {
     throw Object.assign(new Error(`Subtitle must be ${SUBTITLE_MAX_CHARS} characters or fewer`), { statusCode: 400 });
@@ -723,7 +779,8 @@ async function getPartnershipHistoryMonth({ year, month } = {}) {
     const seen = new Set();
     for (const p of activeOnDay) {
       const cfg = configs.get(p.configurationId);
-      const url = cfg?.tabLogo?.url || null;
+      // Calendar thumbnails use Map Logo (not Tab Logo).
+      const url = cfg?.mapLogo?.url || null;
       if (url && !seen.has(url)) {
         seen.add(url);
         logos.push({
@@ -790,6 +847,7 @@ async function getPartnershipDayDetail({ date } = {}) {
       tabLogoUrl: cfg?.tabLogo?.url || null,
       mapLogoUrl: cfg?.mapLogo?.url || null,
       linkImageUrl: cfg?.linkImage?.url || null,
+      linkUrl: cfg?.linkUrl || '',
       tabLogoFileName: cfg?.tabLogo?.fileName || null,
       mapLogoFileName: cfg?.mapLogo?.fileName || null,
       linkImageFileName: cfg?.linkImage?.fileName || null,
@@ -842,6 +900,7 @@ async function getPublicPartnership() {
       tabLogoUrl: config.tabLogo?.url || null,
       mapLogoUrl: config.mapLogo?.url || null,
       linkImageUrl: config.linkImage?.url || null,
+      linkUrl: config.linkUrl || '',
       configurationId: config.id,
     };
   } catch {
@@ -852,6 +911,7 @@ async function getPublicPartnership() {
 module.exports = {
   HISTORY_TIMEZONE,
   SUBTITLE_MAX_CHARS,
+  LINK_URL_MAX_CHARS,
   TAB_LOGO_RECOMMENDED,
   MAP_LOGO_RECOMMENDED,
   LINK_IMAGE_RECOMMENDED,
@@ -864,5 +924,6 @@ module.exports = {
   getPartnershipDayDetail,
   getPublicPartnership,
   draftIsComplete,
+  normalizeLinkUrl,
   MEDIA_ROOT,
 };
