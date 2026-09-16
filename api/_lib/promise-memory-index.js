@@ -296,9 +296,73 @@ async function rebuildPromiseIndex() {
   return { indexed: promises.length, shards: byShard.size };
 }
 
+async function listAllIndexedEntries() {
+  const paths = await listShardPaths({});
+  const entries = [];
+  for (const path of paths) {
+    const shard = await readShard(path);
+    for (const entry of shard) entries.push(entry);
+  }
+  return entries;
+}
+
+/** Rebuild stats.json from shard entries so KPI totals never drift from the list. */
+async function rebuildStatsFromShards() {
+  const entries = await listAllIndexedEntries();
+  await writeStats({
+    totalPromises: 0,
+    uniqueCountries: 0,
+    uniqueCities: 0,
+    uniqueVoices: 0,
+    events: {},
+    countries: {},
+    cities: {},
+    voices: {},
+    updatedAt: null,
+  });
+  for (const entry of entries) {
+    await updateStatsForEntry(entry);
+  }
+  return { totalPromises: entries.length };
+}
+
+function aggregateOverviewFromEntries(entries, { eventId = 'all' } = {}) {
+  const scoped = eventId && eventId !== 'all'
+    ? entries.filter((e) => e.event_id === eventId)
+    : entries;
+  const countries = new Set();
+  const cities = new Set();
+  const voices = new Set();
+  for (const entry of scoped) {
+    if (entry.country_key) countries.add(entry.country_key);
+    if (entry.city_key) cities.add(entry.city_key);
+    const voiceKey = entry.voice_number != null ? String(entry.voice_number) : entry.user_id;
+    if (voiceKey) {
+      voices.add(eventId === 'all' ? `${entry.event_id}:${voiceKey}` : voiceKey);
+    }
+  }
+  return {
+    totalPromises: scoped.length,
+    countries: countries.size,
+    cities: cities.size,
+    voices: voices.size,
+  };
+}
+
 async function ensureIndexReady() {
   if (!(await indexExists())) {
     await rebuildPromiseIndex();
+    return;
+  }
+  // Heal drift: stats counters can fall behind shards if a write fails mid-index.
+  try {
+    const stats = await readStats();
+    const entries = await listAllIndexedEntries();
+    if ((Number(stats.totalPromises) || 0) !== entries.length) {
+      await rebuildStatsFromShards();
+    }
+  } catch (err) {
+    console.error('Promise memory stats heal failed:', err);
   }
 }
 
@@ -444,19 +508,19 @@ async function readDailyRollup(eventId) {
 }
 
 async function buildOverviewFromStats({ eventId = 'all' } = {}) {
-  const stats = await readStats();
+  // KPI totals always come from indexed shards — same source as the promise list.
+  const allEntries = await listAllIndexedEntries();
+  const liveAll = aggregateOverviewFromEntries(allEntries, { eventId: 'all' });
+
   const events = KNOWN_EVENTS.map((ev) => {
-    const data = stats.events?.[ev.id] || {};
-    const countries = Object.values(data.countries || {}).filter((c) => c.count > 0);
-    const cities = Object.values(data.countries || {}).flatMap((c) => Object.values(c.cities || {})).filter((c) => c.count > 0);
-    const voices = Object.values(data.voices || {}).filter((v) => v > 0);
+    const live = aggregateOverviewFromEntries(allEntries, { eventId: ev.id });
     return {
       id: ev.id,
       title: ev.title,
-      totalPromises: data.totalPromises || 0,
-      countries: countries.length,
-      cities: cities.length,
-      voices: voices.length,
+      totalPromises: live.totalPromises,
+      countries: live.countries,
+      cities: live.cities,
+      voices: live.voices,
     };
   });
 
@@ -464,10 +528,7 @@ async function buildOverviewFromStats({ eventId = 'all' } = {}) {
     const ev = events.find((e) => e.id === eventId) || {
       id: eventId,
       title: eventTitle(eventId),
-      totalPromises: 0,
-      countries: 0,
-      cities: 0,
-      voices: 0,
+      ...aggregateOverviewFromEntries(allEntries, { eventId }),
     };
     return {
       totalPromises: ev.totalPromises,
@@ -480,10 +541,10 @@ async function buildOverviewFromStats({ eventId = 'all' } = {}) {
   }
 
   return {
-    totalPromises: stats.totalPromises || 0,
-    countries: stats.uniqueCountries || 0,
-    cities: stats.uniqueCities || 0,
-    voices: stats.uniqueVoices || 0,
+    totalPromises: liveAll.totalPromises,
+    countries: liveAll.countries,
+    cities: liveAll.cities,
+    voices: liveAll.voices,
     events,
     viewingEvent: null,
   };
@@ -615,6 +676,7 @@ module.exports = {
   normalizeIndexEntry,
   appendPromiseToIndex,
   rebuildPromiseIndex,
+  rebuildStatsFromShards,
   ensureIndexReady,
   queryPromiseIndex,
   readStats,
