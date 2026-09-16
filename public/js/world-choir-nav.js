@@ -855,6 +855,13 @@ const WorldChoirNav = (() => {
     vv?.addEventListener('resize', scheduleNavPin, { passive: true });
     vv?.addEventListener('scroll', scheduleNavPin, { passive: true });
     document.addEventListener('visibilitychange', scheduleNavPin);
+    const root = document.getElementById('nav-root');
+    if (root && typeof MutationObserver === 'function') {
+      new MutationObserver(scheduleNavPin).observe(root, {
+        attributes: true,
+        attributeFilter: ['hidden', 'style', 'class'],
+      });
+    }
   }
 
   function mount(activePage) {
