@@ -4357,6 +4357,35 @@ const OwnerControl = (() => {
     render();
   }
 
+  function readOwnerNavScroll() {
+    const list = root()?.querySelector('.owner-nav__list');
+    const aside = root()?.querySelector('.owner-nav');
+    return {
+      listLeft: list ? list.scrollLeft : null,
+      asideTop: aside ? aside.scrollTop : null,
+    };
+  }
+
+  function restoreOwnerNavScroll(saved) {
+    if (!saved) return;
+    const apply = () => {
+      const list = root()?.querySelector('.owner-nav__list');
+      const aside = root()?.querySelector('.owner-nav');
+      if (list && saved.listLeft != null && Number.isFinite(saved.listLeft)) {
+        list.scrollLeft = saved.listLeft;
+      }
+      if (aside && saved.asideTop != null && Number.isFinite(saved.asideTop)) {
+        aside.scrollTop = saved.asideTop;
+      }
+    };
+    apply();
+    // Re-apply after layout so a full shell remount never snaps the bar back.
+    requestAnimationFrame(() => {
+      apply();
+      requestAnimationFrame(apply);
+    });
+  }
+
   function render() {
     if (!state.authenticated) {
       renderLogin();
@@ -4373,11 +4402,13 @@ const OwnerControl = (() => {
       `;
       return;
     }
+    const navScroll = readOwnerNavScroll();
     syncOwnerRoute();
     root().innerHTML = renderShell(sectionContent());
     bindShell();
     bindSectionEvents();
     mountOwnerMapIfNeeded();
+    restoreOwnerNavScroll(navScroll);
   }
 
   function mountOwnerMapIfNeeded() {

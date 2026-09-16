@@ -81,8 +81,16 @@
     display: flex;
     gap: 6px;
     overflow-x: auto;
+    overflow-y: hidden;
     padding-bottom: 4px;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .owner-nav__list > li {
+    flex: 0 0 auto;
+  }
+  .owner-nav__btn {
+    width: auto;
   }
   .owner-nav__title { display: none; }
 }
