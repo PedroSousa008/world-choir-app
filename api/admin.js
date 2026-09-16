@@ -45,6 +45,7 @@ const {
   removePartnershipImage,
   getPartnershipHistoryMonth,
   getPartnershipDayDetail,
+  getPartnershipOverall,
 } = require('./_lib/pass-the-world-partnership');
 const {
   listAttentionNotes,
@@ -324,6 +325,13 @@ module.exports = async function handler(req, res) {
       res.setHeader('Cache-Control', 'no-store');
       if (!requireOwner(req, res)) return;
       const data = await getPartnershipDayDetail({ date: String(req.query.date || '') });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'ptw-partnership-overall' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await getPartnershipOverall();
       return res.status(200).json(data);
     }
 

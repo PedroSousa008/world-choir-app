@@ -519,14 +519,259 @@ async function getPartnershipDayAnalytics({
   };
 }
 
+function shiftUtcDateKey(dateKey, deltaDays) {
+  const ms = Date.parse(`${dateKey}T12:00:00.000Z`);
+  if (!Number.isFinite(ms)) return null;
+  return utcDateKey(new Date(ms + deltaDays * 86400000));
+}
+
+function enumerateUtcDays(fromKey, toKey) {
+  const out = [];
+  if (!fromKey || !toKey || fromKey > toKey) return out;
+  let cur = fromKey;
+  while (cur && cur <= toKey) {
+    out.push(cur);
+    cur = shiftUtcDateKey(cur, 1);
+    if (!cur || out.length > 4000) break;
+  }
+  return out;
+}
+
+function dayKeyInPeriod(period, dateKey) {
+  if (!period?.startedAt) return false;
+  const startMs = new Date(period.startedAt).getTime();
+  const endMs = period.endedAt ? new Date(period.endedAt).getTime() : Number.POSITIVE_INFINITY;
+  if (!Number.isFinite(startMs)) return false;
+  const dayStart = Date.parse(`${dateKey}T00:00:00.000Z`);
+  const dayEnd = dayStart + 86400000;
+  return startMs < dayEnd && endMs > dayStart;
+}
+
+function emptyOverallMetrics() {
+  return {
+    partnershipReach: 0,
+    partnershipImpressions: 0,
+    uniqueCountriesReached: 0,
+    uniqueCitiesReached: 0,
+    linkImageClicks: 0,
+    uniqueLinkImageClickers: 0,
+    averageTimeOnPassTheWorldMs: 0,
+    averageTimeOnPassTheWorldLabel: formatDurationMs(0),
+    partnershipActiveDays: 0,
+  };
+}
+
+function metricsFromMergedRow(merged, activeDays = 0) {
+  const summary = summarizeRow(merged);
+  return {
+    ...summary,
+    partnershipActiveDays: activeDays,
+  };
+}
+
+/**
+ * Overall partnership analytics: deduped totals, 7-day series, daily table,
+ * and partner-identity comparison payloads (partner groups passed in).
+ */
+async function getPartnershipOverallAnalytics({
+  periods = [],
+  partnerGroups = [],
+  now = new Date(),
+} = {}) {
+  const nowDate = now instanceof Date ? now : new Date(now);
+  const nowIso = nowDate.toISOString();
+  const meta = await ensureTrackingSince(nowIso);
+  const trackingSince = meta.trackingSince || `${TRACKING_EPOCH_DATE}T00:00:00.000Z`;
+  const todayKey = utcDateKey(nowDate);
+  const epochKey = TRACKING_EPOCH_DATE;
+
+  const segments = (periods || []).map((p) => ({
+    configurationId: p.configurationId,
+    startedAt: p.startedAt,
+    endedAt: p.endedAt,
+  }));
+
+  const trackedDays = enumerateUtcDays(epochKey, todayKey);
+  const dailyRowsByDate = new Map(); // date -> rows[]
+  const activeDaysSet = new Set();
+  const partnersOnDay = new Map(); // date -> [{partnerId, label}]
+
+  const configToPartner = new Map();
+  for (const g of partnerGroups || []) {
+    for (const id of g.configurationIds || []) {
+      configToPartner.set(id, g);
+    }
+  }
+
+  for (const dateKey of trackedDays) {
+    const dayPeriods = (periods || []).filter((p) => dayKeyInPeriod(p, dateKey));
+    const intervals = buildDayIntervals(
+      dayPeriods.map((p) => ({
+        configurationId: p.configurationId,
+        startedAt: p.startedAt,
+        endedAt: p.endedAt,
+      })),
+      dateKey,
+      nowDate,
+    );
+    if (intervals.length) activeDaysSet.add(dateKey);
+
+    const configIds = [...new Set(intervals.map((iv) => iv.configurationId).filter(Boolean))];
+    const rows = [];
+    for (const id of configIds) {
+      rows.push(await readDailyRow(id, dateKey));
+    }
+    dailyRowsByDate.set(dateKey, rows);
+
+    const seenPartners = new Map();
+    for (const id of configIds) {
+      const g = configToPartner.get(id);
+      if (!g) continue;
+      if (!seenPartners.has(g.partnerId)) {
+        seenPartners.set(g.partnerId, {
+          partnerId: g.partnerId,
+          label: g.label || '',
+          mapLogoUrl: g.mapLogoUrl || null,
+        });
+      }
+    }
+    partnersOnDay.set(dateKey, [...seenPartners.values()]);
+  }
+
+  // Overall: merge every daily row across the tracked window (dedupe visitors).
+  const allRows = [];
+  for (const dateKey of trackedDays) {
+    allRows.push(...(dailyRowsByDate.get(dateKey) || []));
+  }
+  const overallMerged = allRows.length ? mergeRows(allRows) : emptyRow('_overall', todayKey);
+  const overall = metricsFromMergedRow(overallMerged, activeDaysSet.size);
+
+  // 7-day series ending today (pre-epoch days are unavailable, not zero).
+  const series = [];
+  for (let i = 6; i >= 0; i -= 1) {
+    const dateKey = shiftUtcDateKey(todayKey, -i);
+    if (!dateKey) continue;
+    const unavailable = dateKey < epochKey;
+    const rows = dailyRowsByDate.get(dateKey) || [];
+    const intervals = buildDayIntervals(segments, dateKey, nowDate);
+    const partnershipOff = !unavailable && intervals.length === 0;
+    let metrics = null;
+    if (!unavailable) {
+      const merged = rows.length ? mergeRows(rows) : emptyRow('_day', dateKey);
+      const summary = summarizeRow(merged);
+      const activeMs = intervals.reduce((sum, iv) => sum + iv.ms, 0);
+      metrics = {
+        ...summary,
+        partnershipActiveTimeMs: activeMs,
+        partnershipActiveTimeLabel: formatActiveDurationMs(activeMs),
+      };
+    }
+    series.push({
+      date: dateKey,
+      unavailable,
+      partnershipOff,
+      partners: partnersOnDay.get(dateKey) || [],
+      metrics,
+      values: metrics ? {
+        reach: metrics.partnershipReach,
+        clicks: metrics.linkImageClicks,
+        avgTimeMs: metrics.averageTimeOnPassTheWorldMs,
+      } : null,
+    });
+  }
+
+  // Daily performance table — all tracked days, newest first.
+  const dailyPerformance = trackedDays.slice().reverse().map((dateKey) => {
+    const rows = dailyRowsByDate.get(dateKey) || [];
+    const intervals = buildDayIntervals(segments, dateKey, nowDate);
+    const merged = rows.length ? mergeRows(rows) : emptyRow('_day', dateKey);
+    const summary = summarizeRow(merged);
+    const activeMs = intervals.reduce((sum, iv) => sum + iv.ms, 0);
+    return {
+      date: dateKey,
+      partnershipOff: intervals.length === 0,
+      metrics: {
+        ...summary,
+        partnershipActiveTimeMs: activeMs,
+        partnershipActiveTimeLabel: formatActiveDurationMs(activeMs),
+      },
+    };
+  });
+
+  // Partner comparison aggregates
+  const partnerships = [];
+  for (const g of partnerGroups || []) {
+    const partnerRows = [];
+    const partnerActiveDays = new Set();
+    for (const dateKey of trackedDays) {
+      const rows = (dailyRowsByDate.get(dateKey) || [])
+        .filter((r) => (g.configurationIds || []).includes(r.configurationId));
+      if (!rows.length) continue;
+      const dayHadPartner = (periods || []).some((p) => (
+        (g.configurationIds || []).includes(p.configurationId) && dayKeyInPeriod(p, dateKey)
+      ));
+      if (dayHadPartner) partnerActiveDays.add(dateKey);
+      partnerRows.push(...rows);
+    }
+    // Also count active days from periods even with zero traffic
+    for (const dateKey of trackedDays) {
+      const dayHadPartner = (periods || []).some((p) => (
+        (g.configurationIds || []).includes(p.configurationId) && dayKeyInPeriod(p, dateKey)
+      ));
+      if (dayHadPartner) partnerActiveDays.add(dateKey);
+    }
+
+    const merged = partnerRows.length
+      ? mergeRows(partnerRows)
+      : emptyRow('_partner', todayKey);
+    const totals = metricsFromMergedRow(merged, partnerActiveDays.size);
+    const days = Math.max(1, partnerActiveDays.size);
+    partnerships.push({
+      partnerId: g.partnerId,
+      label: g.label || 'Partnership',
+      mapLogoUrl: g.mapLogoUrl || null,
+      dateRange: g.dateRange || null,
+      activeDays: partnerActiveDays.size,
+      configurationIds: g.configurationIds || [],
+      metrics: totals,
+      perActiveDay: {
+        reach: totals.partnershipReach / days,
+        impressions: totals.partnershipImpressions / days,
+        linkImageClicks: totals.linkImageClicks / days,
+      },
+    });
+  }
+
+  return {
+    trackingSince,
+    trackingEpoch: epochKey,
+    timezone: 'UTC',
+    asOf: nowIso,
+    overall,
+    geographic: {
+      uniqueCountriesReached: overall.uniqueCountriesReached,
+      uniqueCitiesReached: overall.uniqueCitiesReached,
+    },
+    series7d: series,
+    dailyPerformance,
+    partnerships,
+    partnershipCount: partnerships.length,
+  };
+}
+
 module.exports = {
   IMPRESSION_COOLDOWN_MS,
   TRACKING_EPOCH_DATE,
   recordPartnershipAnalyticsEvent,
   getPartnershipDayAnalytics,
+  getPartnershipOverallAnalytics,
   buildDayIntervals,
   formatDurationMs,
   formatActiveDurationMs,
   utcDateKey,
+  shiftUtcDateKey,
+  enumerateUtcDays,
+  mergeRows,
+  summarizeRow,
   ROOT,
 };

@@ -172,6 +172,7 @@ function normalizeConfig(raw) {
   return {
     id,
     version: Number(raw.version) || 1,
+    partnerId: String(raw.partnerId || '').trim() || null,
     subtitle: String(raw.subtitle || '').slice(0, SUBTITLE_MAX_CHARS),
     tabLogo: normalizeImage(raw.tabLogo),
     mapLogo: normalizeImage(raw.mapLogo),
@@ -228,11 +229,12 @@ function draftsEqual(a, b) {
   );
 }
 
-function configFromDraft(draft, { createdBy, createdAt, version = 1 } = {}) {
+function configFromDraft(draft, { createdBy, createdAt, version = 1, partnerId = null } = {}) {
   const d = normalizeDraft(draft, { strictLinkUrl: true });
   return {
     id: `cfg_${randomUUID().replace(/-/g, '').slice(0, 16)}`,
     version,
+    partnerId: String(partnerId || '').trim() || `ptr_${randomUUID().replace(/-/g, '').slice(0, 16)}`,
     subtitle: d.subtitle,
     tabLogo: d.tabLogo,
     mapLogo: d.mapLogo,
@@ -241,6 +243,38 @@ function configFromDraft(draft, { createdBy, createdAt, version = 1 } = {}) {
     createdAt: createdAt || nowIso(),
     createdBy: createdBy || null,
   };
+}
+
+function partnerMatchKey(configOrDraft) {
+  const pathname = configOrDraft?.mapLogo?.pathname || '';
+  if (pathname) return `logo:${pathname}`;
+  const subtitle = String(configOrDraft?.subtitle || '').trim().toLowerCase();
+  if (subtitle) return `sub:${subtitle}`;
+  const link = String(configOrDraft?.linkUrl || '').trim().toLowerCase();
+  if (link) {
+    try {
+      return `host:${new URL(link).hostname}`;
+    } catch {
+      return `link:${link}`;
+    }
+  }
+  return null;
+}
+
+async function resolvePartnerIdForDraft(draft, { previousConfigId = null } = {}) {
+  if (previousConfigId) {
+    const prev = await readConfig(previousConfigId);
+    if (prev?.partnerId) return prev.partnerId;
+  }
+  const key = partnerMatchKey(draft);
+  if (!key) return null;
+  const index = await readIndex();
+  for (const entry of index.configs || []) {
+    const cfg = await readConfig(entry.id);
+    if (!cfg) continue;
+    if (partnerMatchKey(cfg) === key && cfg.partnerId) return cfg.partnerId;
+  }
+  return null;
 }
 
 function publicConfigProjection(config) {
@@ -498,7 +532,13 @@ async function savePartnershipDraft({ draft, actor = null, confirmLiveUpdate = f
   }
 
   const stamp = nowIso();
-  const config = configFromDraft(nextDraft, { createdBy: actor, createdAt: stamp });
+  const prevConfigId = state.activeConfigId;
+  const partnerId = await resolvePartnerIdForDraft(nextDraft, { previousConfigId: prevConfigId });
+  const config = configFromDraft(nextDraft, {
+    createdBy: actor,
+    createdAt: stamp,
+    partnerId,
+  });
   await writeConfig(config);
 
   // Close current period
@@ -602,7 +642,14 @@ async function setPartnershipEnabled({ enabled, actor = null } = {}) {
     }
 
     const stamp = nowIso();
-    const config = configFromDraft(state.draft, { createdBy: actor, createdAt: stamp });
+    const partnerId = await resolvePartnerIdForDraft(state.draft, {
+      previousConfigId: state.activeConfigId,
+    });
+    const config = configFromDraft(state.draft, {
+      createdBy: actor,
+      createdAt: stamp,
+      partnerId,
+    });
     await writeConfig(config);
 
     // Safety: close any dangling open period
@@ -913,6 +960,169 @@ async function getPublicPartnership() {
   }
 }
 
+/**
+ * Group historical configs into stable partnership identities.
+ * Config updates while ON (supersede) stay the same partner.
+ * Explicit partnerId is preferred; otherwise lineage + logo/subtitle match.
+ */
+async function buildPartnerGroups(periods, configsById) {
+  const sorted = [...(periods || [])].sort((a, b) => (
+    String(a.startedAt || '').localeCompare(String(b.startedAt || ''))
+  ));
+
+  const parent = new Map();
+  const find = (id) => {
+    if (!id) return null;
+    if (!parent.has(id)) parent.set(id, id);
+    const p = parent.get(id);
+    if (p !== id) {
+      const root = find(p);
+      parent.set(id, root);
+      return root;
+    }
+    return id;
+  };
+  const union = (a, b) => {
+    if (!a || !b) return;
+    const ra = find(a);
+    const rb = find(b);
+    if (ra && rb && ra !== rb) parent.set(ra, rb);
+  };
+
+  for (const cfg of configsById.values()) {
+    if (cfg?.id) find(cfg.id);
+  }
+
+  // Explicit partnerId unions
+  const byPartnerId = new Map();
+  for (const cfg of configsById.values()) {
+    if (!cfg?.id) continue;
+    if (cfg.partnerId) {
+      if (byPartnerId.has(cfg.partnerId)) union(cfg.id, byPartnerId.get(cfg.partnerId));
+      else byPartnerId.set(cfg.partnerId, cfg.id);
+    }
+  }
+
+  // Supersede lineage: consecutive periods sharing end/start stamp
+  for (let i = 0; i < sorted.length - 1; i += 1) {
+    const a = sorted[i];
+    const b = sorted[i + 1];
+    if (!a?.configurationId || !b?.configurationId) continue;
+    const aEnd = a.endedAt ? new Date(a.endedAt).getTime() : null;
+    const bStart = b.startedAt ? new Date(b.startedAt).getTime() : null;
+    if (!Number.isFinite(aEnd) || !Number.isFinite(bStart)) continue;
+    if (Math.abs(aEnd - bStart) > 5000) continue;
+    const events = a.events || [];
+    const superseded = events.some((ev) => (
+      ev && (ev.type === 'superseded' || ev.type === 'updated' || ev.type === 'closed_before_activate')
+    ));
+    const bEvents = b.events || [];
+    const updated = bEvents.some((ev) => ev && (ev.type === 'updated' || ev.type === 'activated'));
+    if (superseded || updated) {
+      union(a.configurationId, b.configurationId);
+    }
+  }
+
+  // Match key unions for configs still alone
+  const byKey = new Map();
+  for (const cfg of configsById.values()) {
+    if (!cfg?.id) continue;
+    const key = partnerMatchKey(cfg);
+    if (!key) continue;
+    if (byKey.has(key)) union(cfg.id, byKey.get(key));
+    else byKey.set(key, cfg.id);
+  }
+
+  const groupsMap = new Map();
+  for (const cfg of configsById.values()) {
+    if (!cfg?.id) continue;
+    const root = find(cfg.id);
+    if (!groupsMap.has(root)) {
+      groupsMap.set(root, {
+        rootConfigId: root,
+        configurationIds: [],
+        configs: [],
+      });
+    }
+    const g = groupsMap.get(root);
+    g.configurationIds.push(cfg.id);
+    g.configs.push(cfg);
+  }
+
+  // Only include groups that actually had activity periods
+  const activeConfigIds = new Set((periods || []).map((p) => p.configurationId).filter(Boolean));
+  const groups = [];
+  for (const g of groupsMap.values()) {
+    const ids = g.configurationIds.filter((id) => activeConfigIds.has(id));
+    if (!ids.length) continue;
+    const relatedPeriods = (periods || [])
+      .filter((p) => ids.includes(p.configurationId))
+      .sort((a, b) => String(a.startedAt || '').localeCompare(String(b.startedAt || '')));
+    if (!relatedPeriods.length) continue;
+
+    const latestCfg = [...g.configs].sort((a, b) => (
+      String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
+    ))[0];
+    const firstStart = relatedPeriods[0].startedAt;
+    const last = relatedPeriods[relatedPeriods.length - 1];
+    const lastEnd = last.endedAt || null;
+    const partnerId = latestCfg?.partnerId || `ptr_legacy_${g.rootConfigId}`;
+    const startKey = firstStart ? String(firstStart).slice(0, 10) : null;
+    const endKey = lastEnd ? String(lastEnd).slice(0, 10) : null;
+
+    groups.push({
+      partnerId,
+      label: latestCfg?.subtitle || 'Partnership',
+      mapLogoUrl: latestCfg?.mapLogo?.url || null,
+      configurationIds: [...new Set(ids)],
+      dateRange: {
+        startAt: firstStart,
+        endAt: lastEnd,
+        startDate: startKey,
+        endDate: endKey,
+        open: !lastEnd,
+      },
+    });
+  }
+
+  groups.sort((a, b) => String(b.dateRange?.startAt || '').localeCompare(String(a.dateRange?.startAt || '')));
+  return groups;
+}
+
+async function getPartnershipOverall() {
+  assertBlobConfigured();
+  const index = await readIndex();
+  const periodIds = [...new Set((index.periods || []).map((p) => p.id).filter(Boolean))];
+  const periods = [];
+  for (const id of periodIds) {
+    const full = await readPeriod(id);
+    if (full) periods.push(full);
+  }
+  periods.sort((a, b) => String(a.startedAt || '').localeCompare(String(b.startedAt || '')));
+
+  const configIds = [...new Set(periods.map((p) => p.configurationId).filter(Boolean))];
+  // Also load all indexed configs so partner matching can see unused siblings
+  for (const entry of index.configs || []) {
+    if (entry?.id) configIds.push(entry.id);
+  }
+  const uniqueConfigIds = [...new Set(configIds)];
+  const configsById = new Map();
+  for (const id of uniqueConfigIds) {
+    const cfg = await readConfig(id);
+    if (cfg) configsById.set(id, cfg);
+  }
+
+  const partnerGroups = await buildPartnerGroups(periods, configsById);
+  const {
+    getPartnershipOverallAnalytics,
+  } = require('./pass-the-world-partnership-analytics');
+  return getPartnershipOverallAnalytics({
+    periods,
+    partnerGroups,
+    now: new Date(),
+  });
+}
+
 module.exports = {
   HISTORY_TIMEZONE,
   SUBTITLE_MAX_CHARS,
@@ -927,6 +1137,7 @@ module.exports = {
   removePartnershipImage,
   getPartnershipHistoryMonth,
   getPartnershipDayDetail,
+  getPartnershipOverall,
   getPublicPartnership,
   draftIsComplete,
   normalizeLinkUrl,

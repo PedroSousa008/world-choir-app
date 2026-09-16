@@ -37,6 +37,9 @@ const OwnerPtwPartnership = (() => {
         dayInflight: Object.create(null),
         dayReqId: 0,
         calendarPanel: null,
+        overall: null,
+        overallLoading: false,
+        overallError: null,
         modal: null,
         toast: null,
         toastTimer: null,
@@ -804,23 +807,455 @@ const OwnerPtwPartnership = (() => {
 
   function renderCalendarPanelModal(ps) {
     if (!ps.calendarPanel) return '';
+    const tab = ps.calendarPanel.tab || 'analytics';
+    const loading = Boolean(ps.overallLoading) && !ps.overall;
+    const err = ps.overallError;
+    const data = ps.overall;
+
     return `
-      <div class="owner-ptw-p-modal owner-ptw-day-modal" role="dialog" aria-modal="true" aria-labelledby="owner-ptw-p-cal-panel-title">
+      <div class="owner-ptw-p-modal owner-ptw-day-modal owner-ptw-overall-modal" role="dialog" aria-modal="true" aria-labelledby="owner-ptw-p-cal-panel-title">
         <button type="button" class="owner-ptw-p-modal__backdrop" data-ptw-p-cal-panel-close aria-label="Close"></button>
-        <div class="owner-ptw-p-modal__card owner-ptw-day-modal__card">
+        <div class="owner-ptw-p-modal__card owner-ptw-day-modal__card owner-ptw-overall-modal__card">
           <button type="button" class="owner-ptw-p-modal__x" data-ptw-p-cal-panel-close aria-label="Close">×</button>
-          <header class="owner-ptw-day-modal__header">
+          <header class="owner-ptw-day-modal__header owner-ptw-overall-modal__header">
             <div>
-              <h3 id="owner-ptw-p-cal-panel-title" class="owner-ptw-day-modal__date">Overview</h3>
-              <p class="owner-ptw-day-modal__sub">Partnership calendar overview.</p>
+              <h3 id="owner-ptw-p-cal-panel-title" class="owner-ptw-day-modal__date">Partnership Analytics</h3>
+              <p class="owner-ptw-day-modal__sub">Overall performance and partnership insights across all tracked days.</p>
             </div>
           </header>
+          <div class="owner-ptw-overall-tabs" role="tablist" aria-label="Partnership analytics sections">
+            <button type="button" role="tab" class="owner-ptw-overall-tabs__btn ${tab === 'analytics' ? 'is-active' : ''}"
+              aria-selected="${tab === 'analytics' ? 'true' : 'false'}" data-ptw-overall-tab="analytics">Analytics</button>
+            <button type="button" role="tab" class="owner-ptw-overall-tabs__btn ${tab === 'partnerships' ? 'is-active' : ''}"
+              aria-selected="${tab === 'partnerships' ? 'true' : 'false'}" data-ptw-overall-tab="partnerships">Partnerships</button>
+          </div>
+          <div class="owner-ptw-overall-body">
+            ${err && !data ? `
+              <p class="owner-muted">Partnership analytics could not be loaded.</p>
+              <p class="owner-muted">${esc(err)}</p>
+              <button type="button" class="owner-btn-ghost" data-ptw-overall-retry>Retry</button>
+            ` : tab === 'partnerships'
+              ? renderOverallPartnershipsTab(ps, data, loading)
+              : renderOverallAnalyticsTab(ps, data, loading)}
+          </div>
           <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
           <div class="owner-ptw-day-modal__footer">
             <button type="button" class="owner-btn-ghost" data-ptw-p-cal-panel-close>Close</button>
           </div>
         </div>
       </div>`;
+  }
+
+  const OVERALL_METRIC_DEFS = [
+    { key: 'reach', title: 'Partnership Reach', desc: 'Unique users reached across all partnership activity', value: (m) => formatCount(m.partnershipReach) },
+    { key: 'impressions', title: 'Partnership Impressions', desc: 'Total qualifying Pass the World views', value: (m) => formatCount(m.partnershipImpressions) },
+    { key: 'countries', title: 'Unique Countries Reached', desc: 'Distinct countries reached across all partnership activity', value: (m) => formatCount(m.uniqueCountriesReached) },
+    { key: 'cities', title: 'Unique Cities Reached', desc: 'Distinct cities reached across all partnership activity', value: (m) => formatCount(m.uniqueCitiesReached) },
+    { key: 'clicks', title: 'Link Image Clicks', desc: 'Total clicks on partnership link images', value: (m) => formatCount(m.linkImageClicks) },
+    { key: 'clickers', title: 'Unique Link Image Clickers', desc: 'Unique users who clicked a partnership link image', value: (m) => formatCount(m.uniqueLinkImageClickers) },
+    { key: 'avgTime', title: 'Average Time on Pass the World', desc: 'Average engaged time per qualifying user', value: (m) => m.averageTimeOnPassTheWorldLabel || '0s' },
+    { key: 'activeDays', title: 'Partnership Active Days', desc: 'Calendar days with partnership activity', value: (m) => formatCount(m.partnershipActiveDays), icon: 'activeTime' },
+  ];
+
+  function formatShortDay(dateKey) {
+    const m = String(dateKey || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return dateKey || '—';
+    try {
+      return new Intl.DateTimeFormat('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      }).format(new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12)));
+    } catch {
+      return dateKey;
+    }
+  }
+
+  function formatAxisTime(ms) {
+    const totalSec = Math.max(0, Math.round((Number(ms) || 0) / 1000));
+    if (totalSec < 60) return `${totalSec}s`;
+    const minutes = Math.floor(totalSec / 60);
+    const rem = totalSec % 60;
+    if (minutes < 60) return rem ? `${minutes}m ${rem}s` : `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const remMin = minutes % 60;
+    return remMin ? `${hours}h ${remMin}m` : `${hours}h`;
+  }
+
+  function formatRangeLabel(range) {
+    if (!range?.startDate) return '—';
+    const start = formatShortDay(range.startDate);
+    if (range.open || !range.endDate) return `${start} – Present`;
+    return `${start} – ${formatShortDay(range.endDate)}`;
+  }
+
+  function barWidthPct(value, max) {
+    const v = Number(value) || 0;
+    const m = Number(max) || 0;
+    if (m <= 0) return 0;
+    return Math.max(0, Math.min(100, (v / m) * 100));
+  }
+
+  function renderScaleBar(value, max, label) {
+    const pct = barWidthPct(value, max);
+    return `
+      <div class="owner-ptw-scale">
+        <div class="owner-ptw-scale__track" aria-hidden="true">
+          <span class="owner-ptw-scale__fill" style="width:${pct.toFixed(1)}%"></span>
+        </div>
+        <span class="owner-ptw-scale__value">${esc(label)}</span>
+      </div>`;
+  }
+
+  function seriesValue(point, metric) {
+    if (!point || point.unavailable || !point.values) return null;
+    if (metric === 'clicks') return point.values.clicks;
+    if (metric === 'time') return point.values.avgTimeMs;
+    return point.values.reach;
+  }
+
+  function renderOverallGraph(ps, data, loading) {
+    const metric = ps.calendarPanel?.graphMetric || 'reach';
+    const series = data?.series7d || [];
+    if (loading) {
+      return `
+        <section class="owner-ptw-overall-graph">
+          <div class="owner-ptw-overall-graph__head">
+            <div>
+              <h4 class="owner-ptw-overall-section__title">7-Day Performance</h4>
+              <p class="owner-ptw-overall-section__sub">Daily partnership performance across the last 7 tracked calendar days.</p>
+            </div>
+          </div>
+          <div class="owner-ptw-overall-graph__skel" aria-hidden="true"></div>
+        </section>`;
+    }
+
+    const selectors = ['reach', 'clicks', 'time'].map((id) => `
+      <button type="button"
+        class="owner-ptw-overall-graph__sel ${metric === id ? 'is-active' : ''}"
+        data-ptw-overall-graph="${id}">${id === 'reach' ? 'Reach' : id === 'clicks' ? 'Clicks' : 'Time'}</button>
+    `).join('');
+
+    const w = 560;
+    const h = 200;
+    const pad = { l: 44, r: 16, t: 18, b: 36 };
+    const innerW = w - pad.l - pad.r;
+    const innerH = h - pad.t - pad.b;
+    const points = series.map((p, i) => {
+      const raw = seriesValue(p, metric);
+      return {
+        ...p,
+        i,
+        raw,
+        plottable: !p.unavailable && raw != null,
+      };
+    });
+    const nums = points.filter((p) => p.plottable).map((p) => Number(p.raw) || 0);
+    const maxY = Math.max(1, ...nums);
+    const coords = points.map((p) => {
+      const x = pad.l + (points.length <= 1 ? innerW / 2 : (p.i / (points.length - 1)) * innerW);
+      if (!p.plottable) return { ...p, x, y: null };
+      const y = pad.t + innerH - ((Number(p.raw) || 0) / maxY) * innerH;
+      return { ...p, x, y };
+    });
+    const lineParts = [];
+    coords.forEach((c) => {
+      if (c.y == null) return;
+      lineParts.push(`${lineParts.length ? 'L' : 'M'}${c.x.toFixed(1)} ${c.y.toFixed(1)}`);
+    });
+    const line = lineParts.join(' ');
+    const yTicks = [0, 0.5, 1].map((t) => t * maxY);
+    const tipPayload = coords.map((c) => ({
+      x: c.x,
+      y: c.y,
+      date: c.date,
+      unavailable: Boolean(c.unavailable),
+      partnershipOff: Boolean(c.partnershipOff),
+      metric,
+      value: c.raw,
+      label: metric === 'time'
+        ? formatAxisTime(c.raw)
+        : formatCount(c.raw),
+      metricLabel: metric === 'clicks'
+        ? 'Link Image Clicks'
+        : metric === 'time'
+          ? 'Average Time'
+          : 'Partnership Reach',
+    }));
+
+    return `
+      <section class="owner-ptw-overall-graph">
+        <div class="owner-ptw-overall-graph__head">
+          <div>
+            <h4 class="owner-ptw-overall-section__title">7-Day Performance</h4>
+            <p class="owner-ptw-overall-section__sub">Daily partnership performance across the last 7 tracked calendar days.</p>
+          </div>
+          <div class="owner-ptw-overall-graph__sels" role="group" aria-label="Graph metric">${selectors}</div>
+        </div>
+        <div class="owner-ptw-overall-graph__plot" data-ptw-overall-chart data-ptw-overall-points="${esc(JSON.stringify(tipPayload))}">
+          <svg viewBox="0 0 ${w} ${h}" role="img" aria-label="7-day ${metric} performance">
+            <defs>
+              <linearGradient id="owner-ptw-overall-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#4ec5e8" stop-opacity="0.28"/>
+                <stop offset="100%" stop-color="#4ec5e8" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            ${yTicks.map((tick) => {
+              const y = pad.t + innerH - (tick / maxY) * innerH;
+              const label = metric === 'time' ? formatAxisTime(tick) : formatCount(tick);
+              return `
+                <line class="owner-ptw-overall-graph__grid" x1="${pad.l}" y1="${y}" x2="${w - pad.r}" y2="${y}"/>
+                <text class="owner-ptw-overall-graph__ylab" x="${pad.l - 8}" y="${y + 3}" text-anchor="end">${esc(label)}</text>`;
+            }).join('')}
+            ${line ? `<path class="owner-ptw-overall-graph__line" d="${line}" fill="none"/>` : ''}
+            ${coords.map((c) => (c.y == null
+              ? `<circle class="owner-ptw-overall-graph__miss" cx="${c.x}" cy="${pad.t + innerH}" r="3.2"/>`
+              : `<circle class="owner-ptw-overall-graph__dot" cx="${c.x}" cy="${c.y}" r="3.4"/>`
+            )).join('')}
+            <rect class="owner-ptw-overall-graph__hit" x="0" y="0" width="${w}" height="${h}" fill="transparent"/>
+          </svg>
+          <div class="owner-ptw-overall-graph__x">
+            ${coords.map((c) => `<span>${esc(formatShortDay(c.date))}</span>`).join('')}
+          </div>
+          <div class="owner-ptw-overall-tip" data-ptw-overall-tip hidden></div>
+        </div>
+      </section>`;
+  }
+
+  function renderDailyPerformanceTable(rows, loading) {
+    if (loading) {
+      return `
+        <section class="owner-ptw-overall-table">
+          <h4 class="owner-ptw-overall-section__title">Daily Performance</h4>
+          <div class="owner-ptw-overall-table__skel" aria-hidden="true"></div>
+        </section>`;
+    }
+    const list = rows || [];
+    if (!list.length) {
+      return `
+        <section class="owner-ptw-overall-table">
+          <h4 class="owner-ptw-overall-section__title">Daily Performance</h4>
+          <p class="owner-muted">No tracked days yet.</p>
+        </section>`;
+    }
+    const maxReach = Math.max(0, ...list.map((r) => r.metrics?.partnershipReach || 0));
+    const maxImp = Math.max(0, ...list.map((r) => r.metrics?.partnershipImpressions || 0));
+    const maxClicks = Math.max(0, ...list.map((r) => r.metrics?.linkImageClicks || 0));
+    const maxAvg = Math.max(0, ...list.map((r) => r.metrics?.averageTimeOnPassTheWorldMs || 0));
+    const maxActive = Math.max(0, ...list.map((r) => r.metrics?.partnershipActiveTimeMs || 0));
+
+    return `
+      <section class="owner-ptw-overall-table">
+        <h4 class="owner-ptw-overall-section__title">Daily Performance</h4>
+        <div class="owner-ptw-overall-table__scroll">
+          <table class="owner-ptw-overall-table__grid">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Reach</th>
+                <th>Impressions</th>
+                <th>Link Clicks</th>
+                <th>Avg. Time</th>
+                <th>Active Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${list.map((r) => {
+                const m = r.metrics || {};
+                return `
+                  <tr class="${r.partnershipOff ? 'is-off' : ''}">
+                    <td>${esc(formatShortDay(r.date))}${r.partnershipOff ? '<span class="owner-ptw-overall-table__off">Off</span>' : ''}</td>
+                    <td>${renderScaleBar(m.partnershipReach, maxReach, formatCount(m.partnershipReach))}</td>
+                    <td>${renderScaleBar(m.partnershipImpressions, maxImp, formatCount(m.partnershipImpressions))}</td>
+                    <td>${renderScaleBar(m.linkImageClicks, maxClicks, formatCount(m.linkImageClicks))}</td>
+                    <td>${renderScaleBar(m.averageTimeOnPassTheWorldMs, maxAvg, m.averageTimeOnPassTheWorldLabel || '0s')}</td>
+                    <td>${renderScaleBar(m.partnershipActiveTimeMs, maxActive, m.partnershipActiveTimeLabel || '0s')}</td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>`;
+  }
+
+  function renderGeoTable(geo, loading) {
+    if (loading) {
+      return `
+        <section class="owner-ptw-overall-table">
+          <h4 class="owner-ptw-overall-section__title">Geographic Reach</h4>
+          <div class="owner-ptw-overall-table__skel is-short" aria-hidden="true"></div>
+        </section>`;
+    }
+    const countries = Number(geo?.uniqueCountriesReached) || 0;
+    const cities = Number(geo?.uniqueCitiesReached) || 0;
+    return `
+      <section class="owner-ptw-overall-table">
+        <h4 class="owner-ptw-overall-section__title">Geographic Reach</h4>
+        <div class="owner-ptw-overall-geo">
+          <div class="owner-ptw-overall-geo__row">
+            <span>Unique Countries Reached</span>
+            ${renderScaleBar(countries, Math.max(countries, 1), formatCount(countries))}
+          </div>
+          <div class="owner-ptw-overall-geo__row">
+            <span>Unique Cities Reached</span>
+            ${renderScaleBar(cities, Math.max(cities, 1), formatCount(cities))}
+          </div>
+        </div>
+      </section>`;
+  }
+
+  function renderOverallAnalyticsTab(ps, data, loading) {
+    const m = data?.overall || {};
+    return `
+      <section class="owner-ptw-overall-analytics" aria-label="Overall analytics">
+        <h4 class="owner-ptw-overall-section__title">Overall Performance</h4>
+        <div class="owner-ptw-day-metrics owner-ptw-overall-metrics">
+          ${OVERALL_METRIC_DEFS.map((def) => renderMetricCard({
+            icon: METRIC_ICONS[def.icon || def.key] || METRIC_ICONS.reach,
+            title: def.title,
+            desc: def.desc,
+            valueHtml: loading ? '' : esc(def.value(m)),
+            loading,
+          })).join('')}
+        </div>
+        <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
+        ${renderOverallGraph(ps, data, loading)}
+        <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
+        <h4 class="owner-ptw-overall-section__title">Analytics Breakdown</h4>
+        ${renderDailyPerformanceTable(data?.dailyPerformance, loading)}
+        ${renderGeoTable(data?.geographic, loading)}
+      </section>`;
+  }
+
+  function selectedComparePartners(ps, data) {
+    const all = data?.partnerships || [];
+    let ids = ps.calendarPanel?.compareIds;
+    if (!Array.isArray(ids) || !ids.length) {
+      ids = all.slice(0, 2).map((p) => p.partnerId);
+    }
+    return all.filter((p) => ids.includes(p.partnerId)).slice(0, 3);
+  }
+
+  function renderOverallPartnershipsTab(ps, data, loading) {
+    if (loading) {
+      return `
+        <section class="owner-ptw-overall-partners">
+          <div class="owner-ptw-overall-table__skel" aria-hidden="true"></div>
+        </section>`;
+    }
+    const all = data?.partnerships || [];
+    if (!all.length) {
+      return `
+        <section class="owner-ptw-overall-empty" aria-label="No partnership data">
+          <span class="owner-ptw-overall-empty__icon" aria-hidden="true">${METRIC_ICONS.impressions}</span>
+          <h4 class="owner-ptw-overall-empty__title">No Partnership Data Yet</h4>
+          <p class="owner-ptw-overall-empty__body">Partnership comparisons will appear here once partnership activity has been recorded.</p>
+        </section>`;
+    }
+    if (all.length < 2) {
+      return `
+        <section class="owner-ptw-overall-empty" aria-label="No partnership comparison">
+          <span class="owner-ptw-overall-empty__icon" aria-hidden="true">${METRIC_ICONS.reach}</span>
+          <h4 class="owner-ptw-overall-empty__title">No Partnership Comparison Yet</h4>
+          <p class="owner-ptw-overall-empty__body">Another partnership is needed before performance can be compared.</p>
+          <p class="owner-muted">Once more than one partnership has been active, their performance will appear here.</p>
+        </section>`;
+    }
+
+    const selected = selectedComparePartners(ps, data);
+    const selector = all.length > 2 ? `
+      <div class="owner-ptw-overall-compare-pick" role="group" aria-label="Partnerships to compare">
+        ${all.map((p) => `
+          <button type="button"
+            class="owner-ptw-overall-compare-pick__btn ${selected.some((s) => s.partnerId === p.partnerId) ? 'is-active' : ''}"
+            data-ptw-overall-compare="${esc(p.partnerId)}">
+            ${esc(p.label || 'Partnership')}
+          </button>`).join('')}
+      </div>` : '';
+
+    const compareMetrics = [
+      { key: 'reach', label: 'Reach', get: (p) => p.metrics?.partnershipReach || 0, fmt: formatCount },
+      { key: 'impressions', label: 'Impressions', get: (p) => p.metrics?.partnershipImpressions || 0, fmt: formatCount },
+      { key: 'countries', label: 'Countries', get: (p) => p.metrics?.uniqueCountriesReached || 0, fmt: formatCount },
+      { key: 'cities', label: 'Cities', get: (p) => p.metrics?.uniqueCitiesReached || 0, fmt: formatCount },
+      { key: 'clicks', label: 'Link Clicks', get: (p) => p.metrics?.linkImageClicks || 0, fmt: formatCount },
+      { key: 'clickers', label: 'Unique Clickers', get: (p) => p.metrics?.uniqueLinkImageClickers || 0, fmt: formatCount },
+      { key: 'avgTime', label: 'Avg Time', get: (p) => p.metrics?.averageTimeOnPassTheWorldMs || 0, fmt: (v, p) => p.metrics?.averageTimeOnPassTheWorldLabel || formatAxisTime(v) },
+      { key: 'activeDays', label: 'Active Days', get: (p) => p.activeDays || 0, fmt: formatCount },
+    ];
+
+    const perDayMetrics = [
+      { key: 'reachDay', label: 'Reach / Active Day', get: (p) => p.perActiveDay?.reach || 0, fmt: (v) => formatCount(Math.round(v)) },
+      { key: 'impDay', label: 'Impressions / Active Day', get: (p) => p.perActiveDay?.impressions || 0, fmt: (v) => formatCount(Math.round(v)) },
+      { key: 'clickDay', label: 'Clicks / Active Day', get: (p) => p.perActiveDay?.linkImageClicks || 0, fmt: (v) => formatCount(Math.round(v)) },
+    ];
+
+    function compareRows(metrics) {
+      return metrics.map((metric) => {
+        const vals = selected.map((p) => metric.get(p));
+        const max = Math.max(0, ...vals);
+        return `
+          <div class="owner-ptw-overall-compare__row">
+            <div class="owner-ptw-overall-compare__metric">${esc(metric.label)}</div>
+            <div class="owner-ptw-overall-compare__cols" style="--cols:${selected.length}">
+              ${selected.map((p, i) => {
+                const v = vals[i];
+                const label = typeof metric.fmt === 'function' ? metric.fmt(v, p) : formatCount(v);
+                return `<div>${renderScaleBar(v, max, label)}</div>`;
+              }).join('')}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    return `
+      <section class="owner-ptw-overall-partners" aria-label="Partnership comparison">
+        <h4 class="owner-ptw-overall-section__title">Partnership Comparison</h4>
+        <p class="owner-ptw-overall-section__sub">Compare performance across historical Pass the World partnerships.</p>
+        ${selector}
+        <div class="owner-ptw-overall-compare__heads" style="--cols:${selected.length}">
+          <div class="owner-ptw-overall-compare__metric-spacer"></div>
+          ${selected.map((p) => `
+            <div class="owner-ptw-overall-compare__head">
+              ${p.mapLogoUrl ? `<img src="${esc(p.mapLogoUrl)}" alt="" class="owner-ptw-overall-compare__logo">` : ''}
+              <strong>${esc(p.label || 'Partnership')}</strong>
+              <span>${esc(formatRangeLabel(p.dateRange))}</span>
+              <span>${esc(formatCount(p.activeDays))} active day${p.activeDays === 1 ? '' : 's'}</span>
+            </div>`).join('')}
+        </div>
+        <div class="owner-ptw-overall-compare">
+          ${compareRows(compareMetrics)}
+        </div>
+        <h4 class="owner-ptw-overall-section__title" style="margin-top:18px">Per Active Day</h4>
+        <div class="owner-ptw-overall-compare">
+          ${compareRows(perDayMetrics)}
+        </div>
+      </section>`;
+  }
+
+  async function loadOverallAnalytics(ctx, { force = false } = {}) {
+    const { state, api, render } = ctx;
+    const ps = ensureState(state);
+    if (ps.overallLoading) return;
+    if (ps.overall && !force) return;
+    ps.overallLoading = true;
+    ps.overallError = null;
+    render();
+    try {
+      const data = await api('ptw-partnership-overall');
+      ps.overall = data;
+      ps.overallError = null;
+      if (ps.calendarPanel && !ps.calendarPanel.compareIds?.length) {
+        const ids = (data?.partnerships || []).slice(0, 2).map((p) => p.partnerId);
+        ps.calendarPanel = { ...ps.calendarPanel, compareIds: ids };
+      }
+    } catch (err) {
+      ps.overallError = err.message || 'Partnership analytics could not be loaded.';
+      if (!ps.overall) ps.overall = null;
+    } finally {
+      ps.overallLoading = false;
+      render();
+    }
   }
 
   function renderSkeleton() {
@@ -1177,8 +1612,14 @@ const OwnerPtwPartnership = (() => {
 
     root.querySelector('[data-ptw-p-cal-panel]')?.addEventListener('click', () => {
       ps.dayDetail = null;
-      ps.calendarPanel = { id: 'overview' };
+      ps.calendarPanel = {
+        id: 'overview',
+        tab: 'analytics',
+        graphMetric: 'reach',
+        compareIds: ps.calendarPanel?.compareIds || [],
+      };
       render();
+      loadOverallAnalytics(ctx);
     });
 
     document.querySelectorAll('[data-ptw-p-cal-panel-close]').forEach((btn) => {
@@ -1187,6 +1628,97 @@ const OwnerPtwPartnership = (() => {
         render();
       });
     });
+
+    document.querySelectorAll('[data-ptw-overall-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!ps.calendarPanel) return;
+        const next = btn.getAttribute('data-ptw-overall-tab') || 'analytics';
+        ps.calendarPanel = { ...ps.calendarPanel, tab: next };
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-ptw-overall-graph]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!ps.calendarPanel) return;
+        const metric = btn.getAttribute('data-ptw-overall-graph') || 'reach';
+        ps.calendarPanel = { ...ps.calendarPanel, graphMetric: metric };
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-ptw-overall-compare]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!ps.calendarPanel) return;
+        const id = btn.getAttribute('data-ptw-overall-compare');
+        if (!id) return;
+        const cur = new Set(ps.calendarPanel.compareIds || []);
+        if (cur.has(id)) {
+          if (cur.size <= 1) return;
+          cur.delete(id);
+        } else {
+          if (cur.size >= 3) {
+            const first = cur.values().next().value;
+            cur.delete(first);
+          }
+          cur.add(id);
+        }
+        ps.calendarPanel = { ...ps.calendarPanel, compareIds: [...cur] };
+        render();
+      });
+    });
+
+    document.querySelector('[data-ptw-overall-retry]')?.addEventListener('click', () => {
+      loadOverallAnalytics(ctx, { force: true });
+    });
+
+    const chart = document.querySelector('[data-ptw-overall-chart]');
+    if (chart && !chart._ptwBound) {
+      chart._ptwBound = true;
+      let points = [];
+      try {
+        points = JSON.parse(chart.getAttribute('data-ptw-overall-points') || '[]');
+      } catch {
+        points = [];
+      }
+      const tip = chart.querySelector('[data-ptw-overall-tip]');
+      const svg = chart.querySelector('svg');
+      const hide = () => { if (tip) tip.hidden = true; };
+      const show = (e) => {
+        if (!tip || !svg || !points.length) return;
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width) return;
+        const x = ((e.clientX - rect.left) / rect.width) * 560;
+        let best = null;
+        let bestDist = Infinity;
+        points.forEach((p) => {
+          const d = Math.abs(p.x - x);
+          if (d < bestDist) {
+            bestDist = d;
+            best = p;
+          }
+        });
+        if (!best) return;
+        const dateLabel = formatLongDate(best.date);
+        let body;
+        if (best.unavailable) {
+          body = `<strong>${esc(dateLabel)}</strong><span>Analytics unavailable</span>`;
+        } else if (best.partnershipOff) {
+          body = `<strong>${esc(dateLabel)}</strong><span>Partnership inactive</span><span>${esc(best.metricLabel)} · ${esc(best.label || '0')}</span>`;
+        } else {
+          body = `<strong>${esc(dateLabel)}</strong><span>${esc(best.metricLabel)}</span><span class="owner-ptw-overall-tip__val">${esc(best.label || '0')}</span>`;
+        }
+        tip.innerHTML = body;
+        tip.hidden = false;
+        const chartRect = chart.getBoundingClientRect();
+        const px = ((best.x / 560) * rect.width) + (rect.left - chartRect.left);
+        tip.style.left = `${Math.max(8, Math.min(px, chartRect.width - 140))}px`;
+        tip.style.top = '12px';
+      };
+      chart.addEventListener('pointermove', show);
+      chart.addEventListener('pointerdown', show);
+      chart.addEventListener('pointerleave', hide);
+    }
 
     root.querySelectorAll('[data-ptw-p-day]').forEach((btn) => {
       const date = btn.getAttribute('data-ptw-p-day');
