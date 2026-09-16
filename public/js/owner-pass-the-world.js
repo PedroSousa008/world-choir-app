@@ -585,7 +585,7 @@ const OwnerPassTheWorld = (() => {
     pollTimer = setTimeout(() => loadFn(true), 2000);
   }
 
-  function bind(root, state, helpers, { onRender, loadData }) {
+  function bind(root, state, helpers, { onRender, loadData, api } = {}) {
     stopPolling();
 
     const bindRange = (attr, reload = true) => {
@@ -622,7 +622,7 @@ const OwnerPassTheWorld = (() => {
 
     root.querySelector('[data-ptw-partnership]')?.addEventListener('click', () => {
       if (typeof OwnerPtwPartnership === 'undefined') return;
-      OwnerPtwPartnership.open({ state, render: onRender });
+      OwnerPtwPartnership.open({ state, api, render: onRender });
     });
 
     root.querySelector('[data-ptw-refresh]')?.addEventListener('click', () => loadData());

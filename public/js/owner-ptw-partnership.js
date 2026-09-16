@@ -2034,7 +2034,7 @@ const OwnerPtwPartnership = (() => {
   }
 
   function open(ctx) {
-    const { state, render } = ctx;
+    const { state, api, render } = ctx;
     ensureState(state);
     state.section = 'pass-the-world';
     state.ptwView = 'partnership';
@@ -2044,6 +2044,12 @@ const OwnerPtwPartnership = (() => {
       `${window.location.pathname}${window.location.search}#pass-the-world/partnership`
     );
     render();
+    if (typeof api !== 'function') {
+      const ps = ensureState(state);
+      ps.error = 'Partnership could not start: Owner API is unavailable. Refresh and try again.';
+      render();
+      return;
+    }
     load(ctx);
   }
 
