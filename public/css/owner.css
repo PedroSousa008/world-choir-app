@@ -7562,6 +7562,42 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   min-height: 0;
 }
 
+.owner-ptw-overall-analytics {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.owner-ptw-overall-block--kpis {
+  margin: 0;
+}
+
+.owner-ptw-overall-block--kpis .owner-ptw-overall-section__title {
+  margin-bottom: 10px;
+}
+
+.owner-ptw-overall-block--graph {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.owner-ptw-overall-block--breakdown {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.owner-ptw-overall-block--breakdown > .owner-ptw-overall-section__title {
+  margin-bottom: 16px;
+}
+
+.owner-ptw-overall-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
 .owner-ptw-overall-section__title {
   margin: 0 0 4px;
   font-size: 0.92rem;
@@ -7577,6 +7613,10 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 
 .owner-ptw-overall-metrics {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.owner-ptw-overall-table .owner-ptw-overall-section__title {
+  margin-bottom: 12px;
 }
 
 .owner-ptw-overall-graph {

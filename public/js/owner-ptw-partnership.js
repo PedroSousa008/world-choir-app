@@ -1108,22 +1108,30 @@ const OwnerPtwPartnership = (() => {
     const m = data?.overall || {};
     return `
       <section class="owner-ptw-overall-analytics" aria-label="Overall analytics">
-        <h4 class="owner-ptw-overall-section__title">Overall Performance</h4>
-        <div class="owner-ptw-day-metrics owner-ptw-overall-metrics">
-          ${OVERALL_METRIC_DEFS.map((def) => renderMetricCard({
-            icon: METRIC_ICONS[def.icon || def.key] || METRIC_ICONS.reach,
-            title: def.title,
-            desc: def.desc,
-            valueHtml: loading ? '' : esc(def.value(m)),
-            loading,
-          })).join('')}
+        <div class="owner-ptw-overall-block owner-ptw-overall-block--kpis">
+          <h4 class="owner-ptw-overall-section__title">Overall Performance</h4>
+          <div class="owner-ptw-day-metrics owner-ptw-overall-metrics">
+            ${OVERALL_METRIC_DEFS.map((def) => renderMetricCard({
+              icon: METRIC_ICONS[def.icon || def.key] || METRIC_ICONS.reach,
+              title: def.title,
+              desc: def.desc,
+              valueHtml: loading ? '' : esc(def.value(m)),
+              loading,
+            })).join('')}
+          </div>
         </div>
-        <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
-        ${renderOverallGraph(ps, data, loading)}
-        <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
-        <h4 class="owner-ptw-overall-section__title">Analytics Breakdown</h4>
-        ${renderDailyPerformanceTable(data?.dailyPerformance, loading)}
-        ${renderGeoTable(data?.geographic, loading)}
+
+        <div class="owner-ptw-overall-block owner-ptw-overall-block--graph">
+          ${renderOverallGraph(ps, data, loading)}
+        </div>
+
+        <div class="owner-ptw-overall-block owner-ptw-overall-block--breakdown">
+          <h4 class="owner-ptw-overall-section__title">Analytics Breakdown</h4>
+          <div class="owner-ptw-overall-breakdown">
+            ${renderDailyPerformanceTable(data?.dailyPerformance, loading)}
+            ${renderGeoTable(data?.geographic, loading)}
+          </div>
+        </div>
       </section>`;
   }
 
