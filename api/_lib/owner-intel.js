@@ -17,6 +17,7 @@ const {
   PLATFORM_FEE_PERCENT,
 } = require('./members-store');
 const { readWorkspace } = require('./foundation-workspace');
+const { listAttentionNotes } = require('./owner-attention-notes');
 
 const SUCCESS_STATUSES = new Set(['succeeded', 'completed', 'paid']);
 const EXCLUDED_STATUSES = new Set([
@@ -441,13 +442,14 @@ async function projectCountsForFoundations(influencers) {
  * Full Owner Control Center payload.
  */
 async function buildOwnerControlCenter() {
-  const [users, pledges, promises, influencers, donations, operations] = await Promise.all([
+  const [users, pledges, promises, influencers, donations, operations, attentionNotes] = await Promise.all([
     listAllUsers(),
     listAllPledges(),
     listAllPromises(),
     listInfluencersOwnerView(),
     readDonationsLedgerSafe(),
     getOperationsOverview(),
+    listAttentionNotes().catch(() => []),
   ]);
   const choirDb = assembleOwnerDatabaseRows(users, pledges, promises);
 
@@ -704,6 +706,7 @@ async function buildOwnerControlCenter() {
     operations: {
       health: systemHealth,
       alerts: needsAttention,
+      attentionNotes,
       note: needsAttention.length
         ? null
         : 'All clear.',

@@ -38,6 +38,12 @@ const {
   exportPassTheWorldCsv,
 } = require('./_lib/pass-the-world-owner');
 const {
+  listAttentionNotes,
+  saveAttentionNotes,
+  upsertAttentionNote,
+  deleteAttentionNote,
+} = require('./_lib/owner-attention-notes');
+const {
   buildNotificationsOverview,
   listNotifications,
   getNotification,
@@ -716,6 +722,31 @@ module.exports = async function handler(req, res) {
         removedBy: removedBy || 'owner',
       });
       return res.status(200).json(result);
+    }
+
+    if (action === 'attention-notes' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const notes = await listAttentionNotes();
+      return res.status(200).json({ notes });
+    }
+
+    if (action === 'attention-notes-save' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const store = await saveAttentionNotes(req.body?.notes || []);
+      return res.status(200).json({ ok: true, notes: store.notes, updatedAt: store.updatedAt });
+    }
+
+    if (action === 'attention-note-upsert' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const result = await upsertAttentionNote(req.body || {});
+      return res.status(200).json({ ok: true, notes: result.notes, note: result.note });
+    }
+
+    if (action === 'attention-note-delete' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const store = await deleteAttentionNote(req.body?.id);
+      return res.status(200).json({ ok: true, notes: store.notes });
     }
 
     return res.status(404).json({ error: 'Unknown admin action' });

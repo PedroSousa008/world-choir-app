@@ -101,6 +101,9 @@ const OwnerControl = (() => {
     ptwCountryQuery: '',
     ptwCityQuery: '',
     ptwCityPage: 1,
+    attentionNotes: null,
+    attentionSaveTimer: null,
+    attentionExpandedId: null,
     pmData: null,
     pmBusy: false,
     pmQuery: '',
@@ -348,11 +351,15 @@ const OwnerControl = (() => {
     state.busy = true;
     try {
       state.data = await api('control-center');
+      state.attentionNotes = Array.isArray(state.data?.operations?.attentionNotes)
+        ? state.data.operations.attentionNotes.map((n) => ({ ...n }))
+        : [];
       state.error = null;
     } catch (err) {
       if (err.status === 401) {
         state.authenticated = false;
         state.data = null;
+        state.attentionNotes = null;
         state.error = 'Session expired. Please sign in again.';
       } else {
         state.error = err.storageUnavailable
@@ -636,10 +643,8 @@ const OwnerControl = (() => {
       <section class="owner-section owner-two-col">
         <div>
           <p class="owner-section__label">Needs attention</p>
-          <div class="owner-panel">
-            ${(d.operations.alerts || []).length
-              ? d.operations.alerts.map((a) => `<p>${esc(a)}</p>`).join('')
-              : `<p class="owner-empty" style="padding:8px 0">All clear.</p>`}
+          <div class="owner-panel owner-panel--attention">
+            ${renderAttentionNotes()}
           </div>
         </div>
         <div>
@@ -651,6 +656,257 @@ const OwnerControl = (() => {
         </div>
       </section>
     `;
+  }
+
+  function getAttentionNotes() {
+    if (Array.isArray(state.attentionNotes)) return state.attentionNotes;
+    return Array.isArray(state.data?.operations?.attentionNotes)
+      ? state.data.operations.attentionNotes
+      : [];
+  }
+
+  function newAttentionNoteId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    return `note-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  }
+
+  function fmtAttentionDue(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      if (!Number.isFinite(d.getTime())) return '';
+      const today = new Date();
+      const startToday = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+      const startDue = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+      const dayDiff = Math.round((startDue - startToday) / 86400000);
+      if (dayDiff === 0) return 'Today';
+      if (dayDiff === 1) return 'Tomorrow';
+      if (dayDiff === -1) return 'Yesterday';
+      return d.toLocaleDateString('en-GB', {
+        weekday: 'short', day: 'numeric', month: 'short',
+        timeZone: 'UTC',
+      });
+    } catch {
+      return '';
+    }
+  }
+
+  function dueInputValue(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toISOString().slice(0, 10);
+    } catch {
+      return '';
+    }
+  }
+
+  function renderAttentionNoteRow(note, { composer = false } = {}) {
+    const id = composer ? 'composer' : esc(note.id);
+    const completed = !composer && note.completed;
+    const dueLabel = fmtAttentionDue(note.dueAt);
+    const overdue = note.dueAt && !completed && Date.parse(note.dueAt) < Date.now() - 86400000;
+    return `
+      <li class="owner-attention__row ${completed ? 'is-done' : ''} ${composer ? 'is-composer' : ''}" data-note-id="${id}">
+        <button type="button" class="owner-attention__check ${completed ? 'is-checked' : ''}" data-attention-toggle aria-label="${completed ? 'Mark incomplete' : 'Mark complete'}" ${composer ? 'tabindex="-1"' : ''}></button>
+        <div class="owner-attention__body">
+          <input
+            type="text"
+            class="owner-attention__title"
+            data-attention-title
+            value="${esc(note.text || '')}"
+            placeholder="${composer ? 'New reminder' : 'Reminder'}"
+            autocomplete="off"
+            spellcheck="true"
+          />
+          ${composer ? '' : `
+            <div class="owner-attention__meta is-open" data-attention-meta>
+              <label class="owner-attention__date ${dueLabel ? 'has-value' : ''} ${overdue ? 'is-overdue' : ''}">
+                <span class="owner-attention__date-label">${dueLabel ? esc(dueLabel) : 'Add Date'}</span>
+                <input type="date" class="owner-attention__date-input" data-attention-date value="${esc(dueInputValue(note.dueAt))}" />
+              </label>
+              <input
+                type="text"
+                class="owner-attention__detail"
+                data-attention-detail
+                value="${esc(note.detail || '')}"
+                placeholder="Notes"
+                autocomplete="off"
+              />
+            </div>
+          `}
+        </div>
+        ${composer ? '' : `
+          <button type="button" class="owner-attention__delete" data-attention-delete aria-label="Delete reminder">×</button>
+        `}
+      </li>`;
+  }
+
+  function renderAttentionNotes() {
+    const notes = getAttentionNotes();
+    const alerts = state.data?.operations?.alerts || [];
+    return `
+      <div class="owner-attention" data-attention-root>
+        ${alerts.length ? `
+          <ul class="owner-attention__alerts">
+            ${alerts.map((a) => `<li class="owner-attention__alert">${esc(a)}</li>`).join('')}
+          </ul>
+        ` : ''}
+        <ul class="owner-attention__list" data-attention-list>
+          ${notes.map((n) => renderAttentionNoteRow(n)).join('')}
+          ${renderAttentionNoteRow({ id: '', text: '', completed: false, dueAt: null, detail: '' }, { composer: true })}
+        </ul>
+      </div>
+    `;
+  }
+
+  function findAttentionNote(id) {
+    return getAttentionNotes().find((n) => n.id === id) || null;
+  }
+
+  function patchAttentionNote(id, patch) {
+    const list = getAttentionNotes().map((n) => (
+      n.id === id ? { ...n, ...patch, updatedAt: new Date().toISOString() } : n
+    ));
+    state.attentionNotes = list;
+    if (state.data?.operations) state.data.operations.attentionNotes = list;
+  }
+
+  function scheduleAttentionSave() {
+    if (state.attentionSaveTimer) clearTimeout(state.attentionSaveTimer);
+    state.attentionSaveTimer = setTimeout(() => {
+      persistAttentionNotes().catch((err) => {
+        setFlash(err.message || 'Could not save reminder.', 'err');
+        render();
+      });
+    }, 400);
+  }
+
+  async function persistAttentionNotes() {
+    const notes = getAttentionNotes();
+    const data = await api('attention-notes-save', {
+      method: 'POST',
+      body: { notes },
+    });
+    state.attentionNotes = Array.isArray(data.notes) ? data.notes : notes;
+    if (state.data?.operations) state.data.operations.attentionNotes = state.attentionNotes;
+  }
+
+  function remountAttentionList(focus) {
+    const list = root().querySelector('[data-attention-list]');
+    if (!list) return;
+    const notes = getAttentionNotes();
+    list.innerHTML = `
+      ${notes.map((n) => renderAttentionNoteRow(n)).join('')}
+      ${renderAttentionNoteRow({ id: '', text: '', completed: false, dueAt: null, detail: '' }, { composer: true })}
+    `;
+    bindAttentionNotes();
+    if (!focus) return;
+    const row = list.querySelector(`[data-note-id="${focus.id}"]`);
+    if (!row) return;
+    const field = row.querySelector(focus.selector || '[data-attention-title]');
+    if (!field) return;
+    field.focus();
+    if (typeof field.setSelectionRange === 'function' && focus.cursor != null) {
+      try { field.setSelectionRange(focus.cursor, focus.cursor); } catch { /* */ }
+    }
+  }
+
+  function bindAttentionNotes() {
+    const rootEl = root().querySelector('[data-attention-root]');
+    if (!rootEl) return;
+
+    rootEl.querySelectorAll('[data-attention-toggle]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const row = btn.closest('[data-note-id]');
+        const id = row?.getAttribute('data-note-id');
+        if (!id || id === 'composer') {
+          row?.querySelector('[data-attention-title]')?.focus();
+          return;
+        }
+        const note = findAttentionNote(id);
+        if (!note) return;
+        patchAttentionNote(id, { completed: !note.completed });
+        remountAttentionList(null);
+        scheduleAttentionSave();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-attention-delete]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const id = btn.closest('[data-note-id]')?.getAttribute('data-note-id');
+        if (!id || id === 'composer') return;
+        state.attentionNotes = getAttentionNotes().filter((n) => n.id !== id);
+        if (state.data?.operations) state.data.operations.attentionNotes = state.attentionNotes;
+        if (state.attentionExpandedId === id) state.attentionExpandedId = null;
+        remountAttentionList(null);
+        scheduleAttentionSave();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-attention-title]').forEach((input) => {
+      input.addEventListener('focus', () => {
+        const id = input.closest('[data-note-id]')?.getAttribute('data-note-id');
+        if (id && id !== 'composer') state.attentionExpandedId = id;
+      });
+      input.addEventListener('input', () => {
+        const row = input.closest('[data-note-id]');
+        const id = row?.getAttribute('data-note-id');
+        const text = input.value;
+        if (id === 'composer') {
+          if (!String(text).trim()) return;
+          const note = {
+            id: newAttentionNoteId(),
+            text,
+            detail: '',
+            dueAt: null,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          state.attentionNotes = [...getAttentionNotes(), note];
+          if (state.data?.operations) state.data.operations.attentionNotes = state.attentionNotes;
+          state.attentionExpandedId = note.id;
+          remountAttentionList({ id: note.id, selector: '[data-attention-title]', cursor: text.length });
+          scheduleAttentionSave();
+          return;
+        }
+        patchAttentionNote(id, { text });
+        scheduleAttentionSave();
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const row = input.closest('[data-note-id]');
+        const id = row?.getAttribute('data-note-id');
+        if (id && id !== 'composer') {
+          rootEl.querySelector('[data-note-id="composer"] [data-attention-title]')?.focus();
+        }
+      });
+    });
+
+    rootEl.querySelectorAll('[data-attention-detail]').forEach((input) => {
+      input.addEventListener('input', () => {
+        const id = input.closest('[data-note-id]')?.getAttribute('data-note-id');
+        if (!id || id === 'composer') return;
+        patchAttentionNote(id, { detail: input.value });
+        scheduleAttentionSave();
+      });
+    });
+
+    rootEl.querySelectorAll('[data-attention-date]').forEach((input) => {
+      input.addEventListener('change', () => {
+        const id = input.closest('[data-note-id]')?.getAttribute('data-note-id');
+        if (!id || id === 'composer') return;
+        const dueAt = input.value
+          ? new Date(`${input.value}T12:00:00.000Z`).toISOString()
+          : null;
+        patchAttentionNote(id, { dueAt });
+        remountAttentionList({ id, selector: '[data-attention-date]' });
+        scheduleAttentionSave();
+      });
+    });
   }
 
   function metricBtn(value, label, section, extra, raw = false) {
@@ -3323,6 +3579,9 @@ const OwnerControl = (() => {
         render();
       });
     });
+    if (state.section === 'overview') {
+      bindAttentionNotes();
+    }
     root().querySelectorAll('[data-activity-filter]').forEach((btn) => {
       btn.addEventListener('click', () => {
         state.activityFilter = btn.getAttribute('data-activity-filter');
