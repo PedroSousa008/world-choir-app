@@ -24,7 +24,11 @@ module.exports = async function handler(req, res) {
       const state = await readLiveEventState(eventId);
       const schedule = getLiveEventSchedule();
 
-      res.setHeader('Cache-Control', 'no-store');
+      // 1s edge cache collapses thousands of identical polls; serverNow skew ≤1s is fine for sync.
+      res.setHeader(
+        'Cache-Control',
+        'public, s-maxage=1, stale-while-revalidate=2, max-age=0'
+      );
       return res.status(200).json({
         serverNow,
         schedule,

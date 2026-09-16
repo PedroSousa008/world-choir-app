@@ -604,7 +604,7 @@ const WorldChoirNav = (() => {
       'index.html',
       'css/home.css?v=20260911guideGrey',
       'js/world-choir-home.js?v=20260912dapFast',
-      'js/world-choir-db.js?v=20260913presence',
+      'js/world-choir-db.js?v=20260916scale',
     ],
     map: [
       'map.html',
@@ -640,7 +640,7 @@ const WorldChoirNav = (() => {
       'js/profile/daily-acts-peace.js?v=20260912dapFast',
       'js/profile/daily-acts-button.js?v=20260912dapFast',
       'js/world-choir-onboarding.js?v=20260816a',
-      'js/world-choir-db.js?v=20260913presence',
+      'js/world-choir-db.js?v=20260916scale',
       'passport.html',
       'css/passport.css?v=20260914ptwInvite',
       'js/profile/passport-route.js?v=20260901b',

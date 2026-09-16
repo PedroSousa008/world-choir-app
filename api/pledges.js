@@ -21,20 +21,27 @@ module.exports = async function handler(req, res) {
     const eventId = req.query.eventId || 'world-choir-2027';
 
     if (req.query.meta === '1') {
-      // Live voices counter — never CDN-cache; clients poll ~every 1.5–2s.
-      res.setHeader('Cache-Control', 'no-store');
+      // Short CDN cache absorbs poll storms; clients still see updates within ~1–2s.
+      res.setHeader(
+        'Cache-Control',
+        'public, s-maxage=1, stale-while-revalidate=2, max-age=0'
+      );
       const meta = await getPledgesMeta(eventId);
       return res.status(200).json(meta);
     }
 
     // Map aggregate — mirrors client getMapStats/getAggregatedCities over /api/pledges.
     if (req.query.aggregate === '1') {
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader(
+        'Cache-Control',
+        'public, s-maxage=2, stale-while-revalidate=5, max-age=0'
+      );
       const aggregate = await getMapAggregate(eventId);
       return res.status(200).json(aggregate);
     }
 
-    res.setHeader('Cache-Control', 'no-store');
+    // Full pledge list is heavy — keep uncached and discourage hot polling.
+    res.setHeader('Cache-Control', 'private, no-store');
     const pledges = await listPledges(eventId);
 
     return res.status(200).json({
