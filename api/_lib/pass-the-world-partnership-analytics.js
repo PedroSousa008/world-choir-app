@@ -2,8 +2,9 @@
  * Pass the World — Partnership daily analytics (real events only).
  * Blob: wc-data/pass-the-world/partnership/analytics/{configurationId}/{YYYY-MM-DD}.json
  *
- * Tracking begins on first recorded event (meta.trackingSince). Dates before that
- * are "unavailable" — never fabricated zeros that imply tracking existed.
+ * Tracking epoch starts on the UTC day this feature shipped (not on the first
+ * visitor event). Dates before that are "unavailable". Dates on/after that with
+ * no traffic show real zeros — never "not collected" for the live ship day.
  */
 const {
   readBlobJson,
@@ -13,6 +14,8 @@ const {
 
 const ROOT = 'wc-data/pass-the-world/partnership/analytics';
 const META_PATH = `${ROOT}/meta.json`;
+/** UTC calendar day when daily partnership analytics first shipped. */
+const TRACKING_EPOCH_DATE = '2026-09-16';
 
 const EVENT_TYPES = new Set(['impression', 'click', 'engage']);
 /** Client may send at most one impression per visitor/config within this window. */
@@ -105,9 +108,15 @@ async function readMeta() {
 async function ensureTrackingSince(nowIso) {
   const meta = await readMeta();
   if (meta.trackingSince) return meta;
+  // Prefer the feature ship date so Owner sees real zeros on launch day
+  // even before the first public event arrives.
+  const shipIso = `${TRACKING_EPOCH_DATE}T00:00:00.000Z`;
+  const nowMs = new Date(nowIso).getTime();
+  const shipMs = new Date(shipIso).getTime();
+  const since = Number.isFinite(nowMs) && nowMs < shipMs ? nowIso : shipIso;
   const next = {
-    trackingSince: nowIso,
-    updatedAt: nowIso,
+    trackingSince: since,
+    updatedAt: nowIso || new Date().toISOString(),
   };
   await writeJson(META_PATH, next, { overwrite: true });
   return next;
@@ -388,9 +397,11 @@ async function getPartnershipDayAnalytics({
     throw Object.assign(new Error('date must be YYYY-MM-DD'), { statusCode: 400 });
   }
 
-  const meta = await readMeta();
-  const trackingSince = meta.trackingSince || null;
-  const trackingSinceDate = trackingSince ? utcDateKey(trackingSince) : null;
+  const nowIso = (now instanceof Date ? now : new Date(now)).toISOString();
+  // Always materialize the tracking epoch on Owner reads so launch day is not
+  // stuck on "not collected" until the first public visitor event arrives.
+  const meta = await ensureTrackingSince(nowIso);
+  const trackingSince = meta.trackingSince || `${TRACKING_EPOCH_DATE}T00:00:00.000Z`;
   const intervals = buildDayIntervals(segments, dateKey, now);
   const activeMs = intervals.reduce((sum, iv) => sum + iv.ms, 0);
   const isLive = intervals.some((iv) => iv.open);
@@ -399,9 +410,9 @@ async function getPartnershipDayAnalytics({
     intervals.map((iv) => iv.configurationId).filter(Boolean)
   )];
 
-  const unavailable = Boolean(
-    !trackingSinceDate || dateKey < trackingSinceDate
-  );
+  // Ship-epoch gate only — never depend on "first event arrived" or a late
+  // meta.trackingSince, or Owner flashes skeleton then "not collected".
+  const unavailable = dateKey < TRACKING_EPOCH_DATE;
 
   if (!intervals.length) {
     return {
@@ -417,7 +428,19 @@ async function getPartnershipDayAnalytics({
         activeMs: 0,
         activeLabel: formatActiveDurationMs(0),
       },
-      metrics: null,
+      // Off / empty day after tracking started: real zeros, not "unavailable".
+      metrics: unavailable ? null : {
+        partnershipReach: 0,
+        partnershipImpressions: 0,
+        uniqueCountriesReached: 0,
+        uniqueCitiesReached: 0,
+        linkImageClicks: 0,
+        uniqueLinkImageClickers: 0,
+        averageTimeOnPassTheWorldMs: 0,
+        averageTimeOnPassTheWorldLabel: formatDurationMs(0),
+        partnershipActiveTimeMs: 0,
+        partnershipActiveTimeLabel: formatActiveDurationMs(0),
+      },
       byConfiguration: [],
       trackingSince,
     };
@@ -498,6 +521,7 @@ async function getPartnershipDayAnalytics({
 
 module.exports = {
   IMPRESSION_COOLDOWN_MS,
+  TRACKING_EPOCH_DATE,
   recordPartnershipAnalyticsEvent,
   getPartnershipDayAnalytics,
   buildDayIntervals,

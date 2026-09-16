@@ -135,13 +135,35 @@ async function main() {
   assert(multiMs === 3.5 * 3600 * 1000, 'multi intervals sum to 3h30m');
   assert(multi.length === 2, 'keeps separate intervals');
 
-  // Off day
+  // Off day after tracking started → real zeros (not "not collected")
   const off = await analytics.getPartnershipDayAnalytics({
     date: '2026-09-16',
     now: new Date('2026-09-16T20:00:00.000Z'),
     segments: [],
   });
   assert(off.timeline.intervals.length === 0, 'off day has empty timeline');
+  assert(off.unavailable !== true, 'off day after epoch is still available');
+  assert(off.metrics && off.metrics.partnershipReach === 0, 'off day shows zero metrics');
+
+  // Ship day with active intervals but no events yet → zeros, not unavailable
+  mem.files.clear();
+  const liveEmpty = await analytics.getPartnershipDayAnalytics({
+    date: '2026-09-16',
+    now: new Date('2026-09-16T18:20:00.000Z'),
+    segments: [{
+      configurationId: 'cfg_live',
+      startedAt: '2026-09-16T18:07:00.000Z',
+      endedAt: null,
+      mapLogoUrl: 'https://example.com/map.png',
+      subtitle: 'Emirates',
+    }],
+  });
+  assert(liveEmpty.unavailable !== true, 'live ship day without events is available');
+  assert(liveEmpty.available === true, 'live ship day available flag');
+  assert(liveEmpty.live === true, 'open interval is live');
+  assert(liveEmpty.metrics && liveEmpty.metrics.partnershipReach === 0, 'zeros when no traffic yet');
+  assert(liveEmpty.metrics.partnershipImpressions === 0, 'zero impressions');
+  assert(Boolean(mem.files.get('wc-data/pass-the-world/partnership/analytics/meta.json')?.trackingSince), 'Owner read seeds trackingSince');
 
   console.log('\nptw-partnership-analytics tests passed');
 }
