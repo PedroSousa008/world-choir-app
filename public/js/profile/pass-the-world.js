@@ -740,7 +740,9 @@ const PassTheWorld = (() => {
 
   function clearPartnershipUi() {
     const story = document.getElementById('passport-story-view');
+    const card = story?.querySelector('.passport-card--ptw');
     story?.classList.remove('is-ptw-partner');
+    card?.classList.remove('is-ptw-partner');
     root?.classList.remove('is-ptw-partner');
 
     const subtitle = document.querySelector('#passport-story-view [data-ptw-partner-subtitle]');
@@ -827,7 +829,9 @@ const PassTheWorld = (() => {
     }
 
     const story = document.getElementById('passport-story-view');
+    const card = story?.querySelector('.passport-card--ptw');
     story?.classList.add('is-ptw-partner');
+    card?.classList.add('is-ptw-partner');
     root?.classList.add('is-ptw-partner');
 
     const subtitle = document.querySelector('#passport-story-view [data-ptw-partner-subtitle]');
@@ -906,6 +910,13 @@ const PassTheWorld = (() => {
       }
     } else {
       root?.querySelector('[data-ptw-partner-link]')?.remove();
+    }
+
+    // Card height changes when partner chrome mounts — keep map sized correctly.
+    if (typeof PassTheWorldMap !== 'undefined') {
+      requestAnimationFrame(() => {
+        PassTheWorldMap.invalidateSize?.();
+      });
     }
   }
 

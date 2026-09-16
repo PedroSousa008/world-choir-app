@@ -1702,8 +1702,8 @@
 /* Partnership ON — page header (outside white card) */
 .passport-story-view.is-ptw-partner > .passport-header {
   align-items: flex-start;
-  gap: 12px 16px;
-  margin-bottom: 18px;
+  gap: 12px 14px;
+  margin-bottom: 14px;
 }
 
 .passport-header__lead {
@@ -1719,24 +1719,25 @@
 }
 
 .passport-header__partner-subtitle {
-  margin: 6px 0 0;
-  max-width: min(15.5rem, 58vw);
+  margin: 8px 0 0;
+  max-width: min(16.5rem, 56vw);
   font-family: var(--font-sans);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  line-height: 1.35;
-  letter-spacing: 0.04em;
+  line-height: 1.32;
+  letter-spacing: 0.045em;
   text-transform: uppercase;
-  color: rgba(200, 204, 214, 0.78);
+  color: rgba(200, 204, 214, 0.82);
+  white-space: pre-line;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .passport-header__partner-tab {
-  width: min(148px, 38vw);
-  height: 52px;
+  width: min(168px, 42vw);
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1756,16 +1757,82 @@
   display: none !important;
 }
 
+/*
+ * Partnership ON card: unlock fixed passport aspect-ratio so journey info,
+ * Visit my City, and Link Image all fit without being crushed.
+ */
+.passport-story-view.is-ptw-partner .passport-card.passport-card--ptw,
+.passport-story-view.is-ptw-partner .passport-card.passport-card--ptw.is-inside {
+  aspect-ratio: auto;
+  height: auto;
+  min-height: min(78vh, 720px);
+  max-height: none;
+  overflow: visible;
+}
+
+.passport-story-view.is-ptw-partner .passport-story-host,
+.passport-story-view.is-ptw-partner .ptw-card-host,
+.passport-story-view.is-ptw-partner .ptw {
+  height: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.passport-story-view.is-ptw-partner .ptw {
+  min-height: min(78vh, 720px);
+}
+
+.passport-story-view.is-ptw-partner .ptw-map-wrap {
+  flex: 0 0 auto;
+  aspect-ratio: 1.7 / 1;
+  max-height: none;
+  width: 100%;
+}
+
+.passport-story-view.is-ptw-partner .ptw-header {
+  padding: 14px 18px 0;
+}
+
+.passport-story-view.is-ptw-partner .ptw-body {
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+  margin-top: 10px;
+  padding: 0 16px;
+}
+
+.passport-story-view.is-ptw-partner .ptw-cta {
+  margin-top: 12px;
+  padding-bottom: 4px;
+}
+
+.passport-story-view.is-ptw-partner .ptw-visit-btn {
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.passport-story-view.is-ptw-partner .ptw-actions {
+  margin-top: 4px;
+  padding: 10px 18px 16px;
+}
+
+/* Hide lower passport chrome while partner card is the focus */
+.passport-story-view.is-ptw-partner > .passport-permanence,
+.passport-story-view.is-ptw-partner > .passport-stats {
+  display: none;
+}
+
 /* Partnership map watermark — only present when ON */
 .ptw-partner-map-logo {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
+  right: 12px;
+  bottom: 12px;
   z-index: 450;
-  width: min(92px, 28%);
-  height: 36px;
+  width: min(108px, 32%);
+  height: 42px;
   display: grid;
-  place-items: center;
+  place-items: end;
+  justify-items: end;
   pointer-events: none;
 }
 
@@ -1782,13 +1849,21 @@
 
 /* Partnership link banner — above Itinerary, only when ON */
 .ptw-partner-link {
-  margin: 14px 18px 0;
-  border-radius: 12px;
+  margin: 14px 16px 0;
+  border-radius: 14px;
   overflow: hidden;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  width: calc(100% - 32px);
+  align-self: center;
   aspect-ratio: 1200 / 630;
-  max-height: 148px;
+  max-height: 132px;
   background: #0d111a;
+}
+
+.passport-story-view.is-ptw-partner .ptw-partner-link {
+  max-height: none;
+  height: auto;
+  min-height: 96px;
 }
 
 .ptw-partner-link__anchor {
@@ -1812,13 +1887,13 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
-  margin: 4px 8px 0;
-  padding: 10px 0 2px;
+  margin: 10px 0 0;
+  padding: 12px 0 2px;
   border-top: 1px solid rgba(18, 25, 43, 0.1);
 }
 
 .ptw-stats-row__cell {
-  padding: 0 8px;
+  padding: 0 6px;
   text-align: center;
   border-right: 1px solid rgba(18, 25, 43, 0.1);
 }
@@ -1838,7 +1913,7 @@
 
 .ptw-stats-row__value {
   display: block;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #12192b;
   line-height: 1.15;
@@ -1858,19 +1933,38 @@
   gap: 4px;
 }
 
+.passport-story-view.is-ptw-partner .ptw-route--journey .ptw-place__city {
+  font-size: 15px;
+  color: #0B346B;
+}
+
+.passport-story-view.is-ptw-partner .ptw-place__city {
+  color: #0B346B;
+}
+
 @media (max-width: 360px) {
   .passport-header__partner-tab {
-    width: min(120px, 36vw);
-    height: 44px;
+    width: min(132px, 40vw);
+    height: 48px;
   }
 
   .ptw-partner-map-logo {
-    width: min(72px, 30%);
-    height: 30px;
+    width: min(84px, 30%);
+    height: 34px;
   }
 
   .ptw-stats-row__value {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
+  }
+
+  .passport-story-view.is-ptw-partner .passport-card.passport-card--ptw {
+    min-height: min(82vh, 680px);
+  }
+}
+
+@media (min-width: 480px) {
+  .passport-story-view.is-ptw-partner .ptw-partner-link {
+    max-width: 340px;
   }
 }
 
