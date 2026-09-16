@@ -1637,10 +1637,18 @@ async function getPassTheWorld({ deviceId, eventId = 'world-choir-2027', now } =
     } catch { hasInvited = false; }
   }
   viewer.hasInvited = hasInvited;
+
+  let partnership = { enabled: false };
+  try {
+    const { getPublicPartnership } = require('./pass-the-world-partnership');
+    partnership = await getPublicPartnership();
+  } catch { /* partnership optional — never break PTW */ }
+
   return {
     journey: buildPublicState(state, itinerary, advanced.now, viewer),
     itinerary,
     stats: computeStats(itinerary, state, advanced.now),
+    partnership,
   };
 }
 

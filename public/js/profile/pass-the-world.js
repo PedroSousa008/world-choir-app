@@ -667,11 +667,20 @@ const PassTheWorld = (() => {
       <section class="ptw" aria-labelledby="ptw-title">
         <div class="ptw-map-wrap">
           <div id="ptw-map" class="ptw-map" role="img" aria-label="World map showing the Pass the World journey"></div>
+          <div class="ptw-partner-map-logo" data-ptw-partner-map hidden></div>
         </div>
 
         <header class="ptw-header">
+          <div class="ptw-header__brand" data-ptw-partner-tab hidden>
+            <img class="ptw-partner-tab-logo" data-ptw-partner-tab-img alt="">
+          </div>
           <h1 id="ptw-title" class="ptw-title">Pass the World</h1>
+          <p class="ptw-partner-subtitle" data-ptw-partner-subtitle hidden></p>
         </header>
+
+        <div class="ptw-partner-link" data-ptw-partner-link hidden>
+          <img data-ptw-partner-link-img alt="">
+        </div>
 
         <div class="ptw-body" data-ptw-body>
           <div class="ptw-skeleton" aria-hidden="true">
@@ -695,10 +704,79 @@ const PassTheWorld = (() => {
       </section>`;
   }
 
+  function paintPartnership(payload) {
+    const p = payload?.partnership;
+    const enabled = Boolean(p?.enabled);
+
+    const tabWrap = root?.querySelector('[data-ptw-partner-tab]');
+    const tabImg = root?.querySelector('[data-ptw-partner-tab-img]');
+    const subtitle = root?.querySelector('[data-ptw-partner-subtitle]');
+    const mapLogo = root?.querySelector('[data-ptw-partner-map]');
+    const linkWrap = root?.querySelector('[data-ptw-partner-link]');
+    const linkImg = root?.querySelector('[data-ptw-partner-link-img]');
+
+    if (!enabled) {
+      if (tabWrap) tabWrap.hidden = true;
+      if (subtitle) {
+        subtitle.hidden = true;
+        subtitle.textContent = '';
+      }
+      if (mapLogo) {
+        mapLogo.hidden = true;
+        mapLogo.innerHTML = '';
+      }
+      if (linkWrap) linkWrap.hidden = true;
+      return;
+    }
+
+    if (tabWrap && tabImg) {
+      if (p.tabLogoUrl) {
+        tabImg.src = p.tabLogoUrl;
+        tabImg.alt = 'Partnership logo';
+        tabWrap.hidden = false;
+      } else {
+        tabWrap.hidden = true;
+      }
+    }
+
+    if (subtitle) {
+      const text = String(p.subtitle || '').trim();
+      if (text) {
+        subtitle.textContent = text;
+        subtitle.hidden = false;
+      } else {
+        subtitle.textContent = '';
+        subtitle.hidden = true;
+      }
+    }
+
+    if (mapLogo) {
+      if (p.mapLogoUrl) {
+        mapLogo.innerHTML = `<img src="${esc(p.mapLogoUrl)}" alt="Partnership map logo">`;
+        mapLogo.hidden = false;
+      } else {
+        mapLogo.innerHTML = '';
+        mapLogo.hidden = true;
+      }
+    }
+
+    if (linkWrap && linkImg) {
+      if (p.linkImageUrl) {
+        linkImg.src = p.linkImageUrl;
+        linkImg.alt = String(p.subtitle || 'Partnership').trim() || 'Partnership';
+        linkWrap.hidden = false;
+      } else {
+        linkWrap.hidden = true;
+      }
+    }
+  }
+
   function paintBody(payload) {
     const body = root?.querySelector('[data-ptw-body]');
     if (!body || !payload) return;
     const journey = payload.journey || {};
+
+    paintPartnership(payload);
 
     let routeSlot = body.querySelector('[data-ptw-route-slot]');
     if (!routeSlot) {

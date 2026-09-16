@@ -38,6 +38,15 @@ const {
   exportPassTheWorldCsv,
 } = require('./_lib/pass-the-world-owner');
 const {
+  getOwnerPartnership,
+  savePartnershipDraft,
+  setPartnershipEnabled,
+  uploadPartnershipImage,
+  removePartnershipImage,
+  getPartnershipHistoryMonth,
+  getPartnershipDayDetail,
+} = require('./_lib/pass-the-world-partnership');
+const {
   listAttentionNotes,
   saveAttentionNotes,
   upsertAttentionNote,
@@ -222,6 +231,100 @@ module.exports = async function handler(req, res) {
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="pass-the-world-${kind}.csv"`);
       return res.status(200).send(csv);
+    }
+
+    if (action === 'ptw-partnership' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await getOwnerPartnership();
+      return res.status(200).json(data);
+    }
+
+    if (action === 'ptw-partnership-save' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      try {
+        const result = await savePartnershipDraft({
+          draft: req.body?.draft || req.body || {},
+          actor: actor || 'owner',
+          confirmLiveUpdate: Boolean(req.body?.confirmLiveUpdate),
+        });
+        return res.status(200).json(result);
+      } catch (err) {
+        if (err?.code === 'CONFIRM_LIVE_UPDATE' || err?.missing) {
+          return res.status(err.statusCode || 409).json({
+            error: err.message,
+            code: err.code || null,
+            missing: err.missing || null,
+          });
+        }
+        throw err;
+      }
+    }
+
+    if (action === 'ptw-partnership-toggle' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      try {
+        const result = await setPartnershipEnabled({
+          enabled: Boolean(req.body?.enabled),
+          actor: actor || 'owner',
+        });
+        return res.status(200).json(result);
+      } catch (err) {
+        if (err?.code === 'INCOMPLETE' || err?.missing) {
+          return res.status(err.statusCode || 400).json({
+            error: err.message,
+            code: err.code || null,
+            missing: err.missing || null,
+          });
+        }
+        throw err;
+      }
+    }
+
+    if (action === 'ptw-partnership-upload' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const { field, dataUrl, fileName } = req.body || {};
+      const result = await uploadPartnershipImage({
+        field: String(field || ''),
+        dataUrl,
+        fileName,
+        actor: actor || 'owner',
+      });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'ptw-partnership-remove-image' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const actor = await getEffectiveOwnerEmail().catch(() => 'owner');
+      const result = await removePartnershipImage({
+        field: String(req.body?.field || ''),
+        actor: actor || 'owner',
+      });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'ptw-partnership-history' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const now = new Date();
+      const year = Number(req.query.year) || now.getUTCFullYear();
+      const month = Number(req.query.month) || (now.getUTCMonth() + 1);
+      const data = await getPartnershipHistoryMonth({ year, month });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'ptw-partnership-day' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await getPartnershipDayDetail({ date: String(req.query.date || '') });
+      return res.status(200).json(data);
     }
 
     if (action === 'notifications' && req.method === 'GET') {

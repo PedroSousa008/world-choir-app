@@ -9,6 +9,7 @@ const ALLOWED_PREFIXES = [
   'wc-data/members/media/',
   'wc-data/daily-peace/partnerships/media/',
   'wc-data/map-sponsors/media/',
+  'wc-data/pass-the-world/partnership/media/',
   'wc-data/memory/',
   'wc-data/world-chain/photo-book/',
 ];

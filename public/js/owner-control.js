@@ -322,6 +322,8 @@ const OwnerControl = (() => {
       err.status = res.status;
       err.storageUnavailable = !!(data && data.storageUnavailable);
       err.inventory = data && data.inventory;
+      err.missing = data && data.missing;
+      err.code = data && data.code;
       throw err;
     }
     return data;
@@ -492,9 +494,16 @@ const OwnerControl = (() => {
         }
         if (state.section !== 'pass-the-world') {
           state.ptwView = 'main';
+          if (state.ptwPartnership) state.ptwPartnership.dirty = false;
+          window.onbeforeunload = null;
         } else if (state.ptwView === 'partnership') {
           // sidebar Pass the World click resets to main analytics
+          if (state.ptwPartnership?.dirty && !window.confirm('You have unsaved partnership changes. Leave without saving?')) {
+            return;
+          }
           state.ptwView = 'main';
+          if (state.ptwPartnership) state.ptwPartnership.dirty = false;
+          window.onbeforeunload = null;
         }
         if (typeof OwnerPassTheWorld !== 'undefined') OwnerPassTheWorld.stopPolling();
         setFlash(null);
