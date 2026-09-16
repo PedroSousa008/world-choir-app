@@ -709,15 +709,14 @@ const OwnerControl = (() => {
       <li class="owner-attention__row ${completed ? 'is-done' : ''} ${composer ? 'is-composer' : ''}" data-note-id="${id}">
         <button type="button" class="owner-attention__check ${completed ? 'is-checked' : ''}" data-attention-toggle aria-label="${completed ? 'Mark incomplete' : 'Mark complete'}" ${composer ? 'tabindex="-1"' : ''}></button>
         <div class="owner-attention__body">
-          <input
-            type="text"
+          <textarea
             class="owner-attention__title"
             data-attention-title
-            value="${esc(note.text || '')}"
+            rows="1"
             placeholder="${composer ? 'New reminder' : 'Reminder'}"
             autocomplete="off"
             spellcheck="true"
-          />
+          >${esc(note.text || '')}</textarea>
           ${composer ? '' : `
             <div class="owner-attention__meta is-open" data-attention-meta>
               <label class="owner-attention__date ${dueLabel ? 'has-value' : ''} ${overdue ? 'is-overdue' : ''}">
@@ -791,6 +790,12 @@ const OwnerControl = (() => {
     if (state.data?.operations) state.data.operations.attentionNotes = state.attentionNotes;
   }
 
+  function autoGrowAttentionTitle(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(el.scrollHeight, 22)}px`;
+  }
+
   function remountAttentionList(focus) {
     const list = root().querySelector('[data-attention-list]');
     if (!list) return;
@@ -800,6 +805,7 @@ const OwnerControl = (() => {
       ${renderAttentionNoteRow({ id: '', text: '', completed: false, dueAt: null, detail: '' }, { composer: true })}
     `;
     bindAttentionNotes();
+    list.querySelectorAll('[data-attention-title]').forEach(autoGrowAttentionTitle);
     if (!focus) return;
     const row = list.querySelector(`[data-note-id="${focus.id}"]`);
     if (!row) return;
@@ -814,6 +820,8 @@ const OwnerControl = (() => {
   function bindAttentionNotes() {
     const rootEl = root().querySelector('[data-attention-root]');
     if (!rootEl) return;
+
+    rootEl.querySelectorAll('[data-attention-title]').forEach(autoGrowAttentionTitle);
 
     rootEl.querySelectorAll('[data-attention-toggle]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
@@ -851,6 +859,7 @@ const OwnerControl = (() => {
         if (id && id !== 'composer') state.attentionExpandedId = id;
       });
       input.addEventListener('input', () => {
+        autoGrowAttentionTitle(input);
         const row = input.closest('[data-note-id]');
         const id = row?.getAttribute('data-note-id');
         const text = input.value;
@@ -876,7 +885,8 @@ const OwnerControl = (() => {
         scheduleAttentionSave();
       });
       input.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter') return;
+        // Enter finishes this reminder; Shift+Enter inserts a line break.
+        if (e.key !== 'Enter' || e.shiftKey) return;
         e.preventDefault();
         const row = input.closest('[data-note-id]');
         const id = row?.getAttribute('data-note-id');
