@@ -37,6 +37,8 @@ const PassTheWorld = (() => {
     configurationId: null,
     engageTimer: null,
     visibilityHandler: null,
+    pageHideHandler: null,
+    lastEngageFlushAt: 0,
     impressionSentForConfig: null,
   };
 
@@ -842,7 +844,28 @@ const PassTheWorld = (() => {
     }).catch(() => {});
   }
 
+  const MAX_CLIENT_ENGAGE_MS = 60 * 1000;
+
+  function flushPartnershipEngage({ force = false } = {}) {
+    const configId = partnerAnalytics.configurationId;
+    if (!configId || !analyticsAllowed()) return;
+    const now = Date.now();
+    const started = partnerAnalytics.lastEngageFlushAt || now;
+    let ms = Math.round(now - started);
+    if (!force && document.visibilityState !== 'visible') return;
+    if (ms < 1000) return;
+    // Cap to one engage chunk so a long background gap cannot inflate time.
+    ms = Math.min(MAX_CLIENT_ENGAGE_MS, ms);
+    partnerAnalytics.lastEngageFlushAt = now;
+    postPartnershipEvent({
+      eventType: 'engage',
+      configurationId: configId,
+      engagedMs: ms,
+    });
+  }
+
   function stopPartnershipAnalytics() {
+    flushPartnershipEngage({ force: true });
     if (partnerAnalytics.engageTimer) {
       clearInterval(partnerAnalytics.engageTimer);
       partnerAnalytics.engageTimer = null;
@@ -851,7 +874,13 @@ const PassTheWorld = (() => {
       document.removeEventListener('visibilitychange', partnerAnalytics.visibilityHandler);
       partnerAnalytics.visibilityHandler = null;
     }
+    if (partnerAnalytics.pageHideHandler) {
+      window.removeEventListener('pagehide', partnerAnalytics.pageHideHandler);
+      document.removeEventListener('freeze', partnerAnalytics.pageHideHandler);
+      partnerAnalytics.pageHideHandler = null;
+    }
     partnerAnalytics.configurationId = null;
+    partnerAnalytics.lastEngageFlushAt = 0;
   }
 
   function startPartnershipAnalytics(partnership) {
@@ -871,6 +900,7 @@ const PassTheWorld = (() => {
 
     stopPartnershipAnalytics();
     partnerAnalytics.configurationId = configId;
+    partnerAnalytics.lastEngageFlushAt = Date.now();
 
     // One impression per config per browser session load (server also cools down 30m).
     if (partnerAnalytics.impressionSentForConfig !== configId) {
@@ -882,19 +912,25 @@ const PassTheWorld = (() => {
     }
 
     const tickEngage = () => {
-      if (document.visibilityState !== 'visible') return;
       if (partnerAnalytics.configurationId !== configId) return;
-      postPartnershipEvent({
-        eventType: 'engage',
-        configurationId: configId,
-        engagedMs: 15000,
-      });
+      if (document.visibilityState !== 'visible') return;
+      flushPartnershipEngage();
     };
 
     partnerAnalytics.visibilityHandler = () => {
-      if (document.visibilityState === 'visible') tickEngage();
+      if (document.visibilityState === 'hidden') {
+        flushPartnershipEngage({ force: true });
+        return;
+      }
+      partnerAnalytics.lastEngageFlushAt = Date.now();
+      tickEngage();
+    };
+    partnerAnalytics.pageHideHandler = () => {
+      flushPartnershipEngage({ force: true });
     };
     document.addEventListener('visibilitychange', partnerAnalytics.visibilityHandler);
+    window.addEventListener('pagehide', partnerAnalytics.pageHideHandler);
+    document.addEventListener('freeze', partnerAnalytics.pageHideHandler);
     partnerAnalytics.engageTimer = setInterval(tickEngage, 15000);
     // First engaged chunk after a short delay so bounce-opens don't inflate averages.
     setTimeout(() => {

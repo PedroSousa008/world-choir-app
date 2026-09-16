@@ -40,6 +40,8 @@ const OwnerPtwPartnership = (() => {
         overall: null,
         overallLoading: false,
         overallError: null,
+        overallInflight: false,
+        livePollTimer: null,
         modal: null,
         toast: null,
         toastTimer: null,
@@ -155,7 +157,7 @@ const OwnerPtwPartnership = (() => {
     }
   }
 
-  async function loadDayDetail(ctx, dateKey, { force = false } = {}) {
+  async function loadDayDetail(ctx, dateKey, { force = false, silent = false } = {}) {
     const { state, api, render } = ctx;
     const ps = ensureState(state);
     if (!ps.dayCache) ps.dayCache = Object.create(null);
@@ -166,27 +168,30 @@ const OwnerPtwPartnership = (() => {
 
     const reqId = (ps.dayReqId = (ps.dayReqId || 0) + 1);
     const calInfo = calendarDayInfo(ps, key);
+    const selectedKeep = ps.dayDetail?.date === key ? ps.dayDetail.selectedConfigId : null;
 
     // Future / off days resolve from the calendar instantly — no skeleton flash.
     if (!force && calInfo?.status === 'future') {
       ps.dayDetail = { date: key, status: 'future' };
       ps.dayLoading = false;
-      render();
+      if (!silent) render();
+      syncLiveAnalytics(ctx);
       return;
     }
     if (!force && calInfo?.status === 'off') {
       ps.dayDetail = { date: key, status: 'off', segments: [], events: [] };
       ps.dayLoading = false;
-      render();
+      if (!silent) render();
+      syncLiveAnalytics(ctx);
       return;
     }
 
     const cached = !force ? ps.dayCache[key] : null;
-    if (cached) {
-      ps.dayDetail = { ...cached };
+    if (cached && !silent) {
+      ps.dayDetail = { ...cached, selectedConfigId: selectedKeep || cached.selectedConfigId };
       ps.dayLoading = false;
       render();
-    } else {
+    } else if (!silent && !cached) {
       ps.dayDetail = seedDayFromCalendar(ps, key);
       ps.dayLoading = false;
       render();
@@ -207,14 +212,16 @@ const OwnerPtwPartnership = (() => {
         || null;
       const detail = {
         ...data,
-        selectedConfigId: firstConfig,
+        selectedConfigId: selectedKeep
+          || (ps.dayDetail?.date === key ? ps.dayDetail.selectedConfigId : null)
+          || firstConfig,
       };
       ps.dayCache[key] = detail;
       if (ps.dayDetail?.date === key) {
         ps.dayDetail = detail;
         ps.dayLoading = false;
         render();
-      } else if (force && ps.dayReqId === reqId) {
+      } else if (force && ps.dayReqId === reqId && !silent) {
         ps.dayDetail = detail;
         ps.dayLoading = false;
         render();
@@ -222,9 +229,9 @@ const OwnerPtwPartnership = (() => {
     } catch (err) {
       if (ps.dayDetail?.date !== key && ps.dayReqId !== reqId) return;
       // Keep cached / seeded content when a silent refresh fails.
-      if (cached || (ps.dayDetail?.analytics && !force)) {
+      if (silent || cached || (ps.dayDetail?.analytics && !force)) {
         ps.dayLoading = false;
-        render();
+        if (!silent) render();
         return;
       }
       ps.dayDetail = {
@@ -237,6 +244,8 @@ const OwnerPtwPartnership = (() => {
       };
       ps.dayLoading = false;
       render();
+    } finally {
+      syncLiveAnalytics(ctx);
     }
   }
 
@@ -1237,29 +1246,104 @@ const OwnerPtwPartnership = (() => {
       </section>`;
   }
 
-  async function loadOverallAnalytics(ctx, { force = false } = {}) {
+  async function loadOverallAnalytics(ctx, { force = false, silent = false } = {}) {
     const { state, api, render } = ctx;
     const ps = ensureState(state);
-    if (ps.overallLoading) return;
-    if (ps.overall && !force) return;
-    ps.overallLoading = true;
-    ps.overallError = null;
-    render();
+    if (ps.overallInflight) return;
+    if (ps.overall && !force) {
+      syncLiveAnalytics(ctx);
+      return;
+    }
+    const showSkeleton = !silent && !ps.overall;
+    ps.overallInflight = true;
+    if (showSkeleton) {
+      ps.overallLoading = true;
+      ps.overallError = null;
+      render();
+    } else if (!silent) {
+      ps.overallError = null;
+    }
     try {
       const data = await api('ptw-partnership-overall');
+      // Ignore stale responses if the panel was closed mid-flight.
+      if (!ps.calendarPanel && silent) return;
       ps.overall = data;
       ps.overallError = null;
       if (ps.calendarPanel && !ps.calendarPanel.compareIds?.length) {
         const ids = (data?.partnerships || []).slice(0, 2).map((p) => p.partnerId);
         ps.calendarPanel = { ...ps.calendarPanel, compareIds: ids };
       }
+      if (ps.calendarPanel) render();
     } catch (err) {
+      if (silent && ps.overall) return;
       ps.overallError = err.message || 'Partnership analytics could not be loaded.';
       if (!ps.overall) ps.overall = null;
+      if (ps.calendarPanel) render();
     } finally {
       ps.overallLoading = false;
-      render();
+      ps.overallInflight = false;
+      syncLiveAnalytics(ctx);
     }
+  }
+
+  const LIVE_ANALYTICS_MS = 15000;
+
+  function stopLiveAnalytics(ps) {
+    if (!ps) return;
+    if (ps.livePollTimer) {
+      clearInterval(ps.livePollTimer);
+      ps.livePollTimer = null;
+    }
+  }
+
+  function syncLiveAnalytics(ctx) {
+    const { state } = ctx;
+    const ps = ensureState(state);
+    const dayOpen = Boolean(
+      ps.dayDetail
+      && ps.dayDetail.status !== 'future'
+      && !(ps.dayDetail.status === 'off' && !(ps.dayDetail.segments || []).length)
+      && !ps.dayDetail.error
+    );
+    const overallOpen = Boolean(ps.calendarPanel);
+    if (!dayOpen && !overallOpen) {
+      stopLiveAnalytics(ps);
+      return;
+    }
+    if (ps.livePollTimer) return;
+    ps.livePollTimer = setInterval(() => {
+      const cur = ensureState(ctx.state);
+      if (!cur.calendarPanel && !cur.dayDetail) {
+        stopLiveAnalytics(cur);
+        return;
+      }
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (cur.calendarPanel) {
+        loadOverallAnalytics(ctx, { force: true, silent: true });
+      }
+      if (
+        cur.dayDetail?.date
+        && cur.dayDetail.status !== 'future'
+        && !(cur.dayDetail.status === 'off' && !(cur.dayDetail.segments || []).length)
+        && !cur.dayDetail.error
+      ) {
+        loadDayDetail(ctx, cur.dayDetail.date, { force: true, silent: true });
+      }
+    }, LIVE_ANALYTICS_MS);
+  }
+
+  function closeOverallPanel(ctx) {
+    const ps = ensureState(ctx.state);
+    ps.calendarPanel = null;
+    syncLiveAnalytics(ctx);
+    ctx.render();
+  }
+
+  function closeDayPanel(ctx) {
+    const ps = ensureState(ctx.state);
+    ps.dayDetail = null;
+    syncLiveAnalytics(ctx);
+    ctx.render();
   }
 
   function renderSkeleton() {
@@ -1618,19 +1702,16 @@ const OwnerPtwPartnership = (() => {
       ps.dayDetail = null;
       ps.calendarPanel = {
         id: 'overview',
-        tab: 'analytics',
-        graphMetric: 'reach',
+        tab: ps.calendarPanel?.tab || 'analytics',
+        graphMetric: ps.calendarPanel?.graphMetric || 'reach',
         compareIds: ps.calendarPanel?.compareIds || [],
       };
       render();
-      loadOverallAnalytics(ctx);
+      loadOverallAnalytics(ctx, { force: true });
     });
 
     document.querySelectorAll('[data-ptw-p-cal-panel-close]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        ps.calendarPanel = null;
-        render();
-      });
+      btn.addEventListener('click', () => closeOverallPanel(ctx));
     });
 
     document.querySelectorAll('[data-ptw-overall-tab]').forEach((btn) => {
@@ -1740,10 +1821,7 @@ const OwnerPtwPartnership = (() => {
     });
 
     document.querySelectorAll('[data-ptw-p-day-close]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        ps.dayDetail = null;
-        render();
-      });
+      btn.addEventListener('click', () => closeDayPanel(ctx));
     });
 
     document.querySelectorAll('[data-ptw-p-day-config]').forEach((btn) => {
@@ -1766,13 +1844,11 @@ const OwnerPtwPartnership = (() => {
         if (e.key !== 'Escape') return;
         const cur = ensureState(state);
         if (cur.calendarPanel) {
-          cur.calendarPanel = null;
-          render();
+          closeOverallPanel(ctx);
           return;
         }
         if (!cur.dayDetail) return;
-        cur.dayDetail = null;
-        render();
+        closeDayPanel(ctx);
       };
       document.addEventListener('keydown', onEsc);
     }
