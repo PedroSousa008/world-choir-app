@@ -7057,6 +7057,347 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   text-decoration: underline;
 }
 
+/* Partnership daily analytics modal */
+.owner-ptw-day-modal .owner-ptw-day-modal__card {
+  width: min(720px, calc(100vw - 28px));
+  max-height: min(90vh, 900px);
+  overflow: auto;
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.owner-ptw-day-modal__logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 48px;
+  margin: 4px 0 2px;
+}
+
+.owner-ptw-day-modal__logo img {
+  max-width: 120px;
+  max-height: 56px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.owner-ptw-day-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.owner-ptw-day-modal__date {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f2efe8;
+  letter-spacing: -0.01em;
+}
+
+.owner-ptw-day-modal__sub {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: #8a8d97;
+  line-height: 1.4;
+}
+
+.owner-ptw-day-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  color: #c7cbd6;
+  white-space: nowrap;
+}
+
+.owner-ptw-day-status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5c6070;
+}
+
+.owner-ptw-day-status.is-active .owner-ptw-day-status__dot {
+  background: #3ecf8e;
+  box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.18);
+}
+
+.owner-ptw-day-status.is-active {
+  color: #d7f5e6;
+}
+
+.owner-ptw-day-empty {
+  margin: 8px 0 0;
+  padding: 18px 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: #8a8d97;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.owner-ptw-day-timeline {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 14px 14px 12px;
+}
+
+.owner-ptw-day-timeline__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.owner-ptw-day-timeline__title {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8d97;
+  font-weight: 600;
+}
+
+.owner-ptw-day-live {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4ec5e8;
+  border: 1px solid rgba(78, 197, 232, 0.35);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.owner-ptw-day-timeline__row {
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 4px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.owner-ptw-day-timeline__row:last-of-type {
+  margin-bottom: 8px;
+}
+
+.owner-ptw-day-timeline__time {
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+  color: #f2efe8;
+}
+
+.owner-ptw-day-timeline__time:last-of-type {
+  text-align: right;
+}
+
+.owner-ptw-day-timeline__track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+}
+
+.owner-ptw-day-timeline__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ec5e8;
+  flex-shrink: 0;
+}
+
+.owner-ptw-day-timeline__line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, #4ec5e8, rgba(78, 197, 232, 0.35));
+  border-radius: 2px;
+}
+
+.owner-ptw-day-timeline__labels {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #8a8d97;
+}
+
+.owner-ptw-day-timeline__total {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #c7cbd6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.owner-ptw-day-modal__rule {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 2px 0;
+}
+
+.owner-ptw-day-analytics__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f2efe8;
+}
+
+.owner-ptw-day-analytics__sub {
+  margin: 4px 0 12px;
+  font-size: 0.8rem;
+  color: #8a8d97;
+  line-height: 1.4;
+}
+
+.owner-ptw-day-configs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.owner-ptw-day-configs__btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #c7cbd6;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.owner-ptw-day-configs__btn.is-active {
+  border-color: rgba(78, 197, 232, 0.45);
+  color: #4ec5e8;
+  background: rgba(78, 197, 232, 0.08);
+}
+
+.owner-ptw-day-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.owner-ptw-day-metric {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 12px 12px 14px;
+  min-height: 118px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.owner-ptw-day-metric__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.owner-ptw-day-metric__icon {
+  color: #4ec5e8;
+  font-size: 0.9rem;
+  width: 1.1em;
+  text-align: center;
+}
+
+.owner-ptw-day-metric__title {
+  flex: 1;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #f2efe8;
+}
+
+.owner-ptw-day-metric__info {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: #8a8d97;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  padding: 0;
+}
+
+.owner-ptw-day-metric__info:hover,
+.owner-ptw-day-metric__info:focus-visible {
+  color: #4ec5e8;
+  border-color: rgba(78, 197, 232, 0.5);
+  outline: none;
+}
+
+.owner-ptw-day-metric__desc {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #8a8d97;
+  line-height: 1.35;
+  min-height: 2.1em;
+}
+
+.owner-ptw-day-metric__value {
+  margin: auto 0 0;
+  font-size: 1.55rem;
+  font-weight: 650;
+  color: #4ec5e8;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.owner-ptw-day-metric__value.is-skeleton {
+  height: 1.55rem;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.1), rgba(255,255,255,0.04));
+  background-size: 200% 100%;
+  animation: ownerPtwDaySkeleton 1.2s ease-in-out infinite;
+}
+
+@keyframes ownerPtwDaySkeleton {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.owner-ptw-day-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+@media (max-width: 720px) {
+  .owner-ptw-day-modal__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .owner-ptw-day-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .owner-ptw-day-modal .owner-ptw-day-modal__card {
+    padding: 18px 14px 14px;
+  }
+}
+
 .owner-ptw-p-toast {
   position: fixed;
   right: 20px;

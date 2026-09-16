@@ -873,13 +873,36 @@ async function getPartnershipDayDetail({ date } = {}) {
   }
   events.sort((a, b) => String(a.at).localeCompare(String(b.at)));
 
-  return {
+  const base = {
     date: key,
     timezone: HISTORY_TIMEZONE,
     status: segments.length ? 'active' : 'off',
     segments,
     events,
   };
+
+  try {
+    const {
+      getPartnershipDayAnalytics,
+    } = require('./pass-the-world-partnership-analytics');
+    base.analytics = await getPartnershipDayAnalytics({
+      date: key,
+      segments,
+      now: new Date(),
+    });
+  } catch (err) {
+    base.analytics = {
+      available: false,
+      unavailable: false,
+      error: true,
+      unavailableReason: err.message || 'Daily analytics could not be loaded.',
+      timeline: null,
+      metrics: null,
+      byConfiguration: [],
+    };
+  }
+
+  return base;
 }
 
 /**

@@ -33,6 +33,12 @@ const PassTheWorld = (() => {
   let itineraryPanelHome = null;
   let itineraryScrollLockHandler = null;
   let guideDemoActive = false;
+  let partnerAnalytics = {
+    configurationId: null,
+    engageTimer: null,
+    visibilityHandler: null,
+    impressionSentForConfig: null,
+  };
 
   const GUIDE_DEMO_CITY = {
     city: 'Braga',
@@ -740,6 +746,7 @@ const PassTheWorld = (() => {
   }
 
   function clearPartnershipUi() {
+    stopPartnershipAnalytics();
     const story = document.getElementById('passport-story-view');
     const card = story?.querySelector('.passport-card--ptw');
     story?.classList.remove('is-ptw-partner');
@@ -770,6 +777,141 @@ const PassTheWorld = (() => {
 
     root?.querySelector('[data-ptw-partner-map]')?.remove();
     root?.querySelector('[data-ptw-partner-link]')?.remove();
+  }
+
+  function analyticsAllowed() {
+    return typeof WorldChoirPrivacy !== 'undefined'
+      && WorldChoirPrivacy.analyticsAllowed() === true;
+  }
+
+  function getPartnershipVisitorId() {
+    if (!analyticsAllowed()) return null;
+    const KEY = 'wc_ptw_partner_visitor_id';
+    try {
+      let id = localStorage.getItem(KEY);
+      if (!id) {
+        id = typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `pv_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        localStorage.setItem(KEY, id);
+      }
+      return id;
+    } catch {
+      return null;
+    }
+  }
+
+  function getPartnershipGeo() {
+    let country = null;
+    let city = null;
+    try {
+      const pledge = typeof WorldChoirDB !== 'undefined'
+        ? WorldChoirDB.getPledgeForCurrentUser?.()
+        : null;
+      if (pledge) {
+        country = pledge.country ? String(pledge.country).trim() : null;
+        city = pledge.city ? String(pledge.city).trim() : null;
+      }
+      if ((!country || !city) && typeof WorldChoirDB?.getCurrentUser === 'function') {
+        const user = WorldChoirDB.getCurrentUser();
+        city = city || (user?.city ? String(user.city).trim() : null);
+        country = country || (user?.country ? String(user.country).trim() : null);
+      }
+    } catch {
+      /* ignore */
+    }
+    return { country, city };
+  }
+
+  function postPartnershipEvent(payload) {
+    if (!analyticsAllowed()) return;
+    const visitorId = getPartnershipVisitorId();
+    if (!visitorId || !payload?.configurationId || !payload?.eventType) return;
+    const body = {
+      ...payload,
+      visitorId,
+      ...getPartnershipGeo(),
+      clientNow: new Date().toISOString(),
+    };
+    fetch('/api/ptw-partnership-events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      keepalive: true,
+      credentials: 'same-origin',
+    }).catch(() => {});
+  }
+
+  function stopPartnershipAnalytics() {
+    if (partnerAnalytics.engageTimer) {
+      clearInterval(partnerAnalytics.engageTimer);
+      partnerAnalytics.engageTimer = null;
+    }
+    if (partnerAnalytics.visibilityHandler) {
+      document.removeEventListener('visibilitychange', partnerAnalytics.visibilityHandler);
+      partnerAnalytics.visibilityHandler = null;
+    }
+    partnerAnalytics.configurationId = null;
+  }
+
+  function startPartnershipAnalytics(partnership) {
+    if (!partnership?.enabled || !partnership.configurationId || guideDemoActive) {
+      stopPartnershipAnalytics();
+      return;
+    }
+    if (!analyticsAllowed()) {
+      stopPartnershipAnalytics();
+      return;
+    }
+
+    const configId = String(partnership.configurationId);
+    if (partnerAnalytics.configurationId === configId && partnerAnalytics.engageTimer) {
+      return;
+    }
+
+    stopPartnershipAnalytics();
+    partnerAnalytics.configurationId = configId;
+
+    // One impression per config per browser session load (server also cools down 30m).
+    if (partnerAnalytics.impressionSentForConfig !== configId) {
+      partnerAnalytics.impressionSentForConfig = configId;
+      postPartnershipEvent({
+        eventType: 'impression',
+        configurationId: configId,
+      });
+    }
+
+    const tickEngage = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (partnerAnalytics.configurationId !== configId) return;
+      postPartnershipEvent({
+        eventType: 'engage',
+        configurationId: configId,
+        engagedMs: 15000,
+      });
+    };
+
+    partnerAnalytics.visibilityHandler = () => {
+      if (document.visibilityState === 'visible') tickEngage();
+    };
+    document.addEventListener('visibilitychange', partnerAnalytics.visibilityHandler);
+    partnerAnalytics.engageTimer = setInterval(tickEngage, 15000);
+    // First engaged chunk after a short delay so bounce-opens don't inflate averages.
+    setTimeout(() => {
+      if (partnerAnalytics.configurationId === configId && document.visibilityState === 'visible') {
+        tickEngage();
+      }
+    }, 5000);
+  }
+
+  function bindPartnershipLinkClick(anchor, configurationId) {
+    if (!anchor || !configurationId) return;
+    anchor.addEventListener('click', () => {
+      postPartnershipEvent({
+        eventType: 'click',
+        configurationId,
+      });
+    }, { capture: true });
   }
 
   function ensureMapLogoEl() {
@@ -899,6 +1041,7 @@ const PassTheWorld = (() => {
             <a class="ptw-partner-link__anchor" href="${esc(safeUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(label)} website">
               <img alt="" decoding="async">
             </a>`;
+          bindPartnershipLinkClick(linkWrap.querySelector('a'), p.configurationId);
         } else {
           linkWrap.innerHTML = '<img alt="" decoding="async">';
         }
@@ -912,6 +1055,8 @@ const PassTheWorld = (() => {
     } else {
       root?.querySelector('[data-ptw-partner-link]')?.remove();
     }
+
+    startPartnershipAnalytics(p);
 
     // Card height changes when partnership chrome mounts — keep map framed.
     requestAnimationFrame(() => {
@@ -1495,6 +1640,7 @@ const PassTheWorld = (() => {
 
   function destroy() {
     guideDemoActive = false;
+    stopPartnershipAnalytics();
     stopPolling();
     closePanel();
     if (typeof PassTheWorldMap !== 'undefined') PassTheWorldMap.destroy();

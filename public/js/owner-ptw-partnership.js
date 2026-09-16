@@ -158,11 +158,21 @@ const OwnerPtwPartnership = (() => {
       const data = await api('ptw-partnership-day', {
         query: `&date=${encodeURIComponent(dateKey)}`,
       });
-      ps.dayDetail = data;
+      const firstConfig = data?.analytics?.byConfiguration?.[0]?.configurationId
+        || data?.segments?.[0]?.configurationId
+        || null;
+      ps.dayDetail = {
+        ...data,
+        selectedConfigId: firstConfig,
+      };
     } catch (err) {
       ps.dayDetail = {
         date: dateKey,
         error: err.message || 'Could not load day details.',
+        analytics: {
+          error: true,
+          unavailableReason: err.message || 'Daily analytics could not be loaded.',
+        },
       };
     } finally {
       ps.dayLoading = false;
@@ -252,62 +262,332 @@ const OwnerPtwPartnership = (() => {
       </div>`;
   }
 
+  function formatCount(n) {
+    const num = Number(n);
+    if (!Number.isFinite(num)) return '0';
+    return Math.round(num).toLocaleString('en-US');
+  }
+
+  function metricInfoTip(key) {
+    const tips = {
+      reach: 'Unique users who viewed Pass the World while the partnership was active.',
+      impressions: 'Total qualifying Pass the World page views while the partnership was active.',
+      countries: 'Number of distinct countries represented among partnership viewers.',
+      cities: 'Number of distinct cities represented among partnership viewers.',
+      clicks: 'Total clicks on the partnership Link Image.',
+      clickers: 'Unique users who clicked the partnership Link Image.',
+      avgTime: 'Average engaged time users spent on Pass the World while the partnership was active.',
+      activeTime: 'Total time the partnership was active during this day.',
+    };
+    return tips[key] || '';
+  }
+
+  function renderMetricCard({ icon, title, desc, tipKey, valueHtml, loading }) {
+    return `
+      <article class="owner-ptw-day-metric">
+        <header class="owner-ptw-day-metric__head">
+          <span class="owner-ptw-day-metric__icon" aria-hidden="true">${icon}</span>
+          <span class="owner-ptw-day-metric__title">${esc(title)}</span>
+          <button type="button"
+            class="owner-ptw-day-metric__info"
+            data-ptw-day-tip="${esc(tipKey)}"
+            aria-label="${esc(title)} definition"
+            title="${esc(metricInfoTip(tipKey))}">i</button>
+        </header>
+        <p class="owner-ptw-day-metric__desc">${esc(desc)}</p>
+        <p class="owner-ptw-day-metric__value ${loading ? 'is-skeleton' : ''}">${loading ? '&nbsp;' : valueHtml}</p>
+      </article>`;
+  }
+
+  function renderTimeline(analytics) {
+    const tl = analytics?.timeline;
+    if (!tl) return '';
+    const intervals = tl.intervals || [];
+    if (!intervals.length) {
+      return `
+        <section class="owner-ptw-day-timeline" aria-label="Day timeline UTC">
+          <h4 class="owner-ptw-day-timeline__title">Day Timeline (UTC)</h4>
+          <p class="owner-muted">No active partnership intervals on this day.</p>
+        </section>`;
+    }
+
+    const segmentsHtml = intervals.map((iv) => {
+      const start = formatTimeUTC(iv.startIso);
+      const end = iv.open ? 'Now' : formatTimeUTC(iv.endIso);
+      return `
+        <div class="owner-ptw-day-timeline__row ${iv.open ? 'is-live' : ''}">
+          <span class="owner-ptw-day-timeline__time">${esc(start)}</span>
+          <span class="owner-ptw-day-timeline__track" aria-hidden="true">
+            <span class="owner-ptw-day-timeline__dot"></span>
+            <span class="owner-ptw-day-timeline__line"></span>
+            <span class="owner-ptw-day-timeline__dot"></span>
+          </span>
+          <span class="owner-ptw-day-timeline__time">${esc(end)}</span>
+          <span class="owner-ptw-day-timeline__labels">
+            <span>Partnership active</span>
+            <span>${iv.open ? 'Still active' : 'Partnership turned off'}</span>
+          </span>
+        </div>`;
+    }).join('');
+
+    return `
+      <section class="owner-ptw-day-timeline" aria-label="Day timeline UTC">
+        <div class="owner-ptw-day-timeline__head">
+          <h4 class="owner-ptw-day-timeline__title">Day Timeline (UTC)</h4>
+          ${analytics.live ? '<span class="owner-ptw-day-live">Live</span>' : ''}
+        </div>
+        ${segmentsHtml}
+        <p class="owner-ptw-day-timeline__total">
+          <span aria-hidden="true">◷</span>
+          Active for ${esc(tl.activeLabel || '0s')}
+        </p>
+      </section>`;
+  }
+
+  function resolveDayMetrics(d, selectedConfigId) {
+    const a = d?.analytics;
+    if (!a) return { metrics: null, mapLogoUrl: null, subtitle: '', configs: [] };
+    const configs = a.byConfiguration || [];
+    const selected = selectedConfigId
+      ? configs.find((c) => c.configurationId === selectedConfigId)
+      : null;
+    if (selected) {
+      return {
+        metrics: selected.metrics,
+        mapLogoUrl: selected.mapLogoUrl,
+        subtitle: selected.subtitle,
+        configs,
+      };
+    }
+    const first = configs[0] || null;
+    return {
+      metrics: a.metrics,
+      mapLogoUrl: first?.mapLogoUrl || d.segments?.[0]?.mapLogoUrl || null,
+      subtitle: first?.subtitle || d.segments?.[0]?.subtitle || '',
+      configs,
+    };
+  }
+
+  function renderAnalyticsGrid(d, loading) {
+    const a = d?.analytics;
+    if (loading) {
+      return `
+        <section class="owner-ptw-day-analytics">
+          <h4 class="owner-ptw-day-analytics__title">Partnership Analytics</h4>
+          <p class="owner-ptw-day-analytics__sub">Key metrics for this specific day while the partnership was active.</p>
+          <div class="owner-ptw-day-metrics">
+            ${[
+              ['◎', 'Partnership Reach', 'Unique users who viewed Pass the World', 'reach'],
+              ['▣', 'Partnership Impressions', 'Total views of the Pass the World page', 'impressions'],
+              ['🌍', 'Unique Countries Reached', 'Distinct countries from all visitors', 'countries'],
+              ['⌖', 'Unique Cities Reached', 'Distinct cities from all visitors', 'cities'],
+              ['↗', 'Link Image Clicks', 'Total clicks on the partnership link image', 'clicks'],
+              ['◉', 'Unique Link Image Clickers', 'Unique users who clicked the link image', 'clickers'],
+              ['◷', 'Average Time on Pass the World', 'Average time spent per user', 'avgTime'],
+              ['▮', 'Partnership Active Time', 'Total time partnership was active', 'activeTime'],
+            ].map(([icon, title, desc, tip]) => renderMetricCard({
+              icon, title, desc, tipKey: tip, valueHtml: '', loading: true,
+            })).join('')}
+          </div>
+        </section>`;
+    }
+
+    if (a?.error) {
+      return `
+        <section class="owner-ptw-day-analytics">
+          <h4 class="owner-ptw-day-analytics__title">Partnership Analytics</h4>
+          <p class="owner-muted">${esc(a.unavailableReason || 'Daily analytics could not be loaded.')}</p>
+          <button type="button" class="owner-btn-ghost" data-ptw-p-day-retry>Retry</button>
+        </section>`;
+    }
+
+    if (a?.unavailable) {
+      return `
+        <section class="owner-ptw-day-analytics">
+          <h4 class="owner-ptw-day-analytics__title">Partnership Analytics</h4>
+          <p class="owner-muted">${esc(a.unavailableReason || 'Analytics unavailable for this date.')}</p>
+        </section>`;
+    }
+
+    const resolved = resolveDayMetrics(d, d.selectedConfigId);
+    const m = resolved.metrics;
+    if (!m) {
+      return `
+        <section class="owner-ptw-day-analytics">
+          <h4 class="owner-ptw-day-analytics__title">Partnership Analytics</h4>
+          <p class="owner-muted">No analytics for this day.</p>
+        </section>`;
+    }
+
+    const configTabs = (resolved.configs || []).length > 1
+      ? `
+        <div class="owner-ptw-day-configs" role="tablist" aria-label="Partnership configurations">
+          ${resolved.configs.map((c) => `
+            <button type="button"
+              role="tab"
+              class="owner-ptw-day-configs__btn ${(d.selectedConfigId || resolved.configs[0].configurationId) === c.configurationId ? 'is-active' : ''}"
+              data-ptw-p-day-config="${esc(c.configurationId)}">
+              ${esc(c.subtitle || 'Partnership')}
+            </button>
+          `).join('')}
+        </div>`
+      : '';
+
+    return `
+      <section class="owner-ptw-day-analytics">
+        <h4 class="owner-ptw-day-analytics__title">Partnership Analytics</h4>
+        <p class="owner-ptw-day-analytics__sub">Key metrics for this specific day while the partnership was active.</p>
+        ${configTabs}
+        <div class="owner-ptw-day-metrics">
+          ${renderMetricCard({
+            icon: '◎',
+            title: 'Partnership Reach',
+            desc: 'Unique users who viewed Pass the World',
+            tipKey: 'reach',
+            valueHtml: esc(formatCount(m.partnershipReach)),
+          })}
+          ${renderMetricCard({
+            icon: '▣',
+            title: 'Partnership Impressions',
+            desc: 'Total views of the Pass the World page',
+            tipKey: 'impressions',
+            valueHtml: esc(formatCount(m.partnershipImpressions)),
+          })}
+          ${renderMetricCard({
+            icon: '◎',
+            title: 'Unique Countries Reached',
+            desc: 'Distinct countries from all visitors',
+            tipKey: 'countries',
+            valueHtml: esc(formatCount(m.uniqueCountriesReached)),
+          })}
+          ${renderMetricCard({
+            icon: '⌖',
+            title: 'Unique Cities Reached',
+            desc: 'Distinct cities from all visitors',
+            tipKey: 'cities',
+            valueHtml: esc(formatCount(m.uniqueCitiesReached)),
+          })}
+          ${renderMetricCard({
+            icon: '↗',
+            title: 'Link Image Clicks',
+            desc: 'Total clicks on the partnership link image',
+            tipKey: 'clicks',
+            valueHtml: esc(formatCount(m.linkImageClicks)),
+          })}
+          ${renderMetricCard({
+            icon: '◉',
+            title: 'Unique Link Image Clickers',
+            desc: 'Unique users who clicked the link image',
+            tipKey: 'clickers',
+            valueHtml: esc(formatCount(m.uniqueLinkImageClickers)),
+          })}
+          ${renderMetricCard({
+            icon: '◷',
+            title: 'Average Time on Pass the World',
+            desc: 'Average time spent per user',
+            tipKey: 'avgTime',
+            valueHtml: esc(m.averageTimeOnPassTheWorldLabel || '0s'),
+          })}
+          ${renderMetricCard({
+            icon: '▮',
+            title: 'Partnership Active Time',
+            desc: 'Total time partnership was active',
+            tipKey: 'activeTime',
+            valueHtml: esc(m.partnershipActiveTimeLabel || '0s'),
+          })}
+        </div>
+      </section>`;
+  }
+
   function renderDayModal(ps) {
     const d = ps.dayDetail;
     if (!d) return '';
     const title = formatLongDate(d.date);
-    let body = '';
-    if (ps.dayLoading) {
-      body = '<p class="owner-muted">Loading day history…</p>';
-    } else if (d.error) {
-      body = `<p class="owner-muted">${esc(d.error)}</p>`;
-    } else if (d.status === 'future') {
-      body = '<p class="owner-muted">Future dates have no historical status yet.</p>';
-    } else if (d.status === 'off' && !(d.events || []).length) {
-      body = '<p class="owner-muted">Partnership was off for this entire day.</p>';
-    } else {
-      const eventsHtml = (d.events || []).length
-        ? `
-          <ol class="owner-ptw-p-day-events">
-            ${(d.events || []).map((ev) => `
-              <li>
-                <time datetime="${esc(ev.at)}">${esc(formatTimeUTC(ev.at))}</time>
-                <span>${esc(eventLabel(ev.type))}</span>
-                ${ev.tabLogoUrl ? `<img src="${esc(ev.tabLogoUrl)}" alt="" class="owner-ptw-p-day-events__logo">` : ''}
-                ${ev.subtitle ? `<span class="owner-muted">${esc(ev.subtitle)}</span>` : ''}
-              </li>
-            `).join('')}
-          </ol>`
-        : '';
-      const segmentsHtml = (d.segments || []).map((seg) => `
-        <article class="owner-ptw-p-day-seg">
-          <p class="owner-ptw-p-day-seg__time">
-            ${esc(formatTimeUTC(seg.startedAt))}
-            – ${seg.endedAt ? esc(formatTimeUTC(seg.endedAt)) : 'ongoing'}
-            <span class="owner-muted">UTC</span>
-          </p>
-          ${seg.subtitle ? `<p class="owner-ptw-p-day-seg__sub">${esc(seg.subtitle)}</p>` : ''}
-          <div class="owner-ptw-p-day-seg__imgs">
-            ${seg.tabLogoUrl ? `<figure><img src="${esc(seg.tabLogoUrl)}" alt="Tab logo"><figcaption>Tab</figcaption></figure>` : ''}
-            ${seg.mapLogoUrl ? `<figure><img src="${esc(seg.mapLogoUrl)}" alt="Map logo"><figcaption>Map</figcaption></figure>` : ''}
-            ${seg.linkImageUrl ? `<figure><img src="${esc(seg.linkImageUrl)}" alt="Link image"><figcaption>Link</figcaption></figure>` : ''}
+    const loading = Boolean(ps.dayLoading);
+
+    if (d.error && !loading) {
+      return `
+        <div class="owner-ptw-p-modal owner-ptw-day-modal" role="dialog" aria-modal="true" aria-labelledby="owner-ptw-p-day-title">
+          <button type="button" class="owner-ptw-p-modal__backdrop" data-ptw-p-day-close aria-label="Close"></button>
+          <div class="owner-ptw-p-modal__card owner-ptw-day-modal__card">
+            <button type="button" class="owner-ptw-p-modal__x" data-ptw-p-day-close aria-label="Close">×</button>
+            <h3 id="owner-ptw-p-day-title" class="owner-ptw-day-modal__date">${esc(title)}</h3>
+            <p class="owner-muted">${esc(d.error)}</p>
+            <div class="owner-ptw-day-modal__footer">
+              <button type="button" class="owner-btn-ghost" data-ptw-p-day-retry>Retry</button>
+              <button type="button" class="owner-btn-ghost" data-ptw-p-day-close>Close</button>
+            </div>
           </div>
-          ${seg.linkUrl ? `<p class="owner-ptw-p-day-seg__link"><a href="${esc(seg.linkUrl)}" target="_blank" rel="noopener noreferrer">${esc(seg.linkUrl)}</a></p>` : ''}
-        </article>
-      `).join('');
-      body = `
-        <p class="owner-ptw-p-day-status">${d.status === 'active' ? 'Partnership active' : 'Partnership off'}</p>
-        ${eventsHtml}
-        ${segmentsHtml || '<p class="owner-muted">No configuration segments recorded.</p>'}
-      `;
+        </div>`;
     }
+
+    if (d.status === 'future') {
+      return `
+        <div class="owner-ptw-p-modal owner-ptw-day-modal" role="dialog" aria-modal="true" aria-labelledby="owner-ptw-p-day-title">
+          <button type="button" class="owner-ptw-p-modal__backdrop" data-ptw-p-day-close aria-label="Close"></button>
+          <div class="owner-ptw-p-modal__card owner-ptw-day-modal__card">
+            <button type="button" class="owner-ptw-p-modal__x" data-ptw-p-day-close aria-label="Close">×</button>
+            <h3 id="owner-ptw-p-day-title" class="owner-ptw-day-modal__date">${esc(title)}</h3>
+            <p class="owner-muted">Future dates have no historical status yet.</p>
+            <div class="owner-ptw-day-modal__footer">
+              <button type="button" class="owner-btn-ghost" data-ptw-p-day-close>Close</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    const isOff = d.status === 'off' && !(d.segments || []).length;
+    if (isOff && !loading) {
+      return `
+        <div class="owner-ptw-p-modal owner-ptw-day-modal" role="dialog" aria-modal="true" aria-labelledby="owner-ptw-p-day-title">
+          <button type="button" class="owner-ptw-p-modal__backdrop" data-ptw-p-day-close aria-label="Close"></button>
+          <div class="owner-ptw-p-modal__card owner-ptw-day-modal__card">
+            <button type="button" class="owner-ptw-p-modal__x" data-ptw-p-day-close aria-label="Close">×</button>
+            <header class="owner-ptw-day-modal__header">
+              <div>
+                <h3 id="owner-ptw-p-day-title" class="owner-ptw-day-modal__date">${esc(title)}</h3>
+                <p class="owner-ptw-day-modal__sub">Daily partnership analytics for this specific day.</p>
+              </div>
+              <span class="owner-ptw-day-status is-off"><span class="owner-ptw-day-status__dot" aria-hidden="true"></span>Partnership Off</span>
+            </header>
+            <p class="owner-ptw-day-empty">Partnership was not active on this day.</p>
+            <div class="owner-ptw-day-modal__footer">
+              <button type="button" class="owner-btn-ghost" data-ptw-p-day-close>Close</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    const resolved = resolveDayMetrics(d, d.selectedConfigId);
+    const mapLogoUrl = resolved.mapLogoUrl;
+    const active = d.status === 'active' || (d.segments || []).length > 0;
+
     return `
-      <div class="owner-ptw-p-modal" role="dialog" aria-modal="true" aria-labelledby="owner-ptw-p-day-title">
+      <div class="owner-ptw-p-modal owner-ptw-day-modal" role="dialog" aria-modal="true" aria-labelledby="owner-ptw-p-day-title">
         <button type="button" class="owner-ptw-p-modal__backdrop" data-ptw-p-day-close aria-label="Close"></button>
-        <div class="owner-ptw-p-modal__card owner-ptw-p-modal__card--wide">
+        <div class="owner-ptw-p-modal__card owner-ptw-day-modal__card">
           <button type="button" class="owner-ptw-p-modal__x" data-ptw-p-day-close aria-label="Close">×</button>
-          <h3 id="owner-ptw-p-day-title" class="owner-ptw-p-modal__title">${esc(title)}</h3>
-          <div class="owner-ptw-p-day-body">${body}</div>
+          ${mapLogoUrl ? `
+            <div class="owner-ptw-day-modal__logo">
+              <img src="${esc(mapLogoUrl)}" alt="" decoding="async">
+            </div>` : ''}
+          <header class="owner-ptw-day-modal__header">
+            <div>
+              <h3 id="owner-ptw-p-day-title" class="owner-ptw-day-modal__date">${esc(title)}</h3>
+              <p class="owner-ptw-day-modal__sub">Daily partnership analytics for this specific day.</p>
+            </div>
+            <span class="owner-ptw-day-status ${active ? 'is-active' : 'is-off'}">
+              <span class="owner-ptw-day-status__dot" aria-hidden="true"></span>
+              ${active ? 'Partnership Active' : 'Partnership Off'}
+            </span>
+          </header>
+          ${loading ? '<p class="owner-muted">Loading day analytics…</p>' : renderTimeline(d.analytics)}
+          <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
+          ${renderAnalyticsGrid(d, loading)}
+          <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
+          <div class="owner-ptw-day-modal__footer">
+            <button type="button" class="owner-btn-ghost" data-ptw-p-day-close>Close</button>
+          </div>
         </div>
       </div>`;
   }
@@ -803,6 +1083,31 @@ const OwnerPtwPartnership = (() => {
         render();
       });
     });
+
+    document.querySelectorAll('[data-ptw-p-day-config]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-ptw-p-day-config');
+        if (!ps.dayDetail || !id) return;
+        ps.dayDetail = { ...ps.dayDetail, selectedConfigId: id };
+        render();
+      });
+    });
+
+    document.querySelector('[data-ptw-p-day-retry]')?.addEventListener('click', () => {
+      const date = ps.dayDetail?.date;
+      if (date) loadDayDetail(ctx, date);
+    });
+
+    if (ps.dayDetail && !ps._dayEscBound) {
+      ps._dayEscBound = true;
+      const onEsc = (e) => {
+        if (e.key !== 'Escape') return;
+        if (!ensureState(state).dayDetail) return;
+        ensureState(state).dayDetail = null;
+        render();
+      };
+      document.addEventListener('keydown', onEsc);
+    }
 
     document.querySelectorAll('[data-ptw-p-modal-cancel]').forEach((btn) => {
       btn.addEventListener('click', () => closeConfirm(ps, render));
