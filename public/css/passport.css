@@ -1761,7 +1761,7 @@
 .ptw-partner-map-logo {
   position: absolute;
   right: 10px;
-  bottom: 10px;
+  bottom: 35px;
   z-index: 450;
   width: min(46px, 14%);
   height: 18px;
@@ -1784,13 +1784,14 @@
 /* Partnership link banner — above Itinerary, only when ON */
 .ptw-partner-link {
   display: block;
-  margin: 12px 18px 0;
+  margin: 12px 9px 0;
   border-radius: 12px;
   overflow: hidden;
   flex: 0 0 auto;
   align-self: stretch;
-  width: calc(100% - 36px);
+  width: calc(100% - 18px);
   max-width: none;
+  box-sizing: border-box;
   aspect-ratio: 1200 / 630;
   height: auto;
   max-height: none;
@@ -1874,7 +1875,8 @@
   aspect-ratio: auto;
   height: auto;
   min-height: calc(min(100vw - 48px, 372px) / 0.7);
-  overflow: visible;
+  /* Clip map to the card’s rounded corners */
+  overflow: hidden;
 }
 
 .passport-story-view.is-ptw-partner .passport-story-host,
@@ -1895,10 +1897,12 @@
 
 .passport-story-view.is-ptw-partner .ptw-map-wrap,
 .ptw.is-ptw-partner .ptw-map-wrap {
-  /* Keep map size/placement; do not let it absorb extra card height */
+  /* Keep map size/placement; clip to card radius via parent overflow */
   flex: 0 0 auto;
   max-height: none;
   width: 100%;
+  overflow: hidden;
+  border-radius: 18px 18px 0 0;
 }
 
 .passport-story-view.is-ptw-partner .ptw-header,
