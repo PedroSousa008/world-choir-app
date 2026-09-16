@@ -235,8 +235,8 @@ const WorldChoirMap = (() => {
   }
 
   /**
-   * Desktop wheel/trackpad zoom using the same transform path as mobile pinch
-   * (Leaflet _animateZoom + MapLibre zoomanim). Feels continuous, not stepped.
+   * Desktop trackpads/mice fire dense wheel events — Leaflet's default feels
+   * jumpy. Drive zoom ourselves with smaller steps and a hard per-frame cap.
    */
   function bindPreciseDesktopWheelZoom(leafletMap) {
     if (!leafletMap || !isDesktopPointerMap()) return;
@@ -244,138 +244,67 @@ const WorldChoirMap = (() => {
     leafletMap.scrollWheelZoom.disable();
 
     const container = leafletMap.getContainer();
-    // Multiplicative scale — same model as pinch. Higher = slower / more control.
-    const PX_PER_SCALE = 400;
-    const SETTLE_MS = 140;
-    const SNAP = 0.1;
-    // Cap per-event delta so a mouse "notch" (±100px) is not almost a full zoom level.
-    const MAX_DY = 32;
+    const PX_PER_ZOOM = 180;
+    const MAX_STEP = 0.35;
+    const SNAP = 0.25;
 
-    let gesturing = false;
-    let startZoom = 0;
-    let scale = 1;
-    let anchorLatLng = null;
-    let settleTimer = 0;
-    let paintRaf = 0;
+    let pendingPx = 0;
+    let rafId = 0;
 
-    const clampZoom = (z) => Math.max(
-      leafletMap.getMinZoom(),
-      Math.min(leafletMap.getMaxZoom(), z)
-    );
+    const flush = () => {
+      rafId = 0;
+      if (!pendingPx || !leafletMap) return;
 
-    const hardSync = () => {
-      if (typeof WorldChoirMapTiles?.syncToMap === 'function') {
-        WorldChoirMapTiles.syncToMap(leafletMap);
+      const maxPx = MAX_STEP * PX_PER_ZOOM;
+      const applyPx = Math.max(-maxPx, Math.min(maxPx, pendingPx));
+      pendingPx -= applyPx;
+
+      const deltaZoom = -applyPx / PX_PER_ZOOM;
+      if (Math.abs(deltaZoom) >= 0.02) {
+        const minZ = leafletMap.getMinZoom();
+        const maxZ = leafletMap.getMaxZoom();
+        const next = Math.max(minZ, Math.min(maxZ, leafletMap.getZoom() + deltaZoom));
+        const snapped = Math.round(next / SNAP) * SNAP;
+        if (Math.abs(snapped - leafletMap.getZoom()) >= 0.001) {
+          leafletMap.setZoom(snapped, { animate: false });
+        }
       }
-    };
 
-    const endGesture = () => {
-      settleTimer = 0;
-      if (paintRaf) {
-        cancelAnimationFrame(paintRaf);
-        paintRaf = 0;
-      }
-      if (!gesturing) return;
-      gesturing = false;
-
-      const z = clampZoom(startZoom + Math.log2(Math.max(scale, 1e-6)));
-      const snapped = Math.round(z / SNAP) * SNAP;
-
-      // Commit the real zoom (clears temporary zoomanim transforms).
-      // Markers stay on true lat/lng; hardSync locks MapLibre to the same CRS.
-      if (anchorLatLng) {
-        leafletMap.setZoomAround(anchorLatLng, snapped, { animate: false });
+      if (Math.abs(pendingPx) >= 1) {
+        rafId = requestAnimationFrame(flush);
       } else {
-        leafletMap.setZoom(snapped, { animate: false });
+        pendingPx = 0;
       }
-
-      if (typeof leafletMap._onZoomTransitionEnd === 'function') {
-        try { leafletMap._onZoomTransitionEnd(); } catch { /* */ }
-      }
-      hardSync();
-      requestAnimationFrame(() => {
-        requestAnimationFrame(hardSync);
-      });
-
-      scale = 1;
-      anchorLatLng = null;
-    };
-
-    const paintGesture = () => {
-      const z = clampZoom(startZoom + Math.log2(Math.max(scale, 1e-6)));
-      // Leaflet 1.9: _animateZoom(center, zoom, start, noUpdate)
-      // Same zoomanim path TouchZoom uses on mobile → MapLibre + markers scale together.
-      if (typeof leafletMap._animateZoom === 'function' && anchorLatLng) {
-        leafletMap._animateZoom(anchorLatLng, z, true);
-      } else if (anchorLatLng) {
-        leafletMap.setZoomAround(anchorLatLng, z, { animate: false });
-      } else {
-        leafletMap.setZoom(z, { animate: false });
-      }
-    };
-
-    const schedulePaint = () => {
-      if (paintRaf) return;
-      paintRaf = requestAnimationFrame(() => {
-        paintRaf = 0;
-        paintGesture();
-      });
     };
 
     const onWheel = (e) => {
-      if (e.ctrlKey) return;
+      if (e.ctrlKey) return; // leave browser pinch-to-zoom page alone when held
       e.preventDefault();
       e.stopPropagation();
 
       let dy = e.deltaY;
-      if (e.deltaMode === 1) dy *= 16; // lines → px
-      if (e.deltaMode === 2) dy *= Math.max(1, leafletMap.getSize().y * 0.15);
-      dy = Math.max(-MAX_DY, Math.min(MAX_DY, dy));
-      if (dy === 0) return;
+      if (e.deltaMode === 1) dy *= 16; // lines
+      if (e.deltaMode === 2) dy *= leafletMap.getSize().y; // pages
+      // One event cannot dump a huge jump into the accumulator.
+      dy = Math.max(-90, Math.min(90, dy));
+      pendingPx += dy;
 
-      try {
-        const nextAnchor = leafletMap.mouseEventToLatLng(e);
-        if (!gesturing) {
-          gesturing = true;
-          startZoom = leafletMap.getZoom();
-          scale = 1;
-          // Freeze zoom anchor for the whole gesture (stable, accurate control).
-          anchorLatLng = nextAnchor;
-        }
-      } catch {
-        if (!gesturing) {
-          gesturing = true;
-          startZoom = leafletMap.getZoom();
-          scale = 1;
-          anchorLatLng = leafletMap.getCenter();
-        }
-      }
-
-      // Pinch-like continuous scale (not integer zoom jumps).
-      scale *= Math.exp(-dy / PX_PER_SCALE);
-      const rawZoom = startZoom + Math.log2(Math.max(scale, 1e-6));
-      const clamped = clampZoom(rawZoom);
-      scale = Math.pow(2, clamped - startZoom);
-
-      schedulePaint();
-
-      if (settleTimer) clearTimeout(settleTimer);
-      settleTimer = setTimeout(endGesture, SETTLE_MS);
+      if (!rafId) rafId = requestAnimationFrame(flush);
     };
 
     container.addEventListener('wheel', onWheel, { passive: false, capture: true });
     leafletMap.on('unload', () => {
       container.removeEventListener('wheel', onWheel, { capture: true });
-      if (settleTimer) clearTimeout(settleTimer);
-      if (paintRaf) cancelAnimationFrame(paintRaf);
+      if (rafId) cancelAnimationFrame(rafId);
     });
   }
 
   function initMap() {
     const view = getInitialMapView();
     // MapLibre GL paints the basemap in a separate canvas from Leaflet markers.
-    // Desktop wheel uses the same _animateZoom transform path as mobile pinch
-    // (see bindPreciseDesktopWheelZoom), then hard-syncs on gesture end.
+    // CSS zoom animations desync those two systems at extreme zoom-out and can
+    // leave city lights sitting on the wrong geography (e.g. Braga over Spain).
+    // Instant Leaflet zoom keeps markers and basemap on the same CRS always.
     const useVectorBasemap = typeof WorldChoirMapTiles !== 'undefined'
       && typeof WorldChoirMapTiles.canUseMapLibre === 'function'
       && WorldChoirMapTiles.canUseMapLibre();
@@ -392,16 +321,16 @@ const WorldChoirMap = (() => {
       maxBounds: [[-85, -180], [85, 180]],
       maxBoundsViscosity: 1.0,
       fadeAnimation: false,
-      // Needed so desktop wheel can use pinch-style zoomanim transforms.
-      zoomAnimation: true,
-      markerZoomAnimation: true,
+      zoomAnimation: !useVectorBasemap,
+      markerZoomAnimation: !useVectorBasemap,
       bounceAtZoomLimits: true,
       inertia: true,
       inertiaDeceleration: 2800,
-      zoomSnap: desktop ? 0.1 : 1,
-      zoomDelta: 0.5,
+      // Desktop: finer snap + slower wheel; touch keeps Leaflet defaults.
+      zoomSnap: desktop ? 0.25 : 1,
+      zoomDelta: 1,
       wheelPxPerZoomLevel: desktop ? 160 : 60,
-      wheelDebounceTime: desktop ? 40 : 30,
+      wheelDebounceTime: desktop ? 50 : 30,
       scrollWheelZoom: !desktop,
       preferCanvas: false,
     });
