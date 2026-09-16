@@ -838,10 +838,6 @@ const OwnerPtwPartnership = (() => {
               ? renderOverallPartnershipsTab(ps, data, loading)
               : renderOverallAnalyticsTab(ps, data, loading)}
           </div>
-          <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
-          <div class="owner-ptw-day-modal__footer">
-            <button type="button" class="owner-btn-ghost" data-ptw-p-cal-panel-close>Close</button>
-          </div>
         </div>
       </div>`;
   }
@@ -1126,7 +1122,7 @@ const OwnerPtwPartnership = (() => {
         </div>
 
         <div class="owner-ptw-overall-block owner-ptw-overall-block--breakdown">
-          <h4 class="owner-ptw-overall-section__title">Analytics Breakdown</h4>
+          <h4 class="owner-ptw-overall-section__title owner-ptw-overall-section__title--center">Analytics Breakdown</h4>
           <div class="owner-ptw-overall-breakdown">
             ${renderDailyPerformanceTable(data?.dailyPerformance, loading)}
             ${renderGeoTable(data?.geographic, loading)}

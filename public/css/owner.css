@@ -7592,6 +7592,10 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   margin-bottom: 16px;
 }
 
+.owner-ptw-overall-section__title--center {
+  text-align: center;
+}
+
 .owner-ptw-overall-breakdown {
   display: flex;
   flex-direction: column;
