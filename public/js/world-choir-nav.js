@@ -271,7 +271,6 @@ const WorldChoirNav = (() => {
       // Soft secondary surfaces (World Chain, Daily Acts) — no bottom-tab match.
       indicatorEl.classList.remove('is-visible');
     }
-    scheduleNavPin();
   }
 
   function pageIdFromPathname(pathname) {
@@ -605,7 +604,7 @@ const WorldChoirNav = (() => {
       'index.html',
       'css/home.css?v=20260911guideGrey',
       'js/world-choir-home.js?v=20260912dapFast',
-      'js/world-choir-db.js?v=20260916scale',
+      'js/world-choir-db.js?v=20260913presence',
     ],
     map: [
       'map.html',
@@ -615,7 +614,7 @@ const WorldChoirNav = (() => {
       'js/map/sponsor-bar.js?v=20260905a',
       '/api/map-sponsors',
       'js/world-choir-map-tiles.js?v=20260912ptwDark',
-      'js/world-choir-map.js?v=20260916zoomRestore',
+      'js/world-choir-map.js?v=20260912tabRoot',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
@@ -641,7 +640,7 @@ const WorldChoirNav = (() => {
       'js/profile/daily-acts-peace.js?v=20260912dapFast',
       'js/profile/daily-acts-button.js?v=20260912dapFast',
       'js/world-choir-onboarding.js?v=20260816a',
-      'js/world-choir-db.js?v=20260916scale',
+      'js/world-choir-db.js?v=20260913presence',
       'passport.html',
       'css/passport.css?v=20260914ptwInvite',
       'js/profile/passport-route.js?v=20260901b',
@@ -800,77 +799,12 @@ const WorldChoirNav = (() => {
     return nav;
   }
 
-  let navPinBound = false;
-  let navPinRaf = 0;
-
-  /**
-   * Glue #nav-root to the visible bottom of the screen on iOS Safari.
-   * CSS position:fixed alone fails when html/body become scroll containers —
-   * the bar then scrolls mid-page. Re-pin on scroll / visualViewport changes.
-   */
-  function pinNavToVisualViewport() {
-    const root = document.getElementById('nav-root');
-    if (!root || root.hasAttribute('hidden')) return;
-    if (root.parentElement !== document.body) {
-      document.body.appendChild(root);
-    }
-
-    const height = root.offsetHeight || 0;
-    if (!height) return;
-
-    const vv = window.visualViewport;
-    // Prefer visual viewport (iOS URL bar). Fall back to layout viewport.
-    const viewTop = vv ? vv.offsetTop : 0;
-    const viewHeight = vv ? vv.height : window.innerHeight;
-    // absolute + scrollY survives WebKit “fixed becomes document-relative”.
-    const top = Math.round(window.scrollY + viewTop + viewHeight - height);
-
-    root.style.position = 'absolute';
-    root.style.left = '0';
-    root.style.right = '0';
-    root.style.width = '100%';
-    root.style.bottom = 'auto';
-    root.style.top = `${Math.max(0, top)}px`;
-    root.style.zIndex = '100';
-    root.style.pointerEvents = 'none';
-    root.style.transform = 'none';
-    root.style.margin = '0';
-  }
-
-  function scheduleNavPin() {
-    if (navPinRaf) return;
-    navPinRaf = requestAnimationFrame(() => {
-      navPinRaf = 0;
-      pinNavToVisualViewport();
-    });
-  }
-
-  function bindNavViewportPin() {
-    if (navPinBound) return;
-    navPinBound = true;
-    const vv = window.visualViewport;
-    window.addEventListener('scroll', scheduleNavPin, { passive: true, capture: true });
-    window.addEventListener('resize', scheduleNavPin, { passive: true });
-    window.addEventListener('orientationchange', scheduleNavPin, { passive: true });
-    vv?.addEventListener('resize', scheduleNavPin, { passive: true });
-    vv?.addEventListener('scroll', scheduleNavPin, { passive: true });
-    document.addEventListener('visibilitychange', scheduleNavPin);
-    const root = document.getElementById('nav-root');
-    if (root && typeof MutationObserver === 'function') {
-      new MutationObserver(scheduleNavPin).observe(root, {
-        attributes: true,
-        attributeFilter: ['hidden', 'style', 'class'],
-      });
-    }
-  }
-
   function mount(activePage) {
     if (typeof WorldChoirA11y !== 'undefined') {
       WorldChoirA11y.bindOverlays?.();
     }
     const root = document.getElementById('nav-root');
     if (!root) return;
-    bindNavViewportPin();
     clearPendingNavigation();
     clearArrivalTimer();
     indicatorReady = false;
@@ -883,9 +817,6 @@ const WorldChoirNav = (() => {
     }
     root.innerHTML = '';
     root.appendChild(renderWorldChoirNav(activePage, handoff && handoff.to === activePage ? handoff : null));
-    scheduleNavPin();
-    // Second pass after layout (safe-area / font metrics).
-    requestAnimationFrame(scheduleNavPin);
   }
 
   function startWatcher(activePage) {
@@ -947,7 +878,6 @@ const WorldChoirNav = (() => {
     navigateToPrimaryTab,
     openWorldChain,
     openDailyActs,
-    pinNavToVisualViewport,
     getNavIconSvg: (key) => NAV_ICON_SVGS[key] || '',
     getNavGlyph: (pageId) => {
       const page = ALL_PAGES.find((p) => p.id === pageId);

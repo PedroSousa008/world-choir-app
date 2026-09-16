@@ -105,7 +105,7 @@ const WorldChoirDB = (() => {
   }
 
   function startPresenceHeartbeat(options = {}) {
-    const intervalMs = options.intervalMs ?? PRESENCE_INTERVAL_MS;
+    const intervalMs = options.intervalMs ?? 20000;
     if (presenceStarted) return;
     presenceStarted = true;
     const tick = () => { sendPresenceHeartbeat(); };
@@ -125,10 +125,7 @@ const WorldChoirDB = (() => {
   }
 
   /** Poll often enough that new voices usually land within ~2–5s. */
-  const LIVE_SYNC_INTERVAL_MS = 2000;
-  const LIVE_SYNC_FAST_MS = 1200;
-  const LIVE_SYNC_FAST_WINDOW_MS = 12000;
-  const PRESENCE_INTERVAL_MS = 30000;
+  const LIVE_SYNC_INTERVAL_MS = 1500;
   const AGGREGATE_SESSION_KEY = 'wc_map_aggregate_v1';
   const MY_PLEDGE_SESSION_KEY = 'wc_my_pledge_v1';
 
@@ -429,42 +426,22 @@ const WorldChoirDB = (() => {
   }
 
   function startLiveSync(options = {}) {
-    const baseIntervalMs = options.intervalMs ?? LIVE_SYNC_INTERVAL_MS;
+    const intervalMs = options.intervalMs ?? LIVE_SYNC_INTERVAL_MS;
     if (liveSyncStarted) return;
     liveSyncStarted = true;
     startPresenceHeartbeat();
-
-    let currentIntervalMs = baseIntervalMs;
-    let fastUntil = 0;
-
-    const armInterval = () => {
-      if (liveSyncTimer) clearInterval(liveSyncTimer);
-      liveSyncTimer = setInterval(tick, currentIntervalMs);
-    };
 
     const tick = () => {
       if (document.hidden || liveSyncInFlight) return;
       liveSyncInFlight = true;
       syncMapAggregatesIfChanged()
-        .then((result) => {
-          if (result?.changed) {
-            fastUntil = Date.now() + LIVE_SYNC_FAST_WINDOW_MS;
-            if (currentIntervalMs !== LIVE_SYNC_FAST_MS) {
-              currentIntervalMs = LIVE_SYNC_FAST_MS;
-              armInterval();
-            }
-          } else if (Date.now() > fastUntil && currentIntervalMs !== baseIntervalMs) {
-            currentIntervalMs = baseIntervalMs;
-            armInterval();
-          }
-        })
         .catch(() => {})
         .finally(() => { liveSyncInFlight = false; });
     };
 
     const arm = () => {
       tick();
-      armInterval();
+      liveSyncTimer = setInterval(tick, intervalMs);
     };
 
     ready()

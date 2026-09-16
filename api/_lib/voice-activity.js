@@ -12,7 +12,6 @@ const {
   readBlobJson,
   writeJson,
   findUserByDevice,
-  readPledge,
   listPledges,
   assertBlobConfigured,
 } = require('./store');
@@ -22,14 +21,11 @@ const LIVE_INDEX_PATH = `${ROOT}/live-index.json`;
 const EVENT_ID = 'world-choir-2027';
 
 const PRESENCE_TTL_MS = 60 * 1000;
-/** Keep well under TTL so Live Now stays correct, but cut Blob write storms. */
-const HEARTBEAT_MIN_WRITE_MS = 25 * 1000;
-const LIVE_INDEX_MIN_WRITE_MS = 8 * 1000;
+const HEARTBEAT_MIN_WRITE_MS = 12 * 1000;
 const LIVE_PRUNE_INTERVAL_MS = 20 * 1000;
 
 let liveIndexCache = null;
 let liveIndexCacheAt = 0;
-let lastLiveIndexWriteAt = 0;
 let dayCache = new Map();
 let rosterCache = null;
 let rosterCacheAt = 0;
@@ -257,8 +253,8 @@ async function recordPresenceHeartbeat({
   const user = await findUserByDevice(id);
   if (!user) throw Object.assign(new Error('user not found'), { statusCode: 404 });
 
-  // Single-user read — never scan the full pledges index on every heartbeat.
-  const pledge = await readPledge(EVENT_ID, user.id);
+  const pledges = await listPledges(EVENT_ID);
+  const pledge = (pledges || []).find((p) => p.user_id === user.id);
   if (!pledge || !Number(pledge.voice_number)) {
     return { ok: true, tracked: false, reason: 'no_voice' };
   }
@@ -307,8 +303,8 @@ async function recordPresenceHeartbeat({
     await writeJson(presencePath(user.id), presenceRow, { overwrite: true });
   }
 
-  // Live index — throttle shared-file writes; per-instance memory stays fresh.
-  const live = await readLiveIndex({ fresh: !shouldSkipHeavyWrite });
+  // Live index
+  const live = await readLiveIndex({ fresh: true });
   const pruned = pruneLiveVoices(live.voices, now.getTime());
   pruned[String(voiceNumber)] = {
     userId: user.id,
@@ -318,11 +314,8 @@ async function recordPresenceHeartbeat({
     sessions: prevSessions,
     lastSeenAt: nowIso,
   };
-  const liveNeedsPersist = !shouldSkipHeavyWrite || !live.voices?.[String(voiceNumber)];
-  const canWriteLiveIndex = (Date.now() - lastLiveIndexWriteAt) >= LIVE_INDEX_MIN_WRITE_MS;
-  if (liveNeedsPersist && canWriteLiveIndex) {
+  if (!shouldSkipHeavyWrite || !live.voices?.[String(voiceNumber)]) {
     await writeLiveIndex({ voices: pruned, updatedAt: nowIso });
-    lastLiveIndexWriteAt = Date.now();
   } else {
     liveIndexCache = { voices: pruned, updatedAt: nowIso };
     liveIndexCacheAt = Date.now();

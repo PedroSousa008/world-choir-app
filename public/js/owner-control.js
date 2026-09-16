@@ -157,37 +157,69 @@ const OwnerControl = (() => {
   };
 
   const SECTION_IDS = new Set(SECTIONS.map((s) => s.id));
+  const OWNER_ROUTE_KEY = 'wc_owner_last_route';
   let foundationSearchTimer = null;
 
-  function applyOwnerRoute() {
-    const parts = String(window.location.hash || '').replace(/^#/, '').split('/').filter(Boolean);
-    if (!parts.length) return;
-    if (!SECTION_IDS.has(parts[0])) return;
-    state.section = parts[0];
-    if (parts[0] === 'community') {
-      state.communityView = parts[1] === 'voice-activity' ? 'voice-activity' : 'main';
-      return;
-    }
-    if (parts[0] !== 'daily-acts') return;
-    const sub = parts[1];
-    if (['library', 'engagement', 'partnerships'].includes(sub)) {
-      state.dapView = sub;
-    } else if (['users', 'acts'].includes(sub)) {
-      state.dapView = 'engagement';
-      state.dailyPeaceView = sub;
-    }
-    const third = parts[2];
-    if (state.dapView === 'partnerships' && third && third !== 'new') {
-      state.dapPartnershipId = third;
-      state.dapPartnershipDetail = null;
-    }
-    if (state.dapView === 'engagement' && third && third.startsWith('user-')) {
-      state.dailyPeaceUserId = third.slice(5);
+  function readSavedOwnerRoute() {
+    try {
+      const raw = String(localStorage.getItem(OWNER_ROUTE_KEY) || '').trim();
+      if (!raw) return [];
+      return raw.replace(/^#/, '').split('/').filter(Boolean);
+    } catch {
+      return [];
     }
   }
 
-  function ownerHash() {
-    if (!state.authenticated) return '';
+  function writeSavedOwnerRoute(parts) {
+    try {
+      const path = (parts || []).filter(Boolean).join('/');
+      if (!path) localStorage.removeItem(OWNER_ROUTE_KEY);
+      else localStorage.setItem(OWNER_ROUTE_KEY, path);
+    } catch { /* private mode */ }
+  }
+
+  function applyOwnerRouteParts(parts) {
+    if (!parts?.length) return false;
+    if (!SECTION_IDS.has(parts[0])) return false;
+    state.section = parts[0];
+    if (parts[0] === 'community') {
+      state.communityView = parts[1] === 'voice-activity' ? 'voice-activity' : 'main';
+      return true;
+    }
+    if (parts[0] === 'daily-acts') {
+      const sub = parts[1];
+      if (['library', 'engagement', 'partnerships'].includes(sub)) {
+        state.dapView = sub;
+      } else if (['users', 'acts'].includes(sub)) {
+        state.dapView = 'engagement';
+        state.dailyPeaceView = sub;
+      }
+      const third = parts[2];
+      if (state.dapView === 'partnerships' && third && third !== 'new') {
+        state.dapPartnershipId = third;
+        state.dapPartnershipDetail = null;
+      }
+      if (state.dapView === 'engagement' && third && third.startsWith('user-')) {
+        state.dailyPeaceUserId = third.slice(5);
+      }
+    }
+    return true;
+  }
+
+  function applyOwnerRoute() {
+    const hashParts = String(window.location.hash || '').replace(/^#/, '').split('/').filter(Boolean);
+    if (applyOwnerRouteParts(hashParts)) {
+      writeSavedOwnerRoute(hashParts);
+      return;
+    }
+    // No valid hash (hard refresh on overview, cleared URL, etc.) → last tab the owner left open.
+    const saved = readSavedOwnerRoute();
+    if (applyOwnerRouteParts(saved)) return;
+    state.section = 'overview';
+  }
+
+  function ownerRouteParts() {
+    if (!state.authenticated) return [];
     const section = state.section || 'overview';
     const parts = [section];
     if (section === 'community' && state.communityView === 'voice-activity') {
@@ -201,11 +233,19 @@ const OwnerControl = (() => {
         parts.push(`user-${state.dailyPeaceUserId}`);
       }
     }
-    if (section === 'overview' && parts.length === 1) return '';
+    return parts;
+  }
+
+  function ownerHash() {
+    const parts = ownerRouteParts();
+    if (!parts.length) return '';
+    // Always keep an explicit hash — including #overview — so refresh restores the tab.
     return `#${parts.join('/')}`;
   }
 
   function syncOwnerRoute() {
+    const parts = ownerRouteParts();
+    writeSavedOwnerRoute(parts);
     const hash = ownerHash();
     const url = `${window.location.pathname}${window.location.search}${hash}`;
     const cur = `${window.location.pathname}${window.location.search}${window.location.hash}`;

@@ -226,79 +226,6 @@ const WorldChoirMap = (() => {
     });
   }
 
-  function isDesktopPointerMap() {
-    try {
-      return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    } catch {
-      return !('ontouchstart' in window);
-    }
-  }
-
-  /**
-   * Desktop trackpads/mice fire dense wheel events — Leaflet's default feels
-   * jumpy. Drive zoom ourselves with smaller steps and a hard per-frame cap.
-   */
-  function bindPreciseDesktopWheelZoom(leafletMap) {
-    if (!leafletMap || !isDesktopPointerMap()) return;
-
-    leafletMap.scrollWheelZoom.disable();
-
-    const container = leafletMap.getContainer();
-    const PX_PER_ZOOM = 180;
-    const MAX_STEP = 0.35;
-    const SNAP = 0.25;
-
-    let pendingPx = 0;
-    let rafId = 0;
-
-    const flush = () => {
-      rafId = 0;
-      if (!pendingPx || !leafletMap) return;
-
-      const maxPx = MAX_STEP * PX_PER_ZOOM;
-      const applyPx = Math.max(-maxPx, Math.min(maxPx, pendingPx));
-      pendingPx -= applyPx;
-
-      const deltaZoom = -applyPx / PX_PER_ZOOM;
-      if (Math.abs(deltaZoom) >= 0.02) {
-        const minZ = leafletMap.getMinZoom();
-        const maxZ = leafletMap.getMaxZoom();
-        const next = Math.max(minZ, Math.min(maxZ, leafletMap.getZoom() + deltaZoom));
-        const snapped = Math.round(next / SNAP) * SNAP;
-        if (Math.abs(snapped - leafletMap.getZoom()) >= 0.001) {
-          leafletMap.setZoom(snapped, { animate: false });
-        }
-      }
-
-      if (Math.abs(pendingPx) >= 1) {
-        rafId = requestAnimationFrame(flush);
-      } else {
-        pendingPx = 0;
-      }
-    };
-
-    const onWheel = (e) => {
-      if (e.ctrlKey) return; // leave browser pinch-to-zoom page alone when held
-      e.preventDefault();
-      e.stopPropagation();
-
-      let dy = e.deltaY;
-      if (e.deltaMode === 1) dy *= 16; // lines
-      if (e.deltaMode === 2) dy *= leafletMap.getSize().y; // pages
-      // One event cannot dump a huge jump into the accumulator.
-      dy = Math.max(-90, Math.min(90, dy));
-      pendingPx += dy;
-
-      if (!rafId) rafId = requestAnimationFrame(flush);
-    };
-
-    container.addEventListener('wheel', onWheel, { passive: false, capture: true });
-    leafletMap.on('unload', () => {
-      container.removeEventListener('wheel', onWheel, { capture: true });
-      if (rafId) cancelAnimationFrame(rafId);
-    });
-  }
-
   function initMap() {
     const view = getInitialMapView();
     // MapLibre GL paints the basemap in a separate canvas from Leaflet markers.
@@ -308,7 +235,6 @@ const WorldChoirMap = (() => {
     const useVectorBasemap = typeof WorldChoirMapTiles !== 'undefined'
       && typeof WorldChoirMapTiles.canUseMapLibre === 'function'
       && WorldChoirMapTiles.canUseMapLibre();
-    const desktop = isDesktopPointerMap();
 
     map = L.map('world-map', {
       center: view.center,
@@ -326,19 +252,13 @@ const WorldChoirMap = (() => {
       bounceAtZoomLimits: true,
       inertia: true,
       inertiaDeceleration: 2800,
-      // Desktop: finer snap + slower wheel; touch keeps Leaflet defaults.
-      zoomSnap: desktop ? 0.25 : 1,
-      zoomDelta: 1,
-      wheelPxPerZoomLevel: desktop ? 160 : 60,
-      wheelDebounceTime: desktop ? 50 : 30,
-      scrollWheelZoom: !desktop,
+      wheelDebounceTime: 30,
       preferCanvas: false,
     });
 
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     WorldChoirMapTiles.addBasemapLayers(map);
-    bindPreciseDesktopWheelZoom(map);
 
     cityLightsLayer = L.layerGroup().addTo(map);
     gatheringLayer = L.layerGroup().addTo(map);
