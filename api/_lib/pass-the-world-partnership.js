@@ -854,31 +854,13 @@ async function getPartnershipDayDetail({ date } = {}) {
     };
   });
 
-  const events = [];
-  for (const p of periods) {
-    for (const ev of p.events || []) {
-      const atKey = dateKeyUTC(ev.at);
-      if (atKey === key) {
-        const cfg = configs.get(ev.configurationId || p.configurationId);
-        events.push({
-          at: ev.at,
-          type: ev.type,
-          configurationId: ev.configurationId || p.configurationId,
-          subtitle: cfg?.subtitle || '',
-          tabLogoUrl: cfg?.tabLogo?.url || null,
-          by: ev.by || null,
-        });
-      }
-    }
-  }
-  events.sort((a, b) => String(a.at).localeCompare(String(b.at)));
-
+  // Day modal no longer lists history events — skip that scan for faster opens.
   const base = {
     date: key,
     timezone: HISTORY_TIMEZONE,
     status: segments.length ? 'active' : 'off',
     segments,
-    events,
+    events: [],
   };
 
   try {

@@ -33,6 +33,9 @@ const OwnerPtwPartnership = (() => {
         calMonth: null,
         dayDetail: null,
         dayLoading: false,
+        dayCache: Object.create(null),
+        dayInflight: Object.create(null),
+        dayReqId: 0,
         modal: null,
         toast: null,
         toastTimer: null,
@@ -148,36 +151,145 @@ const OwnerPtwPartnership = (() => {
     }
   }
 
-  async function loadDayDetail(ctx, dateKey) {
+  async function loadDayDetail(ctx, dateKey, { force = false } = {}) {
     const { state, api, render } = ctx;
     const ps = ensureState(state);
-    ps.dayLoading = true;
-    ps.dayDetail = { date: dateKey };
-    render();
+    if (!ps.dayCache) ps.dayCache = Object.create(null);
+    if (!ps.dayInflight) ps.dayInflight = Object.create(null);
+
+    const key = String(dateKey || '').trim();
+    if (!key) return;
+
+    const reqId = (ps.dayReqId = (ps.dayReqId || 0) + 1);
+    const calInfo = calendarDayInfo(ps, key);
+
+    // Future / off days resolve from the calendar instantly — no skeleton flash.
+    if (!force && calInfo?.status === 'future') {
+      ps.dayDetail = { date: key, status: 'future' };
+      ps.dayLoading = false;
+      render();
+      return;
+    }
+    if (!force && calInfo?.status === 'off') {
+      ps.dayDetail = { date: key, status: 'off', segments: [], events: [] };
+      ps.dayLoading = false;
+      render();
+      return;
+    }
+
+    const cached = !force ? ps.dayCache[key] : null;
+    if (cached) {
+      ps.dayDetail = { ...cached };
+      ps.dayLoading = false;
+      render();
+    } else {
+      ps.dayDetail = seedDayFromCalendar(ps, key);
+      ps.dayLoading = false;
+      render();
+      // Only show skeletons if the network is still slow after a short beat.
+      setTimeout(() => {
+        if (ps.dayReqId !== reqId) return;
+        if (ps.dayDetail?.date !== key) return;
+        if (ps.dayCache[key]) return;
+        ps.dayLoading = true;
+        render();
+      }, 70);
+    }
+
     try {
-      const data = await api('ptw-partnership-day', {
-        query: `&date=${encodeURIComponent(dateKey)}`,
-      });
+      const data = await fetchDayDetail(ctx, key);
       const firstConfig = data?.analytics?.byConfiguration?.[0]?.configurationId
         || data?.segments?.[0]?.configurationId
         || null;
-      ps.dayDetail = {
+      const detail = {
         ...data,
         selectedConfigId: firstConfig,
       };
+      ps.dayCache[key] = detail;
+      if (ps.dayDetail?.date === key) {
+        ps.dayDetail = detail;
+        ps.dayLoading = false;
+        render();
+      } else if (force && ps.dayReqId === reqId) {
+        ps.dayDetail = detail;
+        ps.dayLoading = false;
+        render();
+      }
     } catch (err) {
+      if (ps.dayDetail?.date !== key && ps.dayReqId !== reqId) return;
+      // Keep cached / seeded content when a silent refresh fails.
+      if (cached || (ps.dayDetail?.analytics && !force)) {
+        ps.dayLoading = false;
+        render();
+        return;
+      }
       ps.dayDetail = {
-        date: dateKey,
+        date: key,
         error: err.message || 'Could not load day details.',
         analytics: {
           error: true,
           unavailableReason: err.message || 'Daily analytics could not be loaded.',
         },
       };
-    } finally {
       ps.dayLoading = false;
       render();
     }
+  }
+
+  function prefetchDayDetail(ctx, dateKey) {
+    const { state } = ctx;
+    const ps = ensureState(state);
+    if (!ps.dayCache) ps.dayCache = Object.create(null);
+    if (!ps.dayInflight) ps.dayInflight = Object.create(null);
+    const key = String(dateKey || '').trim();
+    if (!key || ps.dayCache[key] || ps.dayInflight[key]) return;
+    const calInfo = calendarDayInfo(ps, key);
+    if (calInfo?.status === 'future' || calInfo?.status === 'off') return;
+    fetchDayDetail(ctx, key)
+      .then((data) => {
+        const firstConfig = data?.analytics?.byConfiguration?.[0]?.configurationId
+          || data?.segments?.[0]?.configurationId
+          || null;
+        ps.dayCache[key] = { ...data, selectedConfigId: firstConfig };
+      })
+      .catch(() => {});
+  }
+
+  async function fetchDayDetail(ctx, dateKey) {
+    const { state, api } = ctx;
+    const ps = ensureState(state);
+    if (!ps.dayInflight) ps.dayInflight = Object.create(null);
+    const key = String(dateKey || '').trim();
+    if (ps.dayInflight[key]) return ps.dayInflight[key];
+    const promise = api('ptw-partnership-day', {
+      query: `&date=${encodeURIComponent(key)}`,
+    }).finally(() => {
+      delete ps.dayInflight[key];
+    });
+    ps.dayInflight[key] = promise;
+    return promise;
+  }
+
+  function calendarDayInfo(ps, dateKey) {
+    return (ps.calendar?.days || []).find((d) => d.date === dateKey) || null;
+  }
+
+  function seedDayFromCalendar(ps, dateKey) {
+    const info = calendarDayInfo(ps, dateKey);
+    if (!info) return { date: dateKey, _seeded: true };
+    const logos = info.logos || [];
+    return {
+      date: dateKey,
+      status: info.status || 'off',
+      _seeded: true,
+      segments: logos.map((l, i) => ({
+        configurationId: l.configurationId || `seed_${i}`,
+        mapLogoUrl: l.url || null,
+        subtitle: '',
+      })),
+      events: [],
+      analytics: null,
+    };
   }
 
   function markDirty(ps) {
@@ -268,35 +380,49 @@ const OwnerPtwPartnership = (() => {
     return Math.round(num).toLocaleString('en-US');
   }
 
-  function metricInfoTip(key) {
-    const tips = {
-      reach: 'Unique users who viewed Pass the World while the partnership was active.',
-      impressions: 'Total qualifying Pass the World page views while the partnership was active.',
-      countries: 'Number of distinct countries represented among partnership viewers.',
-      cities: 'Number of distinct cities represented among partnership viewers.',
-      clicks: 'Total clicks on the partnership Link Image.',
-      clickers: 'Unique users who clicked the partnership Link Image.',
-      avgTime: 'Average engaged time users spent on Pass the World while the partnership was active.',
-      activeTime: 'Total time the partnership was active during this day.',
-    };
-    return tips[key] || '';
-  }
+  // Stroke icons — same language as Owner Notifications / app chrome.
+  const METRIC_ICONS = {
+    reach: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="1.6"/></svg>',
+    impressions: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>',
+    countries: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/><path d="M2 12h20" stroke="currentColor" stroke-width="1.6"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" stroke-width="1.6"/></svg>',
+    cities: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 22s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/></svg>',
+    clicks: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4l7.5 16 1.8-6.7L20 11.5 4 4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+    clickers: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.6"/></svg>',
+    avgTime: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    activeTime: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h2l2-7 4 14 2-7h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  };
 
-  function renderMetricCard({ icon, title, desc, tipKey, valueHtml, loading }) {
+  const METRIC_DEFS = [
+    { key: 'reach', title: 'Partnership Reach', desc: 'Unique users who viewed Pass the World', value: (m) => formatCount(m.partnershipReach) },
+    { key: 'impressions', title: 'Partnership Impressions', desc: 'Total views of the Pass the World page', value: (m) => formatCount(m.partnershipImpressions) },
+    { key: 'countries', title: 'Unique Countries Reached', desc: 'Distinct countries from all visitors', value: (m) => formatCount(m.uniqueCountriesReached) },
+    { key: 'cities', title: 'Unique Cities Reached', desc: 'Distinct cities from all visitors', value: (m) => formatCount(m.uniqueCitiesReached) },
+    { key: 'clicks', title: 'Link Image Clicks', desc: 'Total clicks on the partnership link image', value: (m) => formatCount(m.linkImageClicks) },
+    { key: 'clickers', title: 'Unique Link Image Clickers', desc: 'Unique users who clicked the link image', value: (m) => formatCount(m.uniqueLinkImageClickers) },
+    { key: 'avgTime', title: 'Average Time on Pass the World', desc: 'Average time spent per user', value: (m) => m.averageTimeOnPassTheWorldLabel || '0s' },
+    { key: 'activeTime', title: 'Partnership Active Time', desc: 'Total time partnership was active', value: (m) => m.partnershipActiveTimeLabel || '0s' },
+  ];
+
+  function renderMetricCard({ icon, title, desc, valueHtml, loading }) {
     return `
       <article class="owner-ptw-day-metric">
         <header class="owner-ptw-day-metric__head">
           <span class="owner-ptw-day-metric__icon" aria-hidden="true">${icon}</span>
           <span class="owner-ptw-day-metric__title">${esc(title)}</span>
-          <button type="button"
-            class="owner-ptw-day-metric__info"
-            data-ptw-day-tip="${esc(tipKey)}"
-            aria-label="${esc(title)} definition"
-            title="${esc(metricInfoTip(tipKey))}">i</button>
         </header>
         <p class="owner-ptw-day-metric__desc">${esc(desc)}</p>
         <p class="owner-ptw-day-metric__value ${loading ? 'is-skeleton' : ''}">${loading ? '&nbsp;' : valueHtml}</p>
       </article>`;
+  }
+
+  function renderMetricCards(metrics, loading) {
+    return METRIC_DEFS.map((def) => renderMetricCard({
+      icon: METRIC_ICONS[def.key],
+      title: def.title,
+      desc: def.desc,
+      valueHtml: loading ? '' : esc(def.value(metrics || {})),
+      loading,
+    })).join('');
   }
 
   function renderTimeline(analytics) {
@@ -338,7 +464,7 @@ const OwnerPtwPartnership = (() => {
         </div>
         ${segmentsHtml}
         <p class="owner-ptw-day-timeline__total">
-          <span aria-hidden="true">◷</span>
+          <span class="owner-ptw-day-timeline__total-icon" aria-hidden="true">${METRIC_ICONS.avgTime}</span>
           Active for ${esc(tl.activeLabel || '0s')}
         </p>
       </section>`;
@@ -370,25 +496,24 @@ const OwnerPtwPartnership = (() => {
 
   function renderAnalyticsGrid(d, loading) {
     const a = d?.analytics;
+
     if (loading) {
       return `
         <section class="owner-ptw-day-analytics">
           <h4 class="owner-ptw-day-analytics__title">Partnership Analytics</h4>
           <p class="owner-ptw-day-analytics__sub">Key metrics for this specific day while the partnership was active.</p>
           <div class="owner-ptw-day-metrics">
-            ${[
-              ['◎', 'Partnership Reach', 'Unique users who viewed Pass the World', 'reach'],
-              ['▣', 'Partnership Impressions', 'Total views of the Pass the World page', 'impressions'],
-              ['🌍', 'Unique Countries Reached', 'Distinct countries from all visitors', 'countries'],
-              ['⌖', 'Unique Cities Reached', 'Distinct cities from all visitors', 'cities'],
-              ['↗', 'Link Image Clicks', 'Total clicks on the partnership link image', 'clicks'],
-              ['◉', 'Unique Link Image Clickers', 'Unique users who clicked the link image', 'clickers'],
-              ['◷', 'Average Time on Pass the World', 'Average time spent per user', 'avgTime'],
-              ['▮', 'Partnership Active Time', 'Total time partnership was active', 'activeTime'],
-            ].map(([icon, title, desc, tip]) => renderMetricCard({
-              icon, title, desc, tipKey: tip, valueHtml: '', loading: true,
-            })).join('')}
+            ${renderMetricCards(null, true)}
           </div>
+        </section>`;
+    }
+
+    // Brief pre-skeleton window: header/logo already painted, metrics arrive next.
+    if (d?._seeded && !a && !d?.error) {
+      return `
+        <section class="owner-ptw-day-analytics">
+          <h4 class="owner-ptw-day-analytics__title">Partnership Analytics</h4>
+          <p class="owner-ptw-day-analytics__sub">Key metrics for this specific day while the partnership was active.</p>
         </section>`;
     }
 
@@ -439,62 +564,7 @@ const OwnerPtwPartnership = (() => {
         <p class="owner-ptw-day-analytics__sub">Key metrics for this specific day while the partnership was active.</p>
         ${configTabs}
         <div class="owner-ptw-day-metrics">
-          ${renderMetricCard({
-            icon: '◎',
-            title: 'Partnership Reach',
-            desc: 'Unique users who viewed Pass the World',
-            tipKey: 'reach',
-            valueHtml: esc(formatCount(m.partnershipReach)),
-          })}
-          ${renderMetricCard({
-            icon: '▣',
-            title: 'Partnership Impressions',
-            desc: 'Total views of the Pass the World page',
-            tipKey: 'impressions',
-            valueHtml: esc(formatCount(m.partnershipImpressions)),
-          })}
-          ${renderMetricCard({
-            icon: '◎',
-            title: 'Unique Countries Reached',
-            desc: 'Distinct countries from all visitors',
-            tipKey: 'countries',
-            valueHtml: esc(formatCount(m.uniqueCountriesReached)),
-          })}
-          ${renderMetricCard({
-            icon: '⌖',
-            title: 'Unique Cities Reached',
-            desc: 'Distinct cities from all visitors',
-            tipKey: 'cities',
-            valueHtml: esc(formatCount(m.uniqueCitiesReached)),
-          })}
-          ${renderMetricCard({
-            icon: '↗',
-            title: 'Link Image Clicks',
-            desc: 'Total clicks on the partnership link image',
-            tipKey: 'clicks',
-            valueHtml: esc(formatCount(m.linkImageClicks)),
-          })}
-          ${renderMetricCard({
-            icon: '◉',
-            title: 'Unique Link Image Clickers',
-            desc: 'Unique users who clicked the link image',
-            tipKey: 'clickers',
-            valueHtml: esc(formatCount(m.uniqueLinkImageClickers)),
-          })}
-          ${renderMetricCard({
-            icon: '◷',
-            title: 'Average Time on Pass the World',
-            desc: 'Average time spent per user',
-            tipKey: 'avgTime',
-            valueHtml: esc(m.averageTimeOnPassTheWorldLabel || '0s'),
-          })}
-          ${renderMetricCard({
-            icon: '▮',
-            title: 'Partnership Active Time',
-            desc: 'Total time partnership was active',
-            tipKey: 'activeTime',
-            valueHtml: esc(m.partnershipActiveTimeLabel || '0s'),
-          })}
+          ${renderMetricCards(m, false)}
         </div>
       </section>`;
   }
@@ -559,8 +629,9 @@ const OwnerPtwPartnership = (() => {
     }
 
     const resolved = resolveDayMetrics(d, d.selectedConfigId);
-    const mapLogoUrl = resolved.mapLogoUrl;
+    const mapLogoUrl = resolved.mapLogoUrl || d.segments?.[0]?.mapLogoUrl || null;
     const active = d.status === 'active' || (d.segments || []).length > 0;
+    const showTimelineSkel = loading && !d.analytics;
 
     return `
       <div class="owner-ptw-p-modal owner-ptw-day-modal" role="dialog" aria-modal="true" aria-labelledby="owner-ptw-p-day-title">
@@ -581,7 +652,14 @@ const OwnerPtwPartnership = (() => {
               ${active ? 'Partnership Active' : 'Partnership Off'}
             </span>
           </header>
-          ${loading ? '<p class="owner-muted">Loading day analytics…</p>' : renderTimeline(d.analytics)}
+          ${d.analytics ? renderTimeline(d.analytics) : (showTimelineSkel ? `
+            <section class="owner-ptw-day-timeline owner-ptw-day-timeline--skeleton" aria-hidden="true">
+              <div class="owner-ptw-day-timeline__head">
+                <h4 class="owner-ptw-day-timeline__title">Day Timeline (UTC)</h4>
+              </div>
+              <div class="owner-ptw-day-timeline__skel"></div>
+              <div class="owner-ptw-day-timeline__skel is-short"></div>
+            </section>` : '')}
           <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
           ${renderAnalyticsGrid(d, loading)}
           <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
@@ -1071,8 +1149,14 @@ const OwnerPtwPartnership = (() => {
     });
 
     root.querySelectorAll('[data-ptw-p-day]').forEach((btn) => {
+      const date = btn.getAttribute('data-ptw-p-day');
+      btn.addEventListener('pointerenter', () => {
+        if (date) prefetchDayDetail(ctx, date);
+      });
+      btn.addEventListener('focus', () => {
+        if (date) prefetchDayDetail(ctx, date);
+      });
       btn.addEventListener('click', () => {
-        const date = btn.getAttribute('data-ptw-p-day');
         if (date) loadDayDetail(ctx, date);
       });
     });
@@ -1095,7 +1179,7 @@ const OwnerPtwPartnership = (() => {
 
     document.querySelector('[data-ptw-p-day-retry]')?.addEventListener('click', () => {
       const date = ps.dayDetail?.date;
-      if (date) loadDayDetail(ctx, date);
+      if (date) loadDayDetail(ctx, date, { force: true });
     });
 
     if (ps.dayDetail && !ps._dayEscBound) {
