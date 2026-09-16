@@ -23,7 +23,11 @@ The main bottom tab bar (`#nav-root` / `.bottom-nav` — Home, Map, Donate, Prof
 
 ## Horizontal scroll lock
 
-Keep horizontal clipping on `html` and inner wrappers (`.page`, `.page-wide`, etc.) — **not** on `body`.
+Never put `overflow-x: clip/hidden` on `html` or `body` (breaks fixed tabs on iOS Safari). Clip on `.page`, `.page-wide`, `#wc-tab-host`, panels only.
+
+## Mobile pin
+
+`WorldChoirNav` must keep calling `pinNavToVisualViewport` on scroll / `visualViewport` changes so the bar stays on the visible bottom even if WebKit demotes `position: fixed`.
 
 ## Permission
 

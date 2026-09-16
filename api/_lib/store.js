@@ -330,7 +330,8 @@ async function saveCounter(eventId, counter) {
 
 async function allocateVoiceNumber(eventId) {
   let start = (await readCounter(eventId)) + 1;
-  for (let n = start; n < start + 50; n++) {
+  // Wider retry window absorbs concurrent join bursts without failing users.
+  for (let n = start; n < start + 200; n++) {
     try {
       await writeJson(claimPath(eventId, n), { voice_number: n }, { overwrite: false });
       await saveCounter(eventId, n);
@@ -553,16 +554,49 @@ async function readPledgesIndex(eventId) {
 
 async function writePledgesIndex(eventId, pledges) {
   const sorted = sortPledges(pledges);
+  const updatedAt = new Date().toISOString();
   memCache.delete(`pledges:${eventId}`);
   memCache.delete('pledges:all');
   memCache.delete(`map-aggregate:${eventId}`);
   memCache.delete(`pledges-meta:${eventId}`);
   await writeJson(pledgesIndexPath(eventId), {
-    updated_at: new Date().toISOString(),
+    updated_at: updatedAt,
     count: sorted.length,
     pledges: sorted,
   }, { overwrite: true });
+  // Best-effort precomputed map snapshot so thousands of readers never rebuild from all pledges.
+  try {
+    await writeMapAggregateSnapshot(eventId, sorted, updatedAt);
+  } catch {
+    /* non-blocking */
+  }
   return sorted;
+}
+
+function mapAggregatePath(eventId) {
+  return `${eventPrefix(eventId)}/map-aggregate.json`;
+}
+
+async function writeMapAggregateSnapshot(eventId, pledges, updatedAt = new Date().toISOString()) {
+  const trimmedEvent = String(eventId || '').trim();
+  const mapped = (pledges || []).map(mapPledgeRow).filter(Boolean);
+  const { stats, cities } = computeMapAggregateFromMappedPledges(mapped, trimmedEvent);
+  const payload = {
+    eventId: trimmedEvent,
+    meta: {
+      count: Array.isArray(pledges) ? pledges.length : (stats?.voices || 0),
+      updated_at: updatedAt,
+    },
+    stats,
+    cities,
+  };
+  await writeJson(mapAggregatePath(trimmedEvent), payload, { overwrite: true });
+  cacheSet(`map-aggregate:${trimmedEvent}`, payload, 5000);
+  cacheSet(`pledges-meta:${trimmedEvent}`, {
+    count: payload.meta.count,
+    updated_at: payload.meta.updated_at,
+  }, 2000);
+  return payload;
 }
 
 async function upsertPledgeIntoIndex(eventId, pledge) {
@@ -609,13 +643,13 @@ async function getPledgesMeta(eventId) {
       return cacheSet(cacheKey, {
         count: index.count,
         updated_at: index.updated_at || null,
-      }, 400);
+      }, 1500);
     }
     if (Array.isArray(index?.pledges)) {
       return cacheSet(cacheKey, {
         count: index.pledges.length,
         updated_at: index.updated_at || null,
-      }, 400);
+      }, 1500);
     }
   } catch (err) {
     if (isBlobUnavailable(err)) throw wrapBlobError(err);
@@ -624,7 +658,7 @@ async function getPledgesMeta(eventId) {
   return cacheSet(cacheKey, {
     count: pledges.length,
     updated_at: new Date().toISOString(),
-  }, 400);
+  }, 1500);
 }
 
 /**
@@ -693,13 +727,31 @@ async function getMapAggregate(eventId) {
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
+  // Prefer precomputed snapshot written on pledge index updates.
+  try {
+    const snap = await readBlobJson(mapAggregatePath(trimmedEvent));
+    if (snap?.stats && Array.isArray(snap.cities)) {
+      return cacheSet(cacheKey, {
+        eventId: trimmedEvent,
+        meta: {
+          count: Number(snap.meta?.count) || snap.stats.voices || 0,
+          updated_at: snap.meta?.updated_at || null,
+        },
+        stats: snap.stats,
+        cities: snap.cities,
+      }, 3000);
+    }
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+  }
+
   const [rawPledges, meta] = await Promise.all([
     listPledges(trimmedEvent),
     getPledgesMeta(trimmedEvent),
   ]);
   const mapped = rawPledges.map(mapPledgeRow).filter(Boolean);
   const { stats, cities } = computeMapAggregateFromMappedPledges(mapped, trimmedEvent);
-  return cacheSet(cacheKey, {
+  const payload = {
     eventId: trimmedEvent,
     meta: {
       count: meta.count,
@@ -707,7 +759,10 @@ async function getMapAggregate(eventId) {
     },
     stats,
     cities,
-  }, 500);
+  };
+  // Persist for the next cold readers (best-effort).
+  writeJson(mapAggregatePath(trimmedEvent), payload, { overwrite: true }).catch(() => {});
+  return cacheSet(cacheKey, payload, 3000);
 }
 
 async function listAllUsers() {
