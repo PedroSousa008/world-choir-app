@@ -19,10 +19,11 @@
 
 .owner-shell {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 220px minmax(0, 1fr);
   min-height: 100vh;
   position: relative;
   z-index: 1;
+  width: 100%;
 }
 
 @media (max-width: 900px) {
@@ -142,8 +143,29 @@
 }
 
 .owner-main {
-  padding: 28px 28px 64px;
-  max-width: 1180px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 28px 24px 64px;
+}
+
+@media (min-width: 1280px) {
+  .owner-main {
+    padding: 28px 32px 72px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .owner-main {
+    padding: 30px 40px 80px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .owner-main {
+    padding: 32px 48px 88px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -3557,10 +3579,6 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 }
 
 /* Map sponsor management */
-.owner-main:has(.owner-sponsors-page) {
-  max-width: 1320px;
-}
-
 .owner-sponsors-page {
   display: flex;
   flex-direction: column;
@@ -4382,10 +4400,6 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
     flex: 1;
     justify-content: center;
   }
-}
-
-.owner-main:has(.sa-page) {
-  max-width: 1520px;
 }
 
 /* Sponsor analytics dashboard */
@@ -6378,7 +6392,8 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
 .owner-ptw-p {
   display: grid;
   gap: 18px;
-  max-width: 980px;
+  width: 100%;
+  max-width: none;
 }
 
 .owner-ptw-p-crumb {
