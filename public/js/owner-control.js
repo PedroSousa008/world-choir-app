@@ -95,7 +95,7 @@ const OwnerControl = (() => {
     ptwData: null,
     ptwBusy: false,
     ptwError: null,
-    ptwRange: '30d',
+    ptwRange: 'all',
     ptwRoundId: null,
     ptwMapMode: 'invitations',
     ptwGeoTab: 'countries',
@@ -2679,20 +2679,27 @@ const OwnerControl = (() => {
   }
 
   async function ensurePtwLoaded(silent = false) {
-    if (state.ptwBusy) return;
+    const gen = (state.ptwLoadGen = (state.ptwLoadGen || 0) + 1);
     state.ptwBusy = true;
     state.ptwError = null;
-    if (!silent) render();
+    if (!silent) {
+      state.ptwData = null;
+      render();
+    }
     try {
-      const q = new URLSearchParams({ range: state.ptwRange || '30d' });
+      const q = new URLSearchParams({ range: state.ptwRange || 'all' });
       if (state.ptwRoundId) q.set('roundId', state.ptwRoundId);
-      state.ptwData = await api('pass-the-world', { query: `&${q.toString()}` });
+      const data = await api('pass-the-world', { query: `&${q.toString()}` });
+      if (gen !== state.ptwLoadGen) return;
+      state.ptwData = data;
+      if (data?.range) state.ptwRange = data.range;
       state.ptwError = null;
     } catch (err) {
+      if (gen !== state.ptwLoadGen) return;
       state.ptwError = err.message || 'Could not load Pass the World analytics.';
       if (!silent) setFlash(state.ptwError, 'err');
     } finally {
-      state.ptwBusy = false;
+      if (gen === state.ptwLoadGen) state.ptwBusy = false;
     }
   }
 

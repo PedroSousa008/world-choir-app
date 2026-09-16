@@ -310,8 +310,22 @@ function filterByRange(series, range) {
   return series.filter((p) => p.date >= cutoff);
 }
 
-async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {}) {
+function rangeCutoffDate(range, from = new Date()) {
+  const key = String(range || 'all').trim() || 'all';
+  if (key === 'all') return null;
+  const days = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 }[key];
+  if (!days) return null;
+  return daysAgo(days, from);
+}
+
+function entryDateKey(entry) {
+  return utcDate(entry?.arrivedAt || entry?.selectedAt || entry?.createdAt || entry?.departedAt);
+}
+
+async function buildPassTheWorldOwnerIntel({ range = 'all', roundId = null } = {}) {
   const now = new Date();
+  const rangeKey = String(range || 'all').trim() || 'all';
+  const cutoff = rangeCutoffDate(rangeKey, now);
   const [livePayload, pledges, roundIds] = await Promise.all([
     getPassTheWorld({ eventId: EVENT_ID, now: now.toISOString() }),
     listAllPledges().catch(() => []),
@@ -327,19 +341,29 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
 
   const eventPledges = pledges.filter((p) => String(p.event_id || p.eventId || EVENT_ID) === EVENT_ID);
 
-  const rounds = [];
+  const allRounds = [];
   for (const id of roundIds) {
     const [meta, invites, winner] = await Promise.all([
       readRoundMeta(id),
       readRoundInvites(id),
       readWinner(id),
     ]);
-    rounds.push(buildRoundFromData(id, meta, invites, winner, itinerary));
+    allRounds.push(buildRoundFromData(id, meta, invites, winner, itinerary));
   }
-  rounds.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  allRounds.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
 
-  const allInvites = rounds.flatMap((r) => r.invitationCount || 0);
-  const totalInvitations = allInvites.reduce((s, n) => s + n, 0);
+  // Historical intel is scoped by the Owner date filter. Live Today/status stay current.
+  const rounds = cutoff
+    ? allRounds.filter((r) => r.date && r.date >= cutoff)
+    : allRounds;
+  const itineraryScoped = cutoff
+    ? itinerary.filter((e) => {
+      const d = entryDateKey(e);
+      return d && d >= cutoff;
+    })
+    : itinerary;
+
+  const totalInvitations = rounds.reduce((s, r) => s + (Number(r.invitationCount) || 0), 0);
 
   const participantIds = new Set();
   const countryInviteTotals = new Map();
@@ -388,28 +412,39 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
     }
   }
 
-  const journeyStops = itinerary.filter((e) => !e.isSeed && !isInvalidItineraryEntry(e));
+  const journeyStops = itineraryScoped.filter((e) => !e.isSeed && !isInvalidItineraryEntry(e));
   const journeyCountries = new Set(
-    itinerary.map((e) => resolveCountryCode(e.countryCode || e.country)).filter(Boolean)
+    itineraryScoped.map((e) => resolveCountryCode(e.countryCode || e.country)).filter(Boolean)
   );
 
   let totalDistance = 0;
   for (const entry of journeyStops) {
     totalDistance += Number(entry.distanceKm) || 0;
   }
-  if (stateStatus === STATUS.TRAVELLING && journey.progress?.travelledKm) {
+  if (!cutoff && stateStatus === STATUS.TRAVELLING && journey.progress?.travelledKm) {
     totalDistance = (itinerary.filter((e) => e.id !== stateRaw?.currentItineraryEntryId)
       .reduce((s, e) => s + (Number(e.distanceKm) || 0), 0))
       + (Number(journey.progress.travelledKm) || 0);
   }
 
   const beganAt = itinerary[0]?.arrivedAt || itinerary[0]?.createdAt;
-  const daysActive = beganAt
-    ? Math.max(0, Math.floor((now.getTime() - new Date(beganAt).getTime()) / 86400000))
-    : 0;
+  let daysActive = 0;
+  if (!cutoff) {
+    daysActive = beganAt
+      ? Math.max(0, Math.floor((now.getTime() - new Date(beganAt).getTime()) / 86400000))
+      : 0;
+  } else {
+    const daySet = new Set();
+    for (const r of rounds) if (r.date) daySet.add(r.date);
+    for (const e of itineraryScoped) {
+      const d = entryDateKey(e);
+      if (d) daySet.add(d);
+    }
+    daysActive = daySet.size;
+  }
 
   const today = now.toISOString().slice(0, 10);
-  const todayRound = rounds.find((r) => r.date === today) || null;
+  const todayRound = allRounds.find((r) => r.date === today) || null;
 
   const worldCode = resolveCountryCode(journey.current?.countryCode || journey.current?.country);
   const eligibleNow = computeEligiblePledges(eventPledges, worldCode);
@@ -505,7 +540,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
     })
     .sort((a, b) => b.invitations - a.invitations);
 
-  const visitedCityKeys = new Set(itinerary.map((e) => cityKey(e.city, e.country)));
+  const visitedCityKeys = new Set(itineraryScoped.map((e) => cityKey(e.city, e.country)));
 
   const byCity = [...cityInviteTotals.values()]
     .map((c) => ({
@@ -522,7 +557,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
     }))
     .sort((a, b) => b.invitations - a.invitations);
 
-  const journeyHistory = itinerary
+  const journeyHistory = itineraryScoped
     .filter((entry) => !isInvalidItineraryEntry(entry))
     .map((entry, i) => ({
     sequence: entry.sequence || i + 1,
@@ -554,7 +589,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
       if (inv.voiceNumber == null) healthIssues.push({ type: 'missing_voice', roundId: round.roundId });
     }
   }
-  for (const entry of itinerary) {
+  for (const entry of itineraryScoped) {
     if (!entry.isSeed && (entry.latitude == null || entry.longitude == null)) {
       healthIssues.push({ type: 'missing_coords', entryId: entry.id });
     }
@@ -570,7 +605,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
       count: c.invitations,
     }));
 
-  const mapJourney = itinerary
+  const mapJourney = itineraryScoped
     .filter((e) => !isInvalidItineraryEntry(e))
     .filter((e) => e.latitude != null && e.longitude != null)
     .map((e) => ({
@@ -586,7 +621,9 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
     ? stateRaw.invitationCloseAt
     : null;
 
-  const selectedRound = roundId ? rounds.find((r) => r.roundId === roundId) : null;
+  const selectedRound = roundId
+    ? (allRounds.find((r) => r.roundId === roundId) || rounds.find((r) => r.roundId === roundId) || null)
+    : null;
 
   const sortedDates = [...inviteUsersByDate.keys()].sort();
   const cumulativeUsers = new Set();
@@ -615,6 +652,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
 
   return {
     serverNow: now.toISOString(),
+    range: rangeKey,
     live: {
       isLive: stateStatus === STATUS.INVITATION_OPEN || stateStatus === STATUS.REVEAL_PENDING,
       status: stateStatus,
@@ -742,7 +780,7 @@ async function buildPassTheWorldOwnerIntel({ range = '30d', roundId = null } = {
         .slice(0, 10),
       mostVisitedCountries: [...journeyCountries].map((code) => ({
         countryCode: code,
-        visits: itinerary.filter((e) => resolveCountryCode(e.countryCode || e.country) === code).length,
+        visits: itineraryScoped.filter((e) => resolveCountryCode(e.countryCode || e.country) === code).length,
       })).sort((a, b) => b.visits - a.visits).slice(0, 10),
     },
     retention: {

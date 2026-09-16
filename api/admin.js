@@ -216,7 +216,7 @@ module.exports = async function handler(req, res) {
     if (action === 'pass-the-world' && req.method === 'GET') {
       res.setHeader('Cache-Control', 'no-store');
       if (!requireOwner(req, res)) return;
-      const range = String(req.query.range || '30d');
+      const range = String(req.query.range || 'all');
       const roundId = req.query.roundId ? String(req.query.roundId) : null;
       const data = await buildPassTheWorldOwnerIntel({ range, roundId });
       return res.status(200).json(data);

@@ -3,11 +3,11 @@
  */
 const OwnerPassTheWorld = (() => {
   const RANGES = [
+    { id: 'all', label: 'ALL' },
     { id: '7d', label: '7D' },
     { id: '30d', label: '30D' },
     { id: '90d', label: '90D' },
     { id: '1y', label: '1Y' },
-    { id: 'all', label: 'ALL' },
   ];
 
   const POSSIBLE_STATES = [
@@ -268,7 +268,6 @@ const OwnerPassTheWorld = (() => {
           <div class="owner-ptw-header__copy">
             <p class="owner-ptw-eyebrow">Pass the World</p>
             <h2 class="owner-ptw-title">Pass the World</h2>
-            <p class="owner-ptw-sub">Complete performance, engagement and history of Pass the World. <span class="owner-ptw-lock" aria-hidden="true">🔒</span> Owner Mode Only</p>
           </div>
           <div class="owner-ptw-header__actions">
             <button type="button" class="owner-ptw-btn-ghost" data-ptw-partnership aria-label="Partnership">Partnership</button>
