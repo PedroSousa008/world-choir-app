@@ -6854,13 +6854,27 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   background: none;
 }
 
+.owner-ptw-p-cal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
 .owner-ptw-p-cal__legend {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
-  margin-top: 14px;
+  margin: 0;
   font-size: 0.78rem;
   color: #8a8d97;
+}
+
+.owner-ptw-p-cal__panel-btn {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .owner-ptw-p-cal__swatch {
@@ -6882,7 +6896,6 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
   background: #3a3d46;
 }
 
-.owner-ptw-p-cal__tz,
 .owner-ptw-p-cal__loading {
   margin: 10px 0 0;
   font-size: 0.75rem;

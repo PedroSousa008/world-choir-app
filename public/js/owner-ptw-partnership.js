@@ -36,6 +36,7 @@ const OwnerPtwPartnership = (() => {
         dayCache: Object.create(null),
         dayInflight: Object.create(null),
         dayReqId: 0,
+        calendarPanel: null,
         modal: null,
         toast: null,
         toastTimer: null,
@@ -787,14 +788,39 @@ const OwnerPtwPartnership = (() => {
             <button type="button" class="owner-btn-ghost" data-ptw-p-cal-next aria-label="Next month">›</button>
           </div>
           ${grid}
-          <div class="owner-ptw-p-cal__legend" aria-label="Legend">
-            <span><span class="owner-ptw-p-cal__swatch is-active" aria-hidden="true"></span> Partnership active</span>
-            <span><span class="owner-ptw-p-cal__swatch is-off" aria-hidden="true"></span> Partnership off</span>
+          <div class="owner-ptw-p-cal__footer">
+            <div class="owner-ptw-p-cal__legend" aria-label="Legend">
+              <span><span class="owner-ptw-p-cal__swatch is-active" aria-hidden="true"></span> Partnership active</span>
+              <span><span class="owner-ptw-p-cal__swatch is-off" aria-hidden="true"></span> Partnership off</span>
+            </div>
+            <button type="button" class="owner-btn-ghost owner-ptw-p-cal__panel-btn" data-ptw-p-cal-panel>
+              Overview
+            </button>
           </div>
-          <p class="owner-muted owner-ptw-p-cal__tz">Calendar dates use ${esc(cal?.timezone || 'UTC')}.</p>
         </div>
       </section>
     `;
+  }
+
+  function renderCalendarPanelModal(ps) {
+    if (!ps.calendarPanel) return '';
+    return `
+      <div class="owner-ptw-p-modal owner-ptw-day-modal" role="dialog" aria-modal="true" aria-labelledby="owner-ptw-p-cal-panel-title">
+        <button type="button" class="owner-ptw-p-modal__backdrop" data-ptw-p-cal-panel-close aria-label="Close"></button>
+        <div class="owner-ptw-p-modal__card owner-ptw-day-modal__card">
+          <button type="button" class="owner-ptw-p-modal__x" data-ptw-p-cal-panel-close aria-label="Close">×</button>
+          <header class="owner-ptw-day-modal__header">
+            <div>
+              <h3 id="owner-ptw-p-cal-panel-title" class="owner-ptw-day-modal__date">Overview</h3>
+              <p class="owner-ptw-day-modal__sub">Partnership calendar overview.</p>
+            </div>
+          </header>
+          <div class="owner-ptw-day-modal__rule" aria-hidden="true"></div>
+          <div class="owner-ptw-day-modal__footer">
+            <button type="button" class="owner-btn-ghost" data-ptw-p-cal-panel-close>Close</button>
+          </div>
+        </div>
+      </div>`;
   }
 
   function renderSkeleton() {
@@ -945,6 +971,7 @@ const OwnerPtwPartnership = (() => {
         ${toast}
         ${renderModal(ps.modal)}
         ${renderDayModal(ps)}
+        ${renderCalendarPanelModal(ps)}
       </section>
     `;
   }
@@ -1148,6 +1175,19 @@ const OwnerPtwPartnership = (() => {
       render();
     });
 
+    root.querySelector('[data-ptw-p-cal-panel]')?.addEventListener('click', () => {
+      ps.dayDetail = null;
+      ps.calendarPanel = { id: 'overview' };
+      render();
+    });
+
+    document.querySelectorAll('[data-ptw-p-cal-panel-close]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        ps.calendarPanel = null;
+        render();
+      });
+    });
+
     root.querySelectorAll('[data-ptw-p-day]').forEach((btn) => {
       const date = btn.getAttribute('data-ptw-p-day');
       btn.addEventListener('pointerenter', () => {
@@ -1157,7 +1197,9 @@ const OwnerPtwPartnership = (() => {
         if (date) prefetchDayDetail(ctx, date);
       });
       btn.addEventListener('click', () => {
-        if (date) loadDayDetail(ctx, date);
+        if (!date) return;
+        ps.calendarPanel = null;
+        loadDayDetail(ctx, date);
       });
     });
 
@@ -1182,12 +1224,18 @@ const OwnerPtwPartnership = (() => {
       if (date) loadDayDetail(ctx, date, { force: true });
     });
 
-    if (ps.dayDetail && !ps._dayEscBound) {
+    if ((ps.dayDetail || ps.calendarPanel) && !ps._dayEscBound) {
       ps._dayEscBound = true;
       const onEsc = (e) => {
         if (e.key !== 'Escape') return;
-        if (!ensureState(state).dayDetail) return;
-        ensureState(state).dayDetail = null;
+        const cur = ensureState(state);
+        if (cur.calendarPanel) {
+          cur.calendarPanel = null;
+          render();
+          return;
+        }
+        if (!cur.dayDetail) return;
+        cur.dayDetail = null;
         render();
       };
       document.addEventListener('keydown', onEsc);
