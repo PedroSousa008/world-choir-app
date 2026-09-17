@@ -1477,46 +1477,32 @@
 
 .fcc-card-editor {
   display: grid;
-  gap: 32px;
-  align-items: start;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: stretch;
+  width: 100%;
+  max-width: none;
   min-width: 0;
 }
 
-@media (min-width: 980px) {
+@media (min-width: 900px) {
   .fcc-card-editor {
-    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
-    gap: 36px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
   }
-
-  .fcc-card-editor__aside {
-    position: sticky;
-    top: 88px;
-  }
-}
-
-.fcc-card-editor__images,
-.fcc-card-editor__aside {
-  display: grid;
-  gap: 18px;
-  align-content: start;
-  min-width: 0;
-}
-
-.fcc-card-editor__lede {
-  margin: -8px 0 4px;
-  color: #8a8d97;
-  font-size: 0.88rem;
-  line-height: 1.5;
 }
 
 .fcc-card-image {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(78, 197, 232, 0.28);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 16px;
+  background: linear-gradient(180deg, rgba(14, 16, 20, 0.96), rgba(8, 9, 12, 0.98));
+  padding: 18px 20px 20px;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 12px;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .fcc-card-image__head {
@@ -1529,6 +1515,7 @@
   font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: -0.02em;
+  color: #f2efe8;
 }
 
 .fcc-card-image__copy {
@@ -1543,18 +1530,37 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 180px;
-  max-height: min(52vh, 420px);
+  min-height: 220px;
+  height: clamp(220px, 34vh, 340px);
   padding: 16px;
   border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   background: #0c0c0e;
   overflow: hidden;
+}
+
+.fcc-card-image__stage.is-profile .fcc-card-image__img {
+  width: auto;
+  height: auto;
+  max-width: min(100%, 280px);
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.fcc-card-image__stage.is-cover .fcc-card-image__img {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  object-position: center;
 }
 
 .fcc-card-image__img {
   display: block;
   max-width: 100%;
-  max-height: min(46vh, 380px);
+  max-height: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -1645,57 +1651,6 @@
   font-size: 0.72rem;
   line-height: 1.45;
   color: #6b6f7d;
-}
-
-.fcc-card-tips {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
-  padding: 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(78, 197, 232, 0.22);
-  background: linear-gradient(180deg, rgba(78, 197, 232, 0.06), rgba(255, 255, 255, 0.02));
-}
-
-.fcc-card-tips__icon {
-  color: var(--accent-aurora, #4ec5e8);
-  width: 28px;
-  height: 28px;
-}
-
-.fcc-card-tips__icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.fcc-card-tips__title {
-  margin: 0 0 8px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.fcc-card-tips__list {
-  margin: 0;
-  padding-left: 16px;
-  color: #8a8d97;
-  font-size: 0.82rem;
-  line-height: 1.55;
-  display: grid;
-  gap: 6px;
-}
-
-.fcc-card-field-help {
-  margin: 0 0 2px;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  color: #8a8d97;
-}
-
-.fcc-textarea--card {
-  min-height: 128px;
-  resize: vertical;
-  line-height: 1.6;
 }
 
 .fcc-btn-ghost.is-danger {

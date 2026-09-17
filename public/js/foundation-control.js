@@ -970,47 +970,8 @@ const FoundationControl = (() => {
     const locked = !can('editFoundation');
     return `
       <form class="fcc-card-editor" id="fcc-foundation-form" data-part="card">
-        <div class="fcc-card-editor__images">
-          <p class="fcc-page-kicker">Card images</p>
-          <p class="fcc-card-editor__lede">These images represent your foundation across World Choir.</p>
-          ${renderCardImageField('profileImage', form, locked)}
-          ${renderCardImageField('coverImage', form, locked)}
-        </div>
-        <aside class="fcc-card-editor__aside">
-          <section class="fcc-card-tips">
-            <div class="fcc-card-tips__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 18h6"/>
-                <path d="M10 22h4"/>
-                <path d="M12 2a7 7 0 017 7c0 2.6-1.3 4.4-3.1 5.7-.5.4-.9 1.1-.9 1.8v.5H9v-.5c0-.7-.4-1.4-.9-1.8C6.3 13.4 5 11.6 5 9a7 7 0 017-7z"/>
-              </svg>
-            </div>
-            <div>
-              <h3 class="fcc-card-tips__title">Tips for great images</h3>
-              <ul class="fcc-card-tips__list">
-                <li>Use high-quality images that reflect your foundation’s identity and mission.</li>
-                <li>Choose a clear, recognizable Profile Image.</li>
-                <li>Wide images generally work best for the Cover Image.</li>
-                <li>Avoid important text or faces extremely close to the edges — some placements may crop responsively.</li>
-              </ul>
-            </div>
-          </section>
-          <p class="fcc-page-kicker">Card content</p>
-          <div class="fcc-field">
-            <label for="ff-card-mission">Short mission (card)</label>
-            <p class="fcc-card-field-help">A concise version of your mission for compact Foundation experiences, and a fallback when the full mission is empty.</p>
-            <textarea id="ff-card-mission" name="cardShortMission" class="fcc-textarea--card" rows="5"
-              placeholder="A short mission for compact Foundation experiences."
-              ${locked ? 'readonly' : ''}>${esc(form.cardShortMission)}</textarea>
-          </div>
-          <div class="fcc-field">
-            <label for="ff-short">Short description</label>
-            <p class="fcc-card-field-help">A short introduction for places that need a little more context than the card mission.</p>
-            <textarea id="ff-short" name="shortDescription" class="fcc-textarea--card" rows="6"
-              placeholder="A brief introduction to your foundation."
-              ${locked ? 'readonly' : ''}>${esc(form.shortDescription)}</textarea>
-          </div>
-        </aside>
+        ${renderCardImageField('profileImage', form, locked)}
+        ${renderCardImageField('coverImage', form, locked)}
       </form>
     `;
   }
