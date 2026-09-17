@@ -74,12 +74,11 @@ const WorldChoirDonationFlow = (() => {
     };
   }
 
-  function resetState(foundation, project, cause = null) {
+  function resetState(foundation, project) {
     state = {
       step: 'amount',
       foundation,
       project: project || null,
-      cause: cause || null,
       amountChoice: null,
       customAmount: '',
       amount: null,
@@ -746,7 +745,6 @@ const WorldChoirDonationFlow = (() => {
       body: JSON.stringify({
         foundationId: state.foundation.id,
         projectId: state.project?.id || null,
-        causeId: state.cause?.id || null,
         amount: state.amount,
         currency: config.currency || 'EUR',
         deviceId: deviceId(),
@@ -886,7 +884,6 @@ const WorldChoirDonationFlow = (() => {
         CreatorFoundationsStore.UserSupport.recordSuccessfulDonation({
           foundationId: state.foundation.id,
           projectId: state.project?.id || null,
-          causeId: state.cause?.id || null,
           amount: receipt.amountGross ?? state.amount,
           currency: receipt.currency || config?.currency || 'EUR',
           anonymous: state.donorAnonymous,
@@ -1117,13 +1114,13 @@ const WorldChoirDonationFlow = (() => {
     }
   }
 
-  async function start(foundation, project = null, cause = null) {
+  async function start(foundation, project = null) {
     if (!foundation?.donationsEnabled) {
       alert('Donations for this foundation are temporarily unavailable.');
       return;
     }
     ensureShell();
-    resetState(foundation, project, cause);
+    resetState(foundation, project);
     try {
       config = null;
       await loadConfig();

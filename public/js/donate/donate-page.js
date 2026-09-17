@@ -14,8 +14,6 @@ const WorldChoirDonate = (() => {
 
   let selectedFoundation = null;
   let selectedProject = null;
-  let viewingFoundationCause = null;
-  let causesExpanded = false;
   let selectedAmount = 25;
   let customAmount = '';
   let selectedPayment = 'card';
@@ -1106,8 +1104,8 @@ const WorldChoirDonate = (() => {
 
   function heartIconSvg() {
     return `
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 20.4s-6.6-4.1-6.6-9.2A3.9 3.9 0 0 1 12 8.1a3.9 3.9 0 0 1 6.6 3.1c0 5.1-6.6 9.2-6.6 9.2z" stroke-linejoin="round"/>
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path d="M12 20.5S4.5 15.6 4.5 9.8A4.2 4.2 0 0 1 12 6.4a4.2 4.2 0 0 1 7.5 3.4c0 5.8-7.5 10.7-7.5 10.7z" stroke-linejoin="round"/>
       </svg>
     `;
   }
@@ -1298,91 +1296,6 @@ const WorldChoirDonate = (() => {
     `;
   }
 
-  function renderCausesSection(foundation) {
-    const causes = Array.isArray(foundation.causes) ? foundation.causes : [];
-    const catalogReady = typeof CreatorFoundationsStore !== 'undefined'
-      && CreatorFoundationsStore.isReady?.();
-    const showAll = causesExpanded || causes.length <= 3;
-    const visible = showAll ? causes : causes.slice(0, 3);
-    const needsToggle = causes.length > 3;
-
-    return `
-      <section class="df-fp-block df-fp-causes" aria-label="Causes">
-        <p class="df-fp-kicker">Causes</p>
-        ${!catalogReady ? `
-          <p class="df-fp-muted">Loading Causes…</p>
-        ` : !causes.length ? `
-          <p class="df-fp-muted">No Causes have been founded yet.</p>
-        ` : `
-          <ul class="df-fp-causes__grid">
-            ${visible.map((cause) => `
-              <li>
-                <button type="button" class="df-fp-cause-card" data-open-foundation-cause="${esc(cause.id)}" aria-label="${esc(cause.title)}">
-                  <span class="df-fp-cause-card__media">
-                    <img src="${esc(cause.image)}" alt="" decoding="async" loading="lazy">
-                  </span>
-                  <span class="df-fp-cause-card__title">${esc(cause.title)}</span>
-                </button>
-              </li>
-            `).join('')}
-          </ul>
-          ${needsToggle ? `
-            <div class="df-fp-causes__toggle-wrap">
-              <button type="button" class="df-fp-causes__toggle" data-action="toggle-causes">
-                ${showAll ? 'Show less' : 'Show all'}
-              </button>
-            </div>
-          ` : ''}
-        `}
-      </section>
-    `;
-  }
-
-  function renderFoundationCausePage(foundation, cause) {
-    const descriptionHtml = String(cause.description || '')
-      .split(/\n+/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => `<p>${esc(line)}</p>`)
-      .join('');
-
-    return `
-      <article class="df-fp df-fp--cause df-rise">
-        <nav class="df-fp-nav" aria-label="Cause">
-          <button class="df-fp-nav__back" type="button" id="donate-back">← Back</button>
-        </nav>
-        <header class="df-fp-cause-hero">
-          ${cause.image ? `
-            <div class="df-fp-cause-hero__visual">
-              <img src="${esc(cause.image)}" alt="" decoding="async">
-            </div>
-          ` : ''}
-          <div class="df-fp-cause-hero__content">
-            <p class="df-fp-kicker">Cause</p>
-            <h1 class="df-fp-hero__title">${esc(cause.title)}</h1>
-            ${foundation.foundationName
-              ? `<p class="df-fp-hero__byline">${esc(foundation.foundationName)}</p>`
-              : ''}
-            ${foundation.creatorName
-              ? `<p class="df-fp-muted">Founded by ${esc(foundation.creatorName)}</p>`
-              : ''}
-          </div>
-        </header>
-        ${descriptionHtml ? `
-          <section class="df-fp-block">
-            <p class="df-fp-kicker">About this Cause</p>
-            <div class="df-fp-about__text">${descriptionHtml}</div>
-          </section>
-        ` : ''}
-        <section class="df-fp-block df-fp-support-end">
-          <button type="button" class="df-fp-cta df-fp-cta--secondary" data-action="back-to-foundation">
-            Back to Foundation
-          </button>
-        </section>
-      </article>
-    `;
-  }
-
   function renderTransparency(foundation) {
     const allocation = Array.isArray(foundation.financialAllocation)
       ? foundation.financialAllocation.filter((row) => row && row.label && row.percent != null)
@@ -1500,8 +1413,6 @@ const WorldChoirDonate = (() => {
         </nav>
 
         ${renderProfileHero(foundation)}
-
-        ${renderCausesSection(foundation)}
 
         ${foundation.biography ? `
           <section class="df-fp-block df-fp-about">
@@ -1748,11 +1659,7 @@ const WorldChoirDonate = (() => {
       } else {
         url.searchParams.delete('foundation');
       }
-      if (selectedFoundation && viewingFoundationCause) {
-        url.searchParams.set('fcause', viewingFoundationCause.slug || viewingFoundationCause.id);
-      } else {
-        url.searchParams.delete('fcause');
-      }
+      url.searchParams.delete('fcause');
       const next = `${url.pathname}${url.search}${url.hash}`;
       const cur = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       if (next !== cur) window.history.replaceState({}, '', next);
@@ -1761,44 +1668,10 @@ const WorldChoirDonate = (() => {
     }
   }
 
-  function bindFoundationCauseInteractions(root, foundation) {
-    root.querySelectorAll('[data-open-foundation-cause]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-open-foundation-cause');
-        const cause = (foundation.causes || []).find((c) => c.id === id)
-          || CreatorFoundationsStore.getFoundationCause?.(foundation.id, id);
-        if (cause) openFoundationCause(foundation, cause);
-      });
-    });
-    root.querySelector('[data-action="toggle-causes"]')?.addEventListener('click', () => {
-      causesExpanded = !causesExpanded;
-      openProfile(foundation, { preserveScroll: true, preserveExpanded: true });
-    });
-  }
-
-  function openFoundationCause(foundation, cause) {
-    closeFoundationLightbox();
-    viewingFoundationCause = cause;
-    selectedFoundation = foundation;
-    syncDonateUrl();
-    const root = document.getElementById('donate-content');
-    root.innerHTML = renderFoundationCausePage(foundation, cause);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    const backToFoundation = () => {
-      viewingFoundationCause = null;
-      openProfile(foundation);
-    };
-    document.getElementById('donate-back')?.addEventListener('click', backToFoundation);
-    root.querySelector('[data-action="back-to-foundation"]')?.addEventListener('click', backToFoundation);
-  }
-
   function openProfile(foundation, opts = {}) {
     closeFoundationLightbox();
     selectedFoundation = foundation;
     selectedProject = null;
-    viewingFoundationCause = null;
-    if (!opts.preserveExpanded) causesExpanded = false;
     syncDonateUrl();
     const root = document.getElementById('donate-content');
     const scrollY = opts.preserveScroll ? (window.scrollY || 0) : 0;
@@ -1810,8 +1683,6 @@ const WorldChoirDonate = (() => {
       if (closeFoundationLightbox()) return;
       selectedFoundation = null;
       selectedProject = null;
-      viewingFoundationCause = null;
-      causesExpanded = false;
       syncDonateUrl();
       renderHome();
     });
@@ -1837,21 +1708,6 @@ const WorldChoirDonate = (() => {
     });
 
     bindProfileInteractions(root, foundation);
-    bindFoundationCauseInteractions(root, foundation);
-
-    // Refresh catalog so newly created Causes appear without a hard reload.
-    if (typeof CreatorFoundationsStore !== 'undefined' && CreatorFoundationsStore.refresh) {
-      CreatorFoundationsStore.refresh().then(() => {
-        if (selectedFoundation?.id !== foundation.id || viewingFoundationCause) return;
-        const fresh = CreatorFoundationsStore.getById(foundation.id);
-        if (!fresh) return;
-        const before = (foundation.causes || []).map((c) => c.id).join(',');
-        const after = (fresh.causes || []).map((c) => c.id).join(',');
-        if (before === after) return;
-        selectedFoundation = fresh;
-        openProfile(fresh, { preserveScroll: true, preserveExpanded: true });
-      }).catch(() => { /* ignore */ });
-    }
   }
 
   function ensureModal() {
@@ -2457,15 +2313,7 @@ const WorldChoirDonate = (() => {
         || String(f.id || '').toLowerCase() === raw
       );
       if (found) {
-        const causeRaw = String(params.get('fcause') || '').trim();
         openProfile(found);
-        if (causeRaw) {
-          const cause = (found.causes || []).find((c) =>
-            String(c.id || '').toLowerCase() === causeRaw.toLowerCase()
-            || String(c.slug || '').toLowerCase() === causeRaw.toLowerCase()
-          ) || CreatorFoundationsStore.getFoundationCause?.(found.id, causeRaw);
-          if (cause) openFoundationCause(found, cause);
-        }
         return true;
       }
     } catch {
@@ -2526,8 +2374,6 @@ const WorldChoirDonate = (() => {
 
     selectedFoundation = null;
     selectedProject = null;
-    viewingFoundationCause = null;
-    causesExpanded = false;
     searchOpen = false;
     searchQuery = '';
     selectedCause = 'all';

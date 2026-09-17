@@ -1563,6 +1563,7 @@
   stroke: currentColor;
   fill: none;
   stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
 }
 
 .df-fp-nav__back:hover,
@@ -1574,7 +1575,7 @@
 }
 
 .df-fp-nav__favorite.is-on {
-  color: #e0708a;
+  color: var(--df-accent, #4ec5e8);
 }
 
 .df-fp-nav__favorite.is-on svg {
@@ -1584,7 +1585,7 @@
 
 .df-fp-nav__favorite.is-on:hover,
 .df-fp-nav__favorite.is-on:focus-visible {
-  color: #f08aa0;
+  color: var(--df-accent, #4ec5e8);
 }
 
 .df-fp-nav__share.is-copied {
@@ -3381,7 +3382,7 @@ html[data-theme="light"] .df-fp .df-muted {
 }
 
 html[data-theme="light"] .df-fp-nav__favorite.is-on {
-  color: #d45a78 !important;
+  color: var(--df-accent, #4ec5e8) !important;
 }
 
 html[data-theme="light"] .df-fp-story__chevron {
@@ -3395,135 +3396,4 @@ html[data-theme="light"] .df-social__link {
 html[data-theme="light"] .df-social__link:hover,
 html[data-theme="light"] .df-social__link:focus-visible {
   color: var(--df-accent);
-}
-
-/* ─── Foundation Causes ─── */
-
-.df-fp-causes__grid {
-  list-style: none;
-  margin: 14px 0 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.df-fp-cause-card {
-  appearance: none;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
-  background: #0a0a0c;
-  color: inherit;
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: border-color 0.22s ease, transform 0.22s ease;
-}
-
-.df-fp-cause-card:hover,
-.df-fp-cause-card:focus-visible {
-  border-color: color-mix(in srgb, var(--df-accent, #4ec5e8) 35%, var(--border-subtle, rgba(255,255,255,0.08)));
-  outline: none;
-  transform: translateY(-1px);
-}
-
-.df-fp-cause-card__media {
-  display: block;
-  aspect-ratio: 4 / 3;
-  background: #101014;
-  overflow: hidden;
-}
-
-.df-fp-cause-card__media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.df-fp-cause-card__title {
-  display: block;
-  padding: 12px 12px 14px;
-  font-size: 0.92rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.35;
-}
-
-.df-fp-causes__toggle-wrap {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
-}
-
-.df-fp-causes__toggle {
-  appearance: none;
-  border: 1px solid color-mix(in srgb, var(--df-accent, #4ec5e8) 45%, transparent);
-  background: #000;
-  color: var(--df-accent, #4ec5e8);
-  font-family: var(--font-sans);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  padding: 10px 22px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.df-fp-causes__toggle:hover,
-.df-fp-causes__toggle:focus-visible {
-  background: color-mix(in srgb, var(--df-accent, #4ec5e8) 12%, #000);
-  outline: none;
-}
-
-.df-fp-cause-hero__visual {
-  width: 100%;
-  max-height: min(52vh, 360px);
-  overflow: hidden;
-  background: #070708;
-}
-
-.df-fp-cause-hero__visual img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  max-height: min(52vh, 360px);
-  object-fit: cover;
-  object-position: center;
-}
-
-.df-fp-cause-hero__content {
-  padding: 20px 20px 8px;
-}
-
-.df-fp-cause-hero__content .df-fp-muted {
-  margin-top: 4px;
-}
-
-@media (max-width: 720px) {
-  .df-fp-causes__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 420px) {
-  .df-fp-causes__grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-html[data-theme="light"] .df-fp-cause-card {
-  background: #fff;
-}
-
-html[data-theme="light"] .df-fp-cause-card__title {
-  color: #12141a;
 }

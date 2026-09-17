@@ -50,7 +50,6 @@ async function handleCreateIntent(req, res) {
   const body = req.body || {};
   const foundationId = String(body.foundationId || '').trim();
   const projectId = body.projectId ? String(body.projectId).trim() : null;
-  const causeId = body.causeId ? String(body.causeId).trim() : null;
   const deviceId = String(body.deviceId || '').trim() || null;
   const currency = String(body.currency || 'EUR').trim().toUpperCase() || 'EUR';
   const grossCents = donations.eurosToCents(body.amount);
@@ -81,7 +80,6 @@ async function handleCreateIntent(req, res) {
       donationId,
       foundationId: foundation.id,
       projectId: projectId || '',
-      causeId: causeId || '',
       deviceId: deviceId || '',
       platformFeeCents: String(split.platformFeeCents),
       foundationAmountCents: String(split.foundationAmountCents),
@@ -93,7 +91,6 @@ async function handleCreateIntent(req, res) {
     donationId,
     foundation,
     projectId,
-    causeId,
     split,
     currency,
     deviceId,
@@ -312,25 +309,6 @@ async function completeFromPi(pi) {
     updated_at: new Date().toISOString(),
   };
   await donations.upsertDonation(completed);
-
-  // Attribute Cause supporters when donation carries a real causeId
-  const causeId = String(completed.causeId || completed.cause_id || pi.metadata?.causeId || '').trim();
-  const foundationId = String(completed.foundationId || completed.foundation_id || '').trim();
-  const visitorKey = String(completed.deviceId || completed.donorId || '').trim();
-  if (causeId && foundationId && visitorKey) {
-    try {
-      const { recordCauseEvent } = require('./_lib/foundation-cause-analytics');
-      await recordCauseEvent({
-        foundationId,
-        causeId,
-        type: 'cause_supported',
-        visitorKey,
-        isOwner: false,
-      });
-    } catch (analyticsErr) {
-      console.warn('Cause support analytics:', analyticsErr.message);
-    }
-  }
 
   return completed;
 }
