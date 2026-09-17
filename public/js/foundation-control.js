@@ -831,7 +831,7 @@ const FoundationControl = (() => {
     const locked = !can('editFoundation');
     const countries = countryOptions(form.country);
     return `
-      <form class="fcc-form fcc-page-form" id="fcc-foundation-form" data-part="page">
+      <form class="fcc-form wide fcc-page-form" id="fcc-foundation-form" data-part="page">
         ${renderPageEditCard('Basics', `
           <div class="fcc-page-split">
             <div class="fcc-field">

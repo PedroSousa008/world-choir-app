@@ -1331,8 +1331,15 @@
   min-width: 0;
 }
 
-.fcc-page-form {
+.fcc-foundation-editor {
+  width: 100%;
   max-width: none;
+  min-width: 0;
+}
+
+.fcc-page-form {
+  display: grid;
+  max-width: none !important;
   width: 100%;
   gap: 16px;
 }
@@ -1343,6 +1350,7 @@
   border-radius: 14px;
   padding: 18px 20px 20px;
   min-width: 0;
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -1366,22 +1374,26 @@
 .fcc-edit-card--stretch {
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
 .fcc-edit-card--stretch .fcc-edit-card__body {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .fcc-edit-card-row {
   display: grid;
   gap: 16px;
   align-items: stretch;
+  width: 100%;
 }
 
 @media (min-width: 900px) {
   .fcc-edit-card-row {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 
@@ -1865,7 +1877,11 @@
   max-width: 560px;
 }
 
-.fcc-form.wide { max-width: none; }
+.fcc-form.wide,
+.fcc-form.fcc-page-form {
+  max-width: none;
+  width: 100%;
+}
 
 .fcc-form.two-col {
   grid-template-columns: 1fr 1fr;
