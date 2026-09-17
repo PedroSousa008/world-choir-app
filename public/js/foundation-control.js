@@ -764,7 +764,7 @@ const FoundationControl = (() => {
         ` : ''}
         ${tab === 'card' ? renderFoundationCardEditor(form) : ''}
         ${tab === 'information' ? `
-          <div class="fcc-editor-grid">
+          <div class="fcc-page-editor">
             ${renderFoundationInfoFields(form)}
           </div>
         ` : ''}
@@ -978,30 +978,47 @@ const FoundationControl = (() => {
 
   function renderFoundationInfoFields(form) {
     const s = form.socialLinks || {};
+    const locked = !can('editFoundation');
+    const ro = locked ? 'readonly' : '';
     return `
-      <form class="fcc-form wide" id="fcc-foundation-form" data-part="information">
-        <div class="fcc-field">
-          <label for="ff-web">Website</label>
-          <input id="ff-web" name="website" value="${esc(form.website)}" ${can('editFoundation') ? '' : 'readonly'}>
+      <form class="fcc-form wide fcc-page-form" id="fcc-foundation-form" data-part="information">
+        ${renderPageEditCard('Website', `
+          <div class="fcc-field">
+            <label class="sr-only" for="ff-web">Website</label>
+            <input id="ff-web" name="website" value="${esc(form.website)}" ${ro}>
+          </div>
+        `)}
+
+        <div class="fcc-edit-card-row">
+          ${renderPageEditCard('Instagram', `
+            <div class="fcc-field">
+              <label class="sr-only" for="ff-ig">Instagram</label>
+              <input id="ff-ig" name="instagram" value="${esc(s.instagram)}" ${ro}>
+            </div>
+          `)}
+          ${renderPageEditCard('YouTube', `
+            <div class="fcc-field">
+              <label class="sr-only" for="ff-yt">YouTube</label>
+              <input id="ff-yt" name="youtube" value="${esc(s.youtube)}" ${ro}>
+            </div>
+          `)}
         </div>
-        <div class="fcc-form two-col" style="max-width:none;padding:0;border:0;background:transparent">
-          <div class="fcc-field">
-            <label for="ff-ig">Instagram</label>
-            <input id="ff-ig" name="instagram" value="${esc(s.instagram)}" ${can('editFoundation') ? '' : 'readonly'}>
-          </div>
-          <div class="fcc-field">
-            <label for="ff-yt">YouTube</label>
-            <input id="ff-yt" name="youtube" value="${esc(s.youtube)}" ${can('editFoundation') ? '' : 'readonly'}>
-          </div>
-          <div class="fcc-field">
-            <label for="ff-x">X</label>
-            <input id="ff-x" name="x" value="${esc(s.x)}" ${can('editFoundation') ? '' : 'readonly'}>
-          </div>
-          <div class="fcc-field">
-            <label for="ff-tt">TikTok</label>
-            <input id="ff-tt" name="tiktok" value="${esc(s.tiktok)}" ${can('editFoundation') ? '' : 'readonly'}>
-          </div>
+
+        <div class="fcc-edit-card-row">
+          ${renderPageEditCard('X', `
+            <div class="fcc-field">
+              <label class="sr-only" for="ff-x">X</label>
+              <input id="ff-x" name="x" value="${esc(s.x)}" ${ro}>
+            </div>
+          `)}
+          ${renderPageEditCard('TikTok', `
+            <div class="fcc-field">
+              <label class="sr-only" for="ff-tt">TikTok</label>
+              <input id="ff-tt" name="tiktok" value="${esc(s.tiktok)}" ${ro}>
+            </div>
+          `)}
         </div>
+
         <p class="fcc-muted">Email: ${esc(state.data?.foundation?.email || state.email || '—')} · Change email in Settings → Security.</p>
       </form>
     `;
