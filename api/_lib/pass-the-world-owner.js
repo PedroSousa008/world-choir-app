@@ -451,7 +451,7 @@ async function buildPassTheWorldOwnerIntel({ range = 'all', roundId = null } = {
 
   const invitationsOverTime = bucketSeries(rounds);
   const participationOverTime = rounds
-    .filter((r) => r.date && !r.wasEmpty)
+    .filter((r) => r.date)
     .map((r) => {
       const atMs = safeOpenMs(r.openAt);
       const worldEntry = atMs != null ? worldAtTime(itinerary, atMs) : null;
@@ -626,11 +626,11 @@ async function buildPassTheWorldOwnerIntel({ range = 'all', roundId = null } = {
     : null;
 
   const sortedDates = [...inviteUsersByDate.keys()].sort();
-  const cumulativeUsers = new Set();
-  const uniqueParticipantsOverTime = sortedDates.map((date) => {
-    for (const uid of inviteUsersByDate.get(date)) cumulativeUsers.add(uid);
-    return { date, value: cumulativeUsers.size };
-  });
+  // Daily unique participants (can rise and fall), not a cumulative total.
+  const uniqueParticipantsOverTime = sortedDates.map((date) => ({
+    date,
+    value: inviteUsersByDate.get(date)?.size || 0,
+  }));
 
   const successfulRounds = rounds.filter((r) => r.selectedCity && !r.wasEmpty).length;
   const invitationOutcomes = {

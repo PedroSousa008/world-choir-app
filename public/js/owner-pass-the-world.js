@@ -94,35 +94,338 @@ const OwnerPassTheWorld = (() => {
     return row?.id || 'idle';
   }
 
-  function renderLineChart(series, valueKey, label) {
-    if (!series?.length) {
+  const PTW_CHART = { w: 800, h: 220 };
+
+  const PTW_CHART_KINDS = {
+    invitations: {
+      valueKey: 'invitations',
+      label: 'Invitations over time',
+      unit: 'invitations',
+      unitOne: 'invitation',
+      extras: [],
+    },
+    rate: {
+      valueKey: 'rate',
+      label: 'Participation rate over time',
+      unit: null,
+      unitOne: null,
+      extras: ['invitations', 'eligible'],
+      isRate: true,
+    },
+    participants: {
+      valueKey: 'participants',
+      label: 'Unique participants over time',
+      unit: 'participants',
+      unitOne: 'participant',
+      extras: [],
+    },
+  };
+
+  function utcDay(iso = new Date()) {
+    return new Date(iso).toISOString().slice(0, 10);
+  }
+
+  function shiftUtcDay(day, delta) {
+    const d = new Date(`${day}T12:00:00.000Z`);
+    d.setUTCDate(d.getUTCDate() + delta);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function formatChartDay(day, long = false) {
+    if (!day) return '—';
+    const d = new Date(`${day}T12:00:00.000Z`);
+    if (Number.isNaN(d.getTime())) return day;
+    return d.toLocaleDateString('en-GB', long
+      ? { day: 'numeric', month: 'long', year: 'numeric' }
+      : { day: 'numeric', month: 'short' });
+  }
+
+  function chartRangeBounds(state, series) {
+    const today = utcDay();
+    const range = state.ptwRange || 'all';
+    const sorted = [...(series || [])]
+      .filter((p) => p && p.date)
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const first = sorted[0]?.date;
+    const last = sorted[sorted.length - 1]?.date || today;
+    if (range === 'all') {
+      return { from: first || today, to: last > today ? last : today };
+    }
+    const days = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 }[range] || 30;
+    return { from: shiftUtcDay(today, -(days - 1)), to: today };
+  }
+
+  function expandDailySeries(series, valueKey, bounds, extras = []) {
+    const byDate = new Map();
+    for (const p of series || []) {
+      if (!p?.date) continue;
+      byDate.set(p.date, p);
+    }
+    const points = [];
+    if (!bounds?.from || !bounds?.to || bounds.from > bounds.to) return points;
+
+    let prevValue = null;
+    const prevDay = shiftUtcDay(bounds.from, -1);
+    if (byDate.has(prevDay)) {
+      prevValue = Number(byDate.get(prevDay)[valueKey]) || 0;
+    }
+
+    let cursor = bounds.from;
+    while (cursor <= bounds.to) {
+      const hit = byDate.get(cursor);
+      const value = hit ? (Number(hit[valueKey]) || 0) : 0;
+      const point = { date: cursor, value, prevValue };
+      if (hit) {
+        for (const key of extras) {
+          if (hit[key] != null) point[key] = hit[key];
+        }
+      }
+      points.push(point);
+      prevValue = value;
+      cursor = shiftUtcDay(cursor, 1);
+    }
+    return points;
+  }
+
+  function smoothLinePath(coords) {
+    if (!coords.length) return '';
+    if (coords.length === 1) return `M${coords[0].x} ${coords[0].y}`;
+    let d = `M${coords[0].x} ${coords[0].y}`;
+    for (let i = 1; i < coords.length; i += 1) {
+      const prev = coords[i - 1];
+      const cur = coords[i];
+      const cpx = (prev.x + cur.x) / 2;
+      d += ` C ${cpx} ${prev.y}, ${cpx} ${cur.y}, ${cur.x} ${cur.y}`;
+    }
+    return d;
+  }
+
+  function formatChartValue(value, kindMeta) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    if (kindMeta.isRate) return `${n.toFixed(1)}%`;
+    const abs = Math.round(n);
+    const isOne = Math.abs(abs) === 1;
+    const unit = kindMeta.unit ? ` ${isOne ? kindMeta.unitOne : kindMeta.unit}` : '';
+    return `${abs.toLocaleString('en-US')}${unit}`;
+  }
+
+  function formatChartDelta(delta, kindMeta) {
+    const n = Number(delta);
+    if (!Number.isFinite(n) || n === 0) {
+      return kindMeta.isRate ? '0.0%' : `0 ${kindMeta.unit || ''}`.trim();
+    }
+    const sign = n > 0 ? '+' : '−';
+    if (kindMeta.isRate) return `${sign}${Math.abs(n).toFixed(1)} pp`;
+    const abs = Math.round(Math.abs(n));
+    const isOne = abs === 1;
+    const unit = kindMeta.unit ? ` ${isOne ? kindMeta.unitOne : kindMeta.unit}` : '';
+    return `${sign}${abs.toLocaleString('en-US')}${unit}`;
+  }
+
+  function yAxisLabel(tick, kindMeta) {
+    if (kindMeta.isRate) return `${Math.round(tick)}%`;
+    return Number(tick).toLocaleString('en-US');
+  }
+
+  function renderLineChart(series, kind, state, esc) {
+    const kindMeta = PTW_CHART_KINDS[kind] || PTW_CHART_KINDS.invitations;
+    const bounds = chartRangeBounds(state, series);
+    const hasSource = Array.isArray(series) && series.length > 0;
+    if (!hasSource && (state.ptwRange || 'all') === 'all') {
       return `<p class="owner-ptw-empty">No data yet.</p>`;
     }
-    const w = 320;
-    const h = 100;
-    const pad = { l: 2, r: 2, t: 6, b: 4 };
-    const values = series.map((d) => Number(d[valueKey] ?? 0));
-    const max = Math.max(1, ...values);
+
+    const points = expandDailySeries(series, kindMeta.valueKey, bounds, kindMeta.extras);
+    if (!points.length) {
+      return `<p class="owner-ptw-empty">No activity was recorded in this range.</p>`;
+    }
+
+    const w = PTW_CHART.w;
+    const h = PTW_CHART.h;
+    const pad = { t: 18, r: 16, b: 16, l: 16 };
     const innerW = w - pad.l - pad.r;
     const innerH = h - pad.t - pad.b;
-    const coords = series.map((d, i) => {
-      const x = pad.l + (series.length <= 1 ? innerW / 2 : (i / (series.length - 1)) * innerW);
-      const y = pad.t + innerH - (Number(d[valueKey] ?? 0) / max) * innerH;
-      return { x, y };
+    const values = points.map((p) => Number(p.value) || 0);
+    const dataMin = Math.min(...values);
+    const dataMax = Math.max(...values);
+    const spread = dataMax - dataMin;
+    const padAmt = spread === 0 ? Math.max(1, dataMax * 0.08 || 1) : spread * 0.14;
+    const minY = Math.max(0, dataMin - padAmt);
+    const maxY = dataMax + padAmt || 1;
+    const ySpan = maxY - minY || 1;
+    const coords = points.map((p, i) => {
+      const value = Number(p.value) || 0;
+      const x = points.length === 1
+        ? pad.l + innerW / 2
+        : pad.l + (i / (points.length - 1)) * innerW;
+      const y = pad.t + innerH - ((value - minY) / ySpan) * innerH;
+      return { x, y, ...p, value };
     });
-    const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ');
-    const area = `${line} L${coords[coords.length - 1].x.toFixed(1)} ${(pad.t + innerH).toFixed(1)} L${coords[0].x.toFixed(1)} ${(pad.t + innerH).toFixed(1)} Z`;
+    const line = smoothLinePath(coords);
+    const bottom = pad.t + innerH;
+    const area = `${line} L ${coords[coords.length - 1].x} ${bottom} L ${coords[0].x} ${bottom} Z`;
+    const yTicks = [maxY, minY + ySpan / 2, minY];
+    const xTicks = coords.length === 1
+      ? [coords[0]]
+      : [coords[0], coords[Math.floor(coords.length / 2)], coords[coords.length - 1]]
+        .filter((c, i, arr) => arr.findIndex((x) => x.date === c.date) === i);
+    const showDots = coords.length <= 14;
+    const tipPayload = coords.map((c) => ({
+      x: c.x,
+      y: c.y,
+      date: c.date,
+      value: c.value,
+      prevValue: c.prevValue,
+      invitations: c.invitations,
+      eligible: c.eligible,
+    }));
+    const fillId = `owner-ptw-fill-${kind}`;
+    const glowId = `owner-ptw-glow-${kind}`;
+
     return `
-      <svg class="owner-ptw-line-chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="${label}">
-        <defs>
-          <linearGradient id="owner-ptw-chart-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#4ec5e8" stop-opacity="0.35"/>
-            <stop offset="100%" stop-color="#4ec5e8" stop-opacity="0"/>
-          </linearGradient>
-        </defs>
-        <path class="owner-ptw-line-chart__area" d="${area}"/>
-        <path class="owner-ptw-line-chart__line" d="${line}"/>
-      </svg>`;
+      <div class="owner-ptw-chart" data-ptw-chart data-ptw-chart-kind="${kind}" data-ptw-chart-points="${esc(JSON.stringify(tipPayload))}">
+        <div class="owner-ptw-chart__plot">
+          <div class="owner-ptw-chart__y" aria-hidden="true">
+            ${yTicks.map((tick) => `<span>${esc(yAxisLabel(tick, kindMeta))}</span>`).join('')}
+          </div>
+          <svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(kindMeta.label)}">
+            <defs>
+              <linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#4ec5e8" stop-opacity="0.28"/>
+                <stop offset="100%" stop-color="#4ec5e8" stop-opacity="0"/>
+              </linearGradient>
+              <filter id="${glowId}" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="2.2" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            ${yTicks.map((tick) => {
+              const y = pad.t + innerH - ((tick - minY) / ySpan) * innerH;
+              return `<line class="owner-ptw-chart__grid" x1="${pad.l}" y1="${y}" x2="${w - pad.r}" y2="${y}"/>`;
+            }).join('')}
+            <path class="owner-ptw-chart__area" d="${area}" fill="url(#${fillId})"/>
+            <path class="owner-ptw-chart__line" d="${line}" filter="url(#${glowId})"/>
+            ${showDots ? coords.map((c) => `<circle class="owner-ptw-chart__dot" cx="${c.x}" cy="${c.y}" r="3.2"/>`).join('') : ''}
+            <rect class="owner-ptw-chart__hit" x="0" y="0" width="${w}" height="${h}" fill="transparent"/>
+            <circle class="owner-ptw-chart__hover-dot" data-ptw-chart-hover-dot cx="0" cy="0" r="5" hidden/>
+          </svg>
+        </div>
+        <div class="owner-ptw-chart__x" aria-hidden="true">
+          ${xTicks.map((c) => `<span>${esc(formatChartDay(c.date))}</span>`).join('')}
+        </div>
+        <div class="owner-ptw-chart__tip" data-ptw-chart-tip hidden></div>
+      </div>`;
+  }
+
+  function bindCharts(root, esc) {
+    root.querySelectorAll('[data-ptw-chart]').forEach((chart) => {
+      let points = [];
+      try {
+        points = JSON.parse(chart.getAttribute('data-ptw-chart-points') || '[]');
+      } catch {
+        points = [];
+      }
+      const kind = chart.getAttribute('data-ptw-chart-kind') || 'invitations';
+      const kindMeta = PTW_CHART_KINDS[kind] || PTW_CHART_KINDS.invitations;
+      const svg = chart.querySelector('svg');
+      const tip = chart.querySelector('[data-ptw-chart-tip]');
+      const dot = chart.querySelector('[data-ptw-chart-hover-dot]');
+      if (!svg || !tip || !points.length) return;
+
+      function nearest(ev) {
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width) return points[0];
+        const x = ((ev.clientX - rect.left) / rect.width) * PTW_CHART.w;
+        let best = points[0];
+        let bestDist = Infinity;
+        points.forEach((p) => {
+          const dist = Math.abs(p.x - x);
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = p;
+          }
+        });
+        return best;
+      }
+
+      function hide() {
+        tip.hidden = true;
+        if (dot) dot.setAttribute('hidden', '');
+      }
+
+      function show(ev) {
+        const p = nearest(ev);
+        if (!p) return;
+        const value = Number(p.value) || 0;
+        const prevValue = p.prevValue != null ? Number(p.prevValue) : null;
+        const changeBits = [];
+        let changeClass = 'is-flat';
+        if (prevValue != null && Number.isFinite(prevValue)) {
+          const delta = value - prevValue;
+          if (kindMeta.isRate) {
+            if (delta !== 0) {
+              changeBits.push(`${formatChartDelta(delta, kindMeta)} vs previous day`);
+              changeClass = delta > 0 ? 'is-up' : 'is-down';
+            } else {
+              changeBits.push('0.0 pp vs previous day');
+            }
+          } else if (prevValue > 0) {
+            const dayPct = Math.round((delta / prevValue) * 1000) / 10;
+            if (Number.isFinite(dayPct)) {
+              changeBits.push(`${dayPct > 0 ? '+' : ''}${dayPct.toFixed(1)}% vs previous day`);
+              changeClass = dayPct > 0 ? 'is-up' : dayPct < 0 ? 'is-down' : 'is-flat';
+            }
+          } else if (delta !== 0) {
+            changeBits.push(`${formatChartDelta(delta, kindMeta)} vs previous day`);
+            changeClass = delta > 0 ? 'is-up' : 'is-down';
+          } else {
+            changeBits.push('0.0% vs previous day');
+          }
+        }
+
+        let detail = '';
+        if (kindMeta.isRate) {
+          const invited = p.invitations != null ? Number(p.invitations) : null;
+          const eligible = p.eligible != null ? Number(p.eligible) : null;
+          if (invited != null && eligible != null) {
+            detail = `<p class="owner-ptw-chart__tip-detail">${esc(invited.toLocaleString('en-US'))} invitations · ${esc(eligible.toLocaleString('en-US'))} eligible</p>`;
+          }
+        }
+
+        tip.innerHTML = `
+          <p class="owner-ptw-chart__tip-date">${esc(formatChartDay(p.date, true))}</p>
+          <p class="owner-ptw-chart__tip-value">${esc(formatChartValue(value, kindMeta))}</p>
+          ${detail}
+          ${changeBits.length ? `<p class="owner-ptw-chart__tip-change ${changeClass}">${changeBits.map((b) => esc(b)).join(' · ')}</p>` : ''}
+        `;
+        tip.hidden = false;
+        if (dot) {
+          dot.removeAttribute('hidden');
+          dot.setAttribute('cx', String(p.x));
+          dot.setAttribute('cy', String(p.y));
+        }
+        const chartRect = chart.getBoundingClientRect();
+        const svgRect = svg.getBoundingClientRect();
+        const px = svgRect.left - chartRect.left + (p.x / PTW_CHART.w) * svgRect.width;
+        const py = svgRect.top - chartRect.top + (p.y / PTW_CHART.h) * svgRect.height;
+        const tipW = tip.offsetWidth || 180;
+        const tipH = tip.offsetHeight || 72;
+        let left = px - tipW / 2;
+        left = Math.max(8, Math.min(left, chartRect.width - tipW - 8));
+        let top = py - tipH - 14;
+        if (top < 8) top = py + 16;
+        tip.style.left = `${left}px`;
+        tip.style.top = `${top}px`;
+      }
+
+      chart.addEventListener('pointermove', show);
+      chart.addEventListener('pointerdown', show);
+      chart.addEventListener('pointerleave', hide);
+    });
   }
 
   function renderDonut(outcomes) {
@@ -355,21 +658,20 @@ const OwnerPassTheWorld = (() => {
           <article class="owner-ptw-panel">
             <div class="owner-ptw-panel__head">
               <h3 class="owner-ptw-panel__title">Invitations Over Time</h3>
-              <div class="owner-ptw-panel__chips">${renderRangeChips(state, 'ptw-chart-range')}</div>
             </div>
-            ${renderLineChart(d.charts?.invitationsOverTime, 'invitations', 'Invitations over time')}
+            ${renderLineChart(d.charts?.invitationsOverTime, 'invitations', state, esc)}
           </article>
           <article class="owner-ptw-panel">
             <div class="owner-ptw-panel__head">
               <h3 class="owner-ptw-panel__title">Participation Rate</h3>
             </div>
-            ${renderLineChart(d.charts?.participationRateOverTime, 'rate', 'Participation rate over time')}
+            ${renderLineChart(d.charts?.participationRateOverTime, 'rate', state, esc)}
           </article>
           <article class="owner-ptw-panel">
             <div class="owner-ptw-panel__head">
               <h3 class="owner-ptw-panel__title">Unique Participants Over Time</h3>
             </div>
-            ${renderLineChart(d.charts?.uniqueParticipantsOverTime, 'participants', 'Unique participants over time')}
+            ${renderLineChart(d.charts?.uniqueParticipantsOverTime, 'participants', state, esc)}
           </article>
           <article class="owner-ptw-panel">
             <div class="owner-ptw-panel__head">
@@ -598,7 +900,7 @@ const OwnerPassTheWorld = (() => {
     };
 
     bindRange('ptw-range');
-    bindRange('ptw-chart-range');
+    bindCharts(root, helpers.esc || ((s) => String(s ?? '')));
 
     root.querySelector('[data-ptw-back-rounds]')?.addEventListener('click', () => {
       state.ptwRoundId = null;
