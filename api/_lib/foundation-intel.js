@@ -573,9 +573,9 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
     },
     activity,
     donations: {
-      totalRaised: canViewAmounts ? allTimeRaised : null,
-      totalSupporters: canViewSupporters ? allTimeSupporters : null,
-      totalDonations: canViewDetails ? foundationDonations.length : null,
+      totalRaised: canViewAmounts ? totalRaised : null,
+      totalSupporters: canViewSupporters ? totalSupporters : null,
+      totalDonations: canViewDetails ? ranged.length : null,
       newSupporters: canViewSupporters ? newSupporters : null,
       repeatSupporters: canViewSupporters ? repeatSupporters : null,
       averageDonation: canViewAmounts ? (average(amounts) != null ? Math.round(average(amounts) * 100) / 100 : null) : null,

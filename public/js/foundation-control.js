@@ -1411,6 +1411,21 @@ const FoundationControl = (() => {
     const conversionNote = don.conversionRate == null
       ? (don.conversionNote || 'Conversion rate requires Foundation page view tracking.')
       : '';
+    const canViewAmounts = don.canViewAmounts !== false;
+    const raisedAmount = canViewAmounts && don.totalRaised != null ? Number(don.totalRaised) : null;
+    const feePercent = Number(don.platformFeePercent);
+    const hasFeePercent = Number.isFinite(feePercent);
+    let netToFoundationLabel = '—';
+    let worldChoirFeeLabel = '—';
+    if (raisedAmount != null && Number.isFinite(raisedAmount) && hasFeePercent) {
+      const grossCents = Math.round(raisedAmount * 100);
+      const feeCents = Math.round(grossCents * (feePercent / 100));
+      const netCents = grossCents - feeCents;
+      netToFoundationLabel = money(netCents / 100, currency());
+      worldChoirFeeLabel = `${money(feeCents / 100, currency())} (${feePercent}%)`;
+    } else if (hasFeePercent) {
+      worldChoirFeeLabel = `— (${feePercent}%)`;
+    }
 
     return `
       <section class="fcc-donations">
@@ -1427,8 +1442,10 @@ const FoundationControl = (() => {
             <span class="fcc-don-info__icon" aria-hidden="true">${donIcon('info')}</span>
             <div class="fcc-don-info__copy">
               <p class="fcc-don-info__summary">
-                New supporters ${esc(num(don.newSupporters || 0))} · Returning ${esc(num(don.repeatSupporters || 0))}
-                · Foundation share ${esc(don.foundationSharePercent ?? '—')}% · Platform fee ${esc(don.platformFeePercent ?? '—')}%
+                <span class="fcc-don-info__net">Net to Foundation ${esc(netToFoundationLabel)}</span>
+                · World Choir fee ${esc(worldChoirFeeLabel)}
+                · New supporters ${esc(num(don.newSupporters || 0))}
+                · Returning supporters ${esc(num(don.repeatSupporters || 0))}
               </p>
               ${conversionNote ? `<p class="fcc-don-info__note">${esc(conversionNote)}</p>` : ''}
             </div>
