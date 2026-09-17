@@ -18,6 +18,7 @@ function emptyWorkspace(foundationId) {
     version: 1,
     foundationId,
     projects: [],
+    causes: [],
     updates: [],
     team: [],
     activity: [],
@@ -40,6 +41,7 @@ async function readWorkspace(foundationId) {
       ...data,
       foundationId,
       projects: Array.isArray(data.projects) ? data.projects : [],
+      causes: Array.isArray(data.causes) ? data.causes : [],
       updates: Array.isArray(data.updates) ? data.updates : [],
       team: Array.isArray(data.team) ? data.team : [],
       activity: Array.isArray(data.activity) ? data.activity : [],
@@ -106,6 +108,139 @@ function publicProject(row) {
     updatedAt: row.updatedAt || null,
     publishedAt: row.publishedAt || null,
   };
+}
+
+function slugifyCauseTitle(title) {
+  const slug = String(title || '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 72);
+  return slug || 'cause';
+}
+
+function uniqueCauseSlug(ws, title, excludeId = null) {
+  const base = slugifyCauseTitle(title);
+  let candidate = base;
+  let n = 2;
+  const taken = (slug) => (ws.causes || []).some(
+    (c) => c && c.id !== excludeId && String(c.slug || '') === slug
+  );
+  while (taken(candidate)) {
+    candidate = `${base}-${n}`;
+    n += 1;
+  }
+  return candidate;
+}
+
+/** Public Cause entity (Foundation-owned). Distinct from primaryCategory taxonomy. */
+function publicCause(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title || '',
+    description: row.description || '',
+    image: row.image || '',
+    slug: row.slug || '',
+    status: row.status || 'active',
+    sortOrder: row.sortOrder != null && Number.isFinite(Number(row.sortOrder))
+      ? Number(row.sortOrder)
+      : null,
+    createdAt: row.createdAt || null,
+    updatedAt: row.updatedAt || null,
+  };
+}
+
+const CAUSE_STATUSES = new Set(['active', 'archived']);
+
+async function upsertCause(foundationId, payload = {}, actor = 'Foundation Owner') {
+  const ws = await readWorkspace(foundationId);
+  const now = new Date().toISOString();
+  let row;
+  let created = false;
+
+  if (payload.id) {
+    const index = ws.causes.findIndex((c) => c.id === payload.id);
+    if (index === -1) return { ok: false, error: 'Cause not found' };
+    row = { ...ws.causes[index] };
+  } else {
+    created = true;
+    row = {
+      id: randomUUID(),
+      createdAt: now,
+      status: 'active',
+      sortOrder: null,
+    };
+  }
+
+  if (payload.title !== undefined) {
+    row.title = String(payload.title || '').trim();
+  }
+  if (payload.description !== undefined) {
+    row.description = String(payload.description || '').trim();
+  }
+  if (payload.image !== undefined) {
+    row.image = String(payload.image || '').trim();
+  }
+  if (payload.status !== undefined) {
+    const status = String(payload.status || '').trim();
+    if (!CAUSE_STATUSES.has(status)) {
+      return { ok: false, error: 'Invalid cause status' };
+    }
+    row.status = status;
+  }
+  if (payload.sortOrder !== undefined) {
+    const n = Number(payload.sortOrder);
+    row.sortOrder = Number.isFinite(n) ? n : null;
+  }
+
+  if (!String(row.title || '').trim()) {
+    return { ok: false, error: 'Cause title is required' };
+  }
+  if (!String(row.image || '').trim()) {
+    return { ok: false, error: 'Cause image is required' };
+  }
+
+  row.slug = uniqueCauseSlug(ws, row.title, row.id);
+  row.updatedAt = now;
+
+  if (payload.id) {
+    const index = ws.causes.findIndex((c) => c.id === payload.id);
+    ws.causes[index] = row;
+  } else {
+    ws.causes.unshift(row);
+  }
+
+  await writeWorkspace(ws);
+  await appendActivity(foundationId, {
+    action: created ? 'cause_created' : 'cause_updated',
+    label: created ? 'Cause created' : 'Cause updated',
+    detail: row.title,
+    actor,
+    relatedType: 'cause',
+    relatedId: row.id,
+  });
+
+  return { ok: true, cause: publicCause(row) };
+}
+
+async function deleteCause(foundationId, causeId, actor = 'Foundation Owner') {
+  const ws = await readWorkspace(foundationId);
+  const index = ws.causes.findIndex((c) => c.id === causeId);
+  if (index === -1) return { ok: false, error: 'Cause not found' };
+  const [removed] = ws.causes.splice(index, 1);
+  await writeWorkspace(ws);
+  await appendActivity(foundationId, {
+    action: 'cause_deleted',
+    label: 'Cause deleted',
+    detail: removed?.title || causeId,
+    actor,
+    relatedType: 'cause',
+    relatedId: causeId,
+  });
+  return { ok: true };
 }
 
 function publicUpdate(row) {
@@ -474,23 +609,23 @@ async function saveDrafts(foundationId, drafts = {}) {
 function rolePermissions(role) {
   const map = {
     owner: {
-      editFoundation: true, createProjects: true, publishUpdates: true,
+      editFoundation: true, createProjects: true, manageCauses: true, publishUpdates: true,
       viewDonations: true, manageFinancial: true, manageTeam: true, exportData: true,
     },
     admin: {
-      editFoundation: true, createProjects: true, publishUpdates: true,
+      editFoundation: true, createProjects: true, manageCauses: true, publishUpdates: true,
       viewDonations: true, manageFinancial: false, manageTeam: true, exportData: true,
     },
     finance: {
-      editFoundation: false, createProjects: false, publishUpdates: false,
+      editFoundation: false, createProjects: false, manageCauses: false, publishUpdates: false,
       viewDonations: true, manageFinancial: true, manageTeam: false, exportData: true,
     },
     editor: {
-      editFoundation: true, createProjects: true, publishUpdates: true,
+      editFoundation: true, createProjects: true, manageCauses: true, publishUpdates: true,
       viewDonations: false, manageFinancial: false, manageTeam: false, exportData: false,
     },
     analyst: {
-      editFoundation: false, createProjects: false, publishUpdates: false,
+      editFoundation: false, createProjects: false, manageCauses: false, publishUpdates: false,
       viewDonations: true, manageFinancial: false, manageTeam: false, exportData: true,
     },
   };
@@ -501,6 +636,7 @@ module.exports = {
   readWorkspace,
   writeWorkspace,
   publicProject,
+  publicCause,
   publicUpdate,
   publicTeamMember,
   publicNotification,
@@ -508,6 +644,8 @@ module.exports = {
   appendNotification,
   upsertProject,
   setProjectStatus,
+  upsertCause,
+  deleteCause,
   upsertUpdate,
   upsertTeamMember,
   removeTeamMember,
@@ -520,5 +658,6 @@ module.exports = {
   saveDrafts,
   rolePermissions,
   PROJECT_STATUSES,
+  CAUSE_STATUSES,
   TEAM_ROLES,
 };

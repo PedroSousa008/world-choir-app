@@ -46,6 +46,8 @@ const {
 const {
   upsertProject,
   setProjectStatus,
+  upsertCause,
+  deleteCause,
   upsertUpdate,
   upsertTeamMember,
   removeTeamMember,
@@ -218,7 +220,11 @@ module.exports = async function handler(req, res) {
       }
 
       const { dataUrl, kind, fileName } = req.body || {};
-      const field = kind === 'cover' ? 'cover' : (kind === 'project' ? 'project' : 'profile');
+      const field = kind === 'cover'
+        ? 'cover'
+        : (kind === 'project'
+          ? 'project'
+          : (kind === 'cause' ? 'cause' : 'profile'));
       if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
         return res.status(400).json({ error: 'Choose an image from your device' });
       }
@@ -330,6 +336,30 @@ module.exports = async function handler(req, res) {
       const { id, status } = req.body || {};
       if (!id || !status) return res.status(400).json({ error: 'Project id and status required' });
       const result = await setProjectStatus(session.influencerId, id, status, actorLabel(session));
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'cause-upsert' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (!can(session, 'manageCauses') && !can(session, 'createProjects')) {
+        return res.status(403).json({ error: 'Your role cannot manage Causes' });
+      }
+      const result = await upsertCause(session.influencerId, req.body || {}, actorLabel(session));
+      if (!result.ok) return res.status(400).json({ error: result.error });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'cause-delete' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (!can(session, 'manageCauses') && !can(session, 'createProjects')) {
+        return res.status(403).json({ error: 'Your role cannot manage Causes' });
+      }
+      const id = String(req.body?.id || '').trim();
+      if (!id) return res.status(400).json({ error: 'Cause id required' });
+      const result = await deleteCause(session.influencerId, id, actorLabel(session));
       if (!result.ok) return res.status(400).json({ error: result.error });
       return res.status(200).json(result);
     }

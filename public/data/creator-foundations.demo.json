@@ -47,7 +47,8 @@
       "active": true,
       "donationsEnabled": false,
       "sortOrder": 10,
-      "projects": []
+      "projects": [],
+      "causes": []
     }
   ],
   "donations": []

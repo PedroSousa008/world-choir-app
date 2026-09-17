@@ -7,6 +7,7 @@ const FoundationControl = (() => {
   const SECTIONS = [
     { id: 'overview', label: 'Overview' },
     { id: 'foundation', label: 'Foundation' },
+    { id: 'causes', label: 'Causes' },
     { id: 'donations', label: 'Donations' },
     { id: 'community', label: 'Community' },
     { id: 'settings', label: 'Settings' },
@@ -84,6 +85,8 @@ const FoundationControl = (() => {
     foundationDirty: false,
     foundationForm: null,
     uploadingField: null,
+    causeEditor: null,
+    causeBusy: false,
     drill: null,
     settingsTab: 'overview',
     selectedTeamMember: null,
@@ -469,6 +472,7 @@ const FoundationControl = (() => {
   function go(section, opts = {}) {
     state.section = SECTION_IDS.has(section) ? section : 'overview';
     state.navOpen = false;
+    if (state.section !== 'causes') state.causeEditor = null;
     if (opts.drill !== undefined) state.drill = opts.drill;
     if (opts.foundationTab) {
       state.foundationTab = FOUNDATION_TABS.has(opts.foundationTab) ? opts.foundationTab : 'page';
@@ -1066,14 +1070,19 @@ const FoundationControl = (() => {
       return;
     }
 
-    readFoundationFormIntoState();
-    if (!state.foundationForm) syncFoundationForm();
+    const isCauseImage = field === 'causeImage';
+    if (!isCauseImage) {
+      readFoundationFormIntoState();
+      if (!state.foundationForm) syncFoundationForm();
+    }
 
-    const kind = field === 'coverImage' ? 'cover' : 'profile';
+    const kind = field === 'coverImage'
+      ? 'cover'
+      : (field === 'causeImage' ? 'cause' : 'profile');
     state.busy = true;
     state.uploadingField = field;
     state.error = null;
-    setFlash(`Uploading ${kind} image…`);
+    setFlash(`Uploading ${kind === 'cause' ? 'Cause' : kind} image…`);
     render();
 
     try {
@@ -1082,9 +1091,15 @@ const FoundationControl = (() => {
         method: 'POST',
         body: { dataUrl, kind, fileName: file.name || '' },
       });
-      state.foundationForm[field] = data.url;
-      state.foundationDirty = true;
-      setFlash(`${kind === 'cover' ? 'Cover' : 'Profile'} image added — save to publish.`);
+      if (isCauseImage) {
+        if (!state.causeEditor) state.causeEditor = emptyCauseForm();
+        state.causeEditor.image = data.url;
+        setFlash('Cause image added.');
+      } else {
+        state.foundationForm[field] = data.url;
+        state.foundationDirty = true;
+        setFlash(`${kind === 'cover' ? 'Cover' : 'Profile'} image added — save to publish.`);
+      }
     } catch (err) {
       setFlash(err.message || 'Upload failed', 'err');
     } finally {
@@ -1362,6 +1377,143 @@ const FoundationControl = (() => {
       state.busy = false;
       render();
     }
+  }
+
+  /* ─── Causes ─── */
+
+  function canManageCauses() {
+    return can('manageCauses') || can('createProjects');
+  }
+
+  function emptyCauseForm(cause = null) {
+    return {
+      id: cause?.id || null,
+      title: cause?.title || '',
+      description: cause?.description || '',
+      image: cause?.image || '',
+    };
+  }
+
+  function renderCauseEditor(form) {
+    const locked = !canManageCauses();
+    const isEdit = !!form.id;
+    const hasImage = !!String(form.image || '').trim();
+    const loading = state.uploadingField === 'causeImage';
+    return `
+      <section class="fcc-section fcc-causes-editor">
+        <div class="fcc-section__head">
+          <div>
+            <p class="fcc-section__label">Causes</p>
+            <h2>${isEdit ? 'Edit Cause' : 'Create Cause'}</h2>
+            <p class="fcc-muted">Causes appear on your public Foundation page for supporters to explore.</p>
+          </div>
+          <button type="button" class="fcc-btn-ghost" data-action="cause-cancel">Cancel</button>
+        </div>
+        <form class="fcc-form wide" id="fcc-cause-form">
+          <div class="fcc-field">
+            <label for="fcc-cause-title">Cause title</label>
+            <input id="fcc-cause-title" name="title" type="text" maxlength="120"
+              value="${esc(form.title)}" placeholder="Name this Cause"
+              ${locked ? 'readonly' : ''} required>
+          </div>
+          <section class="fcc-card-image ${hasImage ? 'has-image' : ''} ${loading ? 'is-loading' : ''}" data-image-field="causeImage">
+            <div class="fcc-card-image__head">
+              <h3 class="fcc-card-image__title">Cause image</h3>
+              <p class="fcc-card-image__copy">The main visual for this Cause on your public Foundation page.</p>
+            </div>
+            <input type="hidden" name="image" id="fcc-cause-image" value="${esc(form.image || '')}">
+            <div class="fcc-card-image__stage is-cover">
+              ${hasImage ? `
+                <img class="fcc-card-image__img" src="${esc(form.image)}" alt="Cause image" decoding="async">
+              ` : `
+                <div class="fcc-card-image__empty">
+                  <span class="fcc-card-image__empty-icon" aria-hidden="true">${imageActionIcon()}</span>
+                  <p class="fcc-card-image__empty-title">Add a Cause image</p>
+                  <p class="fcc-card-image__empty-copy">Choose a photo that represents this Cause.</p>
+                </div>
+              `}
+              ${loading ? '<div class="fcc-card-image__skel" aria-hidden="true"></div>' : ''}
+            </div>
+            ${locked ? '' : `
+              <div class="fcc-card-image__actions">
+                <label class="fcc-btn fcc-upload__pick" tabindex="0">
+                  <span class="fcc-card-image__pick-icon" aria-hidden="true">${imageActionIcon()}</span>
+                  ${hasImage ? 'Replace' : 'Add image'}
+                  <input type="file" accept="image/*,.heic,.heif,.avif,.bmp,.tif,.tiff,.svg,.ico,.jfif" hidden data-image-input="causeImage" aria-label="Upload Cause image">
+                </label>
+                ${hasImage ? `<button type="button" class="fcc-btn-ghost is-danger" data-action="clear-cause-image">Remove</button>` : ''}
+              </div>
+            `}
+            <p class="fcc-card-image__hint">Recommended: Clear photo · JPG, PNG, WebP, HEIC · Max 4 MB</p>
+          </section>
+          <div class="fcc-field">
+            <label for="fcc-cause-description">Description / About this Cause</label>
+            <textarea id="fcc-cause-description" name="description" rows="7"
+              placeholder="Explain what this Cause is about."
+              ${locked ? 'readonly' : ''}>${esc(form.description)}</textarea>
+          </div>
+          ${locked ? '<p class="fcc-note">Your role cannot create or edit Causes.</p>' : `
+            <div class="fcc-actions">
+              <button type="submit" class="fcc-btn" ${state.causeBusy ? 'disabled' : ''}>
+                ${state.causeBusy ? 'Saving…' : (isEdit ? 'Save Cause' : 'Create Cause')}
+              </button>
+            </div>
+          `}
+        </form>
+      </section>
+    `;
+  }
+
+  function renderCausesList() {
+    const causes = Array.isArray(state.data?.causes) ? state.data.causes : [];
+    const locked = !canManageCauses();
+    return `
+      <section class="fcc-section">
+        <div class="fcc-section__head">
+          <div>
+            <p class="fcc-section__label">Causes</p>
+            <h2>Causes</h2>
+            <p class="fcc-muted">Create Causes your supporters can explore on your public Foundation page.</p>
+          </div>
+          ${locked ? '' : `
+            <button type="button" class="fcc-btn" data-action="cause-create">+ Create Cause</button>
+          `}
+        </div>
+        ${!causes.length ? `
+          <p class="fcc-muted">No Causes have been founded yet.</p>
+          ${locked ? '' : `<p class="fcc-note">Create your first Cause to share it publicly.</p>`}
+        ` : `
+          <ul class="fcc-cause-manage-list">
+            ${causes.map((cause) => `
+              <li class="fcc-cause-manage-card">
+                <div class="fcc-cause-manage-card__media">
+                  ${cause.image
+                    ? `<img src="${esc(cause.image)}" alt="" decoding="async">`
+                    : '<span class="fcc-muted">No image</span>'}
+                </div>
+                <div class="fcc-cause-manage-card__body">
+                  <h3>${esc(cause.title || 'Untitled Cause')}</h3>
+                  ${cause.description
+                    ? `<p class="fcc-muted">${esc(cause.description)}</p>`
+                    : ''}
+                  <div class="fcc-cause-manage-card__actions">
+                    ${locked ? '' : `
+                      <button type="button" class="fcc-btn-ghost" data-action="cause-edit" data-id="${esc(cause.id)}">Edit</button>
+                      <button type="button" class="fcc-btn-ghost is-danger" data-action="cause-delete" data-id="${esc(cause.id)}">Delete</button>
+                    `}
+                  </div>
+                </div>
+              </li>
+            `).join('')}
+          </ul>
+        `}
+      </section>
+    `;
+  }
+
+  function renderCauses() {
+    if (state.causeEditor) return renderCauseEditor(state.causeEditor);
+    return renderCausesList();
   }
 
   /* ─── Donations ─── */
@@ -2005,6 +2157,7 @@ const FoundationControl = (() => {
     const map = {
       overview: renderOverview,
       foundation: renderFoundation,
+      causes: renderCauses,
       donations: renderDonations,
       community: renderCommunity,
       settings: renderSettings,
@@ -2054,10 +2207,113 @@ const FoundationControl = (() => {
     });
   }
 
+  function bindCausesActions() {
+    root().querySelector('[data-action="cause-create"]')?.addEventListener('click', () => {
+      if (!canManageCauses()) return;
+      state.causeEditor = emptyCauseForm();
+      render();
+    });
+
+    root().querySelector('[data-action="cause-cancel"]')?.addEventListener('click', () => {
+      state.causeEditor = null;
+      render();
+    });
+
+    root().querySelector('[data-action="clear-cause-image"]')?.addEventListener('click', () => {
+      if (!state.causeEditor) return;
+      state.causeEditor.image = '';
+      render();
+    });
+
+    root().querySelectorAll('[data-action="cause-edit"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!canManageCauses()) return;
+        const id = btn.getAttribute('data-id');
+        const cause = (state.data?.causes || []).find((c) => c.id === id);
+        if (!cause) {
+          setFlash('Cause not found.', 'err');
+          return;
+        }
+        state.causeEditor = emptyCauseForm(cause);
+        render();
+      });
+    });
+
+    root().querySelectorAll('[data-action="cause-delete"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!canManageCauses()) return;
+        const id = btn.getAttribute('data-id');
+        const cause = (state.data?.causes || []).find((c) => c.id === id);
+        if (!id || !cause) return;
+        const ok = window.confirm(`Delete “${cause.title || 'this Cause'}”? This cannot be undone.`);
+        if (!ok) return;
+        state.busy = true;
+        render();
+        try {
+          await api('cause-delete', { method: 'POST', body: { id } });
+          setFlash('Cause deleted.');
+          state.causeEditor = null;
+          await loadCenter();
+        } catch (err) {
+          setFlash(err.message || 'Could not delete Cause.', 'err');
+          state.busy = false;
+          render();
+        }
+      });
+    });
+
+    document.getElementById('fcc-cause-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!canManageCauses() || !state.causeEditor) return;
+      const titleEl = document.getElementById('fcc-cause-title');
+      const descEl = document.getElementById('fcc-cause-description');
+      const imageEl = document.getElementById('fcc-cause-image');
+      const title = String(titleEl?.value || '').trim();
+      const description = String(descEl?.value || '').trim();
+      const image = String(imageEl?.value || state.causeEditor.image || '').trim();
+      if (!title) {
+        setFlash('Cause title is required.', 'err');
+        render();
+        return;
+      }
+      if (!image) {
+        setFlash('Cause image is required.', 'err');
+        render();
+        return;
+      }
+      state.causeBusy = true;
+      state.busy = true;
+      render();
+      try {
+        await api('cause-upsert', {
+          method: 'POST',
+          body: {
+            id: state.causeEditor.id || undefined,
+            title,
+            description,
+            image,
+            status: 'active',
+          },
+        });
+        setFlash(state.causeEditor.id ? 'Cause saved.' : 'Cause created.');
+        state.causeEditor = null;
+        await loadCenter();
+      } catch (err) {
+        setFlash(err.message || 'Could not save Cause.', 'err');
+        state.causeBusy = false;
+        state.busy = false;
+        render();
+      } finally {
+        state.causeBusy = false;
+      }
+    });
+  }
+
   function bindApp() {
     bindImageUploads();
     bindCardImagePreviews();
     bindCausePicker();
+    bindCausesActions();
     root().querySelectorAll('[data-nav]').forEach((btn) => {
       btn.addEventListener('click', () => go(btn.getAttribute('data-nav')));
     });

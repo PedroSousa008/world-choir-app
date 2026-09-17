@@ -12,6 +12,7 @@ const {
 const {
   readWorkspace,
   publicProject,
+  publicCause,
   publicUpdate,
   publicTeamMember,
   publicNotification,
@@ -29,6 +30,19 @@ function isSuccessfulDonation(d) {
   const status = String(d.paymentStatus || '').toLowerCase();
   if (EXCLUDED_STATUSES.has(status)) return false;
   return SUCCESS_STATUSES.has(status);
+}
+
+function sortCausesForOwner(causes) {
+  return [...(causes || [])].sort((a, b) => {
+    const ao = a?.sortOrder;
+    const bo = b?.sortOrder;
+    const aHas = ao != null && Number.isFinite(Number(ao));
+    const bHas = bo != null && Number.isFinite(Number(bo));
+    if (aHas && bHas && Number(ao) !== Number(bo)) return Number(ao) - Number(bo);
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    return String(b?.createdAt || '').localeCompare(String(a?.createdAt || ''));
+  });
 }
 
 function parseDate(value) {
@@ -443,6 +457,7 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
 
   const projects = (workspace.projects || []).map(publicProject);
   const activeProjects = projects.filter((p) => p.status === 'active');
+  const causes = sortCausesForOwner((workspace.causes || []).map(publicCause));
   const updates = (workspace.updates || []).map(publicUpdate);
   const team = (workspace.team || []).map(publicTeamMember);
   const notifications = (workspace.notifications || []).map(publicNotification);
@@ -635,6 +650,7 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
       },
     },
     projects: projectsWithFunding,
+    causes,
     updates,
     team,
     notifications,

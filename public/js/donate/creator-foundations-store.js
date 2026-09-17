@@ -14,7 +14,7 @@ const CreatorFoundationsStore = (() => {
   const FALLBACK_URL = 'data/creator-foundations.json';
   const DEMO_URL = 'data/creator-foundations.demo.json';
   const PAGE_SIZE = 24;
-  const SESSION_KEY = 'wc_cf_catalog_v1';
+  const SESSION_KEY = 'wc_cf_catalog_v2';
   const FOUNDATION_CAUSES = [
     'Food & Hunger',
     'Health',
@@ -298,6 +298,37 @@ const CreatorFoundationsStore = (() => {
     );
   }
 
+  function normalizeFoundationCause(cause, foundationId) {
+    if (!cause || !cause.id) return null;
+    const title = String(cause.title || '').trim();
+    const image = String(cause.image || '').trim();
+    if (!title || !image) return null;
+    if (cause.status && cause.status !== 'active') return null;
+    return {
+      id: cause.id,
+      foundationId: cause.foundationId || foundationId,
+      title,
+      description: String(cause.description || '').trim(),
+      image,
+      slug: String(cause.slug || '').trim(),
+      status: 'active',
+      sortOrder: Number.isFinite(Number(cause.sortOrder)) ? Number(cause.sortOrder) : null,
+      createdAt: cause.createdAt || null,
+      updatedAt: cause.updatedAt || null,
+    };
+  }
+
+  function sortFoundationCauses(causes) {
+    return [...(causes || [])].sort((a, b) => {
+      const aHas = a.sortOrder != null;
+      const bHas = b.sortOrder != null;
+      if (aHas && bHas && a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+      if (aHas && !bHas) return -1;
+      if (!aHas && bHas) return 1;
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+  }
+
   function normalizeProject(project, foundationId) {
     const goalAmount = Number(project.goalAmount ?? project.goal);
     const raisedAmount = getRaisedAmount({
@@ -341,6 +372,11 @@ const CreatorFoundationsStore = (() => {
     const projects = (foundation.projects || []).map((p) => normalizeProject(p, foundation.id));
     const activeProjects = projects.filter((p) => p.status === 'active');
     const completedProjects = projects.filter((p) => p.status === 'completed');
+    const causes = sortFoundationCauses(
+      (foundation.causes || [])
+        .map((c) => normalizeFoundationCause(c, foundation.id))
+        .filter(Boolean)
+    );
     const uniqueSupporters = getUniqueSupporterCount(foundation.id);
     const totalRaised = getRaisedAmount({ foundationId: foundation.id });
     const raisedKnown = hasVerifiedRaisedData({ foundationId: foundation.id });
@@ -384,6 +420,7 @@ const CreatorFoundationsStore = (() => {
       activeProjectCount: activeProjects.length,
       completedProjectCount: completedProjects.length,
       projects,
+      causes,
       featured: foundation.featured === true,
       active: foundation.active !== false,
       donationsEnabled: foundation.donationsEnabled !== false,
@@ -525,6 +562,16 @@ const CreatorFoundationsStore = (() => {
     const foundation = getById(foundationId);
     if (!foundation) return null;
     return foundation.projects.find((p) => p.id === projectId) || null;
+  }
+
+  function getFoundationCause(foundationId, causeIdOrSlug) {
+    const foundation = getById(foundationId);
+    if (!foundation || !causeIdOrSlug) return null;
+    const key = String(causeIdOrSlug).toLowerCase();
+    return (foundation.causes || []).find((c) =>
+      String(c.id || '').toLowerCase() === key
+      || String(c.slug || '').toLowerCase() === key
+    ) || null;
   }
 
   function isLoaded() {
@@ -684,6 +731,7 @@ const CreatorFoundationsStore = (() => {
     getById,
     getBySlug,
     getProject,
+    getFoundationCause,
     Admin,
     UserSupport,
     PAGE_SIZE,

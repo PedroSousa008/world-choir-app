@@ -440,7 +440,7 @@ function slugify(text) {
   return slug || 'foundation';
 }
 
-function influencerToFoundation(row, projects = []) {
+function influencerToFoundation(row, projects = [], causes = []) {
   const displayName = String(row.displayName || '').trim();
   const foundationName = String(row.foundationName || '').trim()
     || (displayName ? `${displayName}'s Foundation` : 'Creator Foundation');
@@ -460,6 +460,20 @@ function influencerToFoundation(row, projects = []) {
       status: 'active',
       goal: p.fundingGoal,
       raised: p.fundingRaised || 0,
+    }));
+
+  const publicCauses = sortPublicCauses(causes)
+    .filter((c) => c && c.status === 'active' && String(c.title || '').trim() && String(c.image || '').trim())
+    .map((c) => ({
+      id: c.id,
+      title: c.title || '',
+      description: c.description || '',
+      image: c.image || '',
+      slug: c.slug || '',
+      status: 'active',
+      sortOrder: c.sortOrder,
+      createdAt: c.createdAt || null,
+      updatedAt: c.updatedAt || null,
     }));
 
   return {
@@ -501,7 +515,21 @@ function influencerToFoundation(row, projects = []) {
     donationsEnabled: true,
     sortOrder: 100,
     projects: publicProjects,
+    causes: publicCauses,
   };
+}
+
+function sortPublicCauses(causes) {
+  return [...(causes || [])].sort((a, b) => {
+    const ao = a?.sortOrder;
+    const bo = b?.sortOrder;
+    const aHas = ao != null && Number.isFinite(Number(ao));
+    const bHas = bo != null && Number.isFinite(Number(bo));
+    if (aHas && bHas && Number(ao) !== Number(bo)) return Number(ao) - Number(bo);
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    return String(b?.createdAt || '').localeCompare(String(a?.createdAt || ''));
+  });
 }
 
 /**
@@ -539,12 +567,13 @@ async function getPublicCreatorFoundationsCatalog() {
   const foundations = await Promise.all(
     influencers.map(async (row) => {
       try {
-        const { readWorkspace, publicProject } = require('./foundation-workspace');
+        const { readWorkspace, publicProject, publicCause } = require('./foundation-workspace');
         const ws = await readWorkspace(row.id);
         const projects = (ws.projects || []).map(publicProject);
-        return influencerToFoundation(row, projects);
+        const causes = (ws.causes || []).map(publicCause);
+        return influencerToFoundation(row, projects, causes);
       } catch {
-        return influencerToFoundation(row, []);
+        return influencerToFoundation(row, [], []);
       }
     })
   );
