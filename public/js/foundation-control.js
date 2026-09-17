@@ -721,17 +721,11 @@ const FoundationControl = (() => {
   }
 
   function renderLivePreviewCard() {
-    if (typeof FoundationPublicCard === 'undefined') return '';
-    return FoundationPublicCard.render(previewFoundation(), {
-      interactive: false,
-      currency: state.data?.currency || 'EUR',
-    });
+    return '';
   }
 
   function refreshLivePreview() {
-    const card = document.getElementById('fcc-live-preview-card');
-    if (!card || state.foundationTab !== 'page') return;
-    card.innerHTML = renderLivePreviewCard();
+    /* Live preview removed from Foundation → Page */
   }
 
   function renderFoundation() {
@@ -765,13 +759,7 @@ const FoundationControl = (() => {
 
         ${tab === 'page' ? `
           <div class="fcc-page-editor">
-            <div class="fcc-page-editor__form">
-              ${renderFoundationPageFields(form)}
-            </div>
-            <aside class="fcc-live-preview" aria-hidden="true">
-              <p class="fcc-live-preview__label">Live preview</p>
-              <div id="fcc-live-preview-card">${renderLivePreviewCard()}</div>
-            </aside>
+            ${renderFoundationPageFields(form)}
           </div>
         ` : ''}
         ${tab === 'card' ? renderFoundationCardEditor(form) : ''}
@@ -784,16 +772,17 @@ const FoundationControl = (() => {
     `;
   }
 
-  function renderCausePicker(form, locked) {
+  function renderCausePicker(form, locked, { hideLabel = false } = {}) {
     const selected = form.category || '';
     const detail = CAUSE_DETAILS[selected];
     return `
       <div class="fcc-field fcc-cause-field">
-        <span class="fcc-field__label" id="fcc-cause-label">Primary cause</span>
+        ${hideLabel ? '' : `<span class="fcc-field__label" id="fcc-cause-label">Primary cause</span>`}
         <input type="hidden" id="ff-category" name="category" value="${esc(selected)}">
         <div class="fcc-cause-picker" id="fcc-cause-picker">
           <button type="button" class="fcc-cause-trigger ${selected ? 'has-value' : ''}" id="fcc-cause-trigger"
-            aria-haspopup="listbox" aria-expanded="false" aria-labelledby="fcc-cause-label fcc-cause-value"
+            aria-haspopup="listbox" aria-expanded="false"
+            aria-labelledby="${hideLabel ? 'fcc-cause-value' : 'fcc-cause-label fcc-cause-value'}"
             ${locked ? 'disabled' : ''}>
             <span class="fcc-cause-trigger__icon" aria-hidden="true">${causeIconSvg(detail?.icon || 'aid')}</span>
             <span class="fcc-cause-trigger__copy">
@@ -804,7 +793,7 @@ const FoundationControl = (() => {
               <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </span>
           </button>
-          <ul class="fcc-cause-menu" id="fcc-cause-menu" role="listbox" aria-labelledby="fcc-cause-label" hidden>
+          <ul class="fcc-cause-menu" id="fcc-cause-menu" role="listbox" aria-label="Primary cause" hidden>
             ${FOUNDATION_CAUSES.map((cause) => {
               const item = CAUSE_DETAILS[cause];
               const isSelected = cause === selected;
@@ -825,20 +814,34 @@ const FoundationControl = (() => {
     `;
   }
 
+  function renderPageEditCard(title, bodyHtml, { className = '' } = {}) {
+    return `
+      <article class="fcc-edit-card ${className}">
+        <header class="fcc-edit-card__head">
+          <h3 class="fcc-edit-card__title">${esc(title)}</h3>
+        </header>
+        <div class="fcc-edit-card__body">
+          ${bodyHtml}
+        </div>
+      </article>
+    `;
+  }
+
   function renderFoundationPageFields(form) {
     const locked = !can('editFoundation');
     const countries = countryOptions(form.country);
     return `
       <form class="fcc-form fcc-page-form" id="fcc-foundation-form" data-part="page">
-        <p class="fcc-page-kicker">Basics</p>
-        <div class="fcc-field">
-          <label for="ff-name">Foundation name</label>
-          <input id="ff-name" name="foundationName" value="${esc(form.foundationName)}" autocomplete="organization" ${locked ? 'readonly' : ''}>
-        </div>
-        <div class="fcc-page-split">
-          <div class="fcc-field">
-            <label for="ff-creator">Founded by</label>
-            <input id="ff-creator" name="creatorName" value="${esc(form.creatorName)}" autocomplete="name" ${locked ? 'readonly' : ''}>
+        ${renderPageEditCard('Basics', `
+          <div class="fcc-page-split">
+            <div class="fcc-field">
+              <label for="ff-name">Foundation name</label>
+              <input id="ff-name" name="foundationName" value="${esc(form.foundationName)}" autocomplete="organization" ${locked ? 'readonly' : ''}>
+            </div>
+            <div class="fcc-field">
+              <label for="ff-creator">Founded by</label>
+              <input id="ff-creator" name="creatorName" value="${esc(form.creatorName)}" autocomplete="name" ${locked ? 'readonly' : ''}>
+            </div>
           </div>
           <div class="fcc-field">
             <label for="ff-country">Country</label>
@@ -851,43 +854,50 @@ const FoundationControl = (() => {
               </select>
             </div>
           </div>
-        </div>
-        ${renderCausePicker(form, locked)}
+        `)}
 
-        <p class="fcc-page-kicker">Mission</p>
-        <div class="fcc-field">
-          <label class="sr-only" for="ff-mission">Mission</label>
-          <textarea id="ff-mission" name="mission" class="fcc-textarea--story" rows="6"
-            placeholder="What does this foundation exist to do?" ${locked ? 'readonly' : ''}>${esc(form.mission)}</textarea>
-        </div>
+        ${renderPageEditCard('Primary cause', renderCausePicker(form, locked, { hideLabel: true }))}
 
-        <p class="fcc-page-kicker">Why it started</p>
-        <div class="fcc-field">
-          <label class="sr-only" for="ff-why">Why it started</label>
-          <textarea id="ff-why" name="whyStarted" class="fcc-textarea--story" rows="6"
-            placeholder="What first made this work necessary?" ${locked ? 'readonly' : ''}>${esc(form.whyStarted)}</textarea>
-        </div>
-
-        <p class="fcc-page-kicker">How it works</p>
-        <div class="fcc-field">
-          <label class="sr-only" for="ff-how">How it works</label>
-          <textarea id="ff-how" name="howItWorks" class="fcc-textarea--story" rows="6"
-            placeholder="How does support become action?" ${locked ? 'readonly' : ''}>${esc(form.howItWorks)}</textarea>
+        <div class="fcc-edit-card-row">
+          ${renderPageEditCard('Mission', `
+            <div class="fcc-field fcc-field--grow">
+              <label class="sr-only" for="ff-mission">Mission</label>
+              <textarea id="ff-mission" name="mission" class="fcc-textarea--story" rows="5"
+                placeholder="What does this foundation exist to do?" ${locked ? 'readonly' : ''}>${esc(form.mission)}</textarea>
+            </div>
+          `, { className: 'fcc-edit-card--stretch' })}
+          ${renderPageEditCard('Why it started', `
+            <div class="fcc-field fcc-field--grow">
+              <label class="sr-only" for="ff-why">Why it started</label>
+              <textarea id="ff-why" name="whyStarted" class="fcc-textarea--story" rows="5"
+                placeholder="What first made this work necessary?" ${locked ? 'readonly' : ''}>${esc(form.whyStarted)}</textarea>
+            </div>
+          `, { className: 'fcc-edit-card--stretch' })}
         </div>
 
-        <p class="fcc-page-kicker">Story</p>
-        <div class="fcc-field">
-          <label class="sr-only" for="ff-story">Story</label>
-          <textarea id="ff-story" name="story" class="fcc-textarea--story" rows="7"
-            placeholder="The longer story behind this foundation." ${locked ? 'readonly' : ''}>${esc(form.story)}</textarea>
-        </div>
+        ${renderPageEditCard('Story', `
+          <div class="fcc-field">
+            <label class="sr-only" for="ff-story">Story</label>
+            <textarea id="ff-story" name="story" class="fcc-textarea--story" rows="5"
+              placeholder="The longer story behind this foundation." ${locked ? 'readonly' : ''}>${esc(form.story)}</textarea>
+          </div>
+        `)}
 
-        <p class="fcc-page-kicker">Biography</p>
-        <div class="fcc-field">
-          <label class="sr-only" for="ff-bio">Biography</label>
-          <textarea id="ff-bio" name="biography" class="fcc-textarea--story" rows="6"
-            placeholder="A personal biography, if you want it on the public page." ${locked ? 'readonly' : ''}>${esc(form.biography)}</textarea>
-        </div>
+        ${renderPageEditCard('How it works', `
+          <div class="fcc-field">
+            <label class="sr-only" for="ff-how">How it works</label>
+            <textarea id="ff-how" name="howItWorks" class="fcc-textarea--story" rows="5"
+              placeholder="How does support become action?" ${locked ? 'readonly' : ''}>${esc(form.howItWorks)}</textarea>
+          </div>
+        `)}
+
+        ${renderPageEditCard('Biography', `
+          <div class="fcc-field">
+            <label class="sr-only" for="ff-bio">Biography</label>
+            <textarea id="ff-bio" name="biography" class="fcc-textarea--story" rows="5"
+              placeholder="A personal biography, if you want it on the public page." ${locked ? 'readonly' : ''}>${esc(form.biography)}</textarea>
+          </div>
+        `)}
       </form>
     `;
   }
