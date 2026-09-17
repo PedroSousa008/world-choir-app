@@ -1217,10 +1217,17 @@ const WorldChoirDonate = (() => {
     const avatarInner = profile
       ? `<img src="${esc(profile)}" alt="">`
       : `<span>${esc(identityGlyph(foundation))}</span>`;
+    const coverLightbox = cover
+      ? ` data-df-fp-lightbox="${esc(cover)}" role="button" tabindex="0" aria-label="View cover photo"`
+      : '';
+    const heroOnlyProfileLightbox = (!cover && profile)
+      ? ` data-df-fp-lightbox="${esc(profile)}" role="button" tabindex="0" aria-label="View profile photo"`
+      : '';
+    const visualLightbox = coverLightbox || heroOnlyProfileLightbox;
 
     return `
       <header class="df-fp-hero">
-        <div class="df-fp-hero__visual ${heroSrc ? 'has-image' : ''}">
+        <div class="df-fp-hero__visual ${heroSrc ? 'has-image' : ''}${visualLightbox ? ' is-previewable' : ''}"${visualLightbox}>
           ${heroSrc
             ? `<img class="df-fp-hero__img" src="${esc(heroSrc)}" alt="">`
             : `<div class="df-fp-hero__fallback" aria-hidden="true"><span>${esc(identityGlyph(foundation))}</span></div>`}
@@ -1229,7 +1236,7 @@ const WorldChoirDonate = (() => {
 
         <div class="df-fp-hero__content">
           ${showAvatar ? `
-            <div class="df-fp-hero__avatar" aria-hidden="true">${avatarInner}</div>
+            <button type="button" class="df-fp-hero__avatar is-previewable" data-df-fp-lightbox="${esc(profile)}" aria-label="View profile photo">${avatarInner}</button>
           ` : ''}
 
           <div class="df-fp-hero__identity">
@@ -1426,7 +1433,106 @@ const WorldChoirDonate = (() => {
     }
   }
 
+  function closeFoundationLightbox() {
+    const el = document.querySelector('.df-fp-lightbox');
+    if (!el || el.hidden || !el.classList.contains('is-open')) return false;
+    const scrollY = Number(el.dataset.scrollY || 0);
+    el.classList.remove('is-open');
+    const finish = () => {
+      if (el.classList.contains('is-open')) return;
+      el.hidden = true;
+      el.setAttribute('aria-hidden', 'true');
+      const img = el.querySelector('.df-fp-lightbox__img');
+      if (img) {
+        img.removeAttribute('src');
+        img.alt = '';
+      }
+      document.documentElement.classList.remove('is-df-fp-lightbox-open');
+      window.scrollTo(0, scrollY);
+    };
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) finish();
+    else window.setTimeout(finish, 240);
+    return true;
+  }
+
+  function ensureFoundationLightbox() {
+    let el = document.querySelector('.df-fp-lightbox');
+    if (el) return el;
+    el = document.createElement('div');
+    el.className = 'df-fp-lightbox';
+    el.hidden = true;
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-hidden', 'true');
+    el.setAttribute('aria-label', 'Image preview');
+    el.innerHTML = `
+      <button type="button" class="df-fp-lightbox__close" aria-label="Close image preview">
+        <span aria-hidden="true">×</span>
+      </button>
+      <div class="df-fp-lightbox__stage">
+        <img class="df-fp-lightbox__img" alt="">
+      </div>
+    `;
+    document.body.appendChild(el);
+
+    el.addEventListener('click', (e) => {
+      if (e.target === el || e.target.classList.contains('df-fp-lightbox__stage')) {
+        closeFoundationLightbox();
+      }
+    });
+    el.querySelector('.df-fp-lightbox__close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeFoundationLightbox();
+    });
+    el.querySelector('.df-fp-lightbox__img')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+    return el;
+  }
+
+  function openFoundationLightbox(src, label) {
+    const url = String(src || '').trim();
+    if (!url) return;
+    const el = ensureFoundationLightbox();
+    const img = el.querySelector('.df-fp-lightbox__img');
+    if (!img) return;
+    el.dataset.scrollY = String(window.scrollY || window.pageYOffset || 0);
+    img.src = url;
+    img.alt = label || 'Foundation image';
+    el.hidden = false;
+    el.setAttribute('aria-hidden', 'false');
+    document.documentElement.classList.add('is-df-fp-lightbox-open');
+    requestAnimationFrame(() => {
+      el.classList.add('is-open');
+      el.querySelector('.df-fp-lightbox__close')?.focus({ preventScroll: true });
+    });
+  }
+
+  function bindFoundationLightbox(root) {
+    root.querySelectorAll('[data-df-fp-lightbox]').forEach((node) => {
+      const open = () => {
+        openFoundationLightbox(
+          node.getAttribute('data-df-fp-lightbox'),
+          node.getAttribute('aria-label') || 'Foundation image'
+        );
+      };
+      node.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        open();
+      });
+      node.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        open();
+      });
+    });
+  }
+
   function bindProfileInteractions(root, foundation) {
+    bindFoundationLightbox(root);
+
     root.querySelectorAll('.df-fp-story__trigger').forEach((btn) => {
       btn.addEventListener('click', () => {
         const story = btn.closest('.df-fp-story');
@@ -1514,6 +1620,7 @@ const WorldChoirDonate = (() => {
   }
 
   function openProfile(foundation) {
+    closeFoundationLightbox();
     selectedFoundation = foundation;
     selectedProject = null;
     syncDonateUrl();
@@ -1522,6 +1629,7 @@ const WorldChoirDonate = (() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     document.getElementById('donate-back')?.addEventListener('click', () => {
+      if (closeFoundationLightbox()) return;
       selectedFoundation = null;
       selectedProject = null;
       syncDonateUrl();
@@ -2243,7 +2351,12 @@ const WorldChoirDonate = (() => {
       });
     }
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && searchOpen) closeSearch();
+      if (e.key !== 'Escape') return;
+      if (closeFoundationLightbox()) {
+        e.preventDefault();
+        return;
+      }
+      if (searchOpen) closeSearch();
     });
     applyDeepLinkCause();
 
