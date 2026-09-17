@@ -84,7 +84,7 @@
 
 .fcc-shell {
   display: grid;
-  grid-template-columns: 228px 1fr;
+  grid-template-columns: 228px minmax(0, 1fr);
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
@@ -194,11 +194,29 @@
 }
 
 .fcc-main {
-  padding: 28px 28px 72px;
-  max-width: 1120px;
   width: 100%;
-  box-sizing: border-box;
+  max-width: none;
   min-width: 0;
+  box-sizing: border-box;
+  padding: 28px 24px 72px;
+}
+
+@media (min-width: 1280px) {
+  .fcc-main {
+    padding: 28px 32px 72px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .fcc-main {
+    padding: 30px 40px 80px;
+  }
+}
+
+@media (min-width: 1920px) {
+  .fcc-main {
+    padding: 32px 48px 88px;
+  }
 }
 
 /* ── Mobile full-bleed shell ── */
@@ -2154,8 +2172,9 @@
   display: flex;
   flex-direction: column;
   gap: 28px;
-  max-width: 900px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
   padding-bottom: 64px;
 }
 
