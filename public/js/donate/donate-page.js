@@ -1245,10 +1245,6 @@ const WorldChoirDonate = (() => {
               : ''}
           </div>
 
-          ${foundation.mission
-            ? `<p class="df-fp-hero__mission">${esc(foundation.mission)}</p>`
-            : ''}
-
           <p class="df-fp-supporters">
             ${peopleIconSvg()}
             <span
@@ -1348,6 +1344,13 @@ const WorldChoirDonate = (() => {
         num: String(storySections.length + 1).padStart(2, '0'),
         title: 'How the Foundation works',
         bodyHtml: `<p>${esc(foundation.howItWorks)}</p>`,
+      });
+    }
+    if (String(foundation.mission || '').trim()) {
+      storySections.push({
+        num: String(storySections.length + 1).padStart(2, '0'),
+        title: 'Mission',
+        bodyHtml: `<p>${esc(String(foundation.mission).trim())}</p>`,
       });
     }
     if (valuesHtml) {

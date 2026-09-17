@@ -1498,9 +1498,9 @@
 /* ─── Foundation profile (dedicated immersive page) ─── */
 
 .df-fp {
-  margin: 0 -20px;
-  /* Reserve space for the fixed back/share bar so content never jumps under it. */
-  padding: calc(52px + env(safe-area-inset-top, 0px)) 0 8px;
+  /* Cancel .donate-page top/side padding so the cover sits flush under the fixed nav. */
+  margin: -14px -20px 0;
+  padding: calc(56px + env(safe-area-inset-top, 0px)) 0 8px;
 }
 
 .df-fp-nav {
@@ -1573,6 +1573,8 @@
 
 .df-fp-hero {
   position: relative;
+  /* Pull cover flush under the nav border — kills the hairline gap. */
+  margin-top: -1px;
 }
 
 .df-fp-hero__visual {
