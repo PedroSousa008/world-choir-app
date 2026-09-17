@@ -1218,10 +1218,10 @@ const WorldChoirDonate = (() => {
       ? `<img src="${esc(profile)}" alt="">`
       : `<span>${esc(identityGlyph(foundation))}</span>`;
     const coverLightbox = cover
-      ? ` data-df-fp-lightbox="${esc(cover)}" role="button" tabindex="0" aria-label="View cover photo"`
+      ? ` data-df-fp-lightbox="${esc(cover)}" data-df-fp-lightbox-kind="cover" role="button" tabindex="0" aria-label="View cover photo"`
       : '';
     const heroOnlyProfileLightbox = (!cover && profile)
-      ? ` data-df-fp-lightbox="${esc(profile)}" role="button" tabindex="0" aria-label="View profile photo"`
+      ? ` data-df-fp-lightbox="${esc(profile)}" data-df-fp-lightbox-kind="profile" role="button" tabindex="0" aria-label="View profile photo"`
       : '';
     const visualLightbox = coverLightbox || heroOnlyProfileLightbox;
 
@@ -1236,7 +1236,7 @@ const WorldChoirDonate = (() => {
 
         <div class="df-fp-hero__content">
           ${showAvatar ? `
-            <button type="button" class="df-fp-hero__avatar is-previewable" data-df-fp-lightbox="${esc(profile)}" aria-label="View profile photo">${avatarInner}</button>
+            <button type="button" class="df-fp-hero__avatar is-previewable" data-df-fp-lightbox="${esc(profile)}" data-df-fp-lightbox-kind="profile" aria-label="View profile photo">${avatarInner}</button>
           ` : ''}
 
           <div class="df-fp-hero__identity">
@@ -1491,15 +1491,17 @@ const WorldChoirDonate = (() => {
     return el;
   }
 
-  function openFoundationLightbox(src, label) {
+  function openFoundationLightbox(src, label, kind) {
     const url = String(src || '').trim();
     if (!url) return;
     const el = ensureFoundationLightbox();
     const img = el.querySelector('.df-fp-lightbox__img');
     if (!img) return;
+    const isProfile = kind === 'profile';
+    el.classList.toggle('is-profile', isProfile);
     el.dataset.scrollY = String(window.scrollY || window.pageYOffset || 0);
     img.src = url;
-    img.alt = label || 'Foundation image';
+    img.alt = label || (isProfile ? 'Profile photo' : 'Foundation image');
     el.hidden = false;
     el.setAttribute('aria-hidden', 'false');
     document.documentElement.classList.add('is-df-fp-lightbox-open');
@@ -1514,7 +1516,8 @@ const WorldChoirDonate = (() => {
       const open = () => {
         openFoundationLightbox(
           node.getAttribute('data-df-fp-lightbox'),
-          node.getAttribute('aria-label') || 'Foundation image'
+          node.getAttribute('aria-label') || 'Foundation image',
+          node.getAttribute('data-df-fp-lightbox-kind') || 'cover'
         );
       };
       node.addEventListener('click', (e) => {
