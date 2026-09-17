@@ -8,7 +8,7 @@ const { getPublicCreatorFoundationsCatalog } = require('./_lib/members-store');
  */
 module.exports = async function handler(req, res) {
   corsHeaders(res);
-  res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
+  res.setHeader('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=30');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') {
