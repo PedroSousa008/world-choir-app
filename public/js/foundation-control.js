@@ -1368,6 +1368,8 @@ const FoundationControl = (() => {
       city: `<svg ${common}><path d="M12 21s-7-4.5-7-10a7 7 0 0114 0c0 5.5-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg>`,
       explorer: `<svg ${common}><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`,
       chart: `<svg ${common}><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15v-3"/><path d="M12 15V8"/><path d="M16 15v-5"/></svg>`,
+      person: `<svg ${common}><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`,
+      returning: `<svg ${common}><circle cx="9" cy="7" r="4"/><path d="M1 21v-2a4 4 0 0 1 4-4h8"/><path d="M16 11l3-3-3-3"/><path d="M19 8a5 5 0 1 0-1 3.3"/></svg>`,
     };
     return icons[kind] || icons.info;
   }
@@ -1617,46 +1619,154 @@ const FoundationControl = (() => {
 
   /* ─── Community ─── */
 
+  function communityMetricValue(value) {
+    if (value == null || value === '') return '—';
+    return num(value);
+  }
+
+  function renderCommunityWorldBody(c, geo, mapPoints) {
+    const cities = c.topCities || [];
+    const hasLocations = (mapPoints && mapPoints.length) || cities.length;
+    if (!hasLocations) {
+      return donEmptyState('city', 'Not enough data yet', 'No supporter locations to display.');
+    }
+    const rows = (mapPoints && mapPoints.length)
+      ? mapPoints.slice(0, 12).map((p, i) => ({
+        rank: i + 1,
+        city: p.city,
+        country: p.country,
+        supporters: p.count ?? p.voices ?? p.donors ?? 0,
+        totalRaised: p.raised,
+      }))
+      : cities;
+    return renderCityTable(rows);
+  }
+
   function renderCommunity() {
     const c = state.data?.community || {};
+    const geo = state.data?.geography || {};
     const discovery = c.discovery || {};
+    const mapPoints = state.data?.map?.points || geo.mapPoints || [];
+    const topCountries = c.topCountries || [];
+    const topCities = c.topCities || [];
+
+    if (c.restricted) {
+      return `
+        <section class="fcc-community">
+          <article class="fcc-edit-card fcc-don-info">
+            <div class="fcc-don-info__row">
+              <span class="fcc-don-info__icon" aria-hidden="true">${donIcon('info')}</span>
+              <div class="fcc-don-info__copy">
+                <p class="fcc-don-info__summary">${esc(c.note || 'Community access is restricted by the Foundation owner.')}</p>
+              </div>
+            </div>
+          </article>
+        </section>
+      `;
+    }
+
     return `
-      <section class="fcc-section">
-        <div class="fcc-hero">
-          <button type="button" class="fcc-hero__primary" data-nav="community">
-            <span class="fcc-hero__value">${esc(num(c.totalSupporters || 0))}</span>
-            <span class="fcc-hero__label">Supporters</span>
-          </button>
-          <div class="fcc-hero__secondary">
-            ${metricBtn(num(c.newSupporters || 0), 'New', 'community')}
-            ${metricBtn(num(c.returningSupporters || 0), 'Returning', 'community')}
-            ${metricBtn(num(c.countriesReached || 0), 'Countries', 'donations')}
-            ${metricBtn(num(c.citiesReached || 0), 'Cities', 'community')}
+      <section class="fcc-community">
+        <div class="fcc-comm-metrics" aria-label="Community metrics">
+          ${donMetricCard('supporters', communityMetricValue(c.totalSupporters), 'Supporters')}
+          ${donMetricCard('person', communityMetricValue(c.newSupporters), 'New')}
+          ${donMetricCard('returning', communityMetricValue(c.returningSupporters), 'Returning')}
+          <article class="fcc-don-metric fcc-comm-metric--split">
+            <div class="fcc-comm-metric__half">
+              <span class="fcc-don-metric__icon" aria-hidden="true">${donIcon('country')}</span>
+              <div class="fcc-don-metric__copy">
+                <p class="fcc-don-metric__value">${esc(communityMetricValue(c.countriesReached))}</p>
+                <p class="fcc-don-metric__label">Countries</p>
+              </div>
+            </div>
+            <div class="fcc-comm-metric__divider" aria-hidden="true"></div>
+            <div class="fcc-comm-metric__half">
+              <span class="fcc-don-metric__icon" aria-hidden="true">${donIcon('city')}</span>
+              <div class="fcc-don-metric__copy">
+                <p class="fcc-don-metric__value">${esc(communityMetricValue(c.citiesReached))}</p>
+                <p class="fcc-don-metric__label">Cities</p>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <article class="fcc-edit-card fcc-don-panel fcc-comm-world">
+          <header class="fcc-don-panel__head">
+            <div class="fcc-don-panel__title-block">
+              <div class="fcc-don-panel__title-row">
+                <span class="fcc-don-panel__icon" aria-hidden="true">${donIcon('city')}</span>
+                <h2 class="fcc-don-panel__title">Community around the world</h2>
+              </div>
+              <p class="fcc-don-panel__lede">Explore where your supporters are located.</p>
+            </div>
+            <div class="fcc-don-panel__actions">
+              <button type="button" class="fcc-btn" data-action="open-map">Explore on map</button>
+            </div>
+          </header>
+          <div class="fcc-don-panel__body">
+            <div class="fcc-don-stage fcc-comm-world__stage ${(mapPoints.length || topCities.length) ? 'has-table' : ''}">
+              ${renderCommunityWorldBody(c, geo, mapPoints)}
+            </div>
+            ${geo.note && (mapPoints.length || topCities.length) ? `<p class="fcc-note">${esc(geo.note)}</p>` : ''}
           </div>
-        </div>
-        <div class="fcc-actions" style="margin-bottom:24px">
-          <button type="button" class="fcc-btn" data-action="open-map">Explore on map</button>
-        </div>
-      </section>
+        </article>
 
-      <section class="fcc-section fcc-split">
-        <div>
-          <h2 class="fcc-section__label" style="margin-bottom:12px">Top countries</h2>
-          ${renderCountryTable(c.topCountries || [])}
-        </div>
-        <div>
-          <h2 class="fcc-section__label" style="margin-bottom:12px">Top cities</h2>
-          ${renderCityTable(c.topCities || [])}
-        </div>
-      </section>
+        <div class="fcc-don-grid fcc-comm-geo">
+          <article class="fcc-edit-card fcc-don-panel">
+            <header class="fcc-don-panel__head">
+              <div class="fcc-don-panel__title-block">
+                <div class="fcc-don-panel__title-row">
+                  <span class="fcc-don-panel__icon" aria-hidden="true">${donIcon('country')}</span>
+                  <h2 class="fcc-don-panel__title">Top countries</h2>
+                </div>
+                <p class="fcc-don-panel__lede">Countries with the most supporters.</p>
+              </div>
+            </header>
+            <div class="fcc-don-panel__body">
+              <div class="fcc-don-stage ${topCountries.length ? 'has-table' : ''}">
+                ${topCountries.length
+                  ? renderCountryTable(topCountries)
+                  : donEmptyState('country', 'Not enough data yet')}
+              </div>
+            </div>
+          </article>
 
-      <section class="fcc-section">
-        <h2 class="fcc-section__label">Discovery</h2>
-        ${discovery.available
-          ? ''
-          : emptyNote(discovery.note || 'Discovery attribution is not tracked yet.')}
+          <article class="fcc-edit-card fcc-don-panel">
+            <header class="fcc-don-panel__head">
+              <div class="fcc-don-panel__title-block">
+                <div class="fcc-don-panel__title-row">
+                  <span class="fcc-don-panel__icon" aria-hidden="true">${donIcon('city')}</span>
+                  <h2 class="fcc-don-panel__title">Top cities</h2>
+                </div>
+                <p class="fcc-don-panel__lede">Cities with the most supporters.</p>
+              </div>
+            </header>
+            <div class="fcc-don-panel__body">
+              <div class="fcc-don-stage ${topCities.length ? 'has-table' : ''}">
+                ${topCities.length
+                  ? renderCityTable(topCities)
+                  : donEmptyState('city', 'Not enough data yet')}
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <article class="fcc-edit-card fcc-comm-discovery">
+          <div class="fcc-don-info__row">
+            <span class="fcc-don-info__icon" aria-hidden="true">${donIcon('explorer')}</span>
+            <div class="fcc-don-info__copy">
+              <h2 class="fcc-don-panel__title">Discovery</h2>
+              <p class="fcc-don-info__note">
+                ${esc(discovery.available
+                  ? (discovery.note || 'Discovery data is available.')
+                  : (discovery.note || 'Discovery attribution is not tracked yet.'))}
+              </p>
+            </div>
+          </div>
+        </article>
+
+        ${state.drill ? renderDrill() : ''}
       </section>
-      ${state.drill ? renderDrill() : ''}
     `;
   }
 

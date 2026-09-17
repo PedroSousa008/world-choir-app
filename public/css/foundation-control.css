@@ -1759,6 +1759,117 @@
   }
 }
 
+/* ── Community dashboard ── */
+
+.fcc-community {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+.fcc-comm-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.fcc-comm-metric--split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.fcc-comm-metric__half {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+}
+
+.fcc-comm-metric__divider {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(78, 197, 232, 0.2);
+  min-height: 36px;
+}
+
+.fcc-don-panel__title-block {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fcc-don-panel__title-block .fcc-don-panel__lede {
+  margin: 0;
+  padding-left: 28px;
+}
+
+.fcc-comm-world {
+  min-height: 320px;
+}
+
+.fcc-comm-world__stage {
+  min-height: 240px;
+}
+
+.fcc-comm-geo {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .fcc-comm-geo {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+}
+
+.fcc-comm-discovery {
+  padding: 16px 18px;
+}
+
+.fcc-comm-discovery .fcc-don-panel__title {
+  margin: 0 0 4px;
+}
+
+.fcc-comm-discovery .fcc-don-info__note {
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .fcc-comm-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .fcc-comm-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .fcc-comm-metric--split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .fcc-comm-metric__divider {
+    width: 100%;
+    height: 1px;
+    min-height: 0;
+  }
+
+  .fcc-don-panel__title-block .fcc-don-panel__lede {
+    padding-left: 0;
+  }
+}
+
 /* ── Card editor ── */
 
 .fcc-card-editor {
