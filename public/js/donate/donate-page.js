@@ -1381,7 +1381,7 @@ const WorldChoirDonate = (() => {
 
         ${storySections.length ? `
           <section class="df-fp-block df-fp-stories" aria-label="Foundation story">
-            ${storySections.map((s, i) => renderStorySection({ ...s, open: i === 0 })).join('')}
+            ${storySections.map((s) => renderStorySection({ ...s, open: false })).join('')}
           </section>
         ` : ''}
 
