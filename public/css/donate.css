@@ -1524,14 +1524,14 @@
 }
 
 .df-fp-nav__back,
-.df-fp-nav__share {
+.df-fp-nav__icon {
   appearance: none;
   border: 0;
   background: transparent;
   color: var(--df-muted);
   font-family: var(--font-sans);
   cursor: pointer;
-  transition: color 0.22s ease;
+  transition: color 0.22s ease, border-color 0.22s ease, background 0.22s ease;
 }
 
 .df-fp-nav__back {
@@ -1541,7 +1541,14 @@
   padding: 10px 4px;
 }
 
-.df-fp-nav__share {
+.df-fp-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.df-fp-nav__icon {
   width: 42px;
   height: 42px;
   display: grid;
@@ -1550,7 +1557,7 @@
   border: 1px solid transparent;
 }
 
-.df-fp-nav__share svg {
+.df-fp-nav__icon svg {
   width: 18px;
   height: 18px;
   stroke: currentColor;
@@ -1560,10 +1567,24 @@
 
 .df-fp-nav__back:hover,
 .df-fp-nav__back:focus-visible,
-.df-fp-nav__share:hover,
-.df-fp-nav__share:focus-visible {
+.df-fp-nav__icon:hover,
+.df-fp-nav__icon:focus-visible {
   color: var(--df-accent);
   outline: none;
+}
+
+.df-fp-nav__favorite.is-on {
+  color: #e0708a;
+}
+
+.df-fp-nav__favorite.is-on svg {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.df-fp-nav__favorite.is-on:hover,
+.df-fp-nav__favorite.is-on:focus-visible {
+  color: #f08aa0;
 }
 
 .df-fp-nav__share.is-copied {
@@ -3352,11 +3373,15 @@ html[data-theme="light"] .df-fp-project__desc,
 html[data-theme="light"] .df-fp-project__funding,
 html[data-theme="light"] .df-fp-alloc__label,
 html[data-theme="light"] .df-fp-nav__back,
-html[data-theme="light"] .df-fp-nav__share,
+html[data-theme="light"] .df-fp-nav__icon,
 html[data-theme="light"] .df-section h2,
 html[data-theme="light"] .df-section p,
 html[data-theme="light"] .df-fp .df-muted {
   color: #3f424a !important;
+}
+
+html[data-theme="light"] .df-fp-nav__favorite.is-on {
+  color: #d45a78 !important;
 }
 
 html[data-theme="light"] .df-fp-story__chevron {
@@ -3379,18 +3404,16 @@ html[data-theme="light"] .df-social__link:focus-visible {
   margin: 14px 0 0;
   padding: 0;
   display: grid;
-  /* Always 3 equal columns — 1 Cause still occupies exactly 1/3 width. */
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .df-fp-cause-card {
   appearance: none;
   width: 100%;
-  max-width: 100%;
   margin: 0;
   padding: 0;
-  border: 1.5px solid var(--df-accent, #4ec5e8);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
   border-radius: 12px;
   background: #0a0a0c;
   color: inherit;
@@ -3398,15 +3421,14 @@ html[data-theme="light"] .df-social__link:focus-visible {
   font: inherit;
   cursor: pointer;
   overflow: hidden;
-  display: block;
-  min-width: 0;
-  transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.22s ease, transform 0.22s ease;
 }
 
 .df-fp-cause-card:hover,
 .df-fp-cause-card:focus-visible {
-  border-color: var(--df-accent, #4ec5e8);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--df-accent, #4ec5e8) 45%, transparent);
+  border-color: color-mix(in srgb, var(--df-accent, #4ec5e8) 35%, var(--border-subtle, rgba(255,255,255,0.08)));
   outline: none;
   transform: translateY(-1px);
 }
@@ -3416,7 +3438,6 @@ html[data-theme="light"] .df-social__link:focus-visible {
   aspect-ratio: 4 / 3;
   background: #101014;
   overflow: hidden;
-  border-radius: inherit;
 }
 
 .df-fp-cause-card__media img {
@@ -3424,6 +3445,15 @@ html[data-theme="light"] .df-social__link:focus-visible {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.df-fp-cause-card__title {
+  display: block;
+  padding: 12px 12px 14px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
 }
 
 .df-fp-causes__toggle-wrap {
@@ -3478,7 +3508,22 @@ html[data-theme="light"] .df-social__link:focus-visible {
   margin-top: 4px;
 }
 
+@media (max-width: 720px) {
+  .df-fp-causes__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .df-fp-causes__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 html[data-theme="light"] .df-fp-cause-card {
   background: #fff;
-  border-color: var(--df-accent, #0a7f9c);
+}
+
+html[data-theme="light"] .df-fp-cause-card__title {
+  color: #12141a;
 }

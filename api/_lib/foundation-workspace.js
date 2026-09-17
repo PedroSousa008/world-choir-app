@@ -213,7 +213,8 @@ async function upsertCause(foundationId, payload = {}, actor = 'Foundation Owner
     ws.causes.unshift(row);
   }
 
-  pushActivityOntoWorkspace(ws, {
+  await writeWorkspace(ws);
+  await appendActivity(foundationId, {
     action: created ? 'cause_created' : 'cause_updated',
     label: created ? 'Cause created' : 'Cause updated',
     detail: row.title,
@@ -221,7 +222,6 @@ async function upsertCause(foundationId, payload = {}, actor = 'Foundation Owner
     relatedType: 'cause',
     relatedId: row.id,
   });
-  await writeWorkspace(ws);
 
   return { ok: true, cause: publicCause(row) };
 }
@@ -231,7 +231,8 @@ async function deleteCause(foundationId, causeId, actor = 'Foundation Owner') {
   const index = ws.causes.findIndex((c) => c.id === causeId);
   if (index === -1) return { ok: false, error: 'Cause not found' };
   const [removed] = ws.causes.splice(index, 1);
-  pushActivityOntoWorkspace(ws, {
+  await writeWorkspace(ws);
+  await appendActivity(foundationId, {
     action: 'cause_deleted',
     label: 'Cause deleted',
     detail: removed?.title || causeId,
@@ -239,7 +240,6 @@ async function deleteCause(foundationId, causeId, actor = 'Foundation Owner') {
     relatedType: 'cause',
     relatedId: causeId,
   });
-  await writeWorkspace(ws);
   return { ok: true };
 }
 
@@ -276,15 +276,6 @@ function publicNotification(row) {
 
 async function appendActivity(foundationId, entry) {
   const ws = await readWorkspace(foundationId);
-  const item = pushActivityOntoWorkspace(ws, entry);
-  await writeWorkspace(ws);
-  return item;
-}
-
-/** Mutate workspace activity in-memory — callers that already hold `ws` must use this
- *  before a single writeWorkspace to avoid read/write races that wipe other fields. */
-function pushActivityOntoWorkspace(ws, entry = {}) {
-  if (!ws || typeof ws !== 'object') return null;
   const item = {
     id: randomUUID(),
     action: entry.action || 'event',
@@ -295,7 +286,8 @@ function pushActivityOntoWorkspace(ws, entry = {}) {
     relatedId: entry.relatedId || null,
     at: new Date().toISOString(),
   };
-  ws.activity = [item, ...(Array.isArray(ws.activity) ? ws.activity : [])].slice(0, 200);
+  ws.activity = [item, ...ws.activity].slice(0, 200);
+  await writeWorkspace(ws);
   return item;
 }
 
@@ -374,7 +366,8 @@ async function upsertProject(foundationId, payload = {}, actor = 'Foundation Own
     ws.projects.unshift(row);
   }
 
-  pushActivityOntoWorkspace(ws, {
+  await writeWorkspace(ws);
+  await appendActivity(foundationId, {
     action: created ? 'project_created' : 'project_updated',
     label: created ? 'Project created' : 'Project updated',
     detail: row.title,
@@ -382,7 +375,6 @@ async function upsertProject(foundationId, payload = {}, actor = 'Foundation Own
     relatedType: 'project',
     relatedId: row.id,
   });
-  await writeWorkspace(ws);
 
   return { ok: true, project: publicProject(row) };
 }
@@ -437,7 +429,8 @@ async function upsertUpdate(foundationId, payload = {}, actor = 'Foundation Owne
     ws.updates.unshift(row);
   }
 
-  pushActivityOntoWorkspace(ws, {
+  await writeWorkspace(ws);
+  await appendActivity(foundationId, {
     action: created ? 'update_created' : (row.status === 'published' ? 'update_published' : 'update_edited'),
     label: row.status === 'published' && !created ? 'Update published' : (created ? 'Update drafted' : 'Update edited'),
     detail: row.title,
@@ -445,7 +438,6 @@ async function upsertUpdate(foundationId, payload = {}, actor = 'Foundation Owne
     relatedType: 'update',
     relatedId: row.id,
   });
-  await writeWorkspace(ws);
 
   return { ok: true, update: publicUpdate(row) };
 }
@@ -493,7 +485,8 @@ async function upsertTeamMember(foundationId, payload = {}, actor = 'Foundation 
     ws.team.push(row);
   }
 
-  pushActivityOntoWorkspace(ws, {
+  await writeWorkspace(ws);
+  await appendActivity(foundationId, {
     action: 'team_member_added',
     label: payload.id ? 'Team member updated' : 'Team member added',
     detail: `${row.name || row.email} · ${row.role}`,
@@ -502,19 +495,14 @@ async function upsertTeamMember(foundationId, payload = {}, actor = 'Foundation 
     relatedId: row.id,
   });
   if (!payload.id) {
-    const note = {
-      id: randomUUID(),
+    await appendNotification(foundationId, {
       category: 'foundation',
       title: 'Team member added',
       body: `${row.name || row.email} joined as ${row.role}.`,
       relatedType: 'team',
       relatedId: row.id,
-      read: false,
-      createdAt: now,
-    };
-    ws.notifications = [note, ...(Array.isArray(ws.notifications) ? ws.notifications : [])].slice(0, 100);
+    });
   }
-  await writeWorkspace(ws);
 
   return { ok: true, member: publicTeamMember(row) };
 }
@@ -524,7 +512,8 @@ async function removeTeamMember(foundationId, memberId, actor = 'Foundation Owne
   const index = ws.team.findIndex((t) => t.id === memberId);
   if (index === -1) return { ok: false, error: 'Team member not found' };
   const [removed] = ws.team.splice(index, 1);
-  pushActivityOntoWorkspace(ws, {
+  await writeWorkspace(ws);
+  await appendActivity(foundationId, {
     action: 'team_member_removed',
     label: 'Team member removed',
     detail: removed.email,
@@ -532,7 +521,6 @@ async function removeTeamMember(foundationId, memberId, actor = 'Foundation Owne
     relatedType: 'team',
     relatedId: memberId,
   });
-  await writeWorkspace(ws);
   return { ok: true };
 }
 

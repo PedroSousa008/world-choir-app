@@ -1104,6 +1104,30 @@ const WorldChoirDonate = (() => {
     `;
   }
 
+  function heartIconSvg() {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 20.4s-6.6-4.1-6.6-9.2A3.9 3.9 0 0 1 12 8.1a3.9 3.9 0 0 1 6.6 3.1c0 5.1-6.6 9.2-6.6 9.2z" stroke-linejoin="round"/>
+      </svg>
+    `;
+  }
+
+  function isFoundationFavorite(foundationId) {
+    try {
+      return Boolean(CreatorFoundationsStore?.UserSupport?.isFavorite?.(foundationId));
+    } catch {
+      return false;
+    }
+  }
+
+  function syncFavoriteButton(btn, favorited) {
+    if (!btn) return;
+    const on = Boolean(favorited);
+    btn.classList.toggle('is-on', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.setAttribute('aria-label', on ? 'Remove from favorite foundations' : 'Add to favorite foundations');
+  }
+
   function chevronSvg() {
     return `
       <svg class="df-fp-story__chevron" viewBox="0 0 24 24" aria-hidden="true">
@@ -1297,6 +1321,7 @@ const WorldChoirDonate = (() => {
                   <span class="df-fp-cause-card__media">
                     <img src="${esc(cause.image)}" alt="" decoding="async" loading="lazy">
                   </span>
+                  <span class="df-fp-cause-card__title">${esc(cause.title)}</span>
                 </button>
               </li>
             `).join('')}
@@ -1458,9 +1483,20 @@ const WorldChoirDonate = (() => {
       <article class="df-fp df-rise">
         <nav class="df-fp-nav" aria-label="Foundation">
           <button class="df-fp-nav__back" type="button" id="donate-back">← Back</button>
-          <button class="df-fp-nav__share" type="button" id="df-fp-share" aria-label="Share foundation">
-            ${shareIconSvg()}
-          </button>
+          <div class="df-fp-nav__actions">
+            <button
+              class="df-fp-nav__icon df-fp-nav__favorite ${isFoundationFavorite(foundation.id) ? 'is-on' : ''}"
+              type="button"
+              id="df-fp-favorite"
+              aria-pressed="${isFoundationFavorite(foundation.id) ? 'true' : 'false'}"
+              aria-label="${isFoundationFavorite(foundation.id) ? 'Remove from favorite foundations' : 'Add to favorite foundations'}"
+            >
+              ${heartIconSvg()}
+            </button>
+            <button class="df-fp-nav__icon df-fp-nav__share" type="button" id="df-fp-share" aria-label="Share foundation">
+              ${shareIconSvg()}
+            </button>
+          </div>
         </nav>
 
         ${renderProfileHero(foundation)}
@@ -1656,6 +1692,16 @@ const WorldChoirDonate = (() => {
 
     document.getElementById('df-fp-share')?.addEventListener('click', () => {
       shareFoundation(foundation);
+    });
+
+    document.getElementById('df-fp-favorite')?.addEventListener('click', () => {
+      const btn = document.getElementById('df-fp-favorite');
+      try {
+        const result = CreatorFoundationsStore.UserSupport.toggleFavorite(foundation.id);
+        syncFavoriteButton(btn, result?.favorited);
+      } catch {
+        /* ignore */
+      }
     });
 
     const animateCount = (el) => {

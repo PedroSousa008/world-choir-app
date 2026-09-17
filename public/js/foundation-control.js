@@ -2264,15 +2264,7 @@ const FoundationControl = (() => {
 
     document.getElementById('fcc-cause-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (state.causeBusy) return;
-      if (!canManageCauses()) {
-        setFlash('Your role cannot create or edit Causes.', 'err');
-        return;
-      }
-      if (!state.causeEditor) {
-        setFlash('Open Create Cause again, then save.', 'err');
-        return;
-      }
+      if (!canManageCauses() || !state.causeEditor) return;
       const titleEl = document.getElementById('fcc-cause-title');
       const descEl = document.getElementById('fcc-cause-description');
       const imageEl = document.getElementById('fcc-cause-image');
@@ -2281,50 +2273,29 @@ const FoundationControl = (() => {
       const image = String(imageEl?.value || state.causeEditor.image || '').trim();
       if (!title) {
         setFlash('Cause title is required.', 'err');
+        render();
         return;
       }
       if (!image) {
         setFlash('Cause image is required.', 'err');
+        render();
         return;
       }
-
-      // Keep editor values in state so a re-render never wipes the form mid-save.
-      const editingId = state.causeEditor.id || null;
-      state.causeEditor = {
-        ...state.causeEditor,
-        id: editingId,
-        title,
-        description,
-        image,
-      };
       state.causeBusy = true;
       state.busy = true;
-      const submitBtn = e.target.querySelector('[type="submit"]');
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving…';
-      }
-
+      render();
       try {
-        const result = await api('cause-upsert', {
+        await api('cause-upsert', {
           method: 'POST',
           body: {
-            id: editingId || undefined,
+            id: state.causeEditor.id || undefined,
             title,
             description,
             image,
             status: 'active',
           },
         });
-        const saved = result?.cause || null;
-        if (saved?.id && state.data) {
-          const list = Array.isArray(state.data.causes) ? state.data.causes.slice() : [];
-          const idx = list.findIndex((c) => c.id === saved.id);
-          if (idx >= 0) list[idx] = saved;
-          else list.unshift(saved);
-          state.data.causes = list;
-        }
-        setFlash(editingId ? 'Cause saved.' : 'Cause created.');
+        setFlash(state.causeEditor.id ? 'Cause saved.' : 'Cause created.');
         state.causeEditor = null;
         await loadCenter();
       } catch (err) {

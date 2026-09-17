@@ -130,21 +130,17 @@ const CreatorFoundationsStore = (() => {
     }
   }
 
-  async function load(options = {}) {
-    const forceNetwork = options.forceNetwork === true;
-    if (catalog && !forceNetwork) return catalog;
-    if (loadPromise && !forceNetwork) return loadPromise;
+  async function load() {
+    if (catalog) return catalog;
+    if (loadPromise) return loadPromise;
 
     // Serve warm session catalog immediately while network revalidates.
-    if (!forceNetwork && primeFromSession() && catalog) {
+    if (primeFromSession() && catalog) {
       loadPromise = (async () => {
         try {
           const useDemo = isDemoMode();
           if (useDemo) return catalog;
-          const res = await fetch(`${PRODUCTION_URL}?t=${Date.now()}`, {
-            cache: 'no-store',
-            credentials: 'omit',
-          });
+          const res = await fetch(PRODUCTION_URL, { cache: 'default', credentials: 'omit' });
           if (!res.ok) return catalog;
           const data = await res.json();
           if (data?.dataPolicy?.demo === true) return catalog;
@@ -180,10 +176,7 @@ const CreatorFoundationsStore = (() => {
         data = await res.json();
       } else {
         try {
-          const res = await fetch(
-            forceNetwork ? `${PRODUCTION_URL}?t=${Date.now()}` : PRODUCTION_URL,
-            { cache: forceNetwork ? 'no-store' : 'default', credentials: 'omit' }
-          );
+          const res = await fetch(PRODUCTION_URL, { cache: 'default', credentials: 'omit' });
           if (res.ok) {
             data = await res.json();
           } else if (res.status === 503) {
@@ -234,13 +227,12 @@ const CreatorFoundationsStore = (() => {
     return load();
   }
 
-  /** Force re-fetch public catalog (e.g. after a Cause is created or a donation succeeds). */
+  /** Force re-fetch public catalog (e.g. after a successful donation). */
   function refresh() {
     catalog = null;
     loadPromise = null;
     loadError = null;
-    try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
-    return load({ forceNetwork: true });
+    return load();
   }
 
   function yearsActiveFrom(foundation) {
@@ -701,14 +693,38 @@ const CreatorFoundationsStore = (() => {
     getFavorites() {
       return this._read().favoriteFoundationIds || [];
     },
+    isFavorite(foundationId) {
+      const id = String(foundationId || '');
+      if (!id) return false;
+      return (this.getFavorites() || []).includes(id);
+    },
     toggleFavorite(foundationId) {
+      const id = String(foundationId || '');
+      if (!id) return { favorited: false, ids: this.getFavorites() };
       const data = this._read();
       const set = new Set(data.favoriteFoundationIds || []);
-      if (set.has(foundationId)) set.delete(foundationId);
-      else set.add(foundationId);
+      const meta = { ...(data.favoriteMeta || {}) };
+      let favorited;
+      if (set.has(id)) {
+        set.delete(id);
+        delete meta[id];
+        favorited = false;
+      } else {
+        set.add(id);
+        meta[id] = { favoritedAt: new Date().toISOString() };
+        favorited = true;
+      }
       data.favoriteFoundationIds = Array.from(set);
+      data.favoriteMeta = meta;
       this._write(data);
-      return data.favoriteFoundationIds;
+      try {
+        window.dispatchEvent(new CustomEvent('wc-foundation-favorite', {
+          detail: { foundationId: id, favorited, ids: data.favoriteFoundationIds },
+        }));
+      } catch {
+        /* ignore */
+      }
+      return { favorited, ids: data.favoriteFoundationIds };
     },
     getSavedProjects() {
       return this._read().savedProjectIds || [];
