@@ -1354,93 +1354,182 @@ const FoundationControl = (() => {
 
   /* ─── Donations ─── */
 
+  function donIcon(kind) {
+    const common = 'width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+    const icons = {
+      raised: `<svg ${common}><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v4c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 10v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4"/><path d="M5 14v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4"/></svg>`,
+      donations: `<svg ${common}><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 11c0 5.5-7 10-7 10z"/></svg>`,
+      supporters: `<svg ${common}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+      average: `<svg ${common}><path d="M5 12h14"/></svg>`,
+      median: `<svg ${common}><path d="M5 12h14"/></svg>`,
+      info: `<svg ${common}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+      timeline: `<svg ${common}><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 4-6"/></svg>`,
+      country: `<svg ${common}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+      city: `<svg ${common}><path d="M12 21s-7-4.5-7-10a7 7 0 0114 0c0 5.5-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg>`,
+      explorer: `<svg ${common}><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`,
+      chart: `<svg ${common}><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15v-3"/><path d="M12 15V8"/><path d="M16 15v-5"/></svg>`,
+    };
+    return icons[kind] || icons.info;
+  }
+
+  function donMetricCard(icon, value, label) {
+    return `
+      <article class="fcc-don-metric">
+        <span class="fcc-don-metric__icon" aria-hidden="true">${donIcon(icon)}</span>
+        <div class="fcc-don-metric__copy">
+          <p class="fcc-don-metric__value">${esc(value)}</p>
+          <p class="fcc-don-metric__label">${esc(label)}</p>
+        </div>
+      </article>
+    `;
+  }
+
+  function donEmptyState(icon, title, copy) {
+    return `
+      <div class="fcc-don-empty">
+        <span class="fcc-don-empty__icon" aria-hidden="true">${donIcon(icon)}</span>
+        <p class="fcc-don-empty__title">${esc(title)}</p>
+        ${copy ? `<p class="fcc-don-empty__copy">${esc(copy)}</p>` : ''}
+      </div>
+    `;
+  }
+
+  function hasTimelineData(series = []) {
+    return (series || []).some((s) => Number(s.amount ?? s.value ?? 0) > 0);
+  }
+
   function renderDonations() {
     const don = state.data?.donations || {};
     const geo = state.data?.geography || {};
     const explorer = don.explorer || [];
     const cities = geo.cities || [];
     const countries = geo.countries || [];
+    const timeline = don.timeline || [];
+    const timelineReady = hasTimelineData(timeline);
+    const conversionNote = don.conversionRate == null
+      ? (don.conversionNote || 'Conversion rate requires Foundation page view tracking.')
+      : '';
 
     return `
-      <section class="fcc-section">
-        <div class="fcc-hero">
-          <button type="button" class="fcc-hero__primary" data-nav="donations">
-            <span class="fcc-hero__value">${esc(money(don.totalRaised || 0, currency()))}</span>
-            <span class="fcc-hero__label">Total raised</span>
-          </button>
-          <div class="fcc-hero__secondary">
-            ${metricBtn(num(don.totalDonations || 0), 'Donations', 'donations')}
-            ${metricBtn(num(don.totalSupporters || 0), 'Supporters', 'community')}
-            ${metricBtn(don.averageDonation != null ? money(don.averageDonation, currency()) : '—', 'Average', 'donations')}
-            ${metricBtn(don.medianDonation != null ? money(don.medianDonation, currency()) : '—', 'Median', 'donations')}
+      <section class="fcc-donations">
+        <div class="fcc-don-metrics" aria-label="Donation metrics">
+          ${donMetricCard('raised', money(don.totalRaised || 0, currency()), 'Total raised')}
+          ${donMetricCard('donations', num(don.totalDonations || 0), 'Donations')}
+          ${donMetricCard('supporters', num(don.totalSupporters || 0), 'Supporters')}
+          ${donMetricCard('average', don.averageDonation != null ? money(don.averageDonation, currency()) : '—', 'Average')}
+          ${donMetricCard('median', don.medianDonation != null ? money(don.medianDonation, currency()) : '—', 'Median')}
+        </div>
+
+        <article class="fcc-edit-card fcc-don-info">
+          <div class="fcc-don-info__row">
+            <span class="fcc-don-info__icon" aria-hidden="true">${donIcon('info')}</span>
+            <div class="fcc-don-info__copy">
+              <p class="fcc-don-info__summary">
+                New supporters ${esc(num(don.newSupporters || 0))} · Returning ${esc(num(don.repeatSupporters || 0))}
+                · Foundation share ${esc(don.foundationSharePercent ?? '—')}% · Platform fee ${esc(don.platformFeePercent ?? '—')}%
+              </p>
+              ${conversionNote ? `<p class="fcc-don-info__note">${esc(conversionNote)}</p>` : ''}
+            </div>
           </div>
-        </div>
-        <p class="fcc-muted">
-          New supporters ${esc(num(don.newSupporters || 0))} · Returning ${esc(num(don.repeatSupporters || 0))}
-          · Foundation share ${esc(don.foundationSharePercent ?? '—')}% · Platform fee ${esc(don.platformFeePercent ?? '—')}%
-        </p>
-        ${don.conversionRate == null ? `<p class="fcc-note">${esc(don.conversionNote || 'Conversion rate requires Foundation page view tracking.')}</p>` : ''}
-      </section>
+        </article>
 
-      <section class="fcc-section">
-        <div class="fcc-section__head">
-          <h2>Timeline</h2>
-          <button type="button" class="fcc-btn" data-action="open-map">Explore on map</button>
-        </div>
-        ${renderChart(don.timeline || [], 'amount')}
-        ${geo.note ? `<p class="fcc-note">${esc(geo.note)}</p>` : ''}
-      </section>
+        <div class="fcc-don-grid fcc-don-grid--top">
+          <article class="fcc-edit-card fcc-don-panel fcc-don-panel--wide">
+            <header class="fcc-don-panel__head">
+              <div class="fcc-don-panel__title-row">
+                <span class="fcc-don-panel__icon" aria-hidden="true">${donIcon('timeline')}</span>
+                <h2 class="fcc-don-panel__title">Donation Timeline</h2>
+              </div>
+            </header>
+            <div class="fcc-don-panel__body">
+              <div class="fcc-don-stage ${timelineReady ? 'has-chart' : ''}">
+                ${timelineReady
+                  ? renderChart(timeline, 'amount')
+                  : donEmptyState('chart', 'Not enough data yet', geo.note || 'No verified donations yet for this Foundation.')}
+              </div>
+              ${timelineReady && geo.note ? `<p class="fcc-note">${esc(geo.note)}</p>` : ''}
+            </div>
+          </article>
 
-      <section class="fcc-section fcc-split">
-        <div>
-          <div class="fcc-section__head">
-            <h2>Countries</h2>
-          </div>
-          ${renderCountryTable(countries)}
+          <article class="fcc-edit-card fcc-don-panel">
+            <header class="fcc-don-panel__head">
+              <div class="fcc-don-panel__title-row">
+                <span class="fcc-don-panel__icon" aria-hidden="true">${donIcon('country')}</span>
+                <h2 class="fcc-don-panel__title">Donations by Country</h2>
+              </div>
+            </header>
+            <div class="fcc-don-panel__body">
+              <div class="fcc-don-stage ${countries.length ? 'has-table' : ''}">
+                ${countries.length
+                  ? renderCountryTable(countries)
+                  : donEmptyState('country', 'Not enough data yet')}
+              </div>
+            </div>
+          </article>
         </div>
-        <div>
-          <div class="fcc-section__head">
-            <h2>Cities</h2>
-            ${cities.length && can('exportData') ? `
-              <button type="button" class="fcc-btn-ghost" data-action="export-cities">Export CSV</button>
-            ` : ''}
-          </div>
-          ${renderCityTable(cities)}
-        </div>
-      </section>
 
-      ${state.drill ? renderDrill() : ''}
+        <div class="fcc-don-grid fcc-don-grid--bottom">
+          <article class="fcc-edit-card fcc-don-panel">
+            <header class="fcc-don-panel__head">
+              <div class="fcc-don-panel__title-row">
+                <span class="fcc-don-panel__icon" aria-hidden="true">${donIcon('city')}</span>
+                <h2 class="fcc-don-panel__title">Donations by City</h2>
+              </div>
+              ${cities.length && can('exportData') ? `
+                <button type="button" class="fcc-btn-ghost" data-action="export-cities">Export CSV</button>
+              ` : ''}
+            </header>
+            <div class="fcc-don-panel__body">
+              <div class="fcc-don-stage ${cities.length ? 'has-table' : ''}">
+                ${cities.length
+                  ? renderCityTable(cities)
+                  : donEmptyState('city', 'Not enough data yet')}
+              </div>
+            </div>
+          </article>
 
-      <section class="fcc-section">
-        <div class="fcc-section__head">
-          <h2>Donation explorer</h2>
-          ${explorer.length && can('exportData') ? `
-            <button type="button" class="fcc-btn-ghost" data-action="export-donations">Export CSV</button>
-          ` : ''}
+          <article class="fcc-edit-card fcc-don-panel fcc-don-panel--wide">
+            <header class="fcc-don-panel__head">
+              <div class="fcc-don-panel__title-row">
+                <span class="fcc-don-panel__icon" aria-hidden="true">${donIcon('explorer')}</span>
+                <h2 class="fcc-don-panel__title">Donation explorer</h2>
+              </div>
+              <div class="fcc-don-panel__actions">
+                ${explorer.length && can('exportData') ? `
+                  <button type="button" class="fcc-btn-ghost" data-action="export-donations">Export CSV</button>
+                ` : ''}
+                <button type="button" class="fcc-btn" data-action="open-map">Explore on map</button>
+              </div>
+            </header>
+            <div class="fcc-don-panel__body">
+              <p class="fcc-don-panel__lede">Privacy-safe labels only. Identities appear when the supporter opted to share.</p>
+              ${!explorer.length
+                ? `<div class="fcc-don-stage">${donEmptyState('explorer', 'No verified donations in this range yet.')}</div>`
+                : `<div class="fcc-table-scroll">
+                    <table class="fcc-rank">
+                      <thead>
+                        <tr>
+                          <th>Date</th><th>Supporter</th><th>Place</th><th>Message</th><th class="num">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${explorer.map((row) => `
+                          <tr>
+                            <td>${esc(when(row.date))}</td>
+                            <td>${esc(row.supporterLabel)}${row.isReturning ? ' · returning' : (row.isNewSupporter ? ' · new' : '')}</td>
+                            <td>${esc([row.city, row.country].filter(Boolean).join(', ') || '—')}</td>
+                            <td>${row.message ? esc(row.message) : '—'}</td>
+                            <td class="num">${esc(money(row.amount, row.currency || currency()))}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>`}
+            </div>
+          </article>
         </div>
-        <p class="fcc-muted">Privacy-safe labels only. Identities appear when the supporter opted to share.</p>
-        ${!explorer.length
-          ? emptyNote('No verified donations in this range yet.')
-          : `<div style="overflow:auto">
-              <table class="fcc-rank">
-                <thead>
-                  <tr>
-                    <th>Date</th><th>Supporter</th><th>Place</th><th>Message</th><th class="num">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${explorer.map((row) => `
-                    <tr>
-                      <td>${esc(when(row.date))}</td>
-                      <td>${esc(row.supporterLabel)}${row.isReturning ? ' · returning' : (row.isNewSupporter ? ' · new' : '')}</td>
-                      <td>${esc([row.city, row.country].filter(Boolean).join(', ') || '—')}</td>
-                      <td>${row.message ? esc(row.message) : '—'}</td>
-                      <td class="num">${esc(money(row.amount, row.currency || currency()))}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>`}
+
+        ${state.drill ? renderDrill() : ''}
       </section>
     `;
   }
