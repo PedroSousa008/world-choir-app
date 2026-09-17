@@ -1297,7 +1297,6 @@ const WorldChoirDonate = (() => {
                   <span class="df-fp-cause-card__media">
                     <img src="${esc(cause.image)}" alt="" decoding="async" loading="lazy">
                   </span>
-                  <span class="df-fp-cause-card__title">${esc(cause.title)}</span>
                 </button>
               </li>
             `).join('')}
