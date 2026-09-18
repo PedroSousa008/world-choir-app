@@ -103,6 +103,32 @@ const FoundationDonationAnalyticsUI = (() => {
     `;
   }
 
+  function compactAxisLabel(label) {
+    const raw = String(label || '').trim();
+    // "Oct 2025" → "Oct ’25" so wide ranges stay readable at any width
+    const monthYear = raw.match(/^([A-Za-z]{3})\s+(20\d{2})$/);
+    if (monthYear) return `${monthYear[1]} ’${monthYear[2].slice(2)}`;
+    return raw;
+  }
+
+  function pickXLabelIndexes(count) {
+    if (count <= 0) return [];
+    if (count === 1) return [0];
+    const maxLabels = 7;
+    const step = Math.max(1, Math.ceil((count - 1) / (maxLabels - 1)));
+    const idxs = [];
+    for (let i = 0; i < count; i += step) idxs.push(i);
+    const last = count - 1;
+    if (idxs[idxs.length - 1] !== last) {
+      // Drop previous tick if it would crowd the final label
+      if (idxs.length >= 2 && last - idxs[idxs.length - 1] < Math.max(1, Math.floor(step * 0.55))) {
+        idxs.pop();
+      }
+      idxs.push(last);
+    }
+    return idxs;
+  }
+
   function areaChart(points, valueKey, currency, caption) {
     const series = points.length
       ? points
@@ -113,9 +139,10 @@ const FoundationDonationAnalyticsUI = (() => {
         donations: 0,
         averageDonation: 0,
       }));
-    const w = 720;
-    const h = 220;
-    const pad = { t: 16, r: 16, b: 36, l: 52 };
+    // Plot-only viewBox — axis labels live in HTML so they never stretch.
+    const w = 1000;
+    const h = 200;
+    const pad = { t: 12, r: 8, b: 12, l: 8 };
     const values = series.map((p) => Number(p[valueKey] || 0));
     const max = Math.max(...values, 0);
     const emptyScale = max <= 0;
@@ -125,36 +152,50 @@ const FoundationDonationAnalyticsUI = (() => {
     const coords = series.map((p, i) => {
       const x = pad.l + (series.length === 1 ? innerW / 2 : (i / (series.length - 1)) * innerW);
       const y = pad.t + innerH - ((Number(p[valueKey] || 0) / span) * innerH);
-      return { x, y, p };
+      const pct = series.length === 1 ? 50 : (i / (series.length - 1)) * 100;
+      return { x, y, pct, p };
     });
     const line = coords.map((c, i) => `${i ? 'L' : 'M'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
     const area = `${line} L${coords[coords.length - 1].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} L${coords[0].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} Z`;
-    const yTicks = [0, 0.5, 1].map((t) => {
+    const yTicks = [1, 0.5, 0].map((t) => {
       const val = emptyScale ? 0 : span * t;
-      const y = pad.t + innerH - (t * innerH);
+      const topPct = ((1 - t) * 100);
       const label = valueKey === 'donations'
         ? num(Math.round(val))
         : money(val, currency).replace(/\.00$/, '');
-      return { y, label };
+      return { topPct, label };
     });
-    const labelEvery = Math.max(1, Math.ceil(series.length / 8));
+    const xLabelIdx = new Set(pickXLabelIndexes(coords.length));
 
     return chartFrame(`
       <div class="fda-chart" role="img" aria-label="Donation revenue over time">
-        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-          ${yTicks.map((t) => `
-            <line x1="${pad.l}" y1="${t.y}" x2="${w - pad.r}" y2="${t.y}" class="fda-chart__grid"></line>
-            <text x="${pad.l - 8}" y="${t.y + 4}" class="fda-chart__axis" text-anchor="end">${esc(t.label)}</text>
-          `).join('')}
-          <path d="${area}" class="fda-chart__area"></path>
-          <path d="${line}" class="fda-chart__line"></path>
-          ${coords.map((c) => `<circle cx="${c.x}" cy="${c.y}" r="3.2" class="fda-chart__dot">
-            <title>${esc(c.p.label)}: ${esc(valueKey === 'donations' ? num(c.p.donations || 0) : money(c.p[valueKey] || 0, currency))}</title>
-          </circle>`).join('')}
-          ${coords.map((c, i) => (i % labelEvery === 0 || i === coords.length - 1)
-            ? `<text x="${c.x}" y="${h - 10}" class="fda-chart__axis" text-anchor="middle">${esc(c.p.label)}</text>`
-            : '').join('')}
-        </svg>
+        <div class="fda-chart__plot">
+          <div class="fda-chart__y" aria-hidden="true">
+            ${yTicks.map((t) => `
+              <span class="fda-chart__ylabel" style="top:${t.topPct}%">${esc(t.label)}</span>
+            `).join('')}
+          </div>
+          <div class="fda-chart__canvas">
+            <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" focusable="false">
+              ${yTicks.map((t) => {
+                const y = pad.t + (t.topPct / 100) * innerH;
+                return `<line x1="${pad.l}" y1="${y}" x2="${w - pad.r}" y2="${y}" class="fda-chart__grid"></line>`;
+              }).join('')}
+              <path d="${area}" class="fda-chart__area"></path>
+              <path d="${line}" class="fda-chart__line"></path>
+              ${coords.map((c) => `<circle cx="${c.x}" cy="${c.y}" r="3.2" class="fda-chart__dot">
+                <title>${esc(c.p.label)}: ${esc(valueKey === 'donations' ? num(c.p.donations || 0) : money(c.p[valueKey] || 0, currency))}</title>
+              </circle>`).join('')}
+            </svg>
+          </div>
+        </div>
+        <div class="fda-chart__x" aria-hidden="true">
+          ${coords.map((c, i) => {
+            if (!xLabelIdx.has(i)) return '';
+            const edge = i === 0 ? 'is-first' : (i === coords.length - 1 ? 'is-last' : '');
+            return `<span class="fda-chart__xlabel ${edge}" style="left:${c.pct}%">${esc(compactAxisLabel(c.p.label))}</span>`;
+          }).join('')}
+        </div>
       </div>
     `, caption);
   }

@@ -2745,11 +2745,14 @@ body.is-fcc-analytics-open {
 
 .fda-chart {
   width: 100%;
-  min-height: 220px;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
 .fda-chart-frame {
   position: relative;
+  min-width: 0;
 }
 
 .fda-chart-frame.is-empty .fda-chart__line,
@@ -2773,6 +2776,7 @@ body.is-fcc-analytics-open {
   text-align: center;
   max-width: 90%;
   pointer-events: none;
+  z-index: 2;
 }
 
 .fda-section-note {
@@ -2792,20 +2796,78 @@ body.is-fcc-analytics-open {
   opacity: 0.28;
 }
 
-.fda-chart svg {
+.fda-chart__plot {
+  display: grid;
+  grid-template-columns: minmax(44px, 56px) minmax(0, 1fr);
+  gap: 6px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.fda-chart__y {
+  position: relative;
+  height: 200px;
+}
+
+.fda-chart__ylabel {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  color: #6b6f7d;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.fda-chart__canvas {
+  position: relative;
+  min-width: 0;
+  height: 200px;
+}
+
+.fda-chart__canvas svg {
   width: 100%;
-  height: 220px;
+  height: 100%;
   display: block;
+  overflow: visible;
+}
+
+.fda-chart__x {
+  position: relative;
+  height: 28px;
+  margin-left: 62px;
+  min-width: 0;
+}
+
+.fda-chart__xlabel {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  color: #6b6f7d;
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+  max-width: 4.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.fda-chart__xlabel.is-first {
+  transform: translateX(0);
+  text-align: left;
+}
+
+.fda-chart__xlabel.is-last {
+  transform: translateX(-100%);
+  text-align: right;
 }
 
 .fda-chart__grid {
   stroke: rgba(255, 255, 255, 0.06);
   stroke-width: 1;
-}
-
-.fda-chart__axis {
-  fill: #6b6f7d;
-  font-size: 10px;
+  vector-effect: non-scaling-stroke;
 }
 
 .fda-chart__area {
@@ -2816,10 +2878,32 @@ body.is-fcc-analytics-open {
   fill: none;
   stroke: #4ec5e8;
   stroke-width: 2;
+  vector-effect: non-scaling-stroke;
 }
 
 .fda-chart__dot {
   fill: #4ec5e8;
+}
+
+@media (max-width: 640px) {
+  .fda-chart__plot {
+    grid-template-columns: minmax(40px, 48px) minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .fda-chart__y,
+  .fda-chart__canvas {
+    height: 170px;
+  }
+
+  .fda-chart__x {
+    margin-left: 52px;
+  }
+
+  .fda-chart__xlabel {
+    font-size: 9px;
+    max-width: 3.6rem;
+  }
 }
 
 .fda-two {
