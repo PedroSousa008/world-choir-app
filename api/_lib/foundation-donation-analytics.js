@@ -5,6 +5,7 @@
 const { listAllPledges } = require('./store');
 const {
   findInfluencerById,
+  listInfluencersOwnerView,
   readDonationsLedger,
   PLATFORM_FEE_PERCENT,
 } = require('./members-store');
@@ -869,6 +870,45 @@ async function buildFoundationDonationAnalytics(foundationId, {
       return da - db;
     });
 
+  const projects = (workspace.projects || []).map(publicProject);
+  const payload = assembleAnalyticsPayload({
+    allDonations,
+    projects,
+    pledges,
+    range,
+    from,
+    to,
+  });
+
+  return {
+    ...payload,
+    permissions: {
+      canViewAmounts,
+      canViewDetails,
+      canViewSupporters,
+    },
+  };
+}
+
+function foundationFilterOptions(influencers) {
+  const rows = (influencers || [])
+    .filter((f) => f && f.active !== false)
+    .map((f) => ({
+      id: f.id,
+      name: String(f.foundationName || f.displayName || 'Foundation').trim() || 'Foundation',
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  return [{ id: 'all', name: 'All' }, ...rows];
+}
+
+function assembleAnalyticsPayload({
+  allDonations,
+  projects,
+  pledges,
+  range = 'all',
+  from = null,
+  to = null,
+}) {
   const bounds = resolveBounds(range, from, to);
   const period = filterByBounds(allDonations, bounds.from, bounds.to);
   const prev = previousBounds(bounds);
@@ -893,7 +933,6 @@ async function buildFoundationDonationAnalytics(foundationId, {
   };
 
   const pledgeIndex = buildPledgeIndex(pledges);
-  const projects = (workspace.projects || []).map(publicProject);
 
   return {
     ok: true,
@@ -919,15 +958,93 @@ async function buildFoundationDonationAnalytics(foundationId, {
     projects: buildProjects(period, projects),
     timing: buildTiming(period),
     milestones: buildMilestones(allDonations, pledgeIndex),
+  };
+}
+
+/**
+ * Owner Control Center analytics — All foundations by default, or one foundation.
+ * Same metrics shape as Foundation Owner analytics.
+ */
+async function buildOwnerDonationAnalytics({
+  foundationId = 'all',
+  range = 'all',
+  from = null,
+  to = null,
+} = {}) {
+  const [influencers, ledger, pledges] = await Promise.all([
+    listInfluencersOwnerView(),
+    readDonationsLedger(),
+    listAllPledges().catch(() => []),
+  ]);
+
+  const foundations = foundationFilterOptions(influencers);
+  const selectedId = foundationId && foundationId !== 'all' ? String(foundationId) : 'all';
+
+  if (selectedId !== 'all') {
+    const match = foundations.find((f) => f.id === selectedId);
+    if (!match) return { ok: false, error: 'Foundation not found' };
+    const data = await buildFoundationDonationAnalytics(selectedId, { range, from, to });
+    if (!data.ok) return data;
+    return {
+      ...data,
+      scope: 'owner',
+      selectedFoundationId: selectedId,
+      foundations,
+    };
+  }
+
+  const activeIds = new Set(foundations.filter((f) => f.id !== 'all').map((f) => f.id));
+  const allDonations = ledger
+    .filter((d) => d.foundationId && activeIds.has(d.foundationId) && isSuccessfulDonation(d))
+    .sort((a, b) => {
+      const da = donationDate(a)?.getTime() || 0;
+      const db = donationDate(b)?.getTime() || 0;
+      return da - db;
+    });
+
+  const nameById = new Map(foundations.filter((f) => f.id !== 'all').map((f) => [f.id, f.name]));
+  const workspaces = await Promise.all(
+    [...activeIds].map(async (id) => {
+      const ws = await readWorkspace(id).catch(() => ({ projects: [] }));
+      return { id, projects: ws.projects || [] };
+    })
+  );
+
+  const projects = workspaces.flatMap(({ id, projects: list }) => {
+    const foundationName = nameById.get(id) || 'Foundation';
+    return list.map((p) => {
+      const pub = publicProject(p);
+      return {
+        ...pub,
+        title: `${foundationName} · ${pub.title || 'Untitled project'}`,
+      };
+    });
+  });
+
+  const payload = assembleAnalyticsPayload({
+    allDonations,
+    projects,
+    pledges,
+    range,
+    from,
+    to,
+  });
+
+  return {
+    ...payload,
+    scope: 'owner',
+    selectedFoundationId: 'all',
+    foundations,
     permissions: {
-      canViewAmounts,
-      canViewDetails,
-      canViewSupporters,
+      canViewAmounts: true,
+      canViewDetails: true,
+      canViewSupporters: true,
     },
   };
 }
 
 module.exports = {
   buildFoundationDonationAnalytics,
+  buildOwnerDonationAnalytics,
   PLATFORM_FEE_PERCENT,
 };

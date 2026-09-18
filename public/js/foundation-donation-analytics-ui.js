@@ -656,6 +656,28 @@ const FoundationDonationAnalyticsUI = (() => {
     }
   }
 
+  function renderFoundationCategories(data, ui) {
+    const list = (ui.foundations || data.foundations || []).filter(Boolean);
+    if (!list.length) return '';
+    const active = ui.foundationId || data.selectedFoundationId || 'all';
+    return `
+      <section class="fda-foundation-cats" aria-label="Foundation categories">
+        <p class="fda-foundation-cats__label">Categories</p>
+        <div class="fda-foundation-cats__bar" role="tablist" aria-label="Filter by foundation">
+          ${list.map((f) => `
+            <button
+              type="button"
+              class="fda-foundation-cats__btn ${active === f.id ? 'is-active' : ''}"
+              role="tab"
+              aria-selected="${active === f.id ? 'true' : 'false'}"
+              data-analytics-foundation="${esc(f.id)}"
+            >${esc(f.name)}</button>
+          `).join('')}
+        </div>
+      </section>
+    `;
+  }
+
   function renderShell(data, ui) {
     if (!data) {
       return `<div class="fda-loading" role="status">Loading donation analytics…</div>`;
@@ -669,6 +691,7 @@ const FoundationDonationAnalyticsUI = (() => {
 
     const currency = data.currency || 'EUR';
     const rangeKey = ui.range || data.range?.key || 'all';
+    const showFoundationCats = !!(ui.foundations || data.foundations || []).length;
     return `
       <div class="fda">
         ${rangeKey === 'custom' ? `
@@ -678,6 +701,7 @@ const FoundationDonationAnalyticsUI = (() => {
             <button type="button" class="fcc-btn-ghost fcc-top-chip" data-analytics-apply-custom>Apply</button>
           </div>
         ` : ''}
+        ${showFoundationCats ? renderFoundationCategories(data, ui) : ''}
         ${renderFinancial(data, currency)}
         ${renderRevenue(data, ui, currency)}
         <div class="fda-two">
@@ -696,12 +720,15 @@ const FoundationDonationAnalyticsUI = (() => {
 
   function renderHeader(ui = {}) {
     const rangeKey = ui.range || 'all';
+    const subtitle = ui.ownerMode
+      ? 'In-depth insights into Creator Foundations donations and supporters.'
+      : 'In-depth insights into your foundation’s donations and supporters.';
     return `
       <div class="fcc-analytics__title-row">
         <span class="fcc-analytics__title-icon" aria-hidden="true">${icon('trend')}</span>
         <div>
           <h2 id="fcc-analytics-title">Donation Analytics</h2>
-          <p class="fcc-analytics__subtitle">In-depth insights into your foundation’s donations and supporters.</p>
+          <p class="fcc-analytics__subtitle">${esc(subtitle)}</p>
         </div>
       </div>
       <div class="fcc-analytics__head-actions">

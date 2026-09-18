@@ -15,6 +15,9 @@ const {
   buildOwnerControlCenter,
   searchOwnerControlCenter,
 } = require('./_lib/owner-intel');
+const {
+  buildOwnerDonationAnalytics,
+} = require('./_lib/foundation-donation-analytics');
 const { buildDailyPeaceOwnerIntel, purgeIncompleteArchivedAssignments } = require('./_lib/daily-peace');
 const {
   buildVoiceActivityPage,
@@ -159,6 +162,19 @@ module.exports = async function handler(req, res) {
       res.setHeader('Cache-Control', 'no-store');
       if (!requireOwner(req, res)) return;
       const data = await buildOwnerControlCenter();
+      return res.status(200).json(data);
+    }
+
+    if (action === 'donation-analytics' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await buildOwnerDonationAnalytics({
+        foundationId: req.query.foundationId || 'all',
+        range: String(req.query.range || 'all'),
+        from: req.query.from || null,
+        to: req.query.to || null,
+      });
+      if (!data.ok) return res.status(404).json({ error: data.error || 'Not found' });
       return res.status(200).json(data);
     }
 
