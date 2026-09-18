@@ -2308,7 +2308,33 @@ const FoundationControl = (() => {
 
   /* ─── Render router ─── */
 
-  function renderApp() {
+  function getAnalyticsScrollEl() {
+    return document.getElementById('fcc-analytics-body');
+  }
+
+  function captureAnalyticsScroll() {
+    if (!state.analyticsOpen) return null;
+    const el = getAnalyticsScrollEl();
+    return el ? el.scrollTop : null;
+  }
+
+  function restoreAnalyticsScroll(scrollTop, focusSeg) {
+    if (scrollTop == null) return;
+    const apply = () => {
+      const el = getAnalyticsScrollEl();
+      if (el) el.scrollTop = scrollTop;
+      if (focusSeg && focusSeg.group && focusSeg.value) {
+        const btn = root().querySelector(
+          `[data-analytics-seg="${focusSeg.group}"][data-seg-value="${focusSeg.value}"]`
+        );
+        btn?.focus?.({ preventScroll: true });
+      }
+    };
+    apply();
+    requestAnimationFrame(apply);
+  }
+
+  function renderApp(opts = {}) {
     const map = {
       overview: renderOverview,
       foundation: renderFoundation,
@@ -2317,8 +2343,12 @@ const FoundationControl = (() => {
       settings: renderSettings,
     };
     const fn = map[state.section] || renderOverview;
+    const savedScroll = opts.preserveAnalyticsScroll === false
+      ? null
+      : captureAnalyticsScroll();
     root().innerHTML = renderShell(fn());
     bindApp();
+    restoreAnalyticsScroll(savedScroll, opts.focusSeg || null);
     if (state.mapOpen) {
       requestAnimationFrame(() => mountMap());
     } else {
@@ -2401,13 +2431,15 @@ const FoundationControl = (() => {
     });
 
     root().querySelectorAll('[data-analytics-seg]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
         const group = btn.getAttribute('data-analytics-seg');
         const value = btn.getAttribute('data-seg-value');
         if (group === 'revenue') state.analyticsRevenueMetric = value;
         if (group === 'geo') state.analyticsGeoMode = value;
         if (group === 'timing') state.analyticsTimingMode = value;
-        render();
+        // Re-render in place — preserve analytics panel scroll position
+        renderApp({ focusSeg: { group, value } });
       });
     });
 
