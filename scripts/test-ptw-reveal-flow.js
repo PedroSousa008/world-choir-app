@@ -486,7 +486,7 @@ async function main() {
   assert(r.state.destination?.city === 'Rio de Janeiro', 'in-flight destination preserved');
   assert(r.state.arrivalAt === travelSnap.arrivalAt, 'in-flight arrivalAt preserved');
 
-  // Past canonical arrival while travelling must be healed forward (not instant arrive)
+  // Past canonical arrival while travelling must LAND (never push arrival another day)
   await seedArrived(16);
   const pastArrive = isoOn(16, ARR_H, ARR_M);
   mem.itinerary.entries.push({
@@ -527,9 +527,127 @@ async function main() {
     invitedCities: [],
   };
   r = await ptw2.advanceStateMachine(evening);
-  assert(r.state.status === 'TRAVELLING', 'past arrivalAt does not instantly arrive');
-  assert(r.state.arrivalAt === isoOn(17, ARR_H, ARR_M), 'past arrivalAt healed to next landing');
-  assert(r.state.currentCity === 'Braga', 'still at origin until real landing');
+  assert(r.state.status !== 'TRAVELLING', 'past arrivalAt ends travel');
+  assert(r.state.currentCity === 'Rio de Janeiro', 'World parks at destination after landing');
+  assert(r.state.destination == null, 'travel fields cleared after landing');
+
+  // Extended arrival (bug leftover) snaps to first canonical landing, then lands when due
+  await seedArrived(16);
+  mem.itinerary.entries.push({
+    id: 'leg-rio-extended',
+    sequence: 2,
+    city: 'Rio de Janeiro',
+    country: 'Brazil',
+    countryCode: 'BR',
+    latitude: -22.9068,
+    longitude: -43.1729,
+    originCity: 'Braga',
+    originCountry: 'Portugal',
+    departedAt: evening.toISOString(),
+    arrivedAt: isoOn(18, ARR_H, ARR_M),
+    isSeed: false,
+  });
+  mem.state = {
+    version: 3,
+    status: 'TRAVELLING',
+    currentCity: 'Braga',
+    currentCountry: 'Portugal',
+    currentCountryCode: 'PT',
+    currentLatitude: 41.5518,
+    currentLongitude: -8.4229,
+    currentItineraryEntryId: 'leg-rio-extended',
+    origin: {
+      city: 'Braga', country: 'Portugal', countryCode: 'PT',
+      latitude: 41.5518, longitude: -8.4229,
+    },
+    destination: {
+      city: 'Rio de Janeiro', country: 'Brazil', countryCode: 'BR',
+      latitude: -22.9068, longitude: -43.1729,
+    },
+    departureAt: evening.toISOString(),
+    arrivalAt: isoOn(18, ARR_H, ARR_M),
+    activeRoundId: null,
+    invitationCount: 0,
+    invitedCities: [],
+  };
+  // Before the real landing clock: snap only
+  r = await ptw2.advanceStateMachine(evening);
+  assert(r.state.status === 'TRAVELLING', 'extended arrival snaps without inventing a later day');
+  assert(r.state.arrivalAt === isoOn(17, ARR_H, ARR_M), 'extended arrival snaps to first canonical landing');
+  // After the real landing clock: land (may settle into WAITING for first call)
+  r = await ptw2.advanceStateMachine(new Date(Date.UTC(2026, 8, 17, ARR_H, ARR_M, 30)));
+  assert(
+    r.state.status !== 'TRAVELLING' && r.state.currentCity === 'Rio de Janeiro',
+    `snapped arrival lands when due (got ${r.state.status} @ ${r.state.currentCity})`
+  );
+
+  // Premature itinerary legs (departed before previous landed) are pruned
+  await seedArrived(16);
+  mem.itinerary.entries.push(
+    {
+      id: 'leg-a',
+      sequence: 2,
+      city: 'Rio de Janeiro',
+      country: 'Brazil',
+      countryCode: 'BR',
+      latitude: -22.9068,
+      longitude: -43.1729,
+      originCity: 'Braga',
+      originCountry: 'Portugal',
+      departedAt: evening.toISOString(),
+      arrivedAt: isoOn(18, ARR_H, ARR_M),
+      calledByVoiceNumber: 31,
+      isSeed: false,
+    },
+    {
+      id: 'leg-b-orphan',
+      sequence: 3,
+      city: 'Porto',
+      country: 'Portugal',
+      countryCode: 'PT',
+      latitude: 41.15,
+      longitude: -8.61,
+      originCity: 'Rio de Janeiro',
+      originCountry: 'Brazil',
+      departedAt: new Date(evening.getTime() + 5 * 60 * 1000).toISOString(),
+      arrivedAt: isoOn(17, ARR_H, ARR_M),
+      calledByVoiceNumber: 5,
+      isSeed: false,
+    }
+  );
+  mem.state = {
+    version: 4,
+    status: 'TRAVELLING',
+    currentCity: 'Braga',
+    currentCountry: 'Portugal',
+    currentCountryCode: 'PT',
+    currentLatitude: 41.5518,
+    currentLongitude: -8.4229,
+    currentItineraryEntryId: 'leg-a',
+    origin: {
+      city: 'Braga', country: 'Portugal', countryCode: 'PT',
+      latitude: 41.5518, longitude: -8.4229,
+    },
+    destination: {
+      city: 'Rio de Janeiro', country: 'Brazil', countryCode: 'BR',
+      latitude: -22.9068, longitude: -43.1729,
+    },
+    departureAt: evening.toISOString(),
+    arrivalAt: isoOn(18, ARR_H, ARR_M),
+    activeRoundId: null,
+    invitationCount: 2,
+    invitedCities: [],
+  };
+  r = await ptw2.advanceStateMachine(evening);
+  const entriesAfter = Array.isArray(r.itinerary) ? r.itinerary : (r.itinerary?.entries || []);
+  assert(
+    !entriesAfter.some((e) => e.id === 'leg-b-orphan'),
+    'orphan premature leg pruned'
+  );
+  assert(
+    entriesAfter.some((e) => e.id === 'leg-a'),
+    'real in-flight leg kept'
+  );
 
   console.log('\nAll Pass the World tests passed.');
 }

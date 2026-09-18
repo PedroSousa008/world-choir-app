@@ -334,6 +334,41 @@ function isInvalidItineraryEntry(entry) {
   return countriesMatch(entry.originCountry, entry.country);
 }
 
+/**
+ * Drop itinerary stops that departed before the previous leg landed.
+ * Those are race leftovers and break "one World / one trip" truth.
+ */
+function prunePrematureItineraryEntries(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  if (list.length < 2) return list;
+  const sorted = [...list].sort((a, b) => {
+    const sa = Number(a.sequence) || 0;
+    const sb = Number(b.sequence) || 0;
+    if (sa !== sb) return sa - sb;
+    return String(a.departedAt || a.selectedAt || '').localeCompare(
+      String(b.departedAt || b.selectedAt || '')
+    );
+  });
+  const kept = [];
+  for (const entry of sorted) {
+    if (entry.isSeed || !kept.length) {
+      kept.push(entry);
+      continue;
+    }
+    const prev = kept[kept.length - 1];
+    const prevArrive = prev.arrivedAt ? new Date(prev.arrivedAt).getTime() : NaN;
+    const dep = entry.departedAt || entry.selectedAt;
+    const depMs = dep ? new Date(dep).getTime() : NaN;
+    if (Number.isFinite(prevArrive) && Number.isFinite(depMs) && depMs < prevArrive) {
+      continue;
+    }
+    kept.push(entry);
+  }
+  return kept.map((entry, i) => (
+    entry.sequence === i + 1 ? entry : { ...entry, sequence: i + 1 }
+  ));
+}
+
 function isInvalidTravelLeg(origin, destination) {
   if (!origin?.country || !destination?.country) return false;
   return countriesMatch(
@@ -463,20 +498,18 @@ function isCanonicalArrivalAt(iso) {
     && d.getUTCSeconds() === 0;
 }
 
-/** Prefer a stored landing only if it is still a valid future canonical arrival. */
-function pickArrivalAt(departureAt, preferredIso = null, now = new Date()) {
-  const depMs = new Date(departureAt).getTime();
-  const nowMs = (now instanceof Date ? now : new Date(now)).getTime();
-  const floor = Math.max(
-    Number.isFinite(depMs) ? depMs : nowMs,
-    Number.isFinite(nowMs) ? nowMs : depMs
-  );
+/**
+ * Landing for a departure — always the first canonical 15:59 after departure.
+ * Never invent a later day from "now" (that was the never-lands bug).
+ * A stored preferred time is kept only when it matches that first landing.
+ */
+function pickArrivalAt(departureAt, preferredIso = null, _now = new Date()) {
+  const canonical = computeArrivalAt(departureAt);
   if (preferredIso && isCanonicalArrivalAt(preferredIso)) {
     const prefMs = new Date(preferredIso).getTime();
-    if (Number.isFinite(prefMs) && prefMs > floor) return new Date(prefMs);
+    if (Number.isFinite(prefMs) && prefMs === canonical.getTime()) return canonical;
   }
-  // nextArrivalAt(floor) guarantees strictly after both departure and now.
-  return nextArrivalAt(new Date(floor));
+  return canonical;
 }
 
 /** True while the post-window suspense reveal may still run. */
@@ -675,6 +708,7 @@ async function healWorldLocation(state, itinerary, now = new Date()) {
 /** Remove same-country legs and reset state when an invalid in-country trip is in progress. */
 async function repairInvalidJourney(state, itinerary) {
   let cleaned = (itinerary || []).filter((entry) => !isInvalidItineraryEntry(entry));
+  cleaned = prunePrematureItineraryEntries(cleaned);
   cleaned = dedupeItinerary(cleaned);
 
   let nextState = state;
@@ -694,14 +728,16 @@ async function repairInvalidJourney(state, itinerary) {
           nextState.lastReveal.originCountry || nextState.origin?.country,
           nextState.lastReveal.country
         ));
+      // If the live trip entry was pruned, park at the last valid stop.
+      const parked = locationFromStop(anchor);
       nextState = {
         ...nextState,
         status: STATUS.ARRIVED,
-        currentCity: anchor.city,
-        currentCountry: anchor.country,
-        currentCountryCode: anchor.countryCode || resolveCountryCode(anchor.country),
-        currentLatitude: anchor.latitude,
-        currentLongitude: anchor.longitude,
+        currentCity: parked.city,
+        currentCountry: parked.country,
+        currentCountryCode: parked.countryCode || resolveCountryCode(parked.country),
+        currentLatitude: parked.latitude,
+        currentLongitude: parked.longitude,
         currentItineraryEntryId: anchor.id,
         origin: null,
         destination: null,
@@ -737,15 +773,22 @@ async function readStateRaw() {
 }
 
 async function writeState(state) {
-  // Never let a stale reader clobber an in-flight journey (reveal / waiting / arrived).
-  if (state.status !== STATUS.TRAVELLING) {
-    const live = await readStateRaw();
-    if (live?.status === STATUS.TRAVELLING && live.destination && live.arrivalAt) {
-      const arrMs = new Date(live.arrivalAt).getTime();
-      if (Number.isFinite(arrMs) && arrMs > Date.now()) {
+  // Never let a stale reader clobber an in-flight journey.
+  const live = await readStateRaw();
+  if (live?.status === STATUS.TRAVELLING && live.destination && live.arrivalAt) {
+    const arrMs = new Date(live.arrivalAt).getTime();
+    if (Number.isFinite(arrMs) && arrMs > Date.now()) {
+      const sameTrip = Boolean(
+        state.currentItineraryEntryId
+        && live.currentItineraryEntryId
+        && state.currentItineraryEntryId === live.currentItineraryEntryId
+      );
+      if (state.status === STATUS.TRAVELLING) {
+        // Another TRAVELLING write for a different leg must not win the race.
+        if (!sameTrip) return live;
+      } else {
         const completingSameFlight = state.status === STATUS.ARRIVED
-          && state.currentItineraryEntryId
-          && state.currentItineraryEntryId === live.currentItineraryEntryId
+          && sameTrip
           && !state.destination;
         if (!completingSameFlight) return live;
       }
@@ -943,6 +986,25 @@ async function applyWinner(state, itinerary, winner, invitations, nowInput = new
 
   const now = nowInput instanceof Date ? nowInput : new Date(nowInput);
   const selectedAt = winner.selectedAt || now.toISOString();
+
+  // One World, one trip: never start a second leg while another is still in the air.
+  if (
+    state.status === STATUS.TRAVELLING
+    && state.arrivalAt
+    && new Date(state.arrivalAt).getTime() > now.getTime()
+  ) {
+    const current = (itinerary || []).find((e) => e.id === state.currentItineraryEntryId);
+    const sameDestination = current
+      && citiesMatch(current.city, winner.city)
+      && countriesMatch(current.countryCode || current.country, winner.countryCode || winner.country)
+      && (
+        (winner.userId && current.calledByUserId === winner.userId)
+        || (winner.voiceNumber != null && current.calledByVoiceNumber === winner.voiceNumber)
+      );
+    if (!sameDestination) {
+      return { state, itinerary };
+    }
+  }
 
   // Idempotent: heal/re-apply must not append duplicate itinerary stops.
   const already = itinerary.find((entry) => (
@@ -1230,17 +1292,13 @@ async function advanceStateMachine(nowInput) {
   ({ state, itinerary } = await repairInvalidJourney(state, itinerary));
   ({ state, itinerary } = await healWorldLocation(state, itinerary, now));
 
-  // Correct any in-flight arrival that is not a valid future canonical landing
-  // (1 minute before invitation open, strictly after departure AND now).
+  // Snap extended arrivals back to the first canonical landing after departure.
+  // (A prior bug pushed arrival into the future every day past the real landing.)
   if (state.status === STATUS.TRAVELLING && state.departureAt) {
-    const arrivalOk = state.arrivalAt
-      && isCanonicalArrivalAt(state.arrivalAt)
-      && new Date(state.arrivalAt).getTime() > Math.max(
-        new Date(state.departureAt).getTime(),
-        now.getTime()
-      );
-    if (!arrivalOk) {
-      const arrivalAt = pickArrivalAt(state.departureAt, state.arrivalAt, now).toISOString();
+    const canonical = computeArrivalAt(state.departureAt);
+    const currentMs = state.arrivalAt ? new Date(state.arrivalAt).getTime() : NaN;
+    if (!Number.isFinite(currentMs) || currentMs > canonical.getTime()) {
+      const arrivalAt = canonical.toISOString();
       state = await writeState({
         ...state,
         arrivalAt,
@@ -1257,6 +1315,7 @@ async function advanceStateMachine(nowInput) {
     }
   }
 
+  // Land when due — NEVER extend a past arrival into a new day.
   if (state.status === STATUS.TRAVELLING
     && state.arrivalAt
     && now.getTime() >= new Date(state.arrivalAt).getTime()) {
@@ -1283,6 +1342,56 @@ async function advanceStateMachine(nowInput) {
       invitedCities: [],
       version: (Number(state.version) || 1) + 1,
     });
+  }
+
+  // Still travelling: only repair clearly broken (non-canonical) future arrivals.
+  if (state.status === STATUS.TRAVELLING && state.departureAt) {
+    const arrivalOk = state.arrivalAt
+      && isCanonicalArrivalAt(state.arrivalAt)
+      && new Date(state.arrivalAt).getTime() > new Date(state.departureAt).getTime();
+    if (!arrivalOk) {
+      const arrivalAt = computeArrivalAt(state.departureAt).toISOString();
+      state = await writeState({
+        ...state,
+        arrivalAt,
+        version: (Number(state.version) || 1) + 1,
+      });
+      if (state.currentItineraryEntryId) {
+        itinerary = itinerary.map((entry) => (
+          entry.id === state.currentItineraryEntryId
+            ? { ...entry, arrivedAt: arrivalAt }
+            : entry
+        ));
+        await writeItinerary(itinerary);
+      }
+      // If that repair put arrival in the past, land immediately on next check —
+      // re-run landing for this same tick.
+      if (now.getTime() >= new Date(arrivalAt).getTime()) {
+        const trip = itinerary.find((e) => e.id === state.currentItineraryEntryId);
+        const dest = locationFromStop(state.destination) || locationFromStop(trip);
+        state = await writeState({
+          ...state,
+          status: STATUS.ARRIVED,
+          currentCity: dest?.city || state.currentCity,
+          currentCountry: dest?.country || state.currentCountry,
+          currentCountryCode: dest?.countryCode || state.currentCountryCode,
+          currentLatitude: dest?.latitude ?? state.currentLatitude,
+          currentLongitude: dest?.longitude ?? state.currentLongitude,
+          origin: null,
+          destination: null,
+          departureAt: null,
+          arrivalAt: null,
+          activeRoundId: null,
+          invitationOpenAt: null,
+          invitationCloseAt: null,
+          revealStartAt: null,
+          revealEndAt: null,
+          invitationCount: 0,
+          invitedCities: [],
+          version: (Number(state.version) || 1) + 1,
+        });
+      }
+    }
   }
 
   if (state.status === STATUS.TRAVELLING) return { state, itinerary, now };
