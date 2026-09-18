@@ -44,6 +44,9 @@ const {
   searchFoundationControlCenter,
 } = require('./_lib/foundation-intel');
 const {
+  buildFoundationDonationAnalytics,
+} = require('./_lib/foundation-donation-analytics');
+const {
   upsertProject,
   setProjectStatus,
   upsertUpdate,
@@ -184,6 +187,20 @@ module.exports = async function handler(req, res) {
       const data = await buildFoundationControlCenter(session.influencerId, {
         range,
         role,
+        teamMemberId: session.teamMemberId || null,
+      });
+      if (!data.ok) return res.status(404).json({ error: data.error || 'Not found' });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'donation-analytics' && req.method === 'GET') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      const range = String(req.query.range || 'all');
+      const data = await buildFoundationDonationAnalytics(session.influencerId, {
+        range,
+        from: req.query.from || null,
+        to: req.query.to || null,
         teamMemberId: session.teamMemberId || null,
       });
       if (!data.ok) return res.status(404).json({ error: data.error || 'Not found' });

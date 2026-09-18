@@ -1,0 +1,627 @@
+/**
+ * Foundation Donation Analytics UI — renders real analytics payload only.
+ * Never invents metrics. Empty states when data is absent.
+ */
+const FoundationDonationAnalyticsUI = (() => {
+  const RANGES = [
+    { id: '7d', label: 'Last 7 days' },
+    { id: '30d', label: 'Last 30 days' },
+    { id: '90d', label: 'Last 90 days' },
+    { id: '1y', label: 'This year' },
+    { id: 'all', label: 'All time' },
+    { id: 'custom', label: 'Custom range' },
+  ];
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function money(amount, currency = 'EUR') {
+    const n = Number(amount);
+    if (!Number.isFinite(n)) return '—';
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: currency || 'EUR',
+        maximumFractionDigits: n % 1 === 0 ? 0 : 2,
+      }).format(n);
+    } catch {
+      return `${n} ${currency || 'EUR'}`;
+    }
+  }
+
+  function num(n) {
+    if (n == null || !Number.isFinite(Number(n))) return '0';
+    return Number(n).toLocaleString('en-US');
+  }
+
+  function pctLabel(n) {
+    if (n == null || !Number.isFinite(Number(n))) return '—';
+    return `${Number(n)}%`;
+  }
+
+  function when(iso) {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleDateString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+      });
+    } catch {
+      return String(iso);
+    }
+  }
+
+  function icon(kind) {
+    const c = 'width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+    const map = {
+      trend: `<svg ${c}><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 4-6"/></svg>`,
+      wallet: `<svg ${c}><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M16 14h2"/></svg>`,
+      foundation: `<svg ${c}><path d="M3 21h18"/><path d="M5 21V10l7-5 7 5v11"/><path d="M9 21v-6h6v6"/></svg>`,
+      globe: `<svg ${c}><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+      heart: `<svg ${c}><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 11c0 5.5-7 10-7 10z"/></svg>`,
+      bars: `<svg ${c}><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15v-3"/><path d="M12 15V8"/><path d="M16 15v-5"/></svg>`,
+      median: `<svg ${c}><path d="M5 12h14"/></svg>`,
+      people: `<svg ${c}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+      person: `<svg ${c}><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`,
+      info: `<svg ${c}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+      pin: `<svg ${c}><path d="M12 21s-7-4.5-7-10a7 7 0 0114 0c0 5.5-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg>`,
+      project: `<svg ${c}><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`,
+      clock: `<svg ${c}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
+      flag: `<svg ${c}><path d="M4 21V4"/><path d="M4 4h11l-1.5 4L15 12H4"/></svg>`,
+      close: `<svg ${c}><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+    };
+    return map[kind] || map.info;
+  }
+
+  function changeHtml(pct) {
+    if (pct == null || !Number.isFinite(Number(pct))) {
+      return `<span class="fda-change is-muted">—</span>`;
+    }
+    const n = Number(pct);
+    const cls = n > 0 ? 'is-up' : (n < 0 ? 'is-down' : 'is-flat');
+    const arrow = n > 0 ? '↑' : (n < 0 ? '↓' : '→');
+    return `<span class="fda-change ${cls}">${arrow} ${esc(Math.abs(n))}%</span><span class="fda-change__note">vs previous period</span>`;
+  }
+
+  function emptyBlock(message) {
+    return `<div class="fda-empty"><p>${esc(message)}</p></div>`;
+  }
+
+  function kpiCard({ iconKind, label, value, sub, change }) {
+    return `
+      <article class="fda-kpi">
+        <span class="fda-kpi__icon" aria-hidden="true">${icon(iconKind)}</span>
+        <p class="fda-kpi__value">${esc(value)}</p>
+        <p class="fda-kpi__label">${esc(label)}</p>
+        ${sub ? `<p class="fda-kpi__sub">${esc(sub)}</p>` : ''}
+        ${change != null ? `<div class="fda-kpi__change">${changeHtml(change)}</div>` : ''}
+      </article>
+    `;
+  }
+
+  function segControl(name, options, active) {
+    return `
+      <div class="fda-seg" role="tablist" aria-label="${esc(name)}">
+        ${options.map((opt) => `
+          <button type="button" class="fda-seg__btn ${active === opt.id ? 'is-active' : ''}"
+            role="tab" aria-selected="${active === opt.id ? 'true' : 'false'}"
+            data-analytics-seg="${esc(name)}" data-seg-value="${esc(opt.id)}">${esc(opt.label)}</button>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function areaChart(points, valueKey, currency) {
+    if (!points.length) return emptyBlock('No donation data for this period yet.');
+    const w = 720;
+    const h = 220;
+    const pad = { t: 16, r: 16, b: 36, l: 52 };
+    const values = points.map((p) => Number(p[valueKey] || 0));
+    const max = Math.max(...values, 0);
+    const span = max > 0 ? max : 1;
+    const innerW = w - pad.l - pad.r;
+    const innerH = h - pad.t - pad.b;
+    const coords = points.map((p, i) => {
+      const x = pad.l + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
+      const y = pad.t + innerH - ((Number(p[valueKey] || 0) / span) * innerH);
+      return { x, y, p };
+    });
+    const line = coords.map((c, i) => `${i ? 'L' : 'M'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+    const area = `${line} L${coords[coords.length - 1].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} L${coords[0].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} Z`;
+    const yTicks = [0, 0.5, 1].map((t) => {
+      const val = span * t;
+      const y = pad.t + innerH - (t * innerH);
+      const label = valueKey === 'donations'
+        ? num(Math.round(val))
+        : money(val, currency).replace(/\.00$/, '');
+      return { y, label };
+    });
+    const labelEvery = Math.max(1, Math.ceil(points.length / 8));
+
+    return `
+      <div class="fda-chart" role="img" aria-label="Donation revenue over time">
+        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+          ${yTicks.map((t) => `
+            <line x1="${pad.l}" y1="${t.y}" x2="${w - pad.r}" y2="${t.y}" class="fda-chart__grid"></line>
+            <text x="${pad.l - 8}" y="${t.y + 4}" class="fda-chart__axis" text-anchor="end">${esc(t.label)}</text>
+          `).join('')}
+          <path d="${area}" class="fda-chart__area"></path>
+          <path d="${line}" class="fda-chart__line"></path>
+          ${coords.map((c) => `<circle cx="${c.x}" cy="${c.y}" r="3.2" class="fda-chart__dot">
+            <title>${esc(c.p.label)}: ${esc(valueKey === 'donations' ? num(c.p.donations) : money(c.p[valueKey], currency))}</title>
+          </circle>`).join('')}
+          ${coords.map((c, i) => (i % labelEvery === 0 || i === coords.length - 1)
+            ? `<text x="${c.x}" y="${h - 10}" class="fda-chart__axis" text-anchor="middle">${esc(c.p.label)}</text>`
+            : '').join('')}
+        </svg>
+      </div>
+    `;
+  }
+
+  function barChart(rows, valueKey = 'donations') {
+    if (!rows.length || !rows.some((r) => Number(r[valueKey] || 0) > 0)) {
+      return emptyBlock('Donation timing insights will appear as donations are received.');
+    }
+    const max = Math.max(...rows.map((r) => Number(r[valueKey] || 0)), 1);
+    return `
+      <div class="fda-bars" role="img" aria-label="Donation timing chart">
+        ${rows.map((r) => {
+          const v = Number(r[valueKey] || 0);
+          const h = Math.max(v > 0 ? 8 : 2, Math.round((v / max) * 120));
+          return `
+            <div class="fda-bars__col">
+              <div class="fda-bars__bar" style="height:${h}px" title="${esc(r.label)}: ${esc(num(v))}"></div>
+              <span class="fda-bars__label">${esc(r.label)}</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function hBars(ranges) {
+    if (!ranges.some((r) => r.count > 0)) {
+      return emptyBlock('Donation value insights will appear after your Foundation receives donations.');
+    }
+    const max = Math.max(...ranges.map((r) => r.count), 1);
+    return `
+      <div class="fda-hbars">
+        ${ranges.map((r) => `
+          <div class="fda-hbar">
+            <span class="fda-hbar__label">${esc(r.label)}</span>
+            <div class="fda-hbar__track">
+              <div class="fda-hbar__fill" style="width:${Math.round((r.count / max) * 100)}%"></div>
+            </div>
+            <span class="fda-hbar__meta">${esc(num(r.count))} · ${esc(pctLabel(r.percent))}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderFinancial(data, currency) {
+    const f = data.financial || {};
+    const c = f.comparison || {};
+    const showChange = !!c.available;
+    return `
+      <section class="fda-section">
+        <header class="fda-section__head">
+          <div>
+            <h3>1. Financial Performance</h3>
+            <p>Key metrics at a glance.</p>
+          </div>
+        </header>
+        <div class="fda-kpi-grid">
+          ${kpiCard({
+            iconKind: 'wallet',
+            label: 'Gross Raised',
+            value: money(f.grossRaised || 0, currency),
+            change: showChange ? c.grossRaised : null,
+          })}
+          ${kpiCard({
+            iconKind: 'foundation',
+            label: 'Net to Foundation',
+            value: money(f.netToFoundation || 0, currency),
+            change: showChange ? c.netToFoundation : null,
+          })}
+          ${kpiCard({
+            iconKind: 'globe',
+            label: 'World Choir Fee',
+            value: money(f.worldChoirFee || 0, currency),
+            sub: `${data.platformFeePercent ?? '—'}%`,
+          })}
+          ${kpiCard({
+            iconKind: 'heart',
+            label: 'Donations',
+            value: num(f.donations || 0),
+            change: showChange ? c.donations : null,
+          })}
+          ${kpiCard({
+            iconKind: 'bars',
+            label: 'Average Donation',
+            value: f.averageDonation != null ? money(f.averageDonation, currency) : '—',
+            change: showChange ? c.averageDonation : null,
+          })}
+          ${kpiCard({
+            iconKind: 'median',
+            label: 'Median Donation',
+            value: f.medianDonation != null ? money(f.medianDonation, currency) : '—',
+            change: showChange ? c.medianDonation : null,
+          })}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderRevenue(data, ui, currency) {
+    const series = data.revenueOverTime || { empty: true, points: [] };
+    const metric = ui.revenueMetric || 'grossRaised';
+    const metricMap = {
+      grossRaised: 'grossRaised',
+      netRaised: 'netRaised',
+      donations: 'donations',
+      averageDonation: 'averageDonation',
+    };
+    return `
+      <section class="fda-section fda-card">
+        <header class="fda-section__head">
+          <div>
+            <h3>Donation Revenue Over Time</h3>
+            <p>Track your donation performance across different metrics.</p>
+          </div>
+          ${segControl('revenue', [
+            { id: 'grossRaised', label: 'Gross Raised' },
+            { id: 'netRaised', label: 'Net Raised' },
+            { id: 'donations', label: 'Donations' },
+            { id: 'averageDonation', label: 'Average Donation' },
+          ], metric)}
+        </header>
+        ${series.empty
+          ? emptyBlock('No donation data for this period yet.')
+          : areaChart(series.points || [], metricMap[metric] || 'grossRaised', currency)}
+      </section>
+    `;
+  }
+
+  function renderDonors(data, currency) {
+    const d = data.donors || { empty: true };
+    if (d.empty) {
+      return `
+        <section class="fda-section fda-card">
+          <header class="fda-section__head"><div><h3>2. New vs Returning Donors</h3><p>Understand your supporter base and loyalty.</p></div></header>
+          ${emptyBlock('No donor activity for this period yet.')}
+        </section>
+      `;
+    }
+    return `
+      <section class="fda-section fda-card">
+        <header class="fda-section__head">
+          <div>
+            <h3>2. New vs Returning Donors</h3>
+            <p>Understand your supporter base and loyalty.</p>
+          </div>
+        </header>
+        <div class="fda-donor-grid">
+          <article class="fda-mini">
+            <span class="fda-kpi__icon" aria-hidden="true">${icon('person')}</span>
+            <p class="fda-kpi__value">${esc(num(d.newDonors))}</p>
+            <p class="fda-kpi__label">New Donors</p>
+            <p class="fda-kpi__sub">${esc(pctLabel(d.newDonorPercent))} of donors</p>
+          </article>
+          <article class="fda-mini">
+            <span class="fda-kpi__icon" aria-hidden="true">${icon('people')}</span>
+            <p class="fda-kpi__value">${esc(num(d.returningDonors))}</p>
+            <p class="fda-kpi__label">Returning Donors</p>
+            <p class="fda-kpi__sub">${esc(pctLabel(d.returningDonorPercent))} of donors</p>
+          </article>
+          <article class="fda-mini">
+            <span class="fda-kpi__icon" aria-hidden="true">${icon('wallet')}</span>
+            <p class="fda-kpi__value">${esc(money(d.revenueFromNew || 0, currency))}</p>
+            <p class="fda-kpi__label">Revenue from New Donors</p>
+            <p class="fda-kpi__sub">${esc(pctLabel(d.revenueFromNewPercent))} of revenue</p>
+          </article>
+          <article class="fda-mini">
+            <span class="fda-kpi__icon" aria-hidden="true">${icon('foundation')}</span>
+            <p class="fda-kpi__value">${esc(money(d.revenueFromReturning || 0, currency))}</p>
+            <p class="fda-kpi__label">Revenue from Returning Donors</p>
+            <p class="fda-kpi__sub">${esc(pctLabel(d.revenueFromReturningPercent))} of revenue</p>
+          </article>
+        </div>
+        <div class="fda-stat-row">
+          <div class="fda-stat"><span>Avg. Donation — New</span><strong>${esc(d.avgDonationNew != null ? money(d.avgDonationNew, currency) : '—')}</strong></div>
+          <div class="fda-stat"><span>Avg. Donation — Returning</span><strong>${esc(d.avgDonationReturning != null ? money(d.avgDonationReturning, currency) : '—')}</strong></div>
+          <div class="fda-stat"><span>Donations per Returning Donor</span><strong>${esc(d.donationsPerReturningDonor != null ? num(d.donationsPerReturningDonor) : '—')}</strong></div>
+          <div class="fda-stat"><span>Repeat Donation Rate</span><strong>${esc(pctLabel(d.repeatDonationRate))}</strong></div>
+          <div class="fda-stat"><span>Returning Donor Revenue %</span><strong>${esc(pctLabel(d.returningDonorRevenuePercent))}</strong></div>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderValue(data, currency) {
+    const v = data.valueAnalysis || { empty: true };
+    return `
+      <section class="fda-section fda-card">
+        <header class="fda-section__head">
+          <div>
+            <h3>3. Donation Value Analysis</h3>
+            <p>Breakdown of donation amounts and key insights.</p>
+          </div>
+        </header>
+        ${v.empty ? emptyBlock('Donation value insights will appear after your Foundation receives donations.') : `
+          <div class="fda-value-grid">
+            ${hBars(v.ranges || [])}
+            <dl class="fda-kv">
+              <div><dt>Largest Donation</dt><dd>${esc(v.largest != null ? money(v.largest, currency) : '—')}</dd></div>
+              <div><dt>Smallest Donation</dt><dd>${esc(v.smallest != null ? money(v.smallest, currency) : '—')}</dd></div>
+              <div><dt>Most Common Range</dt><dd>${esc(v.mostCommonRange || '—')}</dd></div>
+              <div><dt>Average Donation</dt><dd>${esc(v.averageDonation != null ? money(v.averageDonation, currency) : '—')}</dd></div>
+              <div><dt>Median Donation</dt><dd>${esc(v.medianDonation != null ? money(v.medianDonation, currency) : '—')}</dd></div>
+            </dl>
+          </div>
+          <div class="fda-insight">
+            <span aria-hidden="true">${icon('info')}</span>
+            <p>${esc(v.insight || 'More donation activity is needed to generate this insight.')}</p>
+          </div>
+        `}
+      </section>
+    `;
+  }
+
+  function renderGeography(data, ui, currency) {
+    const g = data.geography || { empty: true };
+    const mode = ui.geoMode || 'countries';
+    const rows = mode === 'cities' ? (g.cities || []) : (g.countries || []);
+    return `
+      <section class="fda-section fda-card">
+        <header class="fda-section__head">
+          <div>
+            <h3>4. Geography Performance</h3>
+            <p>See where your support comes from.</p>
+          </div>
+          ${segControl('geo', [
+            { id: 'countries', label: 'Countries' },
+            { id: 'cities', label: 'Cities' },
+          ], mode)}
+        </header>
+        ${g.empty || !rows.length
+          ? emptyBlock('No geographic donation data available yet.')
+          : `<div class="fda-table-wrap"><table class="fda-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>${mode === 'cities' ? 'City' : 'Country'}</th>
+                  ${mode === 'cities' ? '<th>Country</th>' : ''}
+                  <th class="num">Raised</th>
+                  <th class="num">Donations</th>
+                  <th class="num">Donors</th>
+                  <th class="num">Avg.</th>
+                  <th class="num">% of Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.slice(0, 25).map((r) => `
+                  <tr>
+                    <td>${esc(r.rank)}</td>
+                    <td>${esc(mode === 'cities' ? r.city : r.country)}</td>
+                    ${mode === 'cities' ? `<td>${esc(r.country)}</td>` : ''}
+                    <td class="num">${esc(money(r.raised, currency))}</td>
+                    <td class="num">${esc(num(r.donations))}</td>
+                    <td class="num">${esc(num(r.donors))}</td>
+                    <td class="num">${esc(r.averageDonation != null ? money(r.averageDonation, currency) : '—')}</td>
+                    <td class="num">${esc(pctLabel(r.percentOfTotal))}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table></div>`}
+      </section>
+    `;
+  }
+
+  function renderProjects(data, currency) {
+    const p = data.projects || { empty: true, rows: [] };
+    return `
+      <section class="fda-section fda-card">
+        <header class="fda-section__head">
+          <div>
+            <h3>5. Project / Cause Performance</h3>
+            <p>Compare performance across your foundation’s projects.</p>
+          </div>
+        </header>
+        ${p.empty
+          ? emptyBlock(p.note || 'No project donation data available yet.')
+          : `<div class="fda-table-wrap"><table class="fda-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Project</th><th class="num">Raised</th><th class="num">Donors</th>
+                  <th class="num">Avg.</th><th>Goal Progress</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${p.rows.map((r) => `
+                  <tr>
+                    <td>${esc(r.rank)}</td>
+                    <td><span class="fda-project">${icon('project')}<span>${esc(r.name)}</span></span></td>
+                    <td class="num">${esc(money(r.raised, currency))}</td>
+                    <td class="num">${esc(num(r.donors))}</td>
+                    <td class="num">${esc(r.averageDonation != null ? money(r.averageDonation, currency) : '—')}</td>
+                    <td>
+                      ${r.hasGoal ? `
+                        <div class="fda-progress">
+                          <div class="fda-progress__track"><div class="fda-progress__fill" style="width:${Math.min(100, r.goalProgressPercent || 0)}%"></div></div>
+                          <span>${esc(pctLabel(r.goalProgressPercent))}</span>
+                        </div>
+                      ` : '<span class="fda-muted">No goal</span>'}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table></div>`}
+      </section>
+    `;
+  }
+
+  function renderTiming(data, ui) {
+    const t = data.timing || { empty: true };
+    const mode = ui.timingMode || 'day';
+    const rows = mode === 'hour' ? (t.byHour || []) : (mode === 'month' ? (t.byMonth || []) : (t.byDay || []));
+    const chartRows = mode === 'day'
+      ? [...(t.byDay || [])].slice(1).concat((t.byDay || []).slice(0, 1))
+      : rows;
+    return `
+      <section class="fda-section fda-card">
+        <header class="fda-section__head">
+          <div>
+            <h3>6. Donation Timing</h3>
+            <p>Discover when people support your foundation.</p>
+          </div>
+          ${segControl('timing', [
+            { id: 'day', label: 'By Day' },
+            { id: 'hour', label: 'By Hour' },
+            { id: 'month', label: 'By Month' },
+          ], mode)}
+        </header>
+        ${t.empty ? emptyBlock('Donation timing insights will appear as donations are received.') : `
+          <div class="fda-timing-grid">
+            ${barChart(chartRows, 'donations')}
+            <dl class="fda-kv">
+              <div><dt>Highest Donation Day</dt><dd>${esc(t.highestDonationDay || '—')}</dd></div>
+              <div><dt>Highest Revenue Day</dt><dd>${esc(t.highestRevenueDay || '—')}</dd></div>
+              <div><dt>Highest Donation Hour</dt><dd>${esc(t.highestDonationHour || '—')}</dd></div>
+              <div><dt>Avg. Daily Donations</dt><dd>${esc(t.avgDailyDonations != null ? num(t.avgDailyDonations) : '—')}</dd></div>
+              <div><dt>Avg. Weekly Donations</dt><dd>${esc(t.avgWeeklyDonations != null ? num(t.avgWeeklyDonations) : '—')}</dd></div>
+              <div><dt>Avg. Monthly Donations</dt><dd>${esc(t.avgMonthlyDonations != null ? num(t.avgMonthlyDonations) : '—')}</dd></div>
+            </dl>
+          </div>
+        `}
+      </section>
+    `;
+  }
+
+  function renderMilestones(data) {
+    const m = data.milestones || { empty: true, achieved: [] };
+    return `
+      <section class="fda-section fda-card">
+        <header class="fda-section__head">
+          <div>
+            <h3>Donation Milestones</h3>
+            <p>Real achievements from your Foundation’s donation history.</p>
+          </div>
+        </header>
+        ${m.empty
+          ? emptyBlock(m.note || 'Your Foundation’s donation milestones will appear here.')
+          : `
+            <ul class="fda-milestones">
+              ${m.achieved.map((item) => `
+                <li>
+                  <span class="fda-milestones__icon" aria-hidden="true">${icon('flag')}</span>
+                  <div>
+                    <strong>${esc(item.label)}</strong>
+                    <span>${esc(when(item.at))}</span>
+                  </div>
+                </li>
+              `).join('')}
+            </ul>
+            ${m.next ? `
+              <div class="fda-next-milestone">
+                <p>Next target: <strong>${esc(m.next.label)}</strong></p>
+                <div class="fda-progress">
+                  <div class="fda-progress__track"><div class="fda-progress__fill" style="width:${Math.min(100, m.next.progressPercent || 0)}%"></div></div>
+                  <span>${esc(pctLabel(m.next.progressPercent))}</span>
+                </div>
+              </div>
+            ` : ''}
+          `}
+      </section>
+    `;
+  }
+
+  function toDateInputValue(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(iso).toISOString().slice(0, 10);
+    } catch {
+      return '';
+    }
+  }
+
+  function renderShell(data, ui) {
+    if (!data) {
+      return `<div class="fda-loading" role="status">Loading donation analytics…</div>`;
+    }
+    if (data.restricted) {
+      return `<div class="fda-empty"><p>${esc(data.note || 'Donation analytics access is restricted.')}</p></div>`;
+    }
+    if (data.error) {
+      return `<div class="fda-empty is-err"><p>${esc(data.error)}</p></div>`;
+    }
+
+    const currency = data.currency || 'EUR';
+    const rangeKey = ui.range || data.range?.key || 'all';
+    return `
+      <div class="fda">
+        ${rangeKey === 'custom' ? `
+          <div class="fda-custom is-open" data-analytics-custom>
+            <input type="date" aria-label="From date" data-analytics-from value="${esc(ui.customFrom || toDateInputValue(data.range?.from))}">
+            <input type="date" aria-label="To date" data-analytics-to value="${esc(ui.customTo || toDateInputValue(data.range?.to))}">
+            <button type="button" class="fcc-btn-ghost fcc-top-chip" data-analytics-apply-custom>Apply</button>
+          </div>
+        ` : ''}
+        ${renderFinancial(data, currency)}
+        ${renderRevenue(data, ui, currency)}
+        <div class="fda-two">
+          ${renderDonors(data, currency)}
+          ${renderValue(data, currency)}
+        </div>
+        <div class="fda-two">
+          ${renderGeography(data, ui, currency)}
+          ${renderProjects(data, currency)}
+        </div>
+        ${renderTiming(data, ui)}
+        ${renderMilestones(data)}
+      </div>
+    `;
+  }
+
+  function renderHeader(ui = {}) {
+    const rangeKey = ui.range || 'all';
+    return `
+      <div class="fcc-analytics__title-row">
+        <span class="fcc-analytics__title-icon" aria-hidden="true">${icon('trend')}</span>
+        <div>
+          <h2 id="fcc-analytics-title">Donation Analytics</h2>
+          <p class="fcc-analytics__subtitle">In-depth insights into your foundation’s donations and supporters.</p>
+        </div>
+      </div>
+      <div class="fcc-analytics__head-actions">
+        <label class="sr-only" for="fda-range">Date range</label>
+        <select id="fda-range" class="fcc-range fda-range" data-analytics-range aria-label="Analytics date range">
+          ${RANGES.map((r) => `
+            <option value="${esc(r.id)}" ${rangeKey === r.id ? 'selected' : ''}>${esc(r.label)}</option>
+          `).join('')}
+        </select>
+        <button type="button" class="fcc-icon-btn" data-action="close-analytics" aria-label="Close analytics">
+          ${icon('close')}
+        </button>
+      </div>
+    `;
+  }
+
+  return {
+    RANGES,
+    renderShell,
+    renderHeader,
+    esc,
+    money,
+    num,
+  };
+})();
+
+if (typeof window !== 'undefined') {
+  window.FoundationDonationAnalyticsUI = FoundationDonationAnalyticsUI;
+}

@@ -78,6 +78,15 @@ const FoundationControl = (() => {
     searchResults: null,
     mapOpen: false,
     analyticsOpen: false,
+    analyticsData: null,
+    analyticsLoading: false,
+    analyticsError: null,
+    analyticsRange: 'all',
+    analyticsCustomFrom: '',
+    analyticsCustomTo: '',
+    analyticsRevenueMetric: 'grossRaised',
+    analyticsGeoMode: 'countries',
+    analyticsTimingMode: 'day',
     navOpen: false,
     activityFilter: 'all',
     growthMetric: 'amount',
@@ -371,6 +380,9 @@ const FoundationControl = (() => {
       searchOpen: false,
       mapOpen: false,
       analyticsOpen: false,
+      analyticsData: null,
+      analyticsLoading: false,
+      analyticsError: null,
       flash: null,
       error: null,
       busy: false,
@@ -2200,23 +2212,68 @@ const FoundationControl = (() => {
 
   function renderAnalyticsSubpage() {
     if (state.section !== 'donations' && !state.analyticsOpen) return '';
+    const UI = window.FoundationDonationAnalyticsUI;
+    const uiState = {
+      range: state.analyticsRange || state.range || 'all',
+      customFrom: state.analyticsCustomFrom || '',
+      customTo: state.analyticsCustomTo || '',
+      revenueMetric: state.analyticsRevenueMetric || 'grossRaised',
+      geoMode: state.analyticsGeoMode || 'countries',
+      timingMode: state.analyticsTimingMode || 'day',
+    };
+    const body = state.analyticsLoading && !state.analyticsData
+      ? `<div class="fda-loading" role="status">Loading donation analytics…</div>`
+      : (state.analyticsError && !state.analyticsData
+        ? `<div class="fda-empty is-err"><p>${esc(state.analyticsError)}</p></div>`
+        : (UI
+          ? UI.renderShell(state.analyticsData, uiState)
+          : `<div class="fda-empty is-err"><p>Analytics UI failed to load.</p></div>`));
+
     return `
       <div class="fcc-analytics ${state.analyticsOpen ? 'is-open' : ''}" id="fcc-analytics" aria-hidden="${state.analyticsOpen ? 'false' : 'true'}">
         <div class="fcc-analytics__backdrop" data-action="close-analytics"></div>
         <div class="fcc-analytics__panel" role="dialog" aria-modal="true" aria-labelledby="fcc-analytics-title">
           <div class="fcc-analytics__head">
-            <div>
-              <p class="fcc-kicker">Donations</p>
-              <h2 id="fcc-analytics-title">Analytics</h2>
-            </div>
-            <button type="button" class="fcc-btn-ghost fcc-top-chip" data-action="close-analytics">Close</button>
+            ${UI ? UI.renderHeader(uiState) : `
+              <div>
+                <h2 id="fcc-analytics-title">Donation Analytics</h2>
+              </div>
+              <button type="button" class="fcc-icon-btn" data-action="close-analytics" aria-label="Close analytics">Close</button>
+            `}
           </div>
           <div class="fcc-analytics__body" id="fcc-analytics-body" data-analytics-slot>
-            <!-- Analytics content will be added here -->
+            ${body}
           </div>
         </div>
       </div>
     `;
+  }
+
+  async function loadDonationAnalytics(opts = {}) {
+    const range = opts.range || state.analyticsRange || state.range || 'all';
+    const from = opts.from != null ? opts.from : state.analyticsCustomFrom;
+    const to = opts.to != null ? opts.to : state.analyticsCustomTo;
+    state.analyticsRange = range;
+    state.analyticsLoading = true;
+    state.analyticsError = null;
+    if (opts.resetData) state.analyticsData = null;
+    render();
+    try {
+      let query = `&range=${encodeURIComponent(range)}`;
+      if (range === 'custom') {
+        if (from) query += `&from=${encodeURIComponent(from)}`;
+        if (to) query += `&to=${encodeURIComponent(to)}`;
+      }
+      const data = await api('donation-analytics', { query });
+      state.analyticsData = data;
+      state.analyticsLoading = false;
+      state.analyticsError = null;
+      render();
+    } catch (err) {
+      state.analyticsLoading = false;
+      state.analyticsError = err.message || 'Could not load donation analytics';
+      render();
+    }
   }
 
   function mountMap() {
@@ -2258,8 +2315,9 @@ const FoundationControl = (() => {
     document.body.classList.add('fcc-body');
     document.body.classList.toggle('is-fcc-nav-open', !!(state.authenticated && state.navOpen));
     document.body.classList.toggle('is-fcc-drawer-open', !!(state.mapOpen || state.searchOpen || state.navOpen || state.analyticsOpen));
+    document.body.classList.toggle('is-fcc-analytics-open', !!state.analyticsOpen);
     if (!state.authenticated) {
-      document.body.classList.remove('is-fcc-nav-open', 'is-fcc-drawer-open');
+      document.body.classList.remove('is-fcc-nav-open', 'is-fcc-drawer-open', 'is-fcc-analytics-open');
       renderLogin();
       return;
     }
@@ -2306,6 +2364,36 @@ const FoundationControl = (() => {
     document.getElementById('fcc-range')?.addEventListener('change', async (e) => {
       state.range = e.target.value;
       await loadCenter();
+    });
+
+    document.querySelector('[data-analytics-range]')?.addEventListener('change', async (e) => {
+      const next = e.target.value;
+      state.analyticsRange = next;
+      if (next === 'custom') {
+        render();
+        return;
+      }
+      await loadDonationAnalytics({ range: next, resetData: true });
+    });
+
+    document.querySelector('[data-analytics-apply-custom]')?.addEventListener('click', async () => {
+      const from = document.querySelector('[data-analytics-from]')?.value || '';
+      const to = document.querySelector('[data-analytics-to]')?.value || '';
+      state.analyticsCustomFrom = from;
+      state.analyticsCustomTo = to;
+      state.analyticsRange = 'custom';
+      await loadDonationAnalytics({ range: 'custom', from, to, resetData: true });
+    });
+
+    root().querySelectorAll('[data-analytics-seg]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const group = btn.getAttribute('data-analytics-seg');
+        const value = btn.getAttribute('data-seg-value');
+        if (group === 'revenue') state.analyticsRevenueMetric = value;
+        if (group === 'geo') state.analyticsGeoMode = value;
+        if (group === 'timing') state.analyticsTimingMode = value;
+        render();
+      });
     });
 
     root().querySelectorAll('[data-growth]').forEach((btn) => {
@@ -2547,12 +2635,15 @@ const FoundationControl = (() => {
       state.searchOpen = false;
       state.mapOpen = false;
       destroyMap();
+      if (!state.analyticsRange) state.analyticsRange = state.range || 'all';
       render();
+      loadDonationAnalytics({ range: state.analyticsRange || state.range || 'all', resetData: !state.analyticsData });
       return;
     }
     if (action === 'close-analytics') {
       state.analyticsOpen = false;
       render();
+      document.querySelector('[data-action="open-analytics"]')?.focus();
       return;
     }
     if (action === 'clear-image') {
