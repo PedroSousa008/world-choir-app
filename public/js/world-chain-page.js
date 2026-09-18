@@ -1435,7 +1435,9 @@ const WorldChainPage = (() => {
     const onCooldown = isConnectOnCooldown(viewer);
     const cooldownLabel = viewer.connectCooldownLabel
       || (state.feedback?.retryLabel ? String(state.feedback.retryLabel).replace(/^You can try again in:\s*/i, '') : '');
-    const locked = state.busy || onCooldown;
+    // Cooldown only blocks wrong guesses — keep the field open so a correct Voice
+    // can still be submitted immediately.
+    const locked = !!state.busy;
     return `
       <section class="wc-chain-turn">
         <p class="wc-chain-turn__eyebrow">It's your turn</p>
@@ -1453,17 +1455,18 @@ const WorldChainPage = (() => {
           <input id="wc-chain-voice-input" name="voiceNumber" inputmode="numeric" autocomplete="off" placeholder="# __________" required ${locked ? 'disabled' : ''}>
           <button type="submit" class="wc-chain-primary" ${locked ? 'disabled' : ''}>CONNECT VOICE</button>
         </form>
-        ${onCooldown ? `
-          <div class="wc-chain-feedback" role="status">
-            <strong>VOICE NOT FOUND</strong><br>
-            That Voice doesn't match this destination.<br>
-            You can try again in: ${esc(cooldownLabel || 'a few minutes')}
-          </div>
-        ` : state.feedback ? `
+        ${state.feedback ? `
           <div class="wc-chain-feedback${state.feedback.ok ? ' wc-chain-feedback--ok' : ''}" role="status">
             <strong>${esc(state.feedback.title || '')}</strong><br>
             ${esc(state.feedback.message || '')}
             ${state.feedback.retryLabel ? `<br>${esc(state.feedback.retryLabel)}` : ''}
+          </div>
+        ` : onCooldown ? `
+          <div class="wc-chain-feedback" role="status">
+            <strong>TRY AGAIN SOON</strong><br>
+            That last Voice didn’t match this destination.<br>
+            You can try again in: ${esc(cooldownLabel || 'a few minutes')}<br>
+            If you find the correct Voice number, you can connect it right away.
           </div>
         ` : ''}
         <button type="button" class="wc-chain-card__cta" style="margin-top:12px" data-share-help="${esc(chain.id)}">
@@ -1840,20 +1843,10 @@ const WorldChainPage = (() => {
         state.feedback = null;
         render();
         window.scrollTo(0, 0);
-        // Re-fetch so a prior wrong attempt still locks input after leave/reopen.
+        // Re-fetch so cooldown labels stay accurate after leave/reopen.
+        // Do not auto-show VOICE NOT FOUND — that only belongs to a real wrong submit.
         try {
           await refreshChain(state.activeChainId);
-          const chain = findChain(state.activeChainId);
-          if (isConnectOnCooldown(chain?.viewer)) {
-            state.feedback = {
-              ok: false,
-              title: 'VOICE NOT FOUND',
-              message: "That Voice doesn't match this destination.",
-              retryLabel: chain.viewer.connectCooldownLabel
-                ? `You can try again in: ${chain.viewer.connectCooldownLabel}`
-                : '',
-            };
-          }
           render();
         } catch {
           /* keep cached chain */
@@ -1958,21 +1951,10 @@ const WorldChainPage = (() => {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const chainId = form.getAttribute('data-connect-form');
-        const chainNow = findChain(chainId);
-        if (isConnectOnCooldown(chainNow?.viewer)) {
-          state.feedback = {
-            ok: false,
-            title: 'VOICE NOT FOUND',
-            message: "That Voice doesn't match this destination.",
-            retryLabel: chainNow.viewer.connectCooldownLabel
-              ? `You can try again in: ${chainNow.viewer.connectCooldownLabel}`
-              : (state.feedback?.retryLabel || ''),
-          };
-          render();
-          return;
-        }
+        if (state.busy) return;
         const input = form.querySelector('input[name="voiceNumber"]');
-        const voiceNumber = input?.value || '';
+        const voiceNumber = String(input?.value || '').trim();
+        if (!voiceNumber) return;
         state.busy = true;
         state.feedback = null;
         render();
@@ -1988,8 +1970,23 @@ const WorldChainPage = (() => {
               voiceNumber,
             }),
           });
-          const body = await res.json();
-          if (body.ok && body.chain) {
+          let body = null;
+          try {
+            body = await res.json();
+          } catch {
+            body = null;
+          }
+          if (!res.ok && !body) {
+            state.feedback = {
+              ok: false,
+              title: 'CONNECTION FAILED',
+              message: 'Could not reach World Chain. Please try again.',
+            };
+            state.busy = false;
+            render();
+            return;
+          }
+          if (body?.ok && body.chain) {
             mergeChainIntoState(body.chain);
             state.busy = false;
             state.feedback = null;
@@ -2002,26 +1999,26 @@ const WorldChainPage = (() => {
             render();
             return;
           }
-          if (body.chain) {
+          if (body?.chain) {
             mergeChainIntoState(body.chain);
             if (body.code === 'CHAIN_COMPLETE'
               || (!body.chain.viewer?.isActiveTurn && !body.chain.viewer?.needsStart)) {
               state.turnSheetOpen = false;
             }
-          } else {
+          } else if (body) {
             applyConnectCooldownToChain(chainId, body);
           }
           state.feedback = {
-            ok: !!body.ok,
-            title: body.title || (body.ok ? 'CONNECTION MADE' : 'VOICE NOT FOUND'),
-            message: body.message || '',
-            retryLabel: body.retryLabel || '',
+            ok: !!body?.ok,
+            title: body?.title || (body?.ok ? 'CONNECTION MADE' : 'VOICE NOT FOUND'),
+            message: body?.message || "That Voice doesn't match this destination.",
+            retryLabel: body?.retryLabel || '',
           };
         } catch {
           state.feedback = {
             ok: false,
-            title: 'VOICE NOT FOUND',
-            message: "That Voice doesn't match this destination.",
+            title: 'CONNECTION FAILED',
+            message: 'Could not reach World Chain. Please try again.',
           };
         }
         state.busy = false;

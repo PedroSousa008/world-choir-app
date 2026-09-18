@@ -178,7 +178,11 @@ function isConnectTargetEligible(targetUser, target, active, nowMs) {
   ) {
     return true;
   }
-  return isAccountEligible(targetUser, target, nowMs);
+  const created = accountCreatedAt(targetUser, target);
+  // Missing age metadata (users fetch gap / sparse index) must not reject a
+  // country/city-correct Voice as "not found".
+  if (created == null) return true;
+  return nowMs >= created + ACCOUNT_AGE_MS;
 }
 
 function buildUserMaps(users = []) {
@@ -1347,24 +1351,26 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   }
 
   const attempts = await readAttempts(eventId, day, chainId, viewer.voiceNumber);
-  if (attempts.cooldownUntil && new Date(attempts.cooldownUntil).getTime() > nowMs) {
-    const waitMs = new Date(attempts.cooldownUntil).getTime() - nowMs;
-    const public = publicChain(chain, nowMs, viewer);
-    await attachViewerConnectCooldown(public, eventId, day, viewer, nowMs);
-    return {
-      ...rejectionMessage(),
-      cooldownMs: waitMs,
-      cooldownLabel: formatDuration(waitMs),
-      cooldownUntil: attempts.cooldownUntil,
-      title: 'VOICE NOT FOUND',
-      message: "That Voice doesn't match this destination.",
-      retryLabel: `You can try again in: ${formatDuration(waitMs)}`,
-      chain: public,
-    };
-  }
+  const onCooldown = Boolean(
+    attempts.cooldownUntil && new Date(attempts.cooldownUntil).getTime() > nowMs
+  );
 
   const voiceNum = Number(String(submittedVoiceNumber || '').replace(/[^\d]/g, ''));
   if (!Number.isFinite(voiceNum) || voiceNum <= 0) {
+    // Empty / garbage still counts as a miss (and respects existing cooldown messaging).
+    if (onCooldown) {
+      const waitMs = new Date(attempts.cooldownUntil).getTime() - nowMs;
+      const public = publicChain(chain, nowMs, viewer);
+      await attachViewerConnectCooldown(public, eventId, day, viewer, nowMs);
+      return {
+        ...rejectionMessage(),
+        cooldownMs: waitMs,
+        cooldownLabel: formatDuration(waitMs),
+        cooldownUntil: attempts.cooldownUntil,
+        retryLabel: `You can try again in: ${formatDuration(waitMs)}`,
+        chain: public,
+      };
+    }
     return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
   }
 
@@ -1377,6 +1383,8 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   const target = byVoice.get(voiceNum);
 
   // Privacy-preserving: all failure reasons collapse to the same message.
+  // Always evaluate the number first — a correct Voice must never be blocked by
+  // cooldown from a previous wrong guess.
   let valid = true;
   if (!target) valid = false;
   else if (target.user_id === viewer.userId) valid = false;
@@ -1392,6 +1400,19 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   }
 
   if (!valid) {
+    if (onCooldown) {
+      const waitMs = new Date(attempts.cooldownUntil).getTime() - nowMs;
+      const public = publicChain(chain, nowMs, viewer);
+      await attachViewerConnectCooldown(public, eventId, day, viewer, nowMs);
+      return {
+        ...rejectionMessage(),
+        cooldownMs: waitMs,
+        cooldownLabel: formatDuration(waitMs),
+        cooldownUntil: attempts.cooldownUntil,
+        retryLabel: `You can try again in: ${formatDuration(waitMs)}`,
+        chain: public,
+      };
+    }
     return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
   }
 
