@@ -1573,9 +1573,14 @@
 }
 
 .fcc-don-info__net {
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  color: #ffffff;
+  font-weight: 600;
+}
+
+.fcc-don-info__net strong {
+  color: var(--accent-aurora, #4ec5e8);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .fcc-don-info__note {

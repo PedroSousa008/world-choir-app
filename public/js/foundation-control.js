@@ -1412,19 +1412,19 @@ const FoundationControl = (() => {
       ? (don.conversionNote || 'Conversion rate requires Foundation page view tracking.')
       : '';
     const canViewAmounts = don.canViewAmounts !== false;
-    const raisedAmount = canViewAmounts && don.totalRaised != null ? Number(don.totalRaised) : null;
     const feePercent = Number(don.platformFeePercent);
-    const hasFeePercent = Number.isFinite(feePercent);
+    const feePercentLabel = Number.isFinite(feePercent) ? String(feePercent) : '—';
+    const grossRaised = canViewAmounts && don.totalRaised != null ? Number(don.totalRaised) : null;
     let netToFoundationLabel = '—';
     let worldChoirFeeLabel = '—';
-    if (raisedAmount != null && Number.isFinite(raisedAmount) && hasFeePercent) {
-      const grossCents = Math.round(raisedAmount * 100);
+    if (grossRaised != null && Number.isFinite(grossRaised) && Number.isFinite(feePercent)) {
+      const grossCents = Math.round(grossRaised * 100);
       const feeCents = Math.round(grossCents * (feePercent / 100));
       const netCents = grossCents - feeCents;
       netToFoundationLabel = money(netCents / 100, currency());
-      worldChoirFeeLabel = `${money(feeCents / 100, currency())} (${feePercent}%)`;
-    } else if (hasFeePercent) {
-      worldChoirFeeLabel = `— (${feePercent}%)`;
+      worldChoirFeeLabel = money(feeCents / 100, currency());
+    } else if (grossRaised != null && Number.isFinite(grossRaised) && !Number.isFinite(feePercent)) {
+      netToFoundationLabel = money(grossRaised, currency());
     }
 
     return `
@@ -1442,8 +1442,8 @@ const FoundationControl = (() => {
             <span class="fcc-don-info__icon" aria-hidden="true">${donIcon('info')}</span>
             <div class="fcc-don-info__copy">
               <p class="fcc-don-info__summary">
-                <span class="fcc-don-info__net">Net to Foundation ${esc(netToFoundationLabel)}</span>
-                · World Choir fee ${esc(worldChoirFeeLabel)}
+                <span class="fcc-don-info__net">Net to Foundation <strong>${esc(netToFoundationLabel)}</strong></span>
+                · World Choir fee ${esc(worldChoirFeeLabel)} (${esc(feePercentLabel)}%)
                 · New supporters ${esc(num(don.newSupporters || 0))}
                 · Returning supporters ${esc(num(don.repeatSupporters || 0))}
               </p>
