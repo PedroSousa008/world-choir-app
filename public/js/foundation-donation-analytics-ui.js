@@ -206,6 +206,30 @@ const FoundationDonationAnalyticsUI = (() => {
     `, caption);
   }
 
+  function kpiCard({ iconKind, label, value, sub, change }) {
+    return `
+      <article class="fda-kpi">
+        <span class="fda-kpi__icon" aria-hidden="true">${icon(iconKind)}</span>
+        <p class="fda-kpi__value">${esc(value)}</p>
+        <p class="fda-kpi__label">${esc(label)}</p>
+        ${sub ? `<p class="fda-kpi__sub">${esc(sub)}</p>` : ''}
+        ${change != null ? `<div class="fda-kpi__change">${changeHtml(change)}</div>` : ''}
+      </article>
+    `;
+  }
+
+  function segControl(name, options, active) {
+    return `
+      <div class="fda-seg" role="tablist" aria-label="${esc(name)}">
+        ${options.map((opt) => `
+          <button type="button" class="fda-seg__btn ${active === opt.id ? 'is-active' : ''}"
+            role="tab" aria-selected="${active === opt.id ? 'true' : 'false'}"
+            data-analytics-seg="${esc(name)}" data-seg-value="${esc(opt.id)}">${esc(opt.label)}</button>
+        `).join('')}
+      </div>
+    `;
+  }
+
   function renderFinancial(data, currency) {
     const f = data.financial || {};
     const c = f.comparison || {};

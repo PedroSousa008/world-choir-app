@@ -2226,7 +2226,14 @@ const FoundationControl = (() => {
       : (state.analyticsError && !state.analyticsData
         ? `<div class="fda-empty is-err"><p>${esc(state.analyticsError)}</p></div>`
         : (UI
-          ? UI.renderShell(state.analyticsData, uiState)
+          ? (() => {
+            try {
+              return UI.renderShell(state.analyticsData, uiState);
+            } catch (err) {
+              console.error('Analytics UI renderShell failed', err);
+              return `<div class="fda-empty is-err"><p>${esc(err.message || 'Analytics could not be displayed')}</p></div>`;
+            }
+          })()
           : `<div class="fda-empty is-err"><p>Analytics UI failed to load.</p></div>`));
 
     return `
@@ -2268,11 +2275,19 @@ const FoundationControl = (() => {
       state.analyticsData = data;
       state.analyticsLoading = false;
       state.analyticsError = null;
-      render();
+      try {
+        render();
+      } catch (renderErr) {
+        console.error('Analytics render failed', renderErr);
+        state.analyticsError = renderErr.message || 'Analytics could not be displayed';
+        state.analyticsLoading = false;
+        render();
+      }
     } catch (err) {
       state.analyticsLoading = false;
       state.analyticsError = err.message || 'Could not load donation analytics';
-      render();
+      state.analyticsData = state.analyticsData || null;
+      try { render(); } catch (e) { console.error(e); }
     }
   }
 
