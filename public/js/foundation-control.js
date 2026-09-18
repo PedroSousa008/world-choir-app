@@ -77,6 +77,7 @@ const FoundationControl = (() => {
     searchQuery: '',
     searchResults: null,
     mapOpen: false,
+    analyticsOpen: false,
     navOpen: false,
     activityFilter: 'all',
     growthMetric: 'amount',
@@ -103,6 +104,7 @@ const FoundationControl = (() => {
     }
     if (!SECTION_IDS.has(parts[0])) return;
     state.section = parts[0];
+    if (state.section !== 'donations') state.analyticsOpen = false;
     // Settings no longer has subtabs — ignore any legacy /settings/* hash
     if (parts[1] && parts[0] === 'foundation') {
       state.foundationTab = FOUNDATION_TABS.has(parts[1]) ? parts[1] : 'page';
@@ -368,6 +370,7 @@ const FoundationControl = (() => {
       uploadingField: null,
       searchOpen: false,
       mapOpen: false,
+      analyticsOpen: false,
       flash: null,
       error: null,
       busy: false,
@@ -435,6 +438,11 @@ const FoundationControl = (() => {
                   <option value="${esc(r.id)}" ${state.range === r.id ? 'selected' : ''}>${esc(r.label)}</option>
                 `).join('')}
               </select>
+              ${state.section === 'donations' ? `
+                <button type="button" class="fcc-btn-ghost fcc-top-chip" data-action="open-analytics" aria-haspopup="dialog" aria-expanded="${state.analyticsOpen ? 'true' : 'false'}">
+                  Analytics
+                </button>
+              ` : ''}
               <button type="button" class="fcc-icon-btn fcc-desk-only" data-action="open-search" aria-label="Search" title="Search (⌘K)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
               </button>
@@ -447,6 +455,7 @@ const FoundationControl = (() => {
       </div>
       ${renderSearchOverlay()}
       ${renderMapDrawer()}
+      ${renderAnalyticsSubpage()}
     `;
   }
 
@@ -475,6 +484,7 @@ const FoundationControl = (() => {
     }
     // settings subtabs removed
     if (!opts.keepMap) state.mapOpen = false;
+    if (section !== 'donations') state.analyticsOpen = false;
     state.flash = null;
     render();
   }
@@ -2188,6 +2198,27 @@ const FoundationControl = (() => {
     `;
   }
 
+  function renderAnalyticsSubpage() {
+    if (state.section !== 'donations' && !state.analyticsOpen) return '';
+    return `
+      <div class="fcc-analytics ${state.analyticsOpen ? 'is-open' : ''}" id="fcc-analytics" aria-hidden="${state.analyticsOpen ? 'false' : 'true'}">
+        <div class="fcc-analytics__backdrop" data-action="close-analytics"></div>
+        <div class="fcc-analytics__panel" role="dialog" aria-modal="true" aria-labelledby="fcc-analytics-title">
+          <div class="fcc-analytics__head">
+            <div>
+              <p class="fcc-kicker">Donations</p>
+              <h2 id="fcc-analytics-title">Analytics</h2>
+            </div>
+            <button type="button" class="fcc-btn-ghost fcc-top-chip" data-action="close-analytics">Close</button>
+          </div>
+          <div class="fcc-analytics__body" id="fcc-analytics-body" data-analytics-slot>
+            <!-- Analytics content will be added here -->
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   function mountMap() {
     if (typeof OwnerMap === 'undefined') return;
     const points = state.data?.map?.points || [];
@@ -2226,7 +2257,7 @@ const FoundationControl = (() => {
   function render() {
     document.body.classList.add('fcc-body');
     document.body.classList.toggle('is-fcc-nav-open', !!(state.authenticated && state.navOpen));
-    document.body.classList.toggle('is-fcc-drawer-open', !!(state.mapOpen || state.searchOpen || state.navOpen));
+    document.body.classList.toggle('is-fcc-drawer-open', !!(state.mapOpen || state.searchOpen || state.navOpen || state.analyticsOpen));
     if (!state.authenticated) {
       document.body.classList.remove('is-fcc-nav-open', 'is-fcc-drawer-open');
       renderLogin();
@@ -2487,6 +2518,7 @@ const FoundationControl = (() => {
     if (action === 'open-search') {
       state.searchOpen = true;
       state.navOpen = false;
+      state.analyticsOpen = false;
       render();
       document.getElementById('fcc-search-input')?.focus();
       return;
@@ -2499,12 +2531,27 @@ const FoundationControl = (() => {
     }
     if (action === 'open-map') {
       state.mapOpen = true;
+      state.analyticsOpen = false;
       render();
       return;
     }
     if (action === 'close-map') {
       state.mapOpen = false;
       destroyMap();
+      render();
+      return;
+    }
+    if (action === 'open-analytics') {
+      if (state.section !== 'donations') state.section = 'donations';
+      state.analyticsOpen = true;
+      state.searchOpen = false;
+      state.mapOpen = false;
+      destroyMap();
+      render();
+      return;
+    }
+    if (action === 'close-analytics') {
+      state.analyticsOpen = false;
       render();
       return;
     }
@@ -2624,6 +2671,9 @@ const FoundationControl = (() => {
       }
       if (state.searchOpen) {
         state.searchOpen = false;
+        render();
+      } else if (state.analyticsOpen) {
+        state.analyticsOpen = false;
         render();
       } else if (state.mapOpen) {
         state.mapOpen = false;
