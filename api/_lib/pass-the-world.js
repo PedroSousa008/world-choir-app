@@ -711,8 +711,19 @@ async function repairInvalidJourney(state, itinerary) {
   cleaned = prunePrematureItineraryEntries(cleaned);
   cleaned = dedupeItinerary(cleaned);
 
+  // Snap any leftover extended landings back to the first legal arrival after departure.
+  cleaned = cleaned.map((entry) => {
+    if (entry.isSeed || !entry.departedAt || !entry.arrivedAt) return entry;
+    const canonical = computeArrivalAt(entry.departedAt).toISOString();
+    if (new Date(entry.arrivedAt).getTime() > new Date(canonical).getTime()) {
+      return { ...entry, arrivedAt: canonical };
+    }
+    return entry;
+  });
+
   let nextState = state;
-  let changed = cleaned.length !== (itinerary || []).length;
+  let changed = cleaned.length !== (itinerary || []).length
+    || cleaned.some((entry, i) => entry.arrivedAt !== (itinerary || [])[i]?.arrivedAt);
 
   const invalidTravel = nextState.status === STATUS.TRAVELLING
     && isInvalidTravelLeg(nextState.origin, nextState.destination);
@@ -1321,6 +1332,13 @@ async function advanceStateMachine(nowInput) {
     && now.getTime() >= new Date(state.arrivalAt).getTime()) {
     const trip = itinerary.find((e) => e.id === state.currentItineraryEntryId);
     const dest = locationFromStop(state.destination) || locationFromStop(trip);
+    const landedAt = state.arrivalAt;
+    if (trip && trip.arrivedAt !== landedAt) {
+      itinerary = itinerary.map((entry) => (
+        entry.id === trip.id ? { ...entry, arrivedAt: landedAt } : entry
+      ));
+      await writeItinerary(itinerary);
+    }
     state = await writeState({
       ...state,
       status: STATUS.ARRIVED,
@@ -1369,6 +1387,12 @@ async function advanceStateMachine(nowInput) {
       if (now.getTime() >= new Date(arrivalAt).getTime()) {
         const trip = itinerary.find((e) => e.id === state.currentItineraryEntryId);
         const dest = locationFromStop(state.destination) || locationFromStop(trip);
+        if (trip && trip.arrivedAt !== arrivalAt) {
+          itinerary = itinerary.map((entry) => (
+            entry.id === trip.id ? { ...entry, arrivedAt } : entry
+          ));
+          await writeItinerary(itinerary);
+        }
         state = await writeState({
           ...state,
           status: STATUS.ARRIVED,
