@@ -2637,7 +2637,7 @@ const FoundationControl = (() => {
       destroyMap();
       if (!state.analyticsRange) state.analyticsRange = state.range || 'all';
       render();
-      loadDonationAnalytics({ range: state.analyticsRange || state.range || 'all', resetData: !state.analyticsData });
+      loadDonationAnalytics({ range: state.analyticsRange || state.range || 'all', resetData: true });
       return;
     }
     if (action === 'close-analytics') {

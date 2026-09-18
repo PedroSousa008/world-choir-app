@@ -92,58 +92,54 @@ const FoundationDonationAnalyticsUI = (() => {
     return `<div class="fda-empty"><p>${esc(message)}</p></div>`;
   }
 
-  function kpiCard({ iconKind, label, value, sub, change }) {
-    return `
-      <article class="fda-kpi">
-        <span class="fda-kpi__icon" aria-hidden="true">${icon(iconKind)}</span>
-        <p class="fda-kpi__value">${esc(value)}</p>
-        <p class="fda-kpi__label">${esc(label)}</p>
-        ${sub ? `<p class="fda-kpi__sub">${esc(sub)}</p>` : ''}
-        ${change != null ? `<div class="fda-kpi__change">${changeHtml(change)}</div>` : ''}
-      </article>
-    `;
-  }
+  const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  function segControl(name, options, active) {
+  function chartFrame(innerHtml, caption) {
     return `
-      <div class="fda-seg" role="tablist" aria-label="${esc(name)}">
-        ${options.map((opt) => `
-          <button type="button" class="fda-seg__btn ${active === opt.id ? 'is-active' : ''}"
-            role="tab" aria-selected="${active === opt.id ? 'true' : 'false'}"
-            data-analytics-seg="${esc(name)}" data-seg-value="${esc(opt.id)}">${esc(opt.label)}</button>
-        `).join('')}
+      <div class="fda-chart-frame ${caption ? 'is-empty' : ''}">
+        ${innerHtml}
+        ${caption ? `<p class="fda-chart-frame__caption">${esc(caption)}</p>` : ''}
       </div>
     `;
   }
 
-  function areaChart(points, valueKey, currency) {
-    if (!points.length) return emptyBlock('No donation data for this period yet.');
+  function areaChart(points, valueKey, currency, caption) {
+    const series = points.length
+      ? points
+      : MONTH_SHORT.map((label) => ({
+        label,
+        grossRaised: 0,
+        netRaised: 0,
+        donations: 0,
+        averageDonation: 0,
+      }));
     const w = 720;
     const h = 220;
     const pad = { t: 16, r: 16, b: 36, l: 52 };
-    const values = points.map((p) => Number(p[valueKey] || 0));
+    const values = series.map((p) => Number(p[valueKey] || 0));
     const max = Math.max(...values, 0);
-    const span = max > 0 ? max : 1;
+    const emptyScale = max <= 0;
+    const span = emptyScale ? 100 : max;
     const innerW = w - pad.l - pad.r;
     const innerH = h - pad.t - pad.b;
-    const coords = points.map((p, i) => {
-      const x = pad.l + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
+    const coords = series.map((p, i) => {
+      const x = pad.l + (series.length === 1 ? innerW / 2 : (i / (series.length - 1)) * innerW);
       const y = pad.t + innerH - ((Number(p[valueKey] || 0) / span) * innerH);
       return { x, y, p };
     });
     const line = coords.map((c, i) => `${i ? 'L' : 'M'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
     const area = `${line} L${coords[coords.length - 1].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} L${coords[0].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} Z`;
     const yTicks = [0, 0.5, 1].map((t) => {
-      const val = span * t;
+      const val = emptyScale ? 0 : span * t;
       const y = pad.t + innerH - (t * innerH);
       const label = valueKey === 'donations'
         ? num(Math.round(val))
         : money(val, currency).replace(/\.00$/, '');
       return { y, label };
     });
-    const labelEvery = Math.max(1, Math.ceil(points.length / 8));
+    const labelEvery = Math.max(1, Math.ceil(series.length / 8));
 
-    return `
+    return chartFrame(`
       <div class="fda-chart" role="img" aria-label="Donation revenue over time">
         <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
           ${yTicks.map((t) => `
@@ -153,55 +149,61 @@ const FoundationDonationAnalyticsUI = (() => {
           <path d="${area}" class="fda-chart__area"></path>
           <path d="${line}" class="fda-chart__line"></path>
           ${coords.map((c) => `<circle cx="${c.x}" cy="${c.y}" r="3.2" class="fda-chart__dot">
-            <title>${esc(c.p.label)}: ${esc(valueKey === 'donations' ? num(c.p.donations) : money(c.p[valueKey], currency))}</title>
+            <title>${esc(c.p.label)}: ${esc(valueKey === 'donations' ? num(c.p.donations || 0) : money(c.p[valueKey] || 0, currency))}</title>
           </circle>`).join('')}
           ${coords.map((c, i) => (i % labelEvery === 0 || i === coords.length - 1)
             ? `<text x="${c.x}" y="${h - 10}" class="fda-chart__axis" text-anchor="middle">${esc(c.p.label)}</text>`
             : '').join('')}
         </svg>
       </div>
-    `;
+    `, caption);
   }
 
-  function barChart(rows, valueKey = 'donations') {
-    if (!rows.length || !rows.some((r) => Number(r[valueKey] || 0) > 0)) {
-      return emptyBlock('Donation timing insights will appear as donations are received.');
-    }
-    const max = Math.max(...rows.map((r) => Number(r[valueKey] || 0)), 1);
-    return `
+  function barChart(rows, valueKey = 'donations', caption) {
+    const list = rows.length ? rows : [
+      { label: 'Mon', donations: 0 }, { label: 'Tue', donations: 0 }, { label: 'Wed', donations: 0 },
+      { label: 'Thu', donations: 0 }, { label: 'Fri', donations: 0 }, { label: 'Sat', donations: 0 },
+      { label: 'Sun', donations: 0 },
+    ];
+    const max = Math.max(...list.map((r) => Number(r[valueKey] || 0)), 1);
+    return chartFrame(`
       <div class="fda-bars" role="img" aria-label="Donation timing chart">
-        ${rows.map((r) => {
+        ${list.map((r) => {
           const v = Number(r[valueKey] || 0);
-          const h = Math.max(v > 0 ? 8 : 2, Math.round((v / max) * 120));
+          const h = Math.max(4, Math.round((v / max) * 120));
           return `
             <div class="fda-bars__col">
-              <div class="fda-bars__bar" style="height:${h}px" title="${esc(r.label)}: ${esc(num(v))}"></div>
+              <div class="fda-bars__bar ${v <= 0 ? 'is-zero' : ''}" style="height:${h}px" title="${esc(r.label)}: ${esc(num(v))}"></div>
               <span class="fda-bars__label">${esc(r.label)}</span>
             </div>
           `;
         }).join('')}
       </div>
-    `;
+    `, caption);
   }
 
-  function hBars(ranges) {
-    if (!ranges.some((r) => r.count > 0)) {
-      return emptyBlock('Donation value insights will appear after your Foundation receives donations.');
-    }
-    const max = Math.max(...ranges.map((r) => r.count), 1);
-    return `
+  function hBars(ranges, caption) {
+    const list = (ranges && ranges.length) ? ranges : [
+      { label: '€1–€10', count: 0, percent: null },
+      { label: '€11–€25', count: 0, percent: null },
+      { label: '€26–€50', count: 0, percent: null },
+      { label: '€51–€100', count: 0, percent: null },
+      { label: '€100+', count: 0, percent: null },
+    ];
+    const max = Math.max(...list.map((r) => r.count || 0), 1);
+    return chartFrame(`
       <div class="fda-hbars">
-        ${ranges.map((r) => `
+        ${list.map((r) => `
           <div class="fda-hbar">
             <span class="fda-hbar__label">${esc(r.label)}</span>
             <div class="fda-hbar__track">
-              <div class="fda-hbar__fill" style="width:${Math.round((r.count / max) * 100)}%"></div>
+              <div class="fda-hbar__fill ${!(r.count > 0) ? 'is-zero' : ''}" style="width:${Math.round(((r.count || 0) / max) * 100)}%"></div>
             </div>
-            <span class="fda-hbar__meta">${esc(num(r.count))} · ${esc(pctLabel(r.percent))}</span>
+            <span class="fda-hbar__meta">${esc(num(r.count || 0))} · ${esc(pctLabel(r.percent))}</span>
           </div>
         `).join('')}
       </div>
-    `;
+    `, caption);
   }
 
   function renderFinancial(data, currency) {
@@ -281,23 +283,18 @@ const FoundationDonationAnalyticsUI = (() => {
             { id: 'averageDonation', label: 'Average Donation' },
           ], metric)}
         </header>
-        ${series.empty
-          ? emptyBlock('No donation data for this period yet.')
-          : areaChart(series.points || [], metricMap[metric] || 'grossRaised', currency)}
+        ${areaChart(
+          series.points || [],
+          metricMap[metric] || 'grossRaised',
+          currency,
+          series.empty ? 'No donation data for this period yet.' : ''
+        )}
       </section>
     `;
   }
 
   function renderDonors(data, currency) {
     const d = data.donors || { empty: true };
-    if (d.empty) {
-      return `
-        <section class="fda-section fda-card">
-          <header class="fda-section__head"><div><h3>2. New vs Returning Donors</h3><p>Understand your supporter base and loyalty.</p></div></header>
-          ${emptyBlock('No donor activity for this period yet.')}
-        </section>
-      `;
-    }
     return `
       <section class="fda-section fda-card">
         <header class="fda-section__head">
@@ -309,27 +306,27 @@ const FoundationDonationAnalyticsUI = (() => {
         <div class="fda-donor-grid">
           <article class="fda-mini">
             <span class="fda-kpi__icon" aria-hidden="true">${icon('person')}</span>
-            <p class="fda-kpi__value">${esc(num(d.newDonors))}</p>
+            <p class="fda-kpi__value">${esc(num(d.newDonors || 0))}</p>
             <p class="fda-kpi__label">New Donors</p>
-            <p class="fda-kpi__sub">${esc(pctLabel(d.newDonorPercent))} of donors</p>
+            <p class="fda-kpi__sub">${esc(d.empty ? '—' : pctLabel(d.newDonorPercent))} of donors</p>
           </article>
           <article class="fda-mini">
             <span class="fda-kpi__icon" aria-hidden="true">${icon('people')}</span>
-            <p class="fda-kpi__value">${esc(num(d.returningDonors))}</p>
+            <p class="fda-kpi__value">${esc(num(d.returningDonors || 0))}</p>
             <p class="fda-kpi__label">Returning Donors</p>
-            <p class="fda-kpi__sub">${esc(pctLabel(d.returningDonorPercent))} of donors</p>
+            <p class="fda-kpi__sub">${esc(d.empty ? '—' : pctLabel(d.returningDonorPercent))} of donors</p>
           </article>
           <article class="fda-mini">
             <span class="fda-kpi__icon" aria-hidden="true">${icon('wallet')}</span>
             <p class="fda-kpi__value">${esc(money(d.revenueFromNew || 0, currency))}</p>
             <p class="fda-kpi__label">Revenue from New Donors</p>
-            <p class="fda-kpi__sub">${esc(pctLabel(d.revenueFromNewPercent))} of revenue</p>
+            <p class="fda-kpi__sub">${esc(d.empty ? '—' : pctLabel(d.revenueFromNewPercent))} of revenue</p>
           </article>
           <article class="fda-mini">
             <span class="fda-kpi__icon" aria-hidden="true">${icon('foundation')}</span>
             <p class="fda-kpi__value">${esc(money(d.revenueFromReturning || 0, currency))}</p>
             <p class="fda-kpi__label">Revenue from Returning Donors</p>
-            <p class="fda-kpi__sub">${esc(pctLabel(d.revenueFromReturningPercent))} of revenue</p>
+            <p class="fda-kpi__sub">${esc(d.empty ? '—' : pctLabel(d.revenueFromReturningPercent))} of revenue</p>
           </article>
         </div>
         <div class="fda-stat-row">
@@ -339,6 +336,7 @@ const FoundationDonationAnalyticsUI = (() => {
           <div class="fda-stat"><span>Repeat Donation Rate</span><strong>${esc(pctLabel(d.repeatDonationRate))}</strong></div>
           <div class="fda-stat"><span>Returning Donor Revenue %</span><strong>${esc(pctLabel(d.returningDonorRevenuePercent))}</strong></div>
         </div>
+        ${d.empty ? `<p class="fda-section-note">No donor activity for this period yet.</p>` : ''}
       </section>
     `;
   }
@@ -353,22 +351,23 @@ const FoundationDonationAnalyticsUI = (() => {
             <p>Breakdown of donation amounts and key insights.</p>
           </div>
         </header>
-        ${v.empty ? emptyBlock('Donation value insights will appear after your Foundation receives donations.') : `
-          <div class="fda-value-grid">
-            ${hBars(v.ranges || [])}
-            <dl class="fda-kv">
-              <div><dt>Largest Donation</dt><dd>${esc(v.largest != null ? money(v.largest, currency) : '—')}</dd></div>
-              <div><dt>Smallest Donation</dt><dd>${esc(v.smallest != null ? money(v.smallest, currency) : '—')}</dd></div>
-              <div><dt>Most Common Range</dt><dd>${esc(v.mostCommonRange || '—')}</dd></div>
-              <div><dt>Average Donation</dt><dd>${esc(v.averageDonation != null ? money(v.averageDonation, currency) : '—')}</dd></div>
-              <div><dt>Median Donation</dt><dd>${esc(v.medianDonation != null ? money(v.medianDonation, currency) : '—')}</dd></div>
-            </dl>
-          </div>
-          <div class="fda-insight">
-            <span aria-hidden="true">${icon('info')}</span>
-            <p>${esc(v.insight || 'More donation activity is needed to generate this insight.')}</p>
-          </div>
-        `}
+        <div class="fda-value-grid">
+          ${hBars(
+            v.ranges || [],
+            v.empty ? 'Donation value insights will appear after your Foundation receives donations.' : ''
+          )}
+          <dl class="fda-kv">
+            <div><dt>Largest Donation</dt><dd>${esc(v.largest != null ? money(v.largest, currency) : '—')}</dd></div>
+            <div><dt>Smallest Donation</dt><dd>${esc(v.smallest != null ? money(v.smallest, currency) : '—')}</dd></div>
+            <div><dt>Most Common Range</dt><dd>${esc(v.mostCommonRange || '—')}</dd></div>
+            <div><dt>Average Donation</dt><dd>${esc(v.averageDonation != null ? money(v.averageDonation, currency) : '—')}</dd></div>
+            <div><dt>Median Donation</dt><dd>${esc(v.medianDonation != null ? money(v.medianDonation, currency) : '—')}</dd></div>
+          </dl>
+        </div>
+        <div class="fda-insight">
+          <span aria-hidden="true">${icon('info')}</span>
+          <p>${esc(v.insight || 'More donation activity is needed to generate this insight.')}</p>
+        </div>
       </section>
     `;
   }
@@ -390,7 +389,25 @@ const FoundationDonationAnalyticsUI = (() => {
           ], mode)}
         </header>
         ${g.empty || !rows.length
-          ? emptyBlock('No geographic donation data available yet.')
+          ? `<div class="fda-table-wrap"><table class="fda-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>${mode === 'cities' ? 'City' : 'Country'}</th>
+                  ${mode === 'cities' ? '<th>Country</th>' : ''}
+                  <th class="num">Raised</th>
+                  <th class="num">Donations</th>
+                  <th class="num">Donors</th>
+                  <th class="num">Avg.</th>
+                  <th class="num">% of Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="fda-table__empty">
+                  <td colspan="${mode === 'cities' ? 8 : 7}">No geographic donation data available yet.</td>
+                </tr>
+              </tbody>
+            </table></div>`
           : `<div class="fda-table-wrap"><table class="fda-table">
               <thead>
                 <tr>
@@ -434,7 +451,19 @@ const FoundationDonationAnalyticsUI = (() => {
           </div>
         </header>
         ${p.empty
-          ? emptyBlock(p.note || 'No project donation data available yet.')
+          ? `<div class="fda-table-wrap"><table class="fda-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Project</th><th class="num">Raised</th><th class="num">Donors</th>
+                  <th class="num">Avg.</th><th>Goal Progress</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="fda-table__empty">
+                  <td colspan="6">${esc(p.note || 'No project donation data available yet.')}</td>
+                </tr>
+              </tbody>
+            </table></div>`
           : `<div class="fda-table-wrap"><table class="fda-table">
               <thead>
                 <tr>
@@ -486,7 +515,19 @@ const FoundationDonationAnalyticsUI = (() => {
             { id: 'month', label: 'By Month' },
           ], mode)}
         </header>
-        ${t.empty ? emptyBlock('Donation timing insights will appear as donations are received.') : `
+        ${t.empty ? `
+          <div class="fda-timing-grid">
+            ${barChart(chartRows, 'donations', 'Donation timing insights will appear as donations are received.')}
+            <dl class="fda-kv">
+              <div><dt>Highest Donation Day</dt><dd>—</dd></div>
+              <div><dt>Highest Revenue Day</dt><dd>—</dd></div>
+              <div><dt>Highest Donation Hour</dt><dd>—</dd></div>
+              <div><dt>Avg. Daily Donations</dt><dd>—</dd></div>
+              <div><dt>Avg. Weekly Donations</dt><dd>—</dd></div>
+              <div><dt>Avg. Monthly Donations</dt><dd>—</dd></div>
+            </dl>
+          </div>
+        ` : `
           <div class="fda-timing-grid">
             ${barChart(chartRows, 'donations')}
             <dl class="fda-kv">

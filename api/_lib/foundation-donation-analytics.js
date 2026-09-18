@@ -517,6 +517,7 @@ function seriesKey(date, granularity) {
     return {
       key: `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
       label: `${MONTHS[m]} ${d}`,
+      sortKey: `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
     };
   }
   if (granularity === 'week') {
@@ -527,27 +528,100 @@ function seriesKey(date, granularity) {
     return {
       key: `w-${ws.toISOString().slice(0, 10)}`,
       label: `${MONTHS[ws.getUTCMonth()]} ${ws.getUTCDate()}`,
+      sortKey: ws.toISOString().slice(0, 10),
     };
   }
   return {
     key: `${y}-${String(m + 1).padStart(2, '0')}`,
     label: `${MONTHS[m]} ${y}`,
+    sortKey: `${y}-${String(m + 1).padStart(2, '0')}`,
   };
+}
+
+function scaffoldBounds(bounds) {
+  const now = Date.now();
+  let from = bounds.from;
+  let to = bounds.to != null ? bounds.to : now;
+  if (from == null) {
+    const d = new Date(now);
+    from = Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 11, 1, 0, 0, 0, 0);
+  }
+  if (to < from) to = from;
+  return { from, to };
+}
+
+function buildScaffoldBuckets(bounds, granularity) {
+  const { from, to } = scaffoldBounds(bounds);
+  const buckets = new Map();
+  if (granularity === 'month') {
+    const start = new Date(from);
+    let y = start.getUTCFullYear();
+    let m = start.getUTCMonth();
+    const end = new Date(to);
+    const endY = end.getUTCFullYear();
+    const endM = end.getUTCMonth();
+    while (y < endY || (y === endY && m <= endM)) {
+      const dt = new Date(Date.UTC(y, m, 1));
+      const meta = seriesKey(dt, 'month');
+      buckets.set(meta.key, {
+        key: meta.key,
+        label: meta.label,
+        sortKey: meta.sortKey,
+        gross: 0,
+        net: 0,
+        donations: 0,
+      });
+      m += 1;
+      if (m > 11) {
+        m = 0;
+        y += 1;
+      }
+    }
+    return buckets;
+  }
+
+  const step = granularity === 'week' ? 7 * 86400000 : 86400000;
+  let cursor = granularity === 'week'
+    ? (() => {
+      const dayStart = startOfUtcDay(from);
+      const dow = new Date(dayStart).getUTCDay();
+      return dayStart - dow * 86400000;
+    })()
+    : startOfUtcDay(from);
+  const end = to;
+  let guard = 0;
+  while (cursor <= end && guard < 400) {
+    const dt = new Date(cursor);
+    const meta = seriesKey(dt, granularity);
+    if (!buckets.has(meta.key)) {
+      buckets.set(meta.key, {
+        key: meta.key,
+        label: meta.label,
+        sortKey: meta.sortKey,
+        gross: 0,
+        net: 0,
+        donations: 0,
+      });
+    }
+    cursor += step;
+    guard += 1;
+  }
+  return buckets;
 }
 
 function buildRevenueSeries(donations, bounds) {
   const granularity = chooseSeriesGranularity(bounds);
-  const map = new Map();
+  const map = buildScaffoldBuckets(bounds, granularity);
 
   donations.forEach((d) => {
     const dt = donationDate(d);
     if (!dt) return;
-    const { key, label } = seriesKey(dt, granularity);
+    const { key, label, sortKey } = seriesKey(dt, granularity);
     if (!map.has(key)) {
       map.set(key, {
         key,
         label,
-        sortKey: key,
+        sortKey,
         gross: 0,
         net: 0,
         donations: 0,
@@ -570,8 +644,9 @@ function buildRevenueSeries(donations, bounds) {
       averageDonation: row.donations ? roundMoney(row.gross / row.donations) : 0,
     }));
 
+  const hasActivity = points.some((p) => p.donations > 0 || p.grossRaised > 0);
   return {
-    empty: points.length === 0,
+    empty: !hasActivity,
     granularity,
     points,
   };
