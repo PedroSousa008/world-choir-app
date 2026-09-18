@@ -18,6 +18,10 @@ const {
 const {
   buildOwnerDonationAnalytics,
 } = require('./_lib/foundation-donation-analytics');
+const {
+  seedFoundationDemoData,
+  clearFoundationDemoData,
+} = require('./_lib/foundation-demo-seed');
 const { buildDailyPeaceOwnerIntel, purgeIncompleteArchivedAssignments } = require('./_lib/daily-peace');
 const {
   buildVoiceActivityPage,
@@ -175,6 +179,21 @@ module.exports = async function handler(req, res) {
         to: req.query.to || null,
       });
       if (!data.ok) return res.status(404).json({ error: data.error || 'Not found' });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'seed-foundation-demo' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await seedFoundationDemoData();
+      if (!data.ok) return res.status(400).json({ error: data.error || 'Seed failed' });
+      return res.status(200).json(data);
+    }
+
+    if (action === 'clear-foundation-demo' && req.method === 'POST') {
+      res.setHeader('Cache-Control', 'no-store');
+      if (!requireOwner(req, res)) return;
+      const data = await clearFoundationDemoData();
       return res.status(200).json(data);
     }
 

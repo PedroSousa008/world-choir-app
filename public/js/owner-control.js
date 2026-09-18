@@ -742,6 +742,33 @@ const OwnerControl = (() => {
 
   function bindAnalytics() {
     document.getElementById('owner-open-foundation-analytics')?.addEventListener('click', openFoundationAnalytics);
+    document.getElementById('owner-seed-foundation-demo')?.addEventListener('click', async () => {
+      if (!window.confirm('Load temporary demo donations and projects for every Foundation? You can clear them later.')) return;
+      try {
+        setFlash('Seeding demo data…');
+        render();
+        const data = await api('seed-foundation-demo', { method: 'POST', body: {} });
+        setFlash(`Demo data loaded for ${data.foundations || 0} foundations (${data.donations || 0} donations).`);
+        await loadCenter();
+      } catch (err) {
+        setFlash(err.message || 'Could not seed demo data', 'err');
+        render();
+      }
+    });
+    document.getElementById('owner-clear-foundation-demo')?.addEventListener('click', async () => {
+      if (!window.confirm('Remove all temporary demo donations and projects? Real data stays untouched.')) return;
+      try {
+        setFlash('Clearing demo data…');
+        render();
+        const data = await api('clear-foundation-demo', { method: 'POST', body: {} });
+        setFlash(`Removed ${data.donationsRemoved || 0} demo donations and ${data.projectsRemoved || 0} demo projects.`);
+        state.analyticsData = null;
+        await loadCenter();
+      } catch (err) {
+        setFlash(err.message || 'Could not clear demo data', 'err');
+        render();
+      }
+    });
     root().querySelectorAll('[data-action="close-analytics"]').forEach((el) => {
       el.addEventListener('click', closeFoundationAnalytics);
     });
@@ -2058,6 +2085,8 @@ const OwnerControl = (() => {
                 aria-haspopup="dialog"
                 aria-expanded="${state.analyticsOpen ? 'true' : 'false'}"
               >Analytics</button>
+              <button type="button" class="owner-cf-analytics-btn" id="owner-seed-foundation-demo" title="Temporary test data for all foundations">Load demo data</button>
+              <button type="button" class="owner-cf-analytics-btn" id="owner-clear-foundation-demo" title="Remove temporary demo donations and projects">Clear demo data</button>
               <select class="owner-cf-select" id="owner-cf-status-filter" aria-label="Filter by status">
                 <option value="all" ${state.foundationStatusFilter === 'all' ? 'selected' : ''}>All statuses</option>
                 <option value="active" ${state.foundationStatusFilter === 'active' ? 'selected' : ''}>Active</option>

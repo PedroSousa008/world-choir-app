@@ -144,6 +144,9 @@ function startOfUtcDay(ms) {
 }
 
 function donorIsWorldChoirVoice(d, pledgeIndex) {
+  if (!d) return false;
+  // Temporary demo seed voices — removable with Clear demo data
+  if (d.wcDemoSeed === true && d.wcDemoVoice === true) return true;
   if (!pledgeIndex || !pledgeIndex.size) return false;
   const keys = [d.userId, d.deviceId, d.donorId, d.user_id, d.device_id]
     .filter(Boolean)
