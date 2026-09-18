@@ -136,6 +136,228 @@ function bucketSeries(donations, mode = 'amount') {
     }));
 }
 
+const GROWTH_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function startOfUtcDay(ms) {
+  const d = new Date(ms);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+function donorIsWorldChoirVoice(d, pledgeIndex) {
+  if (!pledgeIndex || !pledgeIndex.size) return false;
+  const keys = [d.userId, d.deviceId, d.donorId, d.user_id, d.device_id]
+    .filter(Boolean)
+    .map(String);
+  return keys.some((k) => pledgeIndex.has(k));
+}
+
+function communityGrowthBounds(rangeKey, allDonations) {
+  const base = rangeBounds(rangeKey);
+  const now = Date.now();
+  if (base.from != null) {
+    return { from: base.from, to: base.to != null ? base.to : now };
+  }
+  let earliest = null;
+  allDonations.forEach((d) => {
+    const dt = donationDate(d);
+    if (!dt) return;
+    const t = dt.getTime();
+    if (earliest == null || t < earliest) earliest = t;
+  });
+  if (earliest == null) {
+    const d = new Date(now);
+    return {
+      from: Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 11, 1, 0, 0, 0, 0),
+      to: now,
+    };
+  }
+  return { from: earliest, to: now };
+}
+
+function communityGrowthGranularity(bounds) {
+  const days = Math.max(1, Math.ceil((bounds.to - bounds.from) / 86400000));
+  if (days <= 45) return 'day';
+  if (days <= 120) return 'week';
+  return 'month';
+}
+
+function communitySeriesMeta(date, granularity) {
+  const y = date.getUTCFullYear();
+  const m = date.getUTCMonth();
+  const d = date.getUTCDate();
+  if (granularity === 'day') {
+    return {
+      key: `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+      label: `${GROWTH_MONTHS[m]} ${d}`,
+      sortKey: `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+    };
+  }
+  if (granularity === 'week') {
+    const dayStart = startOfUtcDay(date.getTime());
+    const dow = new Date(dayStart).getUTCDay();
+    const weekStart = dayStart - dow * 86400000;
+    const ws = new Date(weekStart);
+    return {
+      key: `w-${ws.toISOString().slice(0, 10)}`,
+      label: `${GROWTH_MONTHS[ws.getUTCMonth()]} ${ws.getUTCDate()}`,
+      sortKey: ws.toISOString().slice(0, 10),
+    };
+  }
+  return {
+    key: `${y}-${String(m + 1).padStart(2, '0')}`,
+    label: `${GROWTH_MONTHS[m]} ${y}`,
+    sortKey: `${y}-${String(m + 1).padStart(2, '0')}`,
+  };
+}
+
+function scaffoldCommunityBuckets(bounds, granularity) {
+  const buckets = new Map();
+  const from = bounds.from;
+  const to = bounds.to;
+  if (granularity === 'month') {
+    const start = new Date(from);
+    let y = start.getUTCFullYear();
+    let m = start.getUTCMonth();
+    const end = new Date(to);
+    const endY = end.getUTCFullYear();
+    const endM = end.getUTCMonth();
+    while (y < endY || (y === endY && m <= endM)) {
+      const meta = communitySeriesMeta(new Date(Date.UTC(y, m, 1)), 'month');
+      buckets.set(meta.key, {
+        ...meta,
+        newDonors: new Set(),
+        returningDonors: new Set(),
+        voiceDonors: new Set(),
+      });
+      m += 1;
+      if (m > 11) {
+        m = 0;
+        y += 1;
+      }
+    }
+    return buckets;
+  }
+  const step = granularity === 'week' ? 7 * 86400000 : 86400000;
+  let cursor = granularity === 'week'
+    ? (() => {
+      const dayStart = startOfUtcDay(from);
+      const dow = new Date(dayStart).getUTCDay();
+      return dayStart - dow * 86400000;
+    })()
+    : startOfUtcDay(from);
+  let guard = 0;
+  while (cursor <= to && guard < 400) {
+    const meta = communitySeriesMeta(new Date(cursor), granularity);
+    if (!buckets.has(meta.key)) {
+      buckets.set(meta.key, {
+        ...meta,
+        newDonors: new Set(),
+        returningDonors: new Set(),
+        voiceDonors: new Set(),
+      });
+    }
+    cursor += step;
+    guard += 1;
+  }
+  return buckets;
+}
+
+/**
+ * Community growth over time — real donation + pledge joins only.
+ * totalSupporters: cumulative unique donors through each bucket
+ * newSupporters: first-time donors in that bucket
+ * returningSupporters: previously seen donors active in that bucket
+ * worldChoirVoices: cumulative unique donors linked to a World Choir pledge
+ */
+function buildCommunityGrowthSeries(allDonations, rangeKey, pledgeIndex) {
+  const bounds = communityGrowthBounds(rangeKey, allDonations);
+  const granularity = communityGrowthGranularity(bounds);
+  const buckets = scaffoldCommunityBuckets(bounds, granularity);
+
+  const firstSeenAt = new Map();
+  const sortedAll = [...allDonations].sort((a, b) => {
+    const da = donationDate(a)?.getTime() || 0;
+    const db = donationDate(b)?.getTime() || 0;
+    return da - db;
+  });
+  sortedAll.forEach((d) => {
+    const key = donorKey(d);
+    const dt = donationDate(d);
+    if (!key || !dt) return;
+    const id = String(key);
+    const t = dt.getTime();
+    if (!firstSeenAt.has(id) || t < firstSeenAt.get(id)) firstSeenAt.set(id, t);
+  });
+
+  const ranged = allDonations.filter((d) => inBounds(donationDate(d), bounds.from, bounds.to));
+  ranged.forEach((d) => {
+    const dt = donationDate(d);
+    const key = donorKey(d);
+    if (!dt || !key) return;
+    const id = String(key);
+    const meta = communitySeriesMeta(dt, granularity);
+    let row = buckets.get(meta.key);
+    if (!row) {
+      row = {
+        ...meta,
+        newDonors: new Set(),
+        returningDonors: new Set(),
+        voiceDonors: new Set(),
+      };
+      buckets.set(meta.key, row);
+    }
+    const firstAt = firstSeenAt.get(id);
+    if (firstAt != null && communitySeriesMeta(new Date(firstAt), granularity).key === meta.key) {
+      row.newDonors.add(id);
+    } else {
+      row.returningDonors.add(id);
+    }
+    if (donorIsWorldChoirVoice(d, pledgeIndex)) row.voiceDonors.add(id);
+  });
+
+  const ordered = Array.from(buckets.values()).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  const cumulativeSupporters = new Set();
+  const cumulativeVoices = new Set();
+  // Voices must accumulate in chronological order from all donations (including before range)
+  // For range windows, seed cumulative sets with donors seen before the window.
+  if (bounds.from != null) {
+    sortedAll.forEach((d) => {
+      const dt = donationDate(d);
+      const key = donorKey(d);
+      if (!dt || !key) return;
+      if (dt.getTime() >= bounds.from) return;
+      const id = String(key);
+      cumulativeSupporters.add(id);
+      if (donorIsWorldChoirVoice(d, pledgeIndex)) cumulativeVoices.add(id);
+    });
+  }
+
+  const points = ordered.map((row) => {
+    row.newDonors.forEach((id) => cumulativeSupporters.add(id));
+    row.returningDonors.forEach((id) => cumulativeSupporters.add(id));
+    row.voiceDonors.forEach((id) => cumulativeVoices.add(id));
+    return {
+      key: row.key,
+      label: row.label,
+      totalSupporters: cumulativeSupporters.size,
+      newSupporters: row.newDonors.size,
+      returningSupporters: row.returningDonors.size,
+      worldChoirVoices: cumulativeVoices.size,
+    };
+  });
+
+  const hasActivity = points.some((p) => (
+    p.totalSupporters > 0 || p.newSupporters > 0 || p.returningSupporters > 0 || p.worldChoirVoices > 0
+  ));
+
+  return {
+    empty: !hasActivity,
+    granularity,
+    points,
+    note: hasActivity ? null : 'Community growth will appear as supporters join.',
+  };
+}
+
 function buildPledgeIndex(pledges) {
   const byUser = new Map();
   pledges.forEach((p) => {
@@ -512,9 +734,24 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
     unavailable.push('Map support locations require donations linked to participation cities.');
   }
   unavailable.push('Page view / conversion funnel tracking is not connected yet.');
-  unavailable.push('Discovery attribution sources are not tracked yet.');
   unavailable.push('Payout balances are not connected yet.');
   unavailable.push('Two-factor authentication is not enabled yet.');
+
+  const communityGrowth = canViewSupporters
+    ? buildCommunityGrowthSeries(foundationDonations, range, pledgeIndex)
+    : { empty: true, points: [], note: 'Supporter growth is restricted.' };
+
+  // World Choir Voices in the selected range (unique donors linked to a pledge)
+  let worldChoirVoices = null;
+  if (canViewSupporters) {
+    const voiceSet = new Set();
+    ranged.forEach((d) => {
+      const key = donorKey(d);
+      if (!key) return;
+      if (donorIsWorldChoirVoice(d, pledgeIndex)) voiceSet.add(String(key));
+    });
+    worldChoirVoices = voiceSet.size;
+  }
 
   return {
     ok: true,
@@ -604,15 +841,12 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
       totalSupporters: canViewSupporters ? allTimeSupporters : null,
       newSupporters: canViewSupporters ? newSupporters : null,
       returningSupporters: canViewSupporters ? repeatSupporters : null,
+      worldChoirVoices: canViewSupporters ? worldChoirVoices : null,
       countriesReached: geography.countries.length,
       citiesReached: geography.cities.length,
       topCountries: geography.countries.slice(0, 8),
       topCities: geography.cities.slice(0, 8),
-      discovery: {
-        available: false,
-        note: 'Discovery attribution is not tracked yet.',
-        sources: [],
-      },
+      growthOverTime: communityGrowth,
       restricted: false,
     } : {
       restricted: true,

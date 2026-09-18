@@ -90,6 +90,7 @@ const FoundationControl = (() => {
     navOpen: false,
     activityFilter: 'all',
     growthMetric: 'amount',
+    communityGrowthMetric: 'totalSupporters',
     foundationTab: 'page',
     foundationDirty: false,
     foundationForm: null,
@@ -1681,13 +1682,128 @@ const FoundationControl = (() => {
     return renderCityTable(rows);
   }
 
+  function communityGrowthSeg(active) {
+    const opts = [
+      { id: 'totalSupporters', label: 'Total Supporters' },
+      { id: 'newSupporters', label: 'New' },
+      { id: 'returningSupporters', label: 'Returning' },
+      { id: 'worldChoirVoices', label: 'World Choir Voices' },
+    ];
+    return `
+      <div class="fda-seg fcc-comm-growth__seg" role="tablist" aria-label="Community growth metric">
+        ${opts.map((opt) => `
+          <button type="button" class="fda-seg__btn ${active === opt.id ? 'is-active' : ''}"
+            role="tab" aria-selected="${active === opt.id ? 'true' : 'false'}"
+            data-comm-growth="${esc(opt.id)}">${esc(opt.label)}</button>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function pickCommGrowthLabelIndexes(count) {
+    if (count <= 0) return [];
+    if (count === 1) return [0];
+    const maxLabels = 7;
+    const step = Math.max(1, Math.ceil((count - 1) / (maxLabels - 1)));
+    const idxs = [];
+    for (let i = 0; i < count; i += step) idxs.push(i);
+    const last = count - 1;
+    if (idxs[idxs.length - 1] !== last) {
+      if (idxs.length >= 2 && last - idxs[idxs.length - 1] < Math.max(1, Math.floor(step * 0.55))) {
+        idxs.pop();
+      }
+      idxs.push(last);
+    }
+    return idxs;
+  }
+
+  function renderCommunityGrowthChart(series, valueKey, caption) {
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const points = (series && series.length)
+      ? series
+      : MONTHS.map((label) => ({
+        label,
+        totalSupporters: 0,
+        newSupporters: 0,
+        returningSupporters: 0,
+        worldChoirVoices: 0,
+      }));
+    const w = 1000;
+    const h = 200;
+    const pad = { t: 12, r: 8, b: 12, l: 8 };
+    const values = points.map((p) => Number(p[valueKey] || 0));
+    const max = Math.max(...values, 0);
+    const emptyScale = max <= 0;
+    const span = emptyScale ? 100 : max;
+    const innerW = w - pad.l - pad.r;
+    const innerH = h - pad.t - pad.b;
+    const coords = points.map((p, i) => {
+      const x = pad.l + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
+      const y = pad.t + innerH - ((Number(p[valueKey] || 0) / span) * innerH);
+      const pct = points.length === 1 ? 50 : (i / (points.length - 1)) * 100;
+      return { x, y, pct, p };
+    });
+    const line = coords.map((c, i) => `${i ? 'L' : 'M'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+    const area = `${line} L${coords[coords.length - 1].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} L${coords[0].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} Z`;
+    const yTicks = [1, 0.5, 0].map((t) => {
+      const val = emptyScale ? 0 : span * t;
+      return {
+        topPct: (1 - t) * 100,
+        label: num(Math.round(val)),
+      };
+    });
+    const xLabelIdx = new Set(pickCommGrowthLabelIndexes(coords.length));
+
+    return `
+      <div class="fda-chart-frame ${caption ? 'is-empty' : ''}">
+        <div class="fda-chart" role="img" aria-label="Community growth over time">
+          <div class="fda-chart__plot">
+            <div class="fda-chart__y" aria-hidden="true">
+              ${yTicks.map((t) => `
+                <span class="fda-chart__ylabel" style="top:${t.topPct}%">${esc(t.label)}</span>
+              `).join('')}
+            </div>
+            <div class="fda-chart__canvas">
+              <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" focusable="false">
+                ${yTicks.map((t) => {
+                  const y = pad.t + (t.topPct / 100) * innerH;
+                  return `<line x1="${pad.l}" y1="${y}" x2="${w - pad.r}" y2="${y}" class="fda-chart__grid"></line>`;
+                }).join('')}
+                <path d="${area}" class="fda-chart__area"></path>
+                <path d="${line}" class="fda-chart__line"></path>
+                ${coords.map((c) => `<circle cx="${c.x}" cy="${c.y}" r="3.2" class="fda-chart__dot">
+                  <title>${esc(c.p.label)}: ${esc(num(c.p[valueKey] || 0))}</title>
+                </circle>`).join('')}
+              </svg>
+            </div>
+          </div>
+          <div class="fda-chart__x" aria-hidden="true">
+            ${coords.map((c, i) => {
+              if (!xLabelIdx.has(i)) return '';
+              const edge = i === 0 ? 'is-first' : (i === coords.length - 1 ? 'is-last' : '');
+              return `<span class="fda-chart__xlabel ${edge}" style="left:${c.pct}%">${esc(c.p.label)}</span>`;
+            }).join('')}
+          </div>
+        </div>
+        ${caption ? `<p class="fda-chart-frame__caption">${esc(caption)}</p>` : ''}
+      </div>
+    `;
+  }
+
   function renderCommunity() {
     const c = state.data?.community || {};
     const geo = state.data?.geography || {};
-    const discovery = c.discovery || {};
     const mapPoints = state.data?.map?.points || geo.mapPoints || [];
     const topCountries = c.topCountries || [];
     const topCities = c.topCities || [];
+    const growth = c.growthOverTime || { empty: true, points: [] };
+    const growthMetric = state.communityGrowthMetric || 'totalSupporters';
+    const growthKeys = {
+      totalSupporters: 'totalSupporters',
+      newSupporters: 'newSupporters',
+      returningSupporters: 'returningSupporters',
+      worldChoirVoices: 'worldChoirVoices',
+    };
 
     if (c.restricted) {
       return `
@@ -1728,6 +1844,26 @@ const FoundationControl = (() => {
             </div>
           </article>
         </div>
+
+        <article class="fcc-edit-card fcc-don-panel fcc-comm-growth">
+          <header class="fcc-don-panel__head">
+            <div class="fcc-don-panel__title-block">
+              <div class="fcc-don-panel__title-row">
+                <span class="fcc-don-panel__icon" aria-hidden="true">${donIcon('timeline')}</span>
+                <h2 class="fcc-don-panel__title">Community Growth Over Time</h2>
+              </div>
+              <p class="fcc-don-panel__lede">See whether your supporter community is growing across the selected date range.</p>
+            </div>
+            ${communityGrowthSeg(growthMetric)}
+          </header>
+          <div class="fcc-don-panel__body">
+            ${renderCommunityGrowthChart(
+              growth.points || [],
+              growthKeys[growthMetric] || 'totalSupporters',
+              growth.empty ? (growth.note || 'Community growth will appear as supporters join.') : ''
+            )}
+          </div>
+        </article>
 
         <article class="fcc-edit-card fcc-don-panel fcc-comm-world">
           <header class="fcc-don-panel__head">
@@ -1789,20 +1925,6 @@ const FoundationControl = (() => {
             </div>
           </article>
         </div>
-
-        <article class="fcc-edit-card fcc-comm-discovery">
-          <div class="fcc-don-info__row">
-            <span class="fcc-don-info__icon" aria-hidden="true">${donIcon('explorer')}</span>
-            <div class="fcc-don-info__copy">
-              <h2 class="fcc-don-panel__title">Discovery</h2>
-              <p class="fcc-don-info__note">
-                ${esc(discovery.available
-                  ? (discovery.note || 'Discovery data is available.')
-                  : (discovery.note || 'Discovery attribution is not tracked yet.'))}
-              </p>
-            </div>
-          </div>
-        </article>
 
         ${state.drill ? renderDrill() : ''}
       </section>
@@ -2447,6 +2569,23 @@ const FoundationControl = (() => {
       btn.addEventListener('click', () => {
         state.growthMetric = btn.getAttribute('data-growth');
         render();
+      });
+    });
+
+    root().querySelectorAll('[data-comm-growth]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const next = btn.getAttribute('data-comm-growth');
+        if (!next || next === state.communityGrowthMetric) return;
+        const scrollEl = root().querySelector('.fcc-main') || document.scrollingElement || document.documentElement;
+        const saved = scrollEl.scrollTop;
+        state.communityGrowthMetric = next;
+        render();
+        requestAnimationFrame(() => {
+          const again = root().querySelector('.fcc-main') || document.scrollingElement || document.documentElement;
+          again.scrollTop = saved;
+          root().querySelector(`[data-comm-growth="${next}"]`)?.focus?.({ preventScroll: true });
+        });
       });
     });
 

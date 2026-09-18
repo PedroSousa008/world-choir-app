@@ -1863,16 +1863,28 @@
   }
 }
 
-.fcc-comm-discovery {
-  padding: 16px 18px;
+.fcc-comm-growth .fcc-don-panel__head {
+  align-items: flex-start;
+  gap: 12px;
 }
 
-.fcc-comm-discovery .fcc-don-panel__title {
-  margin: 0 0 4px;
+.fcc-comm-growth__seg {
+  flex-shrink: 0;
 }
 
-.fcc-comm-discovery .fcc-don-info__note {
-  margin: 0;
+.fcc-comm-growth .fda-chart-frame {
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .fcc-comm-growth .fcc-don-panel__head {
+    flex-direction: column;
+  }
+
+  .fcc-comm-growth__seg {
+    width: 100%;
+    overflow-x: auto;
+  }
 }
 
 @media (max-width: 1100px) {
