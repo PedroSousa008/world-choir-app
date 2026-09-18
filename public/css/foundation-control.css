@@ -473,12 +473,14 @@
 }
 
 .fcc-top-chip {
-  min-height: 42px;
-  padding: 10px 16px;
+  min-height: 0;
+  height: auto;
+  padding: 10px 12px;
   font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
