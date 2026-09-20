@@ -479,7 +479,7 @@ const FoundationControl = (() => {
   function sectionSub() {
     const f = state.data?.foundation?.name || 'your Foundation';
     const map = {
-      overview: `Command view for ${f}.`,
+      overview: 'Your foundation at a glance.',
       foundation: "Shape your foundation's story and public profile.",
       donations: 'Verified donations for this Foundation only.',
       community: 'Supporters and where they gather.',
@@ -533,92 +533,238 @@ const FoundationControl = (() => {
     `;
   }
 
-  function renderRaisedSparkline(series = []) {
-    const amounts = (series || [])
-      .map((s) => Number(s.amount ?? s.value ?? 0))
-      .filter((n) => Number.isFinite(n));
-    if (amounts.length < 2) return '';
-    let running = 0;
-    const cumulative = amounts.map((n) => {
-      running += Math.max(0, n);
-      return running;
-    });
-    const max = Math.max(...cumulative);
-    if (max <= 0) return '';
-
-    const w = 360;
-    const h = 64;
-    const padX = 4;
-    const padY = 6;
-    const lastX = cumulative.length - 1;
-    const coords = cumulative.map((v, i) => {
-      const x = padX + (i / lastX) * (w - padX * 2);
-      const y = h - padY - (v / max) * (h - padY * 2);
-      return [x, y];
-    });
-    const line = coords
-      .map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`)
-      .join(' ');
-    const area = `${line} L${coords[coords.length - 1][0].toFixed(1)} ${h} L${coords[0][0].toFixed(1)} ${h} Z`;
-    const [endX, endY] = coords[coords.length - 1];
-
-    return `
-      <svg class="fcc-ov-spark" viewBox="0 0 ${w} ${h}" role="img" aria-label="Verified donation history for the selected range">
-        <path class="fcc-ov-spark__area" d="${area}"></path>
-        <path class="fcc-ov-spark__line" d="${line}" fill="none"></path>
-        <circle class="fcc-ov-spark__dot" cx="${endX.toFixed(1)}" cy="${endY.toFixed(1)}" r="3.2"></circle>
-      </svg>
-    `;
+  function formatRelativeTime(iso) {
+    const t = new Date(iso).getTime();
+    if (!Number.isFinite(t)) return '';
+    const diff = Math.max(0, Date.now() - t);
+    const sec = Math.floor(diff / 1000);
+    if (sec < 60) return 'just now';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min} minute${min === 1 ? '' : 's'} ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 48) return `${hr} hour${hr === 1 ? '' : 's'} ago`;
+    const day = Math.floor(hr / 24);
+    if (day < 30) return `${day} day${day === 1 ? '' : 's'} ago`;
+    const mo = Math.floor(day / 30);
+    if (mo < 12) return `${mo} month${mo === 1 ? '' : 's'} ago`;
+    const yr = Math.floor(day / 365);
+    return `${yr} year${yr === 1 ? '' : 's'} ago`;
   }
 
-  function overviewViewBtn(section, label) {
-    return `
-      <button type="button" class="fcc-ov-view" data-nav="${esc(section)}" aria-label="View ${esc(label)}">
-        View
-      </button>
-    `;
+  function formatChangePct(pct) {
+    if (pct == null || !Number.isFinite(Number(pct))) return '';
+    const n = Number(pct);
+    const abs = Math.abs(n).toFixed(1).replace(/\.0$/, '');
+    if (n > 0) return { text: `↑ ${abs}%`, tone: 'up' };
+    if (n < 0) return { text: `↓ ${abs}%`, tone: 'down' };
+    return { text: `${abs}%`, tone: 'flat' };
   }
 
-  function overviewStat(value, label, copy, section) {
-    return `
-      <div class="fcc-ov-stat">
-        <div class="fcc-ov-stat__top">
-          <p class="fcc-ov-stat__value">${esc(value)}</p>
-          ${overviewViewBtn(section, label)}
+  function ovChangeLine(pct, suffix = 'vs previous period') {
+    const formatted = formatChangePct(pct);
+    if (!formatted) return '';
+    return `<p class="fcc-ov-kpi__delta is-${esc(formatted.tone)}">${esc(formatted.text)} <span>${esc(suffix)}</span></p>`;
+  }
+
+  function ovPeriodDelta(pct) {
+    const formatted = formatChangePct(pct);
+    if (!formatted) return '';
+    return `<span class="fcc-ov-period__delta is-${esc(formatted.tone)}">${esc(formatted.text)}</span>`;
+  }
+
+  function renderOverviewGrowthChart(series, valueKey) {
+    const points = (series && series.points) || [];
+    if (!points.length || series.empty) {
+      return `
+        <div class="fcc-ov-growth__empty">
+          <p class="fcc-ov-growth__empty-title">Not enough data yet</p>
+          <p class="fcc-ov-growth__empty-copy">Growth will appear here as verified activity is recorded.</p>
         </div>
-        <p class="fcc-ov-stat__label">${esc(label)}</p>
-        <p class="fcc-ov-stat__copy">${esc(copy)}</p>
+      `;
+    }
+    const w = 1000;
+    const h = 220;
+    const pad = { t: 16, r: 12, b: 14, l: 12 };
+    const values = points.map((p) => Number(p[valueKey] || 0));
+    const max = Math.max(...values, 0);
+    const emptyScale = max <= 0;
+    const span = emptyScale ? 100 : max;
+    const innerW = w - pad.l - pad.r;
+    const innerH = h - pad.t - pad.b;
+    const coords = points.map((p, i) => {
+      const x = pad.l + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
+      const y = pad.t + innerH - ((Number(p[valueKey] || 0) / span) * innerH);
+      const pct = points.length === 1 ? 50 : (i / (points.length - 1)) * 100;
+      return { x, y, pct, p };
+    });
+    const line = coords.map((c, i) => `${i ? 'L' : 'M'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+    const area = `${line} L${coords[coords.length - 1].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} L${coords[0].x.toFixed(1)},${(pad.t + innerH).toFixed(1)} Z`;
+    const formatY = (val) => {
+      if (valueKey === 'amount') {
+        if (val >= 1000) return `${money(Math.round(val), currency()).replace(/\.00$/, '')}`;
+        return money(val, currency());
+      }
+      return num(Math.round(val));
+    };
+    const yTicks = [1, 0.5, 0].map((t) => ({
+      topPct: (1 - t) * 100,
+      label: emptyScale ? (valueKey === 'amount' ? money(0, currency()) : '0') : formatY(span * t),
+    }));
+    const xLabelIdx = new Set(pickCommGrowthLabelIndexes(coords.length));
+    const ariaMetric = valueKey === 'amount'
+      ? 'Amount raised'
+      : (valueKey === 'donations' ? 'Donations' : 'Supporters');
+
+    return `
+      <div class="fda-chart-frame fcc-ov-growth__chart">
+        <div class="fda-chart" role="img" aria-label="Foundation growth: ${esc(ariaMetric)} over time">
+          <div class="fda-chart__plot">
+            <div class="fda-chart__y" aria-hidden="true">
+              ${yTicks.map((t) => `
+                <span class="fda-chart__ylabel" style="top:${t.topPct}%">${esc(t.label)}</span>
+              `).join('')}
+            </div>
+            <div class="fda-chart__canvas">
+              <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" focusable="false">
+                ${yTicks.map((t) => {
+                  const y = pad.t + (t.topPct / 100) * innerH;
+                  return `<line x1="${pad.l}" y1="${y}" x2="${w - pad.r}" y2="${y}" class="fda-chart__grid"></line>`;
+                }).join('')}
+                <path d="${area}" class="fda-chart__area"></path>
+                <path d="${line}" class="fda-chart__line"></path>
+                ${coords.map((c) => `<circle cx="${c.x}" cy="${c.y}" r="3.2" class="fda-chart__dot">
+                  <title>${esc(c.p.label)}: ${esc(formatY(c.p[valueKey] || 0))}</title>
+                </circle>`).join('')}
+              </svg>
+            </div>
+          </div>
+          <div class="fda-chart__x" aria-hidden="true">
+            ${coords.map((c, i) => {
+              if (!xLabelIdx.has(i)) return '';
+              const edge = i === 0 ? 'is-first' : (i === coords.length - 1 ? 'is-last' : '');
+              return `<span class="fda-chart__xlabel ${edge}" style="left:${c.pct}%">${esc(c.p.label)}</span>`;
+            }).join('')}
+          </div>
+        </div>
       </div>
+    `;
+  }
+
+  function ovKpiCard(icon, value, label, changeHtml, locked = false) {
+    return `
+      <article class="fcc-ov-kpi">
+        <span class="fcc-ov-kpi__icon" aria-hidden="true">${donIcon(icon)}</span>
+        <p class="fcc-ov-kpi__value ${locked ? 'is-locked' : ''}">${esc(value)}</p>
+        <p class="fcc-ov-kpi__label">${esc(label)}</p>
+        ${changeHtml || ''}
+      </article>
     `;
   }
 
   /* ─── Overview ─── */
 
   function renderOverview() {
+    if (state.busy && !state.data) {
+      return `
+        <section class="fcc-ov" aria-label="Foundation overview" aria-busy="true">
+          <div class="fcc-ov-loading">Loading foundation overview…</div>
+        </section>
+      `;
+    }
+    if (!state.data && state.error) {
+      return `
+        <section class="fcc-ov" aria-label="Foundation overview">
+          <article class="fcc-edit-card fcc-don-info">
+            <div class="fcc-don-info__row">
+              <span class="fcc-don-info__icon" aria-hidden="true">${donIcon('info')}</span>
+              <div class="fcc-don-info__copy">
+                <p class="fcc-don-info__summary">${esc(state.error)}</p>
+              </div>
+            </div>
+          </article>
+        </section>
+      `;
+    }
+
     const d = state.data || {};
     const o = d.overview || {};
     const f = d.foundation || {};
+    const don = d.donations || {};
     const growth = d.growth || {};
-    const series = (growth.series && growth.series.amount) || [];
+    const period = o.period || {};
+    const cmp = period.comparison || (growth.comparison?.available ? growth.comparison : null);
+    const setup = o.setup || { healthy: true, issues: [] };
+    const activity = Array.isArray(d.activity) ? d.activity : [];
+    const growthSeries = growth.overviewSeries || { empty: true, points: [] };
+    const growthMetric = ['amount', 'donations', 'supporters'].includes(state.growthMetric)
+      ? state.growthMetric
+      : 'amount';
+
     const name = f.name || 'Your Foundation';
     const founder = f.creatorName || '';
     const country = f.country || '';
     const mission = pickFilled(f.mission, f.cardShortMission, f.shortDescription);
-    const cover = String(f.coverImage || '').trim();
-    const canViewAmounts = state.data?.donations?.canViewAmounts !== false;
-    const canViewSupporters = state.data?.donations?.canViewSupporters !== false;
-    const rawRaised = o.rangedRaised != null ? o.rangedRaised : o.totalRaised;
-    const rawSupporters = o.rangedSupporters != null ? o.rangedSupporters : o.totalSupporters;
-    const raised = canViewAmounts && rawRaised != null ? rawRaised : null;
-    const supporters = canViewSupporters && rawSupporters != null ? rawSupporters : null;
-    const countries = o.countriesReached || 0;
-    const cities = o.citiesReached || 0;
-    const spark = renderRaisedSparkline(series);
+    const profileImg = String(f.profileImage || f.coverImage || '').trim();
+    const canViewAmounts = don.canViewAmounts !== false;
+    const canViewSupporters = don.canViewSupporters !== false;
+    const canViewDetails = don.canViewDetails !== false;
+
+    // Prefer range-scoped values; fall back to lifetime. Matches Donations/Community under All time.
+    const raisedVal = canViewAmounts
+      ? (o.rangedRaised != null ? o.rangedRaised : o.totalRaised)
+      : null;
+    const donationsVal = canViewDetails
+      ? (o.rangedDonations != null ? o.rangedDonations : o.totalDonations)
+      : null;
+    const supportersVal = canViewSupporters
+      ? (o.rangedSupporters != null ? o.rangedSupporters : o.totalSupporters)
+      : null;
+    const countries = o.countriesReached != null ? o.countriesReached : 0;
+    const cities = o.citiesReached != null ? o.citiesReached : 0;
+
+    const showCmp = !!(cmp && state.range !== 'all' && state.range !== 'today');
     const foundedBits = [
       founder ? `Founded by ${founder}` : '',
       country,
     ].filter(Boolean);
     const initial = (name || 'F').trim().charAt(0).toUpperCase() || 'F';
+    const publicHref = f.publicPath || (f.id ? `donate.html?foundation=${encodeURIComponent(f.id)}` : '');
+    const showActive = f.active === true;
+
+    const periodRows = [
+      {
+        label: 'Raised This Period',
+        value: canViewAmounts && period.raised != null ? money(period.raised, currency()) : (canViewAmounts ? money(0, currency()) : '••••'),
+        delta: showCmp ? period.comparison?.raisedChangePct : null,
+      },
+      {
+        label: 'New Supporters',
+        value: canViewSupporters && period.newSupporters != null ? num(period.newSupporters) : (canViewSupporters ? '0' : '••'),
+        delta: showCmp ? period.comparison?.newSupportersChangePct : null,
+      },
+      {
+        label: 'Returning Supporters',
+        value: canViewSupporters && period.returningSupporters != null ? num(period.returningSupporters) : (canViewSupporters ? '0' : '••'),
+        delta: showCmp ? period.comparison?.returningSupportersChangePct : null,
+      },
+      {
+        label: 'Average Donation',
+        value: canViewAmounts && period.averageDonation != null
+          ? money(period.averageDonation, currency())
+          : (canViewAmounts ? '—' : '••••'),
+        delta: showCmp ? period.comparison?.averageDonationChangePct : null,
+      },
+      {
+        label: 'New Countries',
+        value: period.newCountries != null ? num(period.newCountries) : '0',
+        delta: showCmp ? period.comparison?.newCountriesChangePct : null,
+      },
+      {
+        label: 'New Cities',
+        value: period.newCities != null ? num(period.newCities) : '0',
+        delta: showCmp ? period.comparison?.newCitiesChangePct : null,
+      },
+    ];
 
     return `
       <section class="fcc-ov" aria-label="Foundation overview">
@@ -635,62 +781,183 @@ const FoundationControl = (() => {
             ${foundedBits.length ? `<p class="fcc-ov-hero__byline">${esc(foundedBits.join(' · '))}</p>` : ''}
             ${mission ? `<p class="fcc-ov-hero__mission">${esc(mission)}</p>` : ''}
           </div>
-          <div class="fcc-ov-hero__mark ${cover ? '' : 'is-fallback'}">
-            <span class="fcc-ov-hero__fallback" aria-hidden="true">${esc(initial)}</span>
-            ${cover ? `
-              <img
-                class="fcc-ov-hero__photo"
-                src="${esc(cover)}"
-                alt="${esc(name)} cover image"
-                width="320"
-                height="320"
-                decoding="async"
-              >
+          <div class="fcc-ov-hero__aside">
+            ${showActive ? `
+              <p class="fcc-ov-hero__status" role="status">
+                <span class="fcc-ov-hero__status-dot" aria-hidden="true"></span>
+                Active
+              </p>
+            ` : ''}
+            <div class="fcc-ov-hero__mark ${profileImg ? '' : 'is-fallback'}">
+              <span class="fcc-ov-hero__fallback" aria-hidden="true">${esc(initial)}</span>
+              ${profileImg ? `
+                <img
+                  class="fcc-ov-hero__photo"
+                  src="${esc(profileImg)}"
+                  alt="${esc(name)} profile image"
+                  width="160"
+                  height="160"
+                  decoding="async"
+                >
+              ` : ''}
+              <img class="fcc-ov-hero__badge" src="${WORLD_CHOIR_LOGO}" alt="" width="36" height="36" decoding="async" aria-hidden="true">
+            </div>
+            ${publicHref ? `
+              <a class="fcc-ov-hero__public" href="${esc(publicHref)}" target="_blank" rel="noopener noreferrer">
+                View Public Foundation
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="M14 4h6v6"/><path d="M10 14L20 4"/><path d="M20 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5"/>
+                </svg>
+              </a>
             ` : ''}
           </div>
         </article>
 
-        <div class="fcc-ov-grid">
-          <article class="fcc-ov-card fcc-ov-raised">
-            <div class="fcc-ov-card__head">
-              <p class="fcc-ov-card__kicker">Total raised</p>
-              ${overviewViewBtn('donations', 'Total raised')}
+        <div class="fcc-ov-kpis" aria-label="Key foundation metrics">
+          ${ovKpiCard(
+            'raised',
+            raisedVal != null ? money(raisedVal, currency()) : '••••••',
+            'TOTAL RAISED',
+            showCmp ? ovChangeLine(cmp.raisedChangePct) : '',
+            raisedVal == null
+          )}
+          ${ovKpiCard(
+            'donations',
+            donationsVal != null ? num(donationsVal) : '••',
+            'DONATIONS',
+            showCmp ? ovChangeLine(cmp.donationsChangePct) : '',
+            donationsVal == null
+          )}
+          ${ovKpiCard(
+            'supporters',
+            supportersVal != null ? num(supportersVal) : '••',
+            'SUPPORTERS',
+            showCmp ? ovChangeLine(cmp.supportersChangePct) : '',
+            supportersVal == null
+          )}
+          ${ovKpiCard(
+            'country',
+            num(countries),
+            'COUNTRIES',
+            showCmp ? ovChangeLine(cmp.countriesChangePct) : ''
+          )}
+          ${ovKpiCard(
+            'city',
+            num(cities),
+            'CITIES',
+            showCmp ? ovChangeLine(cmp.citiesChangePct) : ''
+          )}
+        </div>
+
+        <div class="fcc-ov-analytics">
+          <article class="fcc-ov-panel fcc-ov-growth">
+            <div class="fcc-ov-panel__head">
+              <div>
+                <p class="fcc-ov-panel__title">
+                  <span class="fcc-ov-panel__icon" aria-hidden="true">${donIcon('timeline')}</span>
+                  Foundation Growth
+                </p>
+                <p class="fcc-ov-panel__lede">Track your foundation's growth over time.</p>
+              </div>
+              <div class="fda-seg fcc-ov-growth__seg" role="tablist" aria-label="Growth metric">
+                <button type="button" role="tab" class="fda-seg__btn ${growthMetric === 'amount' ? 'is-active' : ''}"
+                  data-growth="amount" aria-selected="${growthMetric === 'amount' ? 'true' : 'false'}">Amount Raised</button>
+                <button type="button" role="tab" class="fda-seg__btn ${growthMetric === 'donations' ? 'is-active' : ''}"
+                  data-growth="donations" aria-selected="${growthMetric === 'donations' ? 'true' : 'false'}">Donations</button>
+                <button type="button" role="tab" class="fda-seg__btn ${growthMetric === 'supporters' ? 'is-active' : ''}"
+                  data-growth="supporters" aria-selected="${growthMetric === 'supporters' ? 'true' : 'false'}">Supporters</button>
+              </div>
             </div>
-            ${raised != null
-              ? `<p class="fcc-ov-raised__value">${esc(money(raised, currency()))}</p>`
-              : `<p class="fcc-ov-raised__value fcc-locked"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span class="fcc-locked__dots">••••••</span></p>`
-            }
-            ${raised != null
-              ? (spark || '<p class="fcc-ov-raised__empty">Donation history will appear here as verified gifts are recorded.</p>')
-              : '<p class="fcc-ov-raised__empty" style="color:#4a4e5c">Hidden by Foundation owner.</p>'
-            }
+            ${renderOverviewGrowthChart(growthSeries, growthMetric)}
           </article>
 
-          <article class="fcc-ov-card fcc-ov-audience" aria-label="Audience">
-            <div class="fcc-ov-audience__primary">
-              ${supporters != null
-                ? overviewStat(num(supporters), 'Supporters', 'People supporting your foundation', 'community')
-                : overviewStat('••', 'Supporters', 'Hidden by Foundation owner', 'community')
-              }
+          <article class="fcc-ov-panel fcc-ov-period">
+            <div class="fcc-ov-panel__head">
+              <div>
+                <p class="fcc-ov-panel__title">
+                  <span class="fcc-ov-panel__icon" aria-hidden="true">${donIcon('info')}</span>
+                  This period
+                </p>
+                <p class="fcc-ov-panel__lede">Key metrics for the selected time period.</p>
+              </div>
             </div>
-            <div class="fcc-ov-audience__split">
-              ${overviewStat(num(countries), 'Countries', 'Countries represented', 'donations')}
-              ${overviewStat(num(cities), 'Cities', 'Cities represented', 'donations')}
+            <div class="fcc-ov-period__grid">
+              ${periodRows.map((row) => `
+                <div class="fcc-ov-period__item">
+                  <p class="fcc-ov-period__label">${esc(row.label)}</p>
+                  <p class="fcc-ov-period__value">${esc(row.value)} ${ovPeriodDelta(row.delta)}</p>
+                </div>
+              `).join('')}
             </div>
           </article>
         </div>
 
-        <article class="fcc-ov-thanks">
-          <div class="fcc-ov-thanks__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 21s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 11c0 5.5-7 10-7 10z"/>
-            </svg>
+        <article class="fcc-ov-panel fcc-ov-activity">
+          <div class="fcc-ov-panel__head">
+            <div>
+              <p class="fcc-ov-panel__title">
+                <span class="fcc-ov-panel__icon" aria-hidden="true">${donIcon('explorer')}</span>
+                Recent activity
+              </p>
+              <p class="fcc-ov-panel__lede">Latest support and community activity.</p>
+            </div>
           </div>
-          <div class="fcc-ov-thanks__copy">
-            <h2>Thank you for being part of World Choir</h2>
-            <p>Your foundation is part of a global movement of love and unity.</p>
-            <p>Together, we create a world where every voice matters.</p>
-          </div>
+          ${activity.length ? `
+            <ul class="fcc-ov-activity__list">
+              ${activity.map((item) => {
+                const title = item.type === 'donation' && item.amount != null
+                  ? `${money(item.amount, item.currency || currency())} donation`
+                  : (item.title || 'Activity');
+                const meta = [item.place, formatRelativeTime(item.at)].filter(Boolean).join(' · ');
+                return `
+                  <li class="fcc-ov-activity__row">
+                    <span class="fcc-ov-activity__icon" aria-hidden="true">${donIcon(item.icon || 'info')}</span>
+                    <div class="fcc-ov-activity__copy">
+                      <p class="fcc-ov-activity__title">${esc(title)}</p>
+                      ${meta ? `<p class="fcc-ov-activity__meta">${esc(meta)}</p>` : ''}
+                    </div>
+                  </li>
+                `;
+              }).join('')}
+            </ul>
+          ` : `
+            <div class="fcc-ov-activity__empty">
+              <p class="fcc-ov-activity__empty-title">No activity yet</p>
+              <p class="fcc-ov-activity__empty-copy">Verified donations and community milestones will appear here.</p>
+            </div>
+          `}
+        </article>
+
+        <article class="fcc-ov-status ${setup.healthy ? 'is-healthy' : 'is-attention'}" role="status">
+          ${setup.healthy ? `
+            <span class="fcc-ov-status__icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/>
+              </svg>
+            </span>
+            <div class="fcc-ov-status__copy">
+              <p class="fcc-ov-status__title">Everything looks great!</p>
+              <p class="fcc-ov-status__text">Your foundation is set up and running smoothly. Keep making an impact!</p>
+            </div>
+          ` : `
+            <span class="fcc-ov-status__icon is-warn" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M12 8v5"/><path d="M12 16h.01"/>
+              </svg>
+            </span>
+            <div class="fcc-ov-status__copy">
+              <p class="fcc-ov-status__title">Needs attention</p>
+              <ul class="fcc-ov-status__issues">
+                ${(setup.issues || []).map((issue) => `
+                  <li>
+                    <a href="${esc(issue.href || '#foundation')}" data-setup-link="${esc((issue.href || '#foundation').replace(/^#/, ''))}">
+                      ${esc(issue.label)}
+                    </a>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          `}
         </article>
       </section>
     `;
@@ -1381,7 +1648,7 @@ const FoundationControl = (() => {
     const common = 'width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
     const icons = {
       raised: `<svg ${common}><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v4c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 10v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4"/><path d="M5 14v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4"/></svg>`,
-      donations: `<svg ${common}><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.5A4 4 0 0119 11c0 5.5-7 10-7 10z"/></svg>`,
+      donations: `<svg ${common}><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/><path d="M9 9h2"/></svg>`,
       supporters: `<svg ${common}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
       average: `<svg ${common}><path d="M5 12h14"/></svg>`,
       median: `<svg ${common}><path d="M5 12h14"/></svg>`,
@@ -2566,9 +2833,32 @@ const FoundationControl = (() => {
     });
 
     root().querySelectorAll('[data-growth]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        state.growthMetric = btn.getAttribute('data-growth');
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const next = btn.getAttribute('data-growth');
+        if (!next || next === state.growthMetric) return;
+        const scrollEl = root().querySelector('.fcc-main') || document.scrollingElement || document.documentElement;
+        const saved = scrollEl.scrollTop;
+        state.growthMetric = next;
         render();
+        requestAnimationFrame(() => {
+          const again = root().querySelector('.fcc-main') || document.scrollingElement || document.documentElement;
+          again.scrollTop = saved;
+          root().querySelector(`[data-growth="${next}"]`)?.focus?.({ preventScroll: true });
+        });
+      });
+    });
+
+    root().querySelectorAll('[data-setup-link]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const raw = String(link.getAttribute('data-setup-link') || 'foundation');
+        const parts = raw.split('/').filter(Boolean);
+        const section = parts[0] || 'foundation';
+        if (section === 'foundation' && parts[1] && FOUNDATION_TABS.has(parts[1])) {
+          state.foundationTab = parts[1];
+        }
+        go(section);
       });
     });
 

@@ -545,7 +545,7 @@ function pctChange(current, previous) {
   return Math.round(((current - previous) / previous) * 1000) / 10;
 }
 
-function comparePeriods(donations, rangeKey) {
+function comparePeriods(donations, rangeKey, pledgeIndex = null) {
   if (!rangeKey || rangeKey === 'all' || rangeKey === 'today') {
     return { available: false, reason: 'Not enough historical data.' };
   }
@@ -563,11 +563,282 @@ function comparePeriods(donations, rangeKey) {
   const prevAmt = sumAmounts(previous);
   const curSup = uniqueDonors(current);
   const prevSup = uniqueDonors(previous);
+  const curGeo = pledgeIndex ? buildGeography(current, pledgeIndex) : null;
+  const prevGeo = pledgeIndex ? buildGeography(previous, pledgeIndex) : null;
   return {
     available: true,
     raisedChangePct: pctChange(curAmt, prevAmt),
     supportersChangePct: pctChange(curSup, prevSup),
     donationsChangePct: pctChange(current.length, previous.length),
+    countriesChangePct: curGeo && prevGeo
+      ? pctChange(curGeo.countries.length, prevGeo.countries.length)
+      : null,
+    citiesChangePct: curGeo && prevGeo
+      ? pctChange(curGeo.cities.length, prevGeo.cities.length)
+      : null,
+  };
+}
+
+/**
+ * First-seen country/city keys across all foundation donations (chronological).
+ * Used for truthful "new this period" geography metrics.
+ */
+function firstSeenLocationTimes(donations, pledgeIndex) {
+  const countryFirst = new Map();
+  const cityFirst = new Map();
+  const sorted = [...donations].sort((a, b) => {
+    const da = donationDate(a)?.getTime() || 0;
+    const db = donationDate(b)?.getTime() || 0;
+    return da - db;
+  });
+  sorted.forEach((d) => {
+    const loc = resolveLocation(d, pledgeIndex);
+    const dt = donationDate(d);
+    if (!loc || !dt) return;
+    const t = dt.getTime();
+    const countryKey = String(loc.country || '').trim().toLowerCase();
+    if (countryKey && countryKey !== 'unknown country' && !countryFirst.has(countryKey)) {
+      countryFirst.set(countryKey, t);
+    }
+    const city = cityKey(loc.city, loc.country);
+    if (city && !String(loc.city || '').toLowerCase().includes('unknown') && !cityFirst.has(city)) {
+      cityFirst.set(city, t);
+    }
+  });
+  return { countryFirst, cityFirst };
+}
+
+function countFirstSeenInBounds(firstMap, from, to) {
+  let n = 0;
+  firstMap.forEach((t) => {
+    if (inBounds(new Date(t), from, to)) n += 1;
+  });
+  return n;
+}
+
+/**
+ * Cumulative Foundation Growth series for Overview chart.
+ * amount / donations / supporters are running totals through each bucket.
+ */
+function buildOverviewGrowthSeries(allDonations, rangeKey) {
+  if (!allDonations.length) {
+    return { empty: true, points: [], note: 'Not enough data yet' };
+  }
+  const bounds = communityGrowthBounds(rangeKey, allDonations);
+  const granularity = communityGrowthGranularity(bounds);
+  const buckets = scaffoldCommunityBuckets(bounds, granularity);
+  if (!buckets.size) {
+    return { empty: true, points: [], note: 'Not enough data yet' };
+  }
+
+  const sorted = [...allDonations].sort((a, b) => {
+    const da = donationDate(a)?.getTime() || 0;
+    const db = donationDate(b)?.getTime() || 0;
+    return da - db;
+  });
+
+  const bucketList = [...buckets.values()].sort((a, b) => String(a.sortKey).localeCompare(String(b.sortKey)));
+  const points = [];
+  let cumAmount = 0;
+  let cumDonations = 0;
+  const seenDonors = new Set();
+  let di = 0;
+
+  const advanceThrough = (endMs) => {
+    while (di < sorted.length) {
+      const d = sorted[di];
+      const dt = donationDate(d);
+      if (!dt) {
+        di += 1;
+        continue;
+      }
+      const t = dt.getTime();
+      if (t > endMs) break;
+      const amount = Number(d.amount);
+      if (Number.isFinite(amount) && amount > 0) cumAmount += amount;
+      cumDonations += 1;
+      const dk = donorKey(d);
+      if (dk) seenDonors.add(String(dk));
+      di += 1;
+    }
+  };
+
+  // Seed cumulative state with donations before the visible window.
+  advanceThrough(bounds.from - 1);
+
+  bucketList.forEach((meta, index) => {
+    let endMs;
+    if (granularity === 'month') {
+      // sortKey is YYYY-MM → end of that month
+      const [y, m] = String(meta.sortKey).split('-').map(Number);
+      endMs = Date.UTC(y, m, 0, 23, 59, 59, 999);
+    } else if (granularity === 'week') {
+      const start = new Date(`${String(meta.sortKey).replace(/^w-/, '')}T00:00:00.000Z`).getTime();
+      endMs = start + 7 * 86400000 - 1;
+    } else {
+      endMs = new Date(`${meta.sortKey}T23:59:59.999Z`).getTime();
+    }
+    if (!Number.isFinite(endMs)) endMs = bounds.to;
+    if (index === bucketList.length - 1) endMs = Math.max(endMs, bounds.to);
+    advanceThrough(Math.min(endMs, bounds.to));
+    points.push({
+      label: meta.label,
+      amount: Math.round(cumAmount * 100) / 100,
+      donations: cumDonations,
+      supporters: seenDonors.size,
+    });
+  });
+
+  const hasSignal = points.some((p) => p.amount > 0 || p.donations > 0 || p.supporters > 0);
+  return {
+    empty: !hasSignal,
+    points: hasSignal ? points : [],
+    note: hasSignal ? null : 'Not enough data yet',
+    granularity,
+  };
+}
+
+function buildOverviewActivityFeed(donations, pledgeIndex, {
+  canViewAmounts = true,
+  canViewSupporters = true,
+  limit = 8,
+} = {}) {
+  const feed = [];
+  const firstDonorAt = new Map();
+  const firstCityAt = new Map();
+  const sorted = [...donations].sort((a, b) => {
+    const da = donationDate(a)?.getTime() || 0;
+    const db = donationDate(b)?.getTime() || 0;
+    return da - db;
+  });
+
+  sorted.forEach((d) => {
+    const dt = donationDate(d);
+    if (!dt) return;
+    const t = dt.getTime();
+    const dk = donorKey(d);
+    const donorId = dk ? String(dk) : null;
+    const isNew = donorId ? !firstDonorAt.has(donorId) : false;
+    if (donorId && isNew) firstDonorAt.set(donorId, t);
+
+    const loc = resolveLocation(d, pledgeIndex);
+    const cityK = loc ? cityKey(loc.city, loc.country) : null;
+    const isNewCity = cityK
+      && loc
+      && !String(loc.city || '').toLowerCase().includes('unknown')
+      && !firstCityAt.has(cityK);
+    if (isNewCity) firstCityAt.set(cityK, t);
+
+    const amount = Number(d.amount);
+    const currency = d.currency || 'EUR';
+    const place = loc
+      ? (loc.country && loc.country !== 'Unknown country' ? loc.country : null)
+      : null;
+    const cityPlace = loc && loc.city && loc.country
+      && !String(loc.city).toLowerCase().includes('unknown')
+      && loc.country !== 'Unknown country'
+      ? `${loc.city}, ${loc.country}`
+      : place;
+
+    if (canViewAmounts && Number.isFinite(amount) && amount > 0) {
+      feed.push({
+        id: `don-${d.id || t}`,
+        type: 'donation',
+        icon: 'raised',
+        title: 'Donation received',
+        amount,
+        currency,
+        place: place || null,
+        at: dt.toISOString(),
+      });
+    }
+
+    if (canViewSupporters && donorId) {
+      feed.push({
+        id: `sup-${donorId}-${t}`,
+        type: isNew ? 'new_supporter' : 'returning_supporter',
+        icon: isNew ? 'person' : 'returning',
+        title: isNew ? 'New supporter' : 'Returning supporter',
+        amount: null,
+        currency: null,
+        place: place || null,
+        at: dt.toISOString(),
+      });
+    }
+
+    if (canViewSupporters && isNewCity && cityPlace) {
+      feed.push({
+        id: `city-${cityK}-${t}`,
+        type: 'new_city',
+        icon: 'city',
+        title: 'New city represented',
+        amount: null,
+        currency: null,
+        place: cityPlace,
+        at: dt.toISOString(),
+      });
+    }
+  });
+
+  return feed
+    .sort((a, b) => String(b.at).localeCompare(String(a.at)))
+    .slice(0, limit);
+}
+
+function buildFoundationSetupStatus(foundation) {
+  const issues = [];
+  if (!String(foundation?.name || '').trim()) {
+    issues.push({
+      id: 'name',
+      label: 'Foundation name missing',
+      href: '#foundation/information',
+    });
+  }
+  if (!String(foundation?.mission || foundation?.cardShortMission || foundation?.shortDescription || '').trim()) {
+    issues.push({
+      id: 'mission',
+      label: 'Mission missing',
+      href: '#foundation/page',
+    });
+  }
+  if (!String(foundation?.creatorName || '').trim()) {
+    issues.push({
+      id: 'founder',
+      label: 'Founder information missing',
+      href: '#foundation/information',
+    });
+  }
+  if (!String(foundation?.country || '').trim()) {
+    issues.push({
+      id: 'country',
+      label: 'Country missing',
+      href: '#foundation/information',
+    });
+  }
+  if (!String(foundation?.profileImage || '').trim()) {
+    issues.push({
+      id: 'profileImage',
+      label: 'Profile image missing',
+      href: '#foundation/page',
+    });
+  }
+  if (!String(foundation?.coverImage || '').trim()) {
+    issues.push({
+      id: 'coverImage',
+      label: 'Cover image missing',
+      href: '#foundation/card',
+    });
+  }
+  if (!String(foundation?.category || '').trim()) {
+    issues.push({
+      id: 'category',
+      label: 'Primary cause missing',
+      href: '#foundation/page',
+    });
+  }
+  return {
+    healthy: issues.length === 0,
+    issues,
   };
 }
 
@@ -703,12 +974,61 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
   });
   const newSupporters = Math.max(0, totalSupporters - repeatSupporters);
 
-  const comparison = comparePeriods(foundationDonations, range);
+  const comparison = comparePeriods(foundationDonations, range, pledgeIndex);
   const today = todaySummary(foundationDonations, geography.cities, projectsWithFunding, updates);
-  const activity = buildActivityFeed(
-    [...foundationDonations].sort((a, b) => String(donationDate(b) || 0).localeCompare(String(donationDate(a) || 0))),
-    workspace
-  );
+  const { countryFirst, cityFirst } = firstSeenLocationTimes(foundationDonations, pledgeIndex);
+  const rangeBound = rangeBounds(range);
+  const periodFrom = rangeBound.from != null ? rangeBound.from : null;
+  const periodTo = rangeBound.to != null ? rangeBound.to : Date.now();
+  let newCountries = null;
+  let newCities = null;
+  let newCountriesChangePct = null;
+  let newCitiesChangePct = null;
+  if (periodFrom != null) {
+    newCountries = countFirstSeenInBounds(countryFirst, periodFrom, periodTo);
+    newCities = countFirstSeenInBounds(cityFirst, periodFrom, periodTo);
+    if (comparison.available) {
+      const span = periodTo - periodFrom;
+      const prevFrom = periodFrom - span;
+      const prevTo = periodFrom;
+      const prevNewCountries = countFirstSeenInBounds(countryFirst, prevFrom, prevTo);
+      const prevNewCities = countFirstSeenInBounds(cityFirst, prevFrom, prevTo);
+      newCountriesChangePct = pctChange(newCountries, prevNewCountries);
+      newCitiesChangePct = pctChange(newCities, prevNewCities);
+    }
+  } else {
+    // All time: "new" equals currently represented geography (lifetime first-seens).
+    newCountries = geography.countries.length;
+    newCities = geography.cities.length;
+  }
+
+  let newSupportersChangePct = null;
+  let returningSupportersChangePct = null;
+  let averageDonationChangePct = null;
+  if (comparison.available && periodFrom != null) {
+    const span = periodTo - periodFrom;
+    const prevFrom = periodFrom - span;
+    const prevTo = periodFrom;
+    const previous = foundationDonations.filter((d) => inBounds(donationDate(d), prevFrom, prevTo));
+    const prevDonorCounts = new Map();
+    previous.forEach((d) => {
+      const key = donorKey(d);
+      if (!key) return;
+      prevDonorCounts.set(String(key), (prevDonorCounts.get(String(key)) || 0) + 1);
+    });
+    let prevRepeat = 0;
+    prevDonorCounts.forEach((count) => {
+      if (count > 1) prevRepeat += 1;
+    });
+    const prevUnique = prevDonorCounts.size;
+    const prevNew = Math.max(0, prevUnique - prevRepeat);
+    const prevAmounts = previous
+      .map((d) => Number(d.amount))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    newSupportersChangePct = pctChange(newSupporters, prevNew);
+    returningSupportersChangePct = pctChange(repeatSupporters, prevRepeat);
+    averageDonationChangePct = pctChange(average(amounts), average(prevAmounts));
+  }
 
   const profile = publicInfluencer(influencer);
   // Platform-owned verification — never editable by Foundation
@@ -728,6 +1048,20 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
   const canViewDetails = isOwner || (teamPermissions?.viewDonationDetails !== false);
   const canViewSupporters = isOwner || (teamPermissions?.viewSupporterInfo !== false);
   const canViewCommunity = isOwner || (teamPermissions?.viewCommunity !== false);
+
+  const overviewGrowth = (canViewAmounts || canViewDetails || canViewSupporters)
+    ? buildOverviewGrowthSeries(foundationDonations, range)
+    : { empty: true, points: [], note: 'Growth is restricted.' };
+
+  const activity = buildOverviewActivityFeed(foundationDonations, pledgeIndex, {
+    canViewAmounts,
+    canViewSupporters: canViewSupporters && canViewCommunity,
+    limit: 8,
+  });
+  const legacyActivity = buildActivityFeed(
+    [...foundationDonations].sort((a, b) => String(donationDate(b) || 0).localeCompare(String(donationDate(a) || 0))),
+    workspace
+  );
 
   const unavailable = [];
   if (!foundationDonations.length) {
@@ -785,6 +1119,13 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
       verificationStatus,
       foundedAt: profile.createdAt,
       updatedAt: profile.updatedAt,
+      publicPath: `donate.html?foundation=${encodeURIComponent(
+        String(profile.foundationName || profile.id || '')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') || profile.id
+      )}`,
     },
     overview: {
       totalRaised: canViewAmounts ? allTimeRaised : null,
@@ -796,6 +1137,40 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
       rangedRaised: canViewAmounts ? totalRaised : null,
       rangedSupporters: canViewSupporters ? totalSupporters : null,
       rangedDonations: canViewDetails ? ranged.length : null,
+      period: {
+        raised: canViewAmounts ? totalRaised : null,
+        donations: canViewDetails ? ranged.length : null,
+        newSupporters: canViewSupporters ? newSupporters : null,
+        returningSupporters: canViewSupporters ? repeatSupporters : null,
+        averageDonation: canViewAmounts
+          ? (average(amounts) != null ? Math.round(average(amounts) * 100) / 100 : null)
+          : null,
+        newCountries: canViewCommunity ? newCountries : null,
+        newCities: canViewCommunity ? newCities : null,
+        comparison: comparison.available ? {
+          raisedChangePct: comparison.raisedChangePct,
+          donationsChangePct: comparison.donationsChangePct,
+          supportersChangePct: comparison.supportersChangePct,
+          countriesChangePct: comparison.countriesChangePct,
+          citiesChangePct: comparison.citiesChangePct,
+          newSupportersChangePct,
+          returningSupportersChangePct,
+          averageDonationChangePct,
+          newCountriesChangePct,
+          newCitiesChangePct,
+        } : null,
+      },
+      setup: buildFoundationSetupStatus({
+        name: profile.foundationName || `${profile.displayName}'s Foundation`,
+        mission: profile.mission || influencer.cardShortMission || influencer.shortDescription || '',
+        cardShortMission: influencer.cardShortMission || '',
+        shortDescription: influencer.shortDescription || '',
+        creatorName: profile.displayName,
+        country: profile.country,
+        profileImage: influencer.profileImage || '',
+        coverImage: influencer.coverImage || '',
+        category: profile.primaryCategory || '',
+      }),
     },
     teamPermissions: teamPermissions || null,
     isOwner,
@@ -806,12 +1181,14 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
         donations: bucketSeries(ranged, 'donations'),
         supporters: bucketSeries(ranged, 'supporters'),
       },
+      overviewSeries: overviewGrowth,
       comparison,
       projectGrowth: projectsWithFunding
         .filter((p) => p.createdAt)
         .map((p) => ({ date: String(p.createdAt).slice(0, 10), status: p.status })),
     },
     activity,
+    workspaceActivity: legacyActivity,
     donations: {
       totalRaised: canViewAmounts ? allTimeRaised : null,
       totalSupporters: canViewSupporters ? allTimeSupporters : null,
