@@ -573,15 +573,13 @@ const FoundationControl = (() => {
   }
 
   function renderOverviewGrowthChart(series, valueKey) {
-    const points = (series && series.points) || [];
-    if (!points.length || series.empty) {
-      return `
-        <div class="fcc-ov-growth__empty">
-          <p class="fcc-ov-growth__empty-title">Not enough data yet</p>
-          <p class="fcc-ov-growth__empty-copy">Growth will appear here as verified activity is recorded.</p>
-        </div>
-      `;
-    }
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const realPoints = (series && series.points) || [];
+    const isPlaceholder = !realPoints.length || !!series?.empty;
+    // Always render the graph frame — placeholders help influencers see what growth will look like.
+    const points = isPlaceholder
+      ? MONTHS.map((label) => ({ label, amount: 0, donations: 0, supporters: 0 }))
+      : realPoints;
     const w = 1000;
     const h = 220;
     const pad = { t: 16, r: 12, b: 14, l: 12 };
@@ -616,7 +614,7 @@ const FoundationControl = (() => {
       : (valueKey === 'donations' ? 'Donations' : 'Supporters');
 
     return `
-      <div class="fda-chart-frame fcc-ov-growth__chart">
+      <div class="fda-chart-frame fcc-ov-growth__chart ${isPlaceholder ? 'is-empty' : ''}">
         <div class="fda-chart" role="img" aria-label="Foundation growth: ${esc(ariaMetric)} over time">
           <div class="fda-chart__plot">
             <div class="fda-chart__y" aria-hidden="true">
@@ -646,6 +644,9 @@ const FoundationControl = (() => {
             }).join('')}
           </div>
         </div>
+        ${isPlaceholder ? `
+          <p class="fda-chart-frame__caption">Growth will appear here as verified activity is recorded.</p>
+        ` : ''}
       </div>
     `;
   }
@@ -693,7 +694,6 @@ const FoundationControl = (() => {
     const growth = d.growth || {};
     const period = o.period || {};
     const cmp = period.comparison || (growth.comparison?.available ? growth.comparison : null);
-    const setup = o.setup || { healthy: true, issues: [] };
     const activity = Array.isArray(d.activity) ? d.activity : [];
     const growthSeries = growth.overviewSeries || { empty: true, points: [] };
     const growthMetric = ['amount', 'donations', 'supporters'].includes(state.growthMetric)
@@ -924,38 +924,6 @@ const FoundationControl = (() => {
             <div class="fcc-ov-activity__empty">
               <p class="fcc-ov-activity__empty-title">No activity yet</p>
               <p class="fcc-ov-activity__empty-copy">Verified donations and community milestones will appear here.</p>
-            </div>
-          `}
-        </article>
-
-        <article class="fcc-ov-status ${setup.healthy ? 'is-healthy' : 'is-attention'}" role="status">
-          ${setup.healthy ? `
-            <span class="fcc-ov-status__icon" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9"/>
-              </svg>
-            </span>
-            <div class="fcc-ov-status__copy">
-              <p class="fcc-ov-status__title">Everything looks great!</p>
-              <p class="fcc-ov-status__text">Your foundation is set up and running smoothly. Keep making an impact!</p>
-            </div>
-          ` : `
-            <span class="fcc-ov-status__icon is-warn" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/><path d="M12 8v5"/><path d="M12 16h.01"/>
-              </svg>
-            </span>
-            <div class="fcc-ov-status__copy">
-              <p class="fcc-ov-status__title">Needs attention</p>
-              <ul class="fcc-ov-status__issues">
-                ${(setup.issues || []).map((issue) => `
-                  <li>
-                    <a href="${esc(issue.href || '#foundation')}" data-setup-link="${esc((issue.href || '#foundation').replace(/^#/, ''))}">
-                      ${esc(issue.label)}
-                    </a>
-                  </li>
-                `).join('')}
-              </ul>
             </div>
           `}
         </article>
