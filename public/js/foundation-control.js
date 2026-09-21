@@ -2183,7 +2183,7 @@ const FoundationControl = (() => {
     if (!payload) {
       return `<p class="fcc-set-payouts__loading">Loading payout status…</p>`;
     }
-    if (payload.error && !payload.status) {
+    if (payload.error && !payload.status && payload.ready == null && !payload.connected) {
       return `
         <div class="fcc-set-payouts__state is-warn">
           <p class="fcc-set-payouts__title">Could not load payouts</p>
@@ -2196,10 +2196,15 @@ const FoundationControl = (() => {
     const connected = !!payload.connected;
     const configured = payload.configured !== false;
     const bal = payload.balances || {};
+    const country = String(state.data?.foundation?.country || '').trim();
+    const countryMissing = !country;
     const statusLabel = ready
       ? 'Connected — ready for donations'
       : (connected ? 'Connected — finish onboarding' : 'Not connected');
     const statusClass = ready ? 'is-ready' : (connected ? 'is-pending' : 'is-off');
+    const actionError = payload.actionError ? String(payload.actionError) : '';
+    const actionBusy = !!payload.actionBusy;
+    const actionBusyLabel = payload.actionBusyLabel || 'Working with Stripe…';
 
     return `
       <div class="fcc-set-payouts__state ${statusClass}">
@@ -2207,6 +2212,17 @@ const FoundationControl = (() => {
         <p class="fcc-set-payouts__copy">${esc(payload.note || '')}</p>
         ${!configured ? `
           <p class="fcc-set-payouts__copy">Stripe is not configured on the World Choir platform yet. Payouts will unlock once platform keys are live.</p>
+        ` : ''}
+        ${countryMissing ? `
+          <p class="fcc-set-payouts__copy fcc-set-payouts__copy--warn">
+            Set your Foundation country in Account above, click Save account, then connect payouts.
+          </p>
+        ` : ''}
+        ${actionError ? `
+          <div class="fcc-set-payouts__error" role="alert">${esc(actionError)}</div>
+        ` : ''}
+        ${actionBusy ? `
+          <p class="fcc-set-payouts__loading" aria-live="polite">${esc(actionBusyLabel)}</p>
         ` : ''}
         ${ready && bal.available ? `
           <div class="fcc-set-payouts__balances">
@@ -2222,32 +2238,193 @@ const FoundationControl = (() => {
         ` : ''}
         <div class="fcc-set-payouts__actions">
           ${isOwner && configured ? `
-            <button type="button" class="fcc-btn" data-action="payouts-onboard" ${state.busy ? 'disabled' : ''}>
+            <button type="button" class="fcc-btn" data-action="payouts-onboard"
+              ${actionBusy || countryMissing ? 'disabled' : ''}>
               ${connected && !ready ? 'Continue Stripe setup' : (ready ? 'Update payout details' : 'Connect payouts with Stripe')}
             </button>
             ${ready ? `
-              <button type="button" class="fcc-btn-ghost" data-action="payouts-dashboard" ${state.busy ? 'disabled' : ''}>
+              <button type="button" class="fcc-btn-ghost" data-action="payouts-dashboard" ${actionBusy ? 'disabled' : ''}>
                 Open Stripe dashboard
               </button>
             ` : ''}
           ` : ''}
-          <button type="button" class="fcc-btn-ghost fcc-btn--sm" data-action="payouts-refresh">Refresh status</button>
+          <button type="button" class="fcc-btn-ghost fcc-btn--sm" data-action="payouts-refresh" ${actionBusy ? 'disabled' : ''}>
+            Refresh status
+          </button>
         </div>
         ${!isOwner ? `<p class="fcc-set-payouts__copy">Only the Foundation owner can connect or change payouts.</p>` : ''}
       </div>
     `;
   }
 
-  async function hydratePayoutsPanel() {
+  function paintPayoutsPanel(payload) {
+    const panel = document.getElementById('fcc-payouts-panel');
+    if (!panel) return null;
+    state.payouts = payload;
+    panel.innerHTML = renderPayoutsPanelHtml(payload);
+    bindPayoutsPanel(panel);
+    return panel;
+  }
+
+  function bindPayoutsPanel(panel) {
+    if (!panel || panel.dataset.payoutsBound === '1') return;
+    panel.dataset.payoutsBound = '1';
+    panel.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn || !panel.contains(btn)) return;
+      const action = btn.getAttribute('data-action');
+      if (action === 'payouts-onboard' || action === 'payouts-dashboard' || action === 'payouts-refresh') {
+        e.preventDefault();
+        e.stopPropagation();
+        handlePayoutsAction(action);
+      }
+    });
+  }
+
+  async function hydratePayoutsPanel(opts = {}) {
     const panel = document.getElementById('fcc-payouts-panel');
     if (!panel) return;
-    panel.innerHTML = renderPayoutsPanelHtml(null);
+    // New shell from renderApp → re-bind on this panel node.
+    panel.dataset.payoutsBound = '';
+    paintPayoutsPanel(null);
     try {
       const data = await api('connect-payouts-status');
-      state.payouts = data;
-      panel.innerHTML = renderPayoutsPanelHtml(data);
+      paintPayoutsPanel({
+        ...data,
+        actionError: opts.actionError || null,
+      });
     } catch (err) {
-      panel.innerHTML = renderPayoutsPanelHtml({ error: err.message || 'Could not load payout status.' });
+      paintPayoutsPanel({
+        error: err.message || 'Could not load payout status.',
+        actionError: opts.actionError || null,
+      });
+    }
+  }
+
+  function upsertFlashInDom() {
+    const main = root()?.querySelector('.fcc-main');
+    if (!main) return;
+    const existing = main.querySelector(':scope > .fcc-flash');
+    const html = flashHtml();
+    if (!html) {
+      existing?.remove();
+      return;
+    }
+    if (existing) existing.outerHTML = html;
+    else {
+      const top = main.querySelector('.fcc-top');
+      if (top) top.insertAdjacentHTML('afterend', html);
+      else main.insertAdjacentHTML('afterbegin', html);
+    }
+  }
+
+  async function handlePayoutsAction(action) {
+    if (action === 'payouts-refresh') {
+      setFlash('Refreshing payout status…');
+      upsertFlashInDom();
+      await hydratePayoutsPanel();
+      setFlash('Payout status updated.');
+      upsertFlashInDom();
+      return;
+    }
+
+    if (action === 'payouts-onboard') {
+      const country = String(state.data?.foundation?.country || '').trim();
+      if (!country) {
+        const msg = 'Set your Foundation country in Account above, click Save account, then connect payouts.';
+        setFlash(msg, 'err');
+        upsertFlashInDom();
+        paintPayoutsPanel({
+          ...(state.payouts && !state.payouts.error ? state.payouts : {
+            configured: true,
+            connected: false,
+            ready: false,
+            note: 'Connect a Stripe payout account to receive donations for this Foundation.',
+          }),
+          actionBusy: false,
+          actionError: msg,
+        });
+        document.getElementById('fcc-payouts-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      const base = (state.payouts && !state.payouts.error)
+        ? state.payouts
+        : {
+          configured: true,
+          connected: false,
+          ready: false,
+          note: 'Connect a Stripe payout account to receive donations for this Foundation.',
+        };
+
+      try {
+        paintPayoutsPanel({
+          ...base,
+          actionBusy: true,
+          actionBusyLabel: 'Opening Stripe Connect…',
+          actionError: null,
+        });
+
+        const data = await api('connect-payouts-onboard', { method: 'POST', body: {} });
+        if (!data?.url) throw new Error('Stripe did not return an onboarding link.');
+
+        paintPayoutsPanel({
+          ...base,
+          actionBusy: true,
+          actionBusyLabel: 'Redirecting to Stripe…',
+          actionError: null,
+        });
+        window.location.assign(String(data.url));
+        return;
+      } catch (err) {
+        const msg = err.message || 'Could not start Stripe Connect onboarding.';
+        console.error('[payouts-onboard]', err);
+        setFlash(msg, 'err');
+        upsertFlashInDom();
+        paintPayoutsPanel({
+          ...base,
+          actionBusy: false,
+          actionError: msg,
+        });
+        document.getElementById('fcc-payouts-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    if (action === 'payouts-dashboard') {
+      const base = (state.payouts && !state.payouts.error)
+        ? state.payouts
+        : { configured: true, connected: true, ready: true, note: '' };
+      try {
+        paintPayoutsPanel({
+          ...base,
+          actionBusy: true,
+          actionBusyLabel: 'Opening Stripe dashboard…',
+          actionError: null,
+        });
+        const data = await api('connect-payouts-dashboard', { method: 'POST', body: {} });
+        if (!data?.url) throw new Error('Stripe did not return a dashboard link.');
+        const opened = window.open(String(data.url), '_blank', 'noopener,noreferrer');
+        paintPayoutsPanel({
+          ...base,
+          actionBusy: false,
+          actionError: opened ? null : 'Popup blocked — allow popups for this site, then try again.',
+        });
+        if (opened) {
+          setFlash('Stripe dashboard opened in a new tab.');
+          upsertFlashInDom();
+        }
+      } catch (err) {
+        const msg = err.message || 'Could not open Stripe dashboard.';
+        console.error('[payouts-dashboard]', err);
+        setFlash(msg, 'err');
+        upsertFlashInDom();
+        paintPayoutsPanel({
+          ...base,
+          actionBusy: false,
+          actionError: msg,
+        });
+      }
     }
   }
 
@@ -3098,42 +3275,8 @@ const FoundationControl = (() => {
     if (action === 'logout') return logout();
 
     // ─── Settings actions ───
-    if (action === 'payouts-refresh') {
-      setFlash('Refreshing payout status…');
-      render();
-      return;
-    }
-    if (action === 'payouts-onboard') {
-      try {
-        state.busy = true;
-        setFlash('Opening Stripe Connect…');
-        render();
-        const data = await api('connect-payouts-onboard', { method: 'POST', body: {} });
-        if (!data?.url) throw new Error('Stripe did not return an onboarding link.');
-        window.location.href = data.url;
-        return;
-      } catch (err) {
-        state.busy = false;
-        setFlash(err.message || 'Could not start Stripe Connect onboarding.', 'err');
-        render();
-      }
-      return;
-    }
-    if (action === 'payouts-dashboard') {
-      try {
-        state.busy = true;
-        const data = await api('connect-payouts-dashboard', { method: 'POST', body: {} });
-        state.busy = false;
-        if (!data?.url) throw new Error('Stripe did not return a dashboard link.');
-        window.open(data.url, '_blank', 'noopener,noreferrer');
-        setFlash('Stripe dashboard opened in a new tab.');
-        render();
-      } catch (err) {
-        state.busy = false;
-        setFlash(err.message || 'Could not open Stripe dashboard.', 'err');
-        render();
-      }
-      return;
+    if (action === 'payouts-refresh' || action === 'payouts-onboard' || action === 'payouts-dashboard') {
+      return handlePayoutsAction(action);
     }
     if (action === 'team-add-open') {
       state.teamAddOpen = true;

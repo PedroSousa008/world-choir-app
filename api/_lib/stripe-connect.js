@@ -174,32 +174,47 @@ async function ensureExpressAccount(foundationId) {
 
   const iso = countryToIso2(row.country);
   if (!iso) {
+    const labeled = String(row.country || '').trim();
     const err = new Error(
-      'Set your Foundation country in Settings → Account before connecting payouts.'
+      labeled
+        ? `We could not map “${labeled}” to a Stripe country. Pick a country from the Account list, save, then try again.`
+        : 'Set your Foundation country in Settings → Account, save, then connect payouts.'
     );
     err.code = 'COUNTRY_REQUIRED';
     throw err;
   }
 
   const stripe = getStripe();
-  const account = await stripe.accounts.create({
-    type: 'express',
-    country: iso,
-    email: String(row.email || '').trim() || undefined,
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-    business_profile: {
-      name: String(row.foundationName || row.displayName || 'Creator Foundation').slice(0, 100),
-      product_description: 'Donations received through World Choir for this Creator Foundation.',
-      url: 'https://world-choir-app.vercel.app/donate.html',
-    },
-    metadata: {
-      foundationId: String(foundationId),
-      worldChoirApp: '1',
-    },
-  });
+  let account;
+  try {
+    account = await stripe.accounts.create({
+      type: 'express',
+      country: iso,
+      email: String(row.email || '').trim() || undefined,
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+      business_profile: {
+        name: String(row.foundationName || row.displayName || 'Creator Foundation').slice(0, 100),
+        product_description: 'Donations received through World Choir for this Creator Foundation.',
+        url: 'https://world-choir-app.vercel.app/donate.html',
+      },
+      metadata: {
+        foundationId: String(foundationId),
+        worldChoirApp: '1',
+      },
+    });
+  } catch (stripeErr) {
+    const msg = String(stripeErr?.message || stripeErr || 'Stripe account create failed');
+    const err = new Error(
+      /connect/i.test(msg)
+        ? `Stripe Connect is not fully enabled on the platform account yet. (${msg})`
+        : msg
+    );
+    err.code = stripeErr?.code || 'STRIPE_ACCOUNT_CREATE_FAILED';
+    throw err;
+  }
 
   await persistAccountSnapshot(foundationId, account);
   const refreshed = await findInfluencerById(foundationId);
@@ -207,22 +222,31 @@ async function ensureExpressAccount(foundationId) {
 }
 
 async function createOnboardingLink(foundationId, req) {
-  const { accountId } = await ensureExpressAccount(foundationId);
-  const origin = appOrigin(req);
-  const stripe = getStripe();
-  const link = await stripe.accountLinks.create({
-    account: accountId,
-    // Query on the page URL (not inside the hash) so FCC hash routing stays intact.
-    refresh_url: `${origin}/members.html?connect=refresh#settings`,
-    return_url: `${origin}/members.html?connect=return#settings`,
-    type: 'account_onboarding',
-  });
-  return {
-    ok: true,
-    url: link.url,
-    accountId,
-    expiresAt: link.expires_at ? new Date(link.expires_at * 1000).toISOString() : null,
-  };
+  try {
+    const { accountId } = await ensureExpressAccount(foundationId);
+    const origin = appOrigin(req);
+    const stripe = getStripe();
+    const link = await stripe.accountLinks.create({
+      account: accountId,
+      // Query on the page URL (not inside the hash) so FCC hash routing stays intact.
+      refresh_url: `${origin}/members.html?connect=refresh#settings`,
+      return_url: `${origin}/members.html?connect=return#settings`,
+      type: 'account_onboarding',
+    });
+    return {
+      ok: true,
+      url: link.url,
+      accountId,
+      expiresAt: link.expires_at ? new Date(link.expires_at * 1000).toISOString() : null,
+    };
+  } catch (err) {
+    if (err.code === 'COUNTRY_REQUIRED' || err.code === 'PAYMENTS_NOT_CONFIGURED' || err.code === 'FOUNDATION_NOT_FOUND') {
+      throw err;
+    }
+    const wrapped = new Error(err.message || 'Could not create Stripe onboarding link.');
+    wrapped.code = err.code || 'CONNECT_ONBOARD_FAILED';
+    throw wrapped;
+  }
 }
 
 async function createExpressDashboardLink(foundationId) {
