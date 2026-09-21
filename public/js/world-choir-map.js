@@ -143,7 +143,7 @@ const WorldChoirMap = (() => {
   }
 
   function isMapCameraReady() {
-    if (!map || voiceJoinedAnimating) return false;
+    if (!map) return false;
     if (window.__WC_TAB_SILENT_INIT) return false;
     if (!isMapTabActive()) return false;
     try {
@@ -157,12 +157,20 @@ const WorldChoirMap = (() => {
     return true;
   }
 
+  function hasPendingVoiceJoined() {
+    try {
+      return !!sessionStorage.getItem('wc_voice_joined');
+    } catch {
+      return false;
+    }
+  }
+
   function safeSetView(latlng, zoom, options = {}) {
     if (!map || !latlng) return false;
     const lat = Number(latlng[0] ?? latlng.lat);
     const lng = Number(latlng[1] ?? latlng.lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
-    if (!isMapCameraReady()) return false;
+    if (!options.force && !isMapCameraReady()) return false;
     try {
       map.setView([lat, lng], zoom, options);
       return true;
@@ -177,9 +185,12 @@ const WorldChoirMap = (() => {
     const lat = Number(latlng[0] ?? latlng.lat);
     const lng = Number(latlng[1] ?? latlng.lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
-    if (!isMapCameraReady()) return false;
+    if (!options.force && !isMapCameraReady()) return false;
     try {
-      map.flyTo([lat, lng], zoom, options);
+      map.flyTo([lat, lng], zoom, {
+        duration: options.duration ?? 1.2,
+        easeLinearity: options.easeLinearity ?? 0.22,
+      });
       return true;
     } catch (err) {
       console.warn('Map flyTo skipped:', err?.message || err);
@@ -188,7 +199,7 @@ const WorldChoirMap = (() => {
   }
 
   function applyUserHomeCenter(options = {}) {
-    if (!map || voiceJoinedAnimating) return false;
+    if (!map || voiceJoinedAnimating || hasPendingVoiceJoined()) return false;
     // Never move the camera while Map is hidden (0×0) — Leaflet throws Invalid LatLng (NaN, NaN).
     if (!options.allowHidden && !isMapCameraReady()) return false;
 
@@ -632,8 +643,9 @@ const WorldChoirMap = (() => {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     if (voiceJoinedAnimating) return;
 
-    // Claim the session immediately so onTabShow + Home backup cannot double-run.
+    // Claim the session so onTabShow + Home backup cannot double-run / steal the camera.
     sessionStorage.removeItem('wc_voice_joined');
+    voiceJoinedAnimating = true;
 
     // Wait until Map is visible and sized — flyTo on a 0×0 panel throws Invalid LatLng (NaN, NaN).
     for (let i = 0; i < 40 && !isMapCameraReady(); i += 1) {
@@ -644,7 +656,7 @@ const WorldChoirMap = (() => {
     }
     if (!isMapCameraReady()) {
       cacheUserMapHome(lat, lng);
-      // Put session back so a later onTabShow can still play the reveal.
+      voiceJoinedAnimating = false;
       try {
         sessionStorage.setItem('wc_voice_joined', JSON.stringify({
           lat, lng, city: data.city, country: data.country,
@@ -653,26 +665,40 @@ const WorldChoirMap = (() => {
       return;
     }
 
-    voiceJoinedAnimating = true;
-    pulseCityKey = `${data.city}|${data.country}`;
-    refreshMapData();
+    try {
+      map.invalidateSize({ animate: false, pan: false });
+    } catch { /* ignore */ }
 
     const overlay = document.getElementById('voice-joined');
     overlay?.classList.add('active');
 
-    // Zoom in close on the new city light, then ease back out.
-    await flyTo(lat, lng, 9, 2.2);
-    await wait(2200);
-    overlay?.classList.remove('active');
+    // City light stays off (no pulse) until close-up arrives.
+    pulseCityKey = null;
+    refreshMapData();
 
+    const CLOSE_ZOOM = 9;
+    const START_ZOOM = 3;
+
+    // Start pulled back so the zoom-in reads as a smooth journey.
+    safeSetView([lat, lng], START_ZOOM, { animate: false, force: true });
+    await wait(120);
+
+    // 1) Smooth zoom in on the city
+    await flyTo(lat, lng, CLOSE_ZOOM, 2.4);
+
+    // 2) At max zoom — light appears
+    pulseCityKey = `${data.city}|${data.country}`;
+    refreshMapData();
+    await wait(1600);
+
+    // 3) Zoom back out to normal home framing
     cacheUserMapHome(lat, lng);
     lastAppliedHomeKey = userHomeKey({ lat, lng });
+    await flyTo(lat, lng, USER_HOME_ZOOM, 2.0);
 
-    const home = getUserMapCenter() || { lat, lng, zoom: USER_HOME_ZOOM };
-    const clamped = clampMapCenter(home.lat, home.lng);
-    if (clamped) {
-      await flyTo(clamped.lat, clamped.lng, home.zoom ?? USER_HOME_ZOOM, 1.8);
-    }
+    // 4) Message leaves only after zoom-out has fully settled
+    overlay?.classList.remove('active');
+    await wait(500);
 
     voiceJoinedAnimating = false;
     pulseCityKey = null;
@@ -681,17 +707,28 @@ const WorldChoirMap = (() => {
 
   function flyTo(lat, lng, zoom, durationSec) {
     return new Promise((resolve) => {
-      if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
+      if (!map || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
         resolve();
         return;
       }
-      if (!safeFlyTo([Number(lat), Number(lng)], zoom, { duration: durationSec, easeLinearity: 0.22 })) {
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        try { map.off('moveend', finish); } catch { /* ignore */ }
+        resolve();
+      };
+      const ok = safeFlyTo([Number(lat), Number(lng)], zoom, {
+        force: true,
+        duration: durationSec,
+        easeLinearity: 0.22,
+      });
+      if (!ok) {
         resolve();
         return;
       }
-      map.once('moveend', resolve);
-      // Safety: if Leaflet never fires moveend (hidden/interrupted), unblock.
-      setTimeout(resolve, Math.max(800, (durationSec || 1) * 1000 + 400));
+      map.once('moveend', finish);
+      setTimeout(finish, Math.max(900, (durationSec || 1) * 1000 + 450));
     });
   }
 
@@ -704,7 +741,8 @@ const WorldChoirMap = (() => {
     if (!raw) return;
     try {
       const data = JSON.parse(raw);
-      setTimeout(() => runVoiceJoinedAnimation(data), 400);
+      // Delay slightly so soft-tab layout + invalidateSize can settle first.
+      setTimeout(() => runVoiceJoinedAnimation(data), 350);
     } catch (_) {
       sessionStorage.removeItem('wc_voice_joined');
     }
@@ -793,10 +831,18 @@ const WorldChoirMap = (() => {
     return ensureMapStarted().then(() => {
       if (!window.__WC_TAB_SILENT_INIT && isMapTabActive()) setMapBodyLock(true);
       else setMapBodyLock(false);
+      const pendingReveal = hasPendingVoiceJoined();
       requestAnimationFrame(() => {
-        recenterMapAfterLayout();
-        setTimeout(recenterMapAfterLayout, 60);
-        setTimeout(recenterMapAfterLayout, 220);
+        // Don't steal the camera if the join reveal is about to play.
+        if (!pendingReveal && !voiceJoinedAnimating) {
+          recenterMapAfterLayout();
+          setTimeout(recenterMapAfterLayout, 60);
+          setTimeout(recenterMapAfterLayout, 220);
+        } else {
+          try {
+            map?.invalidateSize({ animate: false, pan: false });
+          } catch { /* ignore */ }
+        }
       });
       // Never leave the map boot skeleton on soft switches.
       const skel = document.getElementById('map-boot-skel');
