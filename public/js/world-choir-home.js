@@ -1088,7 +1088,7 @@ const WorldChoirHome = (() => {
   }
 
   function shareCountdown() {
-    const url = window.location.origin + window.location.pathname.replace(/index\.html$/, '') || 'https://world-choir-app.vercel.app';
+    const url = window.location.origin + window.location.pathname.replace(/index\.html$/, '') || 'https://worldchoirapp.com';
     const eventDate = WorldChoirConfig.formatEventDate();
     const eventTime = WorldChoirConfig.formatEventTime();
     const text = `I'm joining World Choir 2027. On ${eventDate} at ${eventTime}, the world sings together. Add your voice: ${url}`;

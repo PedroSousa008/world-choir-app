@@ -633,7 +633,7 @@ const WorldChoirConfig = (() => {
       const path = window.location.pathname.replace(/index\.html$/, '').replace(/\/$/, '');
       return origin + (path || '');
     }
-    return 'https://world-choir-app.vercel.app';
+    return 'https://worldchoirapp.com';
   }
 
   function getCalendarDescription() {

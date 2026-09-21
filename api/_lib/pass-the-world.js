@@ -296,7 +296,7 @@ async function geocodeCityCountry(city, country) {
     {
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'WorldChoirApp/1.0 (pass-the-world; https://world-choir-app.vercel.app)',
+        'User-Agent': 'WorldChoirApp/1.0 (pass-the-world; https://worldchoirapp.com)',
       },
     }
   );

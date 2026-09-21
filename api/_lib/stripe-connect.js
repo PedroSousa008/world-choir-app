@@ -76,7 +76,7 @@ function appOrigin(req) {
   const host = String(
     req?.headers?.['x-forwarded-host']
     || req?.headers?.host
-    || 'world-choir-app.vercel.app'
+    || 'worldchoirapp.com'
   ).split(',')[0].trim();
   return `${proto}://${host}`;
 }
@@ -198,7 +198,7 @@ async function ensureExpressAccount(foundationId) {
       business_profile: {
         name: String(row.foundationName || row.displayName || 'Creator Foundation').slice(0, 100),
         product_description: 'Donations received through World Choir for this Creator Foundation.',
-        url: 'https://world-choir-app.vercel.app/donate.html',
+        url: 'https://worldchoirapp.com/donate.html',
       },
       metadata: {
         foundationId: String(foundationId),

@@ -748,7 +748,7 @@ module.exports = async function handler(req, res) {
         from: req.query.from,
         to: req.query.to,
       });
-      const host = req.headers['x-forwarded-host'] || req.headers.host || 'world-choir-app.vercel.app';
+      const host = req.headers['x-forwarded-host'] || req.headers.host || 'worldchoirapp.com';
       const proto = req.headers['x-forwarded-proto'] || 'https';
       const origin = `${proto}://${host}`;
       const html = await buildMapSponsorAnalyticsReportHtml(analytics, { origin });

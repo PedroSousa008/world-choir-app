@@ -108,7 +108,7 @@ async function resolveImageDataUri(source, origin) {
 
   try {
     if (raw.startsWith('/api/media?')) {
-      const url = new URL(raw, origin || 'https://world-choir-app.vercel.app');
+      const url = new URL(raw, origin || 'https://worldchoirapp.com');
       const blobPath = url.searchParams.get('path');
       if (!blobPath) return null;
       const { buffer, contentType } = await readPrivateBinary(blobPath);
