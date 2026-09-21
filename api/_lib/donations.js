@@ -1,8 +1,9 @@
 /**
  * Creator Foundation donations — fee math, ledger writes, Stripe helpers.
- * With Stripe Connect: destination charges send foundation share to the
- * connected account; World Choir keeps PLATFORM_FEE_PERCENT as application_fee.
- * Never fake success. Never store raw card data.
+ * Destination charges: donor pays the platform; foundation receives net after
+ * World Choir’s PLATFORM_FEE_PERCENT and estimated Stripe card fees (passed
+ * through so the platform nets ~PLATFORM_FEE_PERCENT). Never fake success.
+ * Never store raw card data.
  */
 const { randomUUID } = require('crypto');
 const {
@@ -17,6 +18,10 @@ const MIN_DONATION_CENTS = 100; // €1.00
 const MAX_MESSAGE_LENGTH = 500;
 const SUCCESS_STATUSES = new Set(['succeeded', 'completed', 'paid']);
 const PENDING_STATUSES = new Set(['pending', 'requires_payment', 'processing']);
+
+/** Default EU online card pricing (override via env to match Stripe → Pricing). */
+const DEFAULT_STRIPE_FEE_PERCENT = 1.5;
+const DEFAULT_STRIPE_FEE_FIXED_CENTS = 25;
 
 function getStripeSecretKey() {
   return String(process.env.STRIPE_SECRET_KEY || '').trim();
@@ -47,7 +52,36 @@ function getStripe() {
   return new Stripe(key, { apiVersion: '2024-06-20' });
 }
 
-/** Integer-cent fee split. foundation + fee = gross. */
+function stripeFeePercent() {
+  const raw = Number(process.env.STRIPE_FEE_PERCENT);
+  return Number.isFinite(raw) && raw >= 0 ? raw : DEFAULT_STRIPE_FEE_PERCENT;
+}
+
+function stripeFeeFixedCents() {
+  const raw = Number(process.env.STRIPE_FEE_FIXED_CENTS);
+  return Number.isFinite(raw) && raw >= 0
+    ? Math.round(raw)
+    : DEFAULT_STRIPE_FEE_FIXED_CENTS;
+}
+
+/**
+ * Estimated Stripe processing fee for a charge (EU card default).
+ * Actual fee can vary slightly by card country / method; env overrides match Pricing.
+ */
+function estimateStripeFeeCents(grossCents) {
+  const gross = Math.round(Number(grossCents));
+  if (!Number.isFinite(gross) || gross <= 0) return 0;
+  const percentPart = Math.round(gross * (stripeFeePercent() / 100));
+  return percentPart + stripeFeeFixedCents();
+}
+
+/**
+ * Integer-cent fee split.
+ * - platformFeeCents: World Choir’s 6.5% (ledger / ops share)
+ * - stripeFeeCents: estimated card processing (passed through via application_fee)
+ * - applicationFeeCents: platform + stripe → PaymentIntent.application_fee_amount
+ * - foundationAmountCents: what the connected account receives
+ */
 function splitDonationCents(grossCents) {
   const gross = Math.round(Number(grossCents));
   if (!Number.isFinite(gross) || gross < MIN_DONATION_CENTS) {
@@ -55,16 +89,41 @@ function splitDonationCents(grossCents) {
     err.code = 'AMOUNT_TOO_LOW';
     throw err;
   }
+
   const platformFeeCents = Math.round(gross * (PLATFORM_FEE_PERCENT / 100));
-  const foundationCents = gross - platformFeeCents;
+  const stripeFeeCents = estimateStripeFeeCents(gross);
+  let applicationFeeCents = platformFeeCents + stripeFeeCents;
+  let foundationAmountCents = gross - applicationFeeCents;
+
+  // Keep at least €0.01 for the foundation; fold overflow into application fee only if needed.
+  if (foundationAmountCents < 1) {
+    const err = new Error(
+      `This amount is too small to cover World Choir’s ${PLATFORM_FEE_PERCENT}% fee and card processing. Try a larger donation.`
+    );
+    err.code = 'AMOUNT_TOO_LOW_FOR_FEES';
+    throw err;
+  }
+
+  // Safety: application fee must be < gross for destination charges.
+  if (applicationFeeCents >= gross) {
+    applicationFeeCents = gross - 1;
+    foundationAmountCents = 1;
+  }
+
   return {
     amountGrossCents: gross,
     platformFeeCents,
-    foundationAmountCents: foundationCents,
+    stripeFeeCents,
+    applicationFeeCents,
+    foundationAmountCents,
     amountGross: gross / 100,
     platformFee: platformFeeCents / 100,
-    foundationAmount: foundationCents / 100,
+    stripeFee: stripeFeeCents / 100,
+    applicationFee: applicationFeeCents / 100,
+    foundationAmount: foundationAmountCents / 100,
     platformFeePercent: PLATFORM_FEE_PERCENT,
+    stripeFeePercent: stripeFeePercent(),
+    stripeFeeFixedCents: stripeFeeFixedCents(),
     foundationSharePercent: 100 - PLATFORM_FEE_PERCENT,
   };
 }
@@ -104,6 +163,7 @@ function publicReceipt(row) {
     projectId: row.projectId || row.project_id || null,
     amountGross: Number(row.amount_gross ?? row.amount ?? 0),
     platformFee: Number(row.platform_fee ?? 0),
+    stripeFee: Number(row.stripe_fee ?? row.stripeFee ?? 0),
     foundationAmount: Number(row.foundation_amount ?? 0),
     currency: row.currency || 'EUR',
     status: row.paymentStatus || row.status,
@@ -335,9 +395,17 @@ function buildDraftRecord({
     amount: split.amountGross,
     amount_gross: split.amountGross,
     platform_fee: split.platformFee,
+    stripe_fee: split.stripeFee,
+    stripeFee: split.stripeFee,
+    application_fee: split.applicationFee,
+    applicationFee: split.applicationFee,
     foundation_amount: split.foundationAmount,
     amount_gross_cents: split.amountGrossCents,
     platform_fee_cents: split.platformFeeCents,
+    stripe_fee_cents: split.stripeFeeCents,
+    stripeFeeCents: split.stripeFeeCents,
+    application_fee_cents: split.applicationFeeCents,
+    applicationFeeCents: split.applicationFeeCents,
     foundation_amount_cents: split.foundationAmountCents,
     currency: currency || 'EUR',
     paymentStatus: 'pending',
@@ -404,6 +472,9 @@ module.exports = {
   getStripeWebhookSecret,
   paymentsConfigured,
   getStripe,
+  stripeFeePercent,
+  stripeFeeFixedCents,
+  estimateStripeFeeCents,
   splitDonationCents,
   eurosToCents,
   sanitizeMessage,

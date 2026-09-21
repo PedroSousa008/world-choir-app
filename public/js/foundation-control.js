@@ -2505,7 +2505,7 @@ const FoundationControl = (() => {
             </span>
             <div>
               <h2 class="fcc-set-card__title">Payouts</h2>
-              <p class="fcc-set-card__sub">Connect Stripe so donor gifts go to your bank. World Choir automatically keeps ${esc(String(state.data?.donations?.platformFeePercent ?? 6.5))}%; the rest goes to your Foundation.</p>
+              <p class="fcc-set-card__sub">Connect Stripe so donor gifts go to your bank. World Choir keeps ${esc(String(state.data?.donations?.platformFeePercent ?? 6.5))}%; card processing is covered from each donation so that share stays intact — you receive the remainder.</p>
             </div>
           </div>
           <div class="fcc-set-payouts-body" id="fcc-payouts-panel" aria-live="polite">

@@ -517,7 +517,8 @@ function influencerToFoundation(row, projects = []) {
     ],
     howDonationsAreUsed: [
       'Every donation supports two causes at once.',
-      `${100 - PLATFORM_FEE_PERCENT}% goes directly to the creator's foundation and the people it serves.`,
+      `${100 - PLATFORM_FEE_PERCENT}% of each gift is intended for the creator’s foundation after World Choir’s platform fee.`,
+      `Card processing fees are covered from the donation (not from World Choir’s ${PLATFORM_FEE_PERCENT}% share), so the foundation receives the remainder after processing.`,
       `${PLATFORM_FEE_PERCENT}% helps sustain the infrastructure that enables thousands of creators and millions of supporters to come together in a trusted, transparent ecosystem for good.`,
       'By supporting World Choir, donors help expand the movement itself—allowing more foundations to be created, more communities to be served, and more acts of peace and generosity to reach the world.',
     ].join('\n\n'),

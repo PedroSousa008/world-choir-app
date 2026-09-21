@@ -63,14 +63,41 @@ const WorldChoirDonationFlow = (() => {
 
   function feeSplit(amount) {
     const grossCents = Math.round(Number(amount) * 100);
+    if (!Number.isFinite(grossCents) || grossCents <= 0) {
+      const feePercent = config?.platformFeePercent ?? 6.5;
+      return {
+        amountGross: 0,
+        platformFee: 0,
+        stripeFee: 0,
+        foundationAmount: 0,
+        feePercent,
+        foundationPercent: 100 - feePercent,
+        stripeFeePercent: config?.stripeFeePercent ?? 1.5,
+        stripeFeeFixed: config?.stripeFeeFixed ?? 0.25,
+      };
+    }
     const feePercent = config?.platformFeePercent ?? 6.5;
-    const feeCents = Math.round(grossCents * (feePercent / 100));
+    const stripePercent = config?.stripeFeePercent ?? 1.5;
+    const stripeFixedCents = Number.isFinite(config?.stripeFeeFixedCents)
+      ? Math.round(config.stripeFeeFixedCents)
+      : Math.round((config?.stripeFeeFixed ?? 0.25) * 100);
+    const platformFeeCents = Math.round(grossCents * (feePercent / 100));
+    const stripeFeeCents = Math.round(grossCents * (stripePercent / 100)) + stripeFixedCents;
+    let applicationFeeCents = platformFeeCents + stripeFeeCents;
+    let foundationCents = grossCents - applicationFeeCents;
+    if (foundationCents < 1) {
+      foundationCents = 1;
+      applicationFeeCents = grossCents - 1;
+    }
     return {
       amountGross: grossCents / 100,
-      platformFee: feeCents / 100,
-      foundationAmount: (grossCents - feeCents) / 100,
+      platformFee: platformFeeCents / 100,
+      stripeFee: stripeFeeCents / 100,
+      foundationAmount: foundationCents / 100,
       feePercent,
       foundationPercent: 100 - feePercent,
+      stripeFeePercent: stripePercent,
+      stripeFeeFixed: stripeFixedCents / 100,
     };
   }
 
@@ -386,6 +413,7 @@ const WorldChoirDonationFlow = (() => {
       <div class="df-checkout__fee-preview" id="df-co-fee-preview">
         <div class="df-checkout__fee-row"><span>Foundation</span><strong>${esc(formatMoney(split.foundationAmount))}</strong></div>
         <div class="df-checkout__fee-row"><span>World Choir</span><strong>${esc(formatMoney(split.platformFee))}</strong></div>
+        <div class="df-checkout__fee-row"><span>Card processing</span><strong>${esc(formatMoney(split.stripeFee))}</strong></div>
         <div class="df-checkout__fee-row df-checkout__fee-row--total"><span>Total</span><strong>${esc(formatMoney(split.amountGross))}</strong></div>
       </div>
     `;
@@ -581,10 +609,11 @@ const WorldChoirDonationFlow = (() => {
           <div class="df-checkout__fee-row"><span>Your donation</span><strong>${esc(formatMoney(split.amountGross))}</strong></div>
           <div class="df-checkout__fee-row"><span>Foundation receives</span><strong>${esc(formatMoney(split.foundationAmount))}</strong></div>
           <div class="df-checkout__fee-row"><span>World Choir</span><strong>${esc(formatMoney(split.platformFee))}</strong></div>
+          <div class="df-checkout__fee-row"><span>Card processing</span><strong>${esc(formatMoney(split.stripeFee))}</strong></div>
           <div class="df-checkout__fee-row df-checkout__fee-row--total"><span>Total charged</span><strong>${esc(formatMoney(split.amountGross))}</strong></div>
         </div>
         <p class="df-checkout__note">
-          ${split.feePercent}% of every donation supports World Choir's operational costs, helping us maintain and operate the platform.
+          ${split.feePercent}% supports World Choir. Card processing is covered from the donation so World Choir’s share stays intact.
         </p>
 
         <div class="df-checkout__meta">
@@ -663,6 +692,7 @@ const WorldChoirDonationFlow = (() => {
           <div class="df-checkout__fee-row"><span>Donation</span><strong>${esc(formatMoney(r.amountGross))}</strong></div>
           <div class="df-checkout__fee-row"><span>Foundation receives</span><strong>${esc(formatMoney(r.foundationAmount))}</strong></div>
           <div class="df-checkout__fee-row"><span>World Choir</span><strong>${esc(formatMoney(r.platformFee))}</strong></div>
+          ${Number(r.stripeFee) > 0 ? `<div class="df-checkout__fee-row"><span>Card processing</span><strong>${esc(formatMoney(r.stripeFee))}</strong></div>` : ''}
           <div class="df-checkout__fee-row"><span>Status</span><strong>${esc(r.status || 'succeeded')}</strong></div>
           <div class="df-checkout__fee-row"><span>Donor</span><strong>${esc(r.donorDisplayName || 'Anonymous')}</strong></div>
           ${r.message ? `<div class="df-checkout__fee-row"><span>Message</span><strong>“${esc(r.message)}”</strong></div>` : ''}

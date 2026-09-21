@@ -108,7 +108,7 @@ function publicConnectStatus(row) {
     foundationSharePercent: 100 - PLATFORM_FEE_PERCENT,
     updatedAt: row?.stripeConnectUpdatedAt || null,
     note: ready
-      ? 'Payouts are connected. Donor payments automatically send your share to this account and World Choir’s platform fee to World Choir.'
+      ? 'Payouts are connected. Donor payments send your share to this account. World Choir keeps its platform fee; card processing is covered from the donation so that fee stays intact.'
       : (accountId
         ? 'Finish Stripe onboarding so this Foundation can receive donations.'
         : 'Connect a Stripe payout account to receive donations for this Foundation.'),

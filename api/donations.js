@@ -29,6 +29,9 @@ async function handleConfig(req, res) {
     currency: 'EUR',
     platformFeePercent: donations.PLATFORM_FEE_PERCENT,
     foundationSharePercent: 100 - donations.PLATFORM_FEE_PERCENT,
+    stripeFeePercent: donations.stripeFeePercent(),
+    stripeFeeFixedCents: donations.stripeFeeFixedCents(),
+    stripeFeeFixed: donations.stripeFeeFixedCents() / 100,
     minDonationCents: donations.MIN_DONATION_CENTS,
     minDonation: donations.MIN_DONATION_CENTS / 100,
     maxMessageLength: donations.MAX_MESSAGE_LENGTH,
@@ -64,7 +67,18 @@ async function handleCreateIntent(req, res) {
   }
 
   const foundation = await donations.assertFoundationDonatable(foundationId);
-  const split = donations.splitDonationCents(grossCents);
+  let split;
+  try {
+    split = donations.splitDonationCents(grossCents);
+  } catch (splitErr) {
+    const status = splitErr.code === 'AMOUNT_TOO_LOW' || splitErr.code === 'AMOUNT_TOO_LOW_FOR_FEES'
+      ? 400
+      : 400;
+    return res.status(status).json({
+      error: splitErr.message || 'Invalid donation amount.',
+      code: splitErr.code || 'AMOUNT_INVALID',
+    });
+  }
   const donationId = `don_${donations.randomUUID().replace(/-/g, '').slice(0, 20)}`;
   const idempotencyKey = String(
     req.headers['idempotency-key'] || body.idempotencyKey || `create-${donationId}`
@@ -83,8 +97,9 @@ async function handleCreateIntent(req, res) {
     amount: split.amountGrossCents,
     currency: currency.toLowerCase(),
     automatic_payment_methods: { enabled: true },
-    // Destination charge: foundation receives net, platform keeps application fee.
-    application_fee_amount: split.platformFeeCents,
+    // Destination charge: application_fee = World Choir 6.5% + estimated Stripe fee
+    // (passed through so the platform nets ~6.5%; foundation receives the remainder).
+    application_fee_amount: split.applicationFeeCents,
     transfer_data: {
       destination: connectedAccountId,
     },
@@ -95,6 +110,8 @@ async function handleCreateIntent(req, res) {
       projectId: projectId || '',
       deviceId: deviceId || '',
       platformFeeCents: String(split.platformFeeCents),
+      stripeFeeCents: String(split.stripeFeeCents),
+      applicationFeeCents: String(split.applicationFeeCents),
       foundationAmountCents: String(split.foundationAmountCents),
       connectedAccountId,
       worldChoirApp: '1',
@@ -121,8 +138,12 @@ async function handleCreateIntent(req, res) {
     currency,
     amountGross: split.amountGross,
     platformFee: split.platformFee,
+    stripeFee: split.stripeFee,
+    applicationFee: split.applicationFee,
     foundationAmount: split.foundationAmount,
     platformFeePercent: split.platformFeePercent,
+    stripeFeePercent: split.stripeFeePercent,
+    stripeFeeFixedCents: split.stripeFeeFixedCents,
     foundationSharePercent: split.foundationSharePercent,
     foundationName: foundation.foundationName || '',
     creatorName: foundation.displayName || '',
