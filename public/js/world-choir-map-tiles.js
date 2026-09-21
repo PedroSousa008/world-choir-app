@@ -228,6 +228,14 @@ const WorldChoirMapTiles = (() => {
    */
   function syncToMap(map) {
     if (!map) return;
+    try {
+      const size = map.getSize?.();
+      if (!size || !(size.x > 0) || !(size.y > 0)) return;
+      const center = map.getCenter?.();
+      if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lng)) return;
+    } catch {
+      return;
+    }
     basemapLayers.forEach((layer) => {
       if (!layer) return;
       try {
@@ -242,6 +250,7 @@ const WorldChoirMapTiles = (() => {
             L.DomUtil.setTransform(canvas, null, 1);
           }
           const center = map.getCenter();
+          if (!Number.isFinite(center.lat) || !Number.isFinite(center.lng)) return;
           gl.jumpTo({
             center: [center.lng, center.lat],
             zoom: map.getZoom() - 1,

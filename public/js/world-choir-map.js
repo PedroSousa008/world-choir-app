@@ -142,8 +142,55 @@ const WorldChoirMap = (() => {
     return { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM };
   }
 
+  function isMapCameraReady() {
+    if (!map || voiceJoinedAnimating) return false;
+    if (window.__WC_TAB_SILENT_INIT) return false;
+    if (!isMapTabActive()) return false;
+    try {
+      const size = map.getSize?.();
+      if (!size || !(size.x > 0) || !(size.y > 0)) return false;
+      const el = map.getContainer?.();
+      if (el && (el.clientWidth <= 0 || el.clientHeight <= 0)) return false;
+    } catch {
+      return false;
+    }
+    return true;
+  }
+
+  function safeSetView(latlng, zoom, options = {}) {
+    if (!map || !latlng) return false;
+    const lat = Number(latlng[0] ?? latlng.lat);
+    const lng = Number(latlng[1] ?? latlng.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+    if (!isMapCameraReady()) return false;
+    try {
+      map.setView([lat, lng], zoom, options);
+      return true;
+    } catch (err) {
+      console.warn('Map setView skipped:', err?.message || err);
+      return false;
+    }
+  }
+
+  function safeFlyTo(latlng, zoom, options = {}) {
+    if (!map || !latlng) return false;
+    const lat = Number(latlng[0] ?? latlng.lat);
+    const lng = Number(latlng[1] ?? latlng.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+    if (!isMapCameraReady()) return false;
+    try {
+      map.flyTo([lat, lng], zoom, options);
+      return true;
+    } catch (err) {
+      console.warn('Map flyTo skipped:', err?.message || err);
+      return false;
+    }
+  }
+
   function applyUserHomeCenter(options = {}) {
     if (!map || voiceJoinedAnimating) return false;
+    // Never move the camera while Map is hidden (0×0) — Leaflet throws Invalid LatLng (NaN, NaN).
+    if (!options.allowHidden && !isMapCameraReady()) return false;
 
     const center = getUserMapCenter();
     if (!center) return false;
@@ -157,11 +204,10 @@ const WorldChoirMap = (() => {
     const zoom = center.zoom ?? USER_HOME_ZOOM;
     cacheUserMapHome(lat, lng);
 
-    if (options.animate) {
-      map.flyTo([lat, lng], zoom, { duration: options.duration ?? 1.2, easeLinearity: 0.22 });
-    } else {
-      map.setView([lat, lng], zoom, { animate: false });
-    }
+    const moved = options.animate
+      ? safeFlyTo([lat, lng], zoom, { duration: options.duration ?? 1.2, easeLinearity: 0.22 })
+      : safeSetView([lat, lng], zoom, { animate: false });
+    if (!moved) return false;
 
     lastAppliedHomeKey = key;
     return true;
@@ -585,6 +631,18 @@ const WorldChoirMap = (() => {
     const lng = Number(data?.lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
+    // Wait until Map is visible and sized — flyTo on a 0×0 panel throws Invalid LatLng (NaN, NaN).
+    for (let i = 0; i < 20 && !isMapCameraReady(); i += 1) {
+      try {
+        map?.invalidateSize({ animate: false, pan: false });
+      } catch { /* ignore */ }
+      await wait(50);
+    }
+    if (!isMapCameraReady()) {
+      cacheUserMapHome(lat, lng);
+      return;
+    }
+
     voiceJoinedAnimating = true;
     pulseCityKey = `${data.city}|${data.country}`;
     refreshMapData();
@@ -613,12 +671,17 @@ const WorldChoirMap = (() => {
 
   function flyTo(lat, lng, zoom, durationSec) {
     return new Promise((resolve) => {
-      if (!map || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
+      if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
         resolve();
         return;
       }
-      map.flyTo([Number(lat), Number(lng)], zoom, { duration: durationSec, easeLinearity: 0.22 });
+      if (!safeFlyTo([Number(lat), Number(lng)], zoom, { duration: durationSec, easeLinearity: 0.22 })) {
+        resolve();
+        return;
+      }
       map.once('moveend', resolve);
+      // Safety: if Leaflet never fires moveend (hidden/interrupted), unblock.
+      setTimeout(resolve, Math.max(800, (durationSec || 1) * 1000 + 400));
     });
   }
 
@@ -658,11 +721,16 @@ const WorldChoirMap = (() => {
 
   function recenterMapAfterLayout() {
     if (!map) return;
-    map.invalidateSize({ animate: false, pan: false });
+    try {
+      map.invalidateSize({ animate: false, pan: false });
+    } catch {
+      /* ignore */
+    }
+    if (!isMapCameraReady()) return;
     // After soft-tab reveal, Leaflet often keeps a stale center from a 0-size container.
     if (!applyUserHomeCenter({ force: true, animate: false })) {
       const view = getInitialMapView();
-      map.setView(view.center, view.zoom, { animate: false });
+      safeSetView(view.center, view.zoom, { animate: false });
     }
     // City lights may need a second pass once size is real.
     refreshMapData();
@@ -856,6 +924,8 @@ const WorldChoirMap = (() => {
       if (Number.isFinite(lat) && Number.isFinite(lng)) {
         cacheUserMapHome(lat, lng);
       }
+      // Refresh markers only — never flyTo while Home is showing (hidden map = NaN LatLng).
+      refreshMapData();
       void WorldChoirDB.syncMapAggregates?.().catch(() => {});
     });
     window.addEventListener('wc-pledge-updated', (e) => {
@@ -863,7 +933,9 @@ const WorldChoirMap = (() => {
       const lat = Number(e.detail?.latitude);
       const lng = Number(e.detail?.longitude);
       if (Number.isFinite(lat) && Number.isFinite(lng)) {
-        applyUserHomeCenter({ force: true, animate: true });
+        cacheUserMapHome(lat, lng);
+        // Only recenter when Map is actually visible and sized.
+        applyUserHomeCenter({ force: true, animate: isMapCameraReady() });
       }
       void WorldChoirDB.syncMapAggregates?.().catch(() => {});
     });
@@ -880,6 +952,7 @@ const WorldChoirMap = (() => {
       refreshMapData();
       updateEmptyState();
       if (!hasVoiceJoinedSession) {
+        // Only when Map is visible — startMap can finish while Home is still showing.
         applyUserHomeCenter({ animate: false });
       }
     }).catch((err) => {

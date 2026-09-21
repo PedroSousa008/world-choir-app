@@ -819,17 +819,27 @@ const WorldChoirDB = (() => {
 
   async function createPledgeWithGeocode({ city, country }) {
     // Do not geocode in the browser — Nominatim returns 403 from the app origin.
-    // /api/join resolves coordinates server-side.
-    const hadPledge = !!myPledgeCache;
-    const data = await apiFetch('/api/join', {
-      method: 'POST',
-      body: JSON.stringify({
-        deviceId: getDeviceId(),
-        eventId: WorldChoirConfig.CURRENT_EVENT.id,
-        city,
-        country,
-      }),
-    });
+    // /api/join and /api/update-location resolve coordinates server-side.
+    const hadPledge = !!hasPledged();
+    const data = hadPledge
+      ? await apiFetch('/api/update-location', {
+        method: 'POST',
+        body: JSON.stringify({
+          deviceId: getDeviceId(),
+          eventId: WorldChoirConfig.CURRENT_EVENT.id,
+          city,
+          country,
+        }),
+      })
+      : await apiFetch('/api/join', {
+        method: 'POST',
+        body: JSON.stringify({
+          deviceId: getDeviceId(),
+          eventId: WorldChoirConfig.CURRENT_EVENT.id,
+          city,
+          country,
+        }),
+      });
 
     myPledgeCache = data.pledge;
     if (!hasFiniteCoords(myPledgeCache)) {
