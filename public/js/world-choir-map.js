@@ -716,9 +716,9 @@ const WorldChoirMap = (() => {
       count: 1,
     };
 
-    // Light appears immediately (aggregate can lag) — before / as zoom-in starts.
-    voiceJoinedSpotlight = cityLabel;
-    pulseCityKey = `${data.city}|${data.country}`;
+    // No light yet — zoom in first.
+    voiceJoinedSpotlight = null;
+    pulseCityKey = null;
     lastMarkersSignature = '';
     rebuildMarkers();
 
@@ -726,24 +726,69 @@ const WorldChoirMap = (() => {
     safeSetView([lat, lng], START_ZOOM, { animate: false, force: true });
     await wait(80);
 
-    // Smooth zoom in on the city (light already visible and pulsing)
+    // 1) Smooth zoom in on the city
     await flyTo(lat, lng, CLOSE_ZOOM, 2.4);
-    await wait(900);
 
-    // Zoom back out to normal home framing
+    // 2) At full close-up — light appears (and stays; aggregate can lag)
+    voiceJoinedSpotlight = cityLabel;
+    pulseCityKey = `${data.city}|${data.country}`;
+    lastMarkersSignature = '';
+    rebuildMarkers();
+    await wait(1100);
+
+    // 3) Zoom back out — light stays on
     cacheUserMapHome(lat, lng);
     lastAppliedHomeKey = userHomeKey({ lat, lng });
     await flyTo(lat, lng, USER_HOME_ZOOM, 2.0);
 
-    // Message leaves only after zoom-out has fully settled
+    // 4) Message leaves only after zoom-out has fully settled
     overlay?.classList.remove('active');
-    await wait(450);
+    await wait(400);
 
-    voiceJoinedAnimating = false;
+    // Stop the pulse, but keep the spotlight marker until real aggregate data has this city.
+    // Clearing spotlight too early makes the light vanish, then reappear seconds later.
     pulseCityKey = null;
-    voiceJoinedSpotlight = null;
     lastMarkersSignature = '';
-    refreshMapData();
+    rebuildMarkers();
+    voiceJoinedAnimating = false;
+    releaseVoiceJoinedSpotlightWhenReady(cityLabel);
+    void WorldChoirDB.syncMapAggregates?.().catch(() => {});
+  }
+
+  function cityInAggregate(city, country) {
+    if (!city || !country || typeof WorldChoirDB.getAggregatedCities !== 'function') return false;
+    const key = `${city}|${country}`;
+    return WorldChoirDB.getAggregatedCities().some((c) => cityKey(c) === key);
+  }
+
+  function releaseVoiceJoinedSpotlightWhenReady(cityLabel) {
+    if (!cityLabel?.city || !cityLabel?.country) return;
+    const key = cityKey(cityLabel);
+
+    const tryRelease = () => {
+      if (!voiceJoinedSpotlight || cityKey(voiceJoinedSpotlight) !== key) return true;
+      if (!cityInAggregate(cityLabel.city, cityLabel.country)) return false;
+      voiceJoinedSpotlight = null;
+      lastMarkersSignature = '';
+      refreshMapData();
+      return true;
+    };
+
+    if (tryRelease()) return;
+
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      if (tryRelease() || attempts >= 40) clearInterval(timer);
+    }, 400);
+
+    const onSync = () => {
+      if (tryRelease()) {
+        window.removeEventListener('wc-map-aggregate-synced', onSync);
+        clearInterval(timer);
+      }
+    };
+    window.addEventListener('wc-map-aggregate-synced', onSync);
   }
 
   function flyTo(lat, lng, zoom, durationSec) {
