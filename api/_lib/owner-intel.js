@@ -717,10 +717,8 @@ async function buildOwnerControlCenter() {
       ],
     },
     growth,
-    applications: {
-      pipeline: [],
-      note: 'A formal Creator Foundation application pipeline is not connected yet. Existing Creator profiles appear under Creator Foundations.',
-    },
+    // No applications pipeline: Owner creates Foundations in Creator Foundations.
+    // If open apply/review is added later, restore an `applications` payload here.
     operations: {
       health: systemHealth,
       alerts: needsAttention,
@@ -746,7 +744,6 @@ async function buildOwnerControlCenter() {
         creatorEcosystem: {
           activeFoundations: activeFoundations.length,
           totalProfiles: influencers.length,
-          applications: 0,
         },
         operations: {
           systemHealth: systemHealth.overall,
@@ -761,7 +758,6 @@ async function buildOwnerControlCenter() {
         { id: 'owner', label: 'Owner', note: 'Absolute control. Currently active.' },
         { id: 'super_admin', label: 'Super Admin', note: 'Not provisioned yet.' },
         { id: 'foundation_manager', label: 'Foundation Manager', note: 'Not provisioned yet.' },
-        { id: 'verification', label: 'Verification Team', note: 'Not provisioned yet.' },
         { id: 'finance', label: 'Finance', note: 'Not provisioned yet.' },
         { id: 'support', label: 'Support', note: 'Not provisioned yet.' },
         { id: 'analyst', label: 'Analyst', note: 'Not provisioned yet.' },

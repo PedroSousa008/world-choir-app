@@ -21,12 +21,15 @@ const OwnerControl = (() => {
     { id: 'pass-the-world', label: 'Pass the World' },
     { id: 'growth', label: 'Growth' },
     { id: 'promise-memory', label: 'Post Event Promise Memory' },
-    { id: 'applications', label: 'Applications' },
     { id: 'operations', label: 'Operations' },
     { id: 'reports', label: 'Reports' },
     { id: 'admin', label: 'Admin' },
     { id: 'account', label: 'Account' },
   ];
+
+  /* Applications / verification pipeline intentionally omitted:
+   * Owner creates Foundations directly under Creator Foundations.
+   * Re-add a dedicated Applications section later if open apply/review is needed. */
 
   let state = {
     authenticated: false,
@@ -3455,21 +3458,6 @@ const OwnerControl = (() => {
     return renderDailyActsEngagement();
   }
 
-  function renderApplications() {
-    const a = state.data.applications;
-    return `
-      <section class="owner-section">
-        <p class="owner-section__label">Applications & verification</p>
-        <h2 class="owner-h1" style="font-size:1.35rem;margin-bottom:8px">Creator pipeline</h2>
-        <p class="owner-empty">${esc(a.note || 'No applications require review.')}</p>
-        <p class="owner-muted">Manage live Creator profiles in Creator Foundations.</p>
-        <div style="margin-top:14px">
-          <button type="button" class="owner-btn-ghost" data-section-jump="foundations">Open Creator Foundations</button>
-        </div>
-      </section>
-    `;
-  }
-
   function renderOperations() {
     const ops = state.data.operations;
     return `
@@ -3531,8 +3519,7 @@ const OwnerControl = (() => {
           <p class="owner-group__title">Creator ecosystem</p>
           <p class="owner-muted">
             Active ${esc(num(ex.creatorEcosystem.activeFoundations))}<br>
-            Profiles ${esc(num(ex.creatorEcosystem.totalProfiles))}<br>
-            Applications ${esc(num(ex.creatorEcosystem.applications))}
+            Profiles ${esc(num(ex.creatorEcosystem.totalProfiles))}
           </p>
         </div>
         <div class="owner-group">
@@ -3833,7 +3820,6 @@ const OwnerControl = (() => {
       case 'pass-the-world': return renderPassTheWorld();
       case 'promise-memory': return renderPromiseMemory();
       case 'growth': return renderGrowth();
-      case 'applications': return renderApplications();
       case 'operations': return renderOperations();
       case 'reports': return renderReports();
       case 'admin': return renderAdmin();

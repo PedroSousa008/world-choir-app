@@ -1086,7 +1086,7 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
     unavailable.push('Map support locations require donations linked to participation cities.');
   }
   if (!pageAnalytics.available) {
-    unavailable.push(pageAnalytics.note || 'Foundation page analytics will appear after visitors open Donate with analytics consent.');
+    unavailable.push(pageAnalytics.note || 'Tracking is live. Foundation page analytics appear after consented Donate visits.');
   }
   unavailable.push('Two-factor authentication is not enabled yet.');
 
