@@ -2195,25 +2195,39 @@ const FoundationControl = (() => {
     const ready = !!payload.ready;
     const connected = !!payload.connected;
     const configured = payload.configured !== false;
+    const platformReady = payload.platform?.ready !== false && configured;
+    const platformBlocked = configured && payload.platform && payload.platform.ready === false;
     const bal = payload.balances || {};
     const country = String(state.data?.foundation?.country || '').trim();
     const countryMissing = !country;
-    const statusLabel = ready
-      ? 'Connected — ready for donations'
-      : (connected ? 'Connected — finish onboarding' : 'Not connected');
-    const statusClass = ready ? 'is-ready' : (connected ? 'is-pending' : 'is-off');
+    const statusLabel = !configured || platformBlocked
+      ? 'Platform almost ready'
+      : (ready
+        ? 'Ready for donations'
+        : (connected ? 'Almost ready — finish Stripe' : 'Almost ready — connect payouts'));
+    const statusClass = ready
+      ? 'is-ready'
+      : ((!configured || platformBlocked || connected) ? 'is-pending' : 'is-off');
     const actionError = payload.actionError ? String(payload.actionError) : '';
     const actionBusy = !!payload.actionBusy;
     const actionBusyLabel = payload.actionBusyLabel || 'Working with Stripe…';
+    const canOnboard = isOwner && configured && !platformBlocked;
 
     return `
       <div class="fcc-set-payouts__state ${statusClass}">
         <p class="fcc-set-payouts__badge">${esc(statusLabel)}</p>
         <p class="fcc-set-payouts__copy">${esc(payload.note || '')}</p>
         ${!configured ? `
-          <p class="fcc-set-payouts__copy">Stripe is not configured on the World Choir platform yet. Payouts will unlock once platform keys are live.</p>
+          <p class="fcc-set-payouts__copy fcc-set-payouts__copy--warn">
+            World Choir still needs to finish Stripe keys on the platform. Your Connect button unlocks after that.
+          </p>
         ` : ''}
-        ${countryMissing ? `
+        ${platformBlocked ? `
+          <p class="fcc-set-payouts__copy fcc-set-payouts__copy--warn">
+            ${esc(payload.platform?.summary || 'World Choir is still finishing payment setup. Check back once the platform is Payments ready.')}
+          </p>
+        ` : ''}
+        ${countryMissing && platformReady ? `
           <p class="fcc-set-payouts__copy fcc-set-payouts__copy--warn">
             Set your Foundation country in Account above, click Save account, then connect payouts.
           </p>
@@ -2237,7 +2251,7 @@ const FoundationControl = (() => {
           </div>
         ` : ''}
         <div class="fcc-set-payouts__actions">
-          ${isOwner && configured ? `
+          ${canOnboard ? `
             <button type="button" class="fcc-btn" data-action="payouts-onboard"
               ${actionBusy || countryMissing ? 'disabled' : ''}>
               ${connected && !ready ? 'Continue Stripe setup' : (ready ? 'Update payout details' : 'Connect payouts with Stripe')}

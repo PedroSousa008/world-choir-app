@@ -494,8 +494,26 @@ async function buildOwnerControlCenter() {
 
   const foundationProjectCounts = await projectCountsForFoundations(influencers);
 
+  let paymentsStatus = null;
+  try {
+    paymentsStatus = await require('./payments-status').buildPaymentsStatus();
+  } catch (payErr) {
+    paymentsStatus = {
+      level: 'not_ready',
+      label: 'Not ready',
+      summary: payErr.message || 'Could not evaluate payments readiness.',
+      platformReady: false,
+      checks: [],
+      foundations: { total: 0, ready: 0, pending: 0, notConnected: 0 },
+    };
+  }
+
+  const paymentsServiceStatus = paymentsStatus.level === 'ready'
+    ? 'operational'
+    : (paymentsStatus.level === 'almost_ready' ? 'degraded' : 'not_connected');
+
   const systemHealth = {
-    overall: 'operational',
+    overall: paymentsStatus.level === 'not_ready' ? 'degraded' : 'operational',
     services: [
       { id: 'api', name: 'API', status: 'operational' },
       { id: 'blob', name: 'Data storage', status: 'operational' },
@@ -503,8 +521,8 @@ async function buildOwnerControlCenter() {
       {
         id: 'payments',
         name: 'Payments',
-        status: 'not_connected',
-        note: 'Live payment processing is not connected yet.',
+        status: paymentsServiceStatus,
+        note: paymentsStatus.summary,
       },
     ],
   };
@@ -750,6 +768,7 @@ async function buildOwnerControlCenter() {
       ],
       auditLog: [],
       auditNote: 'Audit logging will appear here as administrative actions are recorded.',
+      payments: paymentsStatus,
     },
     activity,
     choirDatabase: choirDb,

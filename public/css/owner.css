@@ -8113,3 +8113,126 @@ textarea.owner-input { min-height: 88px; resize: vertical; }
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Admin → Payments ops ─── */
+.owner-payments__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.owner-payments__title {
+  font-size: 1.35rem;
+  margin: 0 0 8px;
+}
+
+.owner-payments__status {
+  margin-top: 4px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.owner-payments__summary {
+  margin: 0 0 18px;
+  color: #a8abb8;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  max-width: 52em;
+}
+
+.owner-payments__grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 860px) {
+  .owner-payments__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.owner-payments__check {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px 16px 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+}
+
+.owner-payments__check.is-ok {
+  border-color: rgba(93, 202, 138, 0.22);
+}
+
+.owner-payments__check.is-warn {
+  border-color: rgba(201, 169, 98, 0.28);
+}
+
+.owner-payments__check.is-fail {
+  border-color: rgba(224, 112, 112, 0.28);
+}
+
+.owner-payments__check-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.owner-payments__check-label {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #c4c7d1;
+}
+
+.owner-payments__pill {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #8a8d97;
+}
+
+.owner-payments__pill.is-ok {
+  color: #9fe0b8;
+  border-color: rgba(93, 202, 138, 0.35);
+}
+
+.owner-payments__pill.is-warn {
+  color: #e0c889;
+  border-color: rgba(201, 169, 98, 0.4);
+}
+
+.owner-payments__pill.is-fail {
+  color: #f0a8a8;
+  border-color: rgba(224, 112, 112, 0.4);
+}
+
+.owner-payments__check-detail {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #8a8d97;
+}
+
+.owner-payments__meta {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 860px) {
+  .owner-payments__meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.owner-payments__meta-card .owner-metric__value {
+  font-size: 1.25rem;
+}

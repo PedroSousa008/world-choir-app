@@ -3553,9 +3553,92 @@ const OwnerControl = (() => {
     `;
   }
 
-  function renderAdmin() {
-    const a = state.data.admin;
+  function renderPaymentsOps(payments) {
+    const p = payments || null;
+    if (!p) {
+      return `
+        <section class="owner-section owner-payments">
+          <p class="owner-section__label">Payments</p>
+          <p class="owner-empty">Payments readiness is not available yet.</p>
+        </section>
+      `;
+    }
+    const level = p.level || 'not_ready';
+    const dotClass = level === 'ready' ? '' : (level === 'almost_ready' ? 'is-warn' : 'is-down');
+    const checks = Array.isArray(p.checks) ? p.checks : [];
+    const foundations = p.foundations || {};
+    const fees = p.fees || {};
+
     return `
+      <section class="owner-section owner-payments">
+        <div class="owner-payments__head">
+          <div>
+            <p class="owner-section__label">Payments</p>
+            <h2 class="owner-h1 owner-payments__title">Payment operations</h2>
+            <p class="owner-sub">Keys, webhooks, Connect, and fees — clear ready vs almost ready.</p>
+          </div>
+          <div class="owner-status owner-payments__status" title="${esc(p.summary || '')}">
+            <span class="owner-status__dot ${dotClass}" aria-hidden="true"></span>
+            <span>${esc(p.label || 'Unknown')}</span>
+          </div>
+        </div>
+        <p class="owner-payments__summary">${esc(p.summary || '')}</p>
+
+        <div class="owner-payments__grid">
+          ${checks.map((c) => {
+            const st = c.status === 'ok' ? 'is-ok' : (c.status === 'warn' ? 'is-warn' : 'is-fail');
+            const stLabel = c.status === 'ok' ? 'Ready' : (c.status === 'warn' ? 'Almost' : 'Blocked');
+            return `
+              <article class="owner-payments__check ${st}">
+                <div class="owner-payments__check-top">
+                  <p class="owner-payments__check-label">${esc(c.label)}</p>
+                  <span class="owner-payments__pill ${st}">${esc(stLabel)}</span>
+                </div>
+                <p class="owner-payments__check-detail">${esc(c.detail || '')}</p>
+              </article>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="owner-payments__meta">
+          <div class="owner-group owner-payments__meta-card">
+            <p class="owner-group__title">Fee split</p>
+            <p class="owner-metric">
+              <span class="owner-metric__label">World Choir</span>
+              <span class="owner-metric__value">${esc(String(fees.platformFeePercent ?? 6.5))}%</span>
+            </p>
+            <p class="owner-metric">
+              <span class="owner-metric__label">Card processing</span>
+              <span class="owner-metric__value" style="font-size:1rem">
+                ~${esc(String(fees.stripeFeePercent ?? 1.5))}% + €${esc(Number(fees.stripeFeeFixed ?? 0.25).toFixed(2))}
+              </span>
+            </p>
+            <p class="owner-muted" style="margin-top:10px">${esc(fees.note || 'Card fees are passed through to foundations.')}</p>
+          </div>
+          <div class="owner-group owner-payments__meta-card">
+            <p class="owner-group__title">Foundations</p>
+            <p class="owner-metric">
+              <span class="owner-metric__label">Ready</span>
+              <span class="owner-metric__value">${esc(String(foundations.ready ?? 0))}</span>
+            </p>
+            <p class="owner-metric">
+              <span class="owner-metric__label">Finishing</span>
+              <span class="owner-metric__value">${esc(String(foundations.pending ?? 0))}</span>
+            </p>
+            <p class="owner-metric">
+              <span class="owner-metric__label">Not connected</span>
+              <span class="owner-metric__value">${esc(String(foundations.notConnected ?? 0))}</span>
+            </p>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderAdmin() {
+    const a = state.data.admin || {};
+    return `
+      ${renderPaymentsOps(a.payments)}
       <section class="owner-section">
         <p class="owner-section__label">Admin</p>
         <h2 class="owner-h1" style="font-size:1.35rem;margin-bottom:8px">Roles & audit</h2>
