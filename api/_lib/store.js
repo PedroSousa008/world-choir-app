@@ -453,9 +453,41 @@ async function joinWorldChoir({ deviceId, eventId, city, country, latitude, long
 
   const existing = await readPledge(trimmedEvent, user.id);
   if (existing) {
+    const latOk = Number.isFinite(Number(existing.latitude));
+    const lngOk = Number.isFinite(Number(existing.longitude));
+    if (existing.city && existing.country && (!latOk || !lngOk || existing.latitude == null || existing.longitude == null)) {
+      try {
+        const { resolveCityCoordinates } = require('./geocode');
+        const coords = await resolveCityCoordinates(
+          existing.city,
+          existing.country,
+          existing.latitude,
+          existing.longitude
+        );
+        const healed = {
+          ...existing,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          updated_at: new Date().toISOString(),
+        };
+        await writeJson(pledgePath(trimmedEvent, user.id), healed, { overwrite: true });
+        await upsertPledgeIntoIndex(trimmedEvent, healed).catch(() => {});
+        return healed;
+      } catch {
+        /* return existing even if heal fails */
+      }
+    }
     await upsertPledgeIntoIndex(trimmedEvent, existing).catch(() => {});
     return existing;
   }
+
+  const { resolveCityCoordinates } = require('./geocode');
+  const coords = await resolveCityCoordinates(
+    trimmedCity,
+    trimmedCountry,
+    latitude,
+    longitude
+  );
 
   const voiceNumber = await allocateVoiceNumber(trimmedEvent);
   const now = new Date().toISOString();
@@ -476,8 +508,8 @@ async function joinWorldChoir({ deviceId, eventId, city, country, latitude, long
     voice_name: `Voice ${voiceNumber}`,
     city: trimmedCity,
     country: trimmedCountry,
-    latitude: latitude ?? null,
-    longitude: longitude ?? null,
+    latitude: coords.latitude,
+    longitude: coords.longitude,
     pledged_at: now,
     updated_at: now,
     map_pioneer_for_country: mapPioneerForCountry,
@@ -509,12 +541,20 @@ async function updatePledgeLocation({ deviceId, eventId, city, country, latitude
   const pledge = await readPledge(trimmedEvent, user.id);
   if (!pledge) throw new Error('pledge not found');
 
+  const { resolveCityCoordinates } = require('./geocode');
+  const coords = await resolveCityCoordinates(
+    String(city).trim(),
+    String(country).trim(),
+    latitude,
+    longitude
+  );
+
   const updated = {
     ...pledge,
     city: String(city).trim(),
     country: String(country).trim(),
-    latitude: latitude ?? null,
-    longitude: longitude ?? null,
+    latitude: coords.latitude,
+    longitude: coords.longitude,
     updated_at: new Date().toISOString(),
   };
 

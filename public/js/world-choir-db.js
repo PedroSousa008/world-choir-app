@@ -791,6 +791,7 @@ const WorldChoirDB = (() => {
   }
 
   async function geocodeCityCountry(city, country) {
+    // Browser Nominatim is blocked (403) on production domains — server geocodes on join/update.
     const geocodeCountry = typeof WorldChoirCountries !== 'undefined'
       ? WorldChoirCountries.getGeocodeCountry(country)
       : country;
@@ -802,17 +803,23 @@ const WorldChoirDB = (() => {
     if (!res.ok) throw new Error('Geocoding failed');
     const data = await res.json();
     if (!data.length) throw new Error('City not found');
-    return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+    const latitude = Number.parseFloat(data[0].lat);
+    const longitude = Number.parseFloat(data[0].lon);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      throw new Error('Invalid geocode result');
+    }
+    return { latitude, longitude };
+  }
+
+  function hasFiniteCoords(obj) {
+    return obj
+      && Number.isFinite(Number(obj.latitude))
+      && Number.isFinite(Number(obj.longitude));
   }
 
   async function createPledgeWithGeocode({ city, country }) {
-    let coords = { latitude: null, longitude: null };
-    try {
-      coords = await geocodeCityCountry(city, country);
-    } catch (e) {
-      console.warn('Geocoding unavailable, saving city without coordinates', e);
-    }
-
+    // Do not geocode in the browser — Nominatim returns 403 from the app origin.
+    // /api/join resolves coordinates server-side.
     const hadPledge = !!myPledgeCache;
     const data = await apiFetch('/api/join', {
       method: 'POST',
@@ -821,12 +828,13 @@ const WorldChoirDB = (() => {
         eventId: WorldChoirConfig.CURRENT_EVENT.id,
         city,
         country,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
       }),
     });
 
     myPledgeCache = data.pledge;
+    if (!hasFiniteCoords(myPledgeCache)) {
+      throw new Error('Could not locate that city. Check the spelling and try again.');
+    }
     await syncMapAggregates();
 
     if (hadPledge) {
@@ -839,13 +847,7 @@ const WorldChoirDB = (() => {
   }
 
   async function updateParticipationLocation({ city, country }) {
-    let coords = { latitude: null, longitude: null };
-    try {
-      coords = await geocodeCityCountry(city, country);
-    } catch (e) {
-      console.warn('Geocoding failed on profile update', e);
-    }
-
+    // Server geocodes — same Nominatim block as join when called from the browser.
     if (hasPledged()) {
       const data = await apiFetch('/api/update-location', {
         method: 'POST',
@@ -854,17 +856,27 @@ const WorldChoirDB = (() => {
           eventId: WorldChoirConfig.CURRENT_EVENT.id,
           city,
           country,
-          latitude: coords.latitude,
-          longitude: coords.longitude,
         }),
       });
       myPledgeCache = data.pledge;
+      if (!hasFiniteCoords(myPledgeCache)) {
+        throw new Error('Could not locate that city. Check the spelling and try again.');
+      }
       await syncMapAggregates();
       window.dispatchEvent(new CustomEvent('wc-pledge-updated', { detail: myPledgeCache }));
-    } else {
-      updateUser({ city, country, latitude: coords.latitude, longitude: coords.longitude });
+      return {
+        latitude: Number(myPledgeCache.latitude),
+        longitude: Number(myPledgeCache.longitude),
+      };
     }
 
+    let coords = { latitude: null, longitude: null };
+    try {
+      coords = await geocodeCityCountry(city, country);
+    } catch (e) {
+      console.warn('Geocoding failed on profile update (not yet pledged)', e);
+    }
+    updateUser({ city, country, latitude: coords.latitude, longitude: coords.longitude });
     return coords;
   }
 

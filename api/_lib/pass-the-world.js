@@ -290,25 +290,8 @@ function countriesMatch(a, b) {
 
 /** Server-side Nominatim lookup when join saved city without lat/lng. */
 async function geocodeCityCountry(city, country) {
-  const q = encodeURIComponent(`${String(city || '').trim()}, ${String(country || '').trim()}`);
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`,
-    {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'WorldChoirApp/1.0 (pass-the-world; https://worldchoirapp.com)',
-      },
-    }
-  );
-  if (!res.ok) throw new Error('Geocoding failed');
-  const data = await res.json();
-  if (!Array.isArray(data) || !data.length) throw new Error('City not found');
-  const latitude = Number.parseFloat(data[0].lat);
-  const longitude = Number.parseFloat(data[0].lon);
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    throw new Error('Invalid geocode result');
-  }
-  return { latitude, longitude };
+  const { geocodeCityCountry: geocode } = require('./geocode');
+  return geocode(city, country);
 }
 
 /** Invites and destinations must be in a different country than where the World currently is. */

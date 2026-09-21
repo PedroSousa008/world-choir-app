@@ -175,10 +175,12 @@ const WorldChoirParticipation = (() => {
   }
 
   function triggerVoiceJoinedAnimation(pledge) {
-    if (!pledge?.latitude || !pledge?.longitude) return;
+    const lat = Number(pledge?.latitude);
+    const lng = Number(pledge?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     sessionStorage.setItem('wc_voice_joined', JSON.stringify({
-      lat: pledge.latitude,
-      lng: pledge.longitude,
+      lat,
+      lng,
       city: pledge.city,
       country: pledge.country,
     }));

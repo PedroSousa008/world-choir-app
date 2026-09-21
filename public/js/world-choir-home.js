@@ -1245,7 +1245,9 @@ const WorldChoirHome = (() => {
 
     WorldChoirParticipation.init({
       onSuccess: async (pledge) => {
-        if (pledge?.latitude && pledge?.longitude) {
+        const lat = Number(pledge?.latitude);
+        const lng = Number(pledge?.longitude);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
           WorldChoirParticipation.triggerVoiceJoinedAnimation(pledge);
           if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.navigateToPrimaryTab) {
             WorldChoirNav.navigateToPrimaryTab('map');

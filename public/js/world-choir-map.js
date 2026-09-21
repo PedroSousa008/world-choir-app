@@ -50,8 +50,10 @@ const WorldChoirMap = (() => {
       const raw = localStorage.getItem(MAP_HOME_STORAGE_KEY);
       if (!raw) return null;
       const data = JSON.parse(raw);
-      if (typeof data?.lat === 'number' && typeof data?.lng === 'number') {
-        return { lat: data.lat, lng: data.lng };
+      const lat = Number(data?.lat);
+      const lng = Number(data?.lng);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng };
       }
     } catch {
       /* ignore */
@@ -60,18 +62,32 @@ const WorldChoirMap = (() => {
   }
 
   function cacheUserMapHome(lat, lng) {
+    const safeLat = Number(lat);
+    const safeLng = Number(lng);
+    if (!Number.isFinite(safeLat) || !Number.isFinite(safeLng)) return;
     try {
-      localStorage.setItem(MAP_HOME_STORAGE_KEY, JSON.stringify({ lat, lng }));
+      localStorage.setItem(MAP_HOME_STORAGE_KEY, JSON.stringify({ lat: safeLat, lng: safeLng }));
     } catch {
       /* ignore */
     }
   }
 
   function clampMapCenter(lat, lng) {
+    const safeLat = Number(lat);
+    const safeLng = Number(lng);
+    if (!Number.isFinite(safeLat) || !Number.isFinite(safeLng)) return null;
     return {
-      lat: clamp(lat, -85, 85),
-      lng: clamp(((lng + 180) % 360 + 360) % 360 - 180, -180, 180),
+      lat: clamp(safeLat, -85, 85),
+      lng: clamp(((safeLng + 180) % 360 + 360) % 360 - 180, -180, 180),
     };
+  }
+
+  function coordsFromPoint(point) {
+    if (!point) return null;
+    const lat = Number(point.latitude ?? point.lat);
+    const lng = Number(point.longitude ?? point.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
   }
 
   function getUserMapCenter() {
@@ -79,22 +95,25 @@ const WorldChoirMap = (() => {
       ? WorldChoirDB.getPledgeForCurrentUser?.()
       : null;
 
-    if (pledge?.latitude != null && pledge?.longitude != null) {
-      return { lat: pledge.latitude, lng: pledge.longitude, zoom: USER_HOME_ZOOM };
+    const fromPledge = coordsFromPoint(pledge);
+    if (fromPledge) {
+      return { ...fromPledge, zoom: USER_HOME_ZOOM };
     }
 
     if (pledge?.city && pledge?.country && typeof WorldChoirDB.getAggregatedCities === 'function') {
       const match = WorldChoirDB.getAggregatedCities().find(
         (city) => city.city === pledge.city && city.country === pledge.country
       );
-      if (match?.latitude != null && match?.longitude != null) {
-        return { lat: match.latitude, lng: match.longitude, zoom: USER_HOME_ZOOM };
+      const fromMatch = coordsFromPoint(match);
+      if (fromMatch) {
+        return { ...fromMatch, zoom: USER_HOME_ZOOM };
       }
     }
 
     const user = typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.getCurrentUser?.() : null;
-    if (user?.latitude != null && user?.longitude != null) {
-      return { lat: user.latitude, lng: user.longitude, zoom: USER_HOME_ZOOM };
+    const fromUser = coordsFromPoint(user);
+    if (fromUser) {
+      return { ...fromUser, zoom: USER_HOME_ZOOM };
     }
 
     const cached = readCachedUserMapHome();
@@ -106,15 +125,19 @@ const WorldChoirMap = (() => {
   }
 
   function userHomeKey(center) {
-    if (!center) return null;
-    return `${center.lat.toFixed(4)}|${center.lng.toFixed(4)}`;
+    if (!center || !Number.isFinite(Number(center.lat)) || !Number.isFinite(Number(center.lng))) {
+      return null;
+    }
+    return `${Number(center.lat).toFixed(4)}|${Number(center.lng).toFixed(4)}`;
   }
 
   function getInitialMapView() {
     const center = getUserMapCenter();
     if (center) {
-      const { lat, lng } = clampMapCenter(center.lat, center.lng);
-      return { center: [lat, lng], zoom: center.zoom ?? USER_HOME_ZOOM };
+      const clamped = clampMapCenter(center.lat, center.lng);
+      if (clamped) {
+        return { center: [clamped.lat, clamped.lng], zoom: center.zoom ?? USER_HOME_ZOOM };
+      }
     }
     return { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM };
   }
@@ -128,7 +151,9 @@ const WorldChoirMap = (() => {
     const key = userHomeKey(center);
     if (!options.force && key === lastAppliedHomeKey && !options.animate) return true;
 
-    const { lat, lng } = clampMapCenter(center.lat, center.lng);
+    const clamped = clampMapCenter(center.lat, center.lng);
+    if (!clamped) return false;
+    const { lat, lng } = clamped;
     const zoom = center.zoom ?? USER_HOME_ZOOM;
     cacheUserMapHome(lat, lng);
 
@@ -556,25 +581,29 @@ const WorldChoirMap = (() => {
   }
 
   async function runVoiceJoinedAnimation(data) {
-    if (!data?.lat || !data?.lng) return;
+    const lat = Number(data?.lat);
+    const lng = Number(data?.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
     voiceJoinedAnimating = true;
     pulseCityKey = `${data.city}|${data.country}`;
     refreshMapData();
 
     const overlay = document.getElementById('voice-joined');
-    overlay.classList.add('active');
+    overlay?.classList.add('active');
 
-    await flyTo(data.lat, data.lng, 9, 2.2);
+    await flyTo(lat, lng, 9, 2.2);
     await wait(2200);
-    overlay.classList.remove('active');
+    overlay?.classList.remove('active');
 
-    cacheUserMapHome(data.lat, data.lng);
-    lastAppliedHomeKey = userHomeKey({ lat: data.lat, lng: data.lng });
+    cacheUserMapHome(lat, lng);
+    lastAppliedHomeKey = userHomeKey({ lat, lng });
 
-    const home = getUserMapCenter() || { lat: data.lat, lng: data.lng, zoom: USER_HOME_ZOOM };
-    const { lat, lng } = clampMapCenter(home.lat, home.lng);
-    await flyTo(lat, lng, home.zoom ?? USER_HOME_ZOOM, 1.8);
+    const home = getUserMapCenter() || { lat, lng, zoom: USER_HOME_ZOOM };
+    const clamped = clampMapCenter(home.lat, home.lng);
+    if (clamped) {
+      await flyTo(clamped.lat, clamped.lng, home.zoom ?? USER_HOME_ZOOM, 1.8);
+    }
 
     voiceJoinedAnimating = false;
     pulseCityKey = null;
@@ -584,7 +613,11 @@ const WorldChoirMap = (() => {
 
   function flyTo(lat, lng, zoom, durationSec) {
     return new Promise((resolve) => {
-      map.flyTo([lat, lng], zoom, { duration: durationSec, easeLinearity: 0.22 });
+      if (!map || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
+        resolve();
+        return;
+      }
+      map.flyTo([Number(lat), Number(lng)], zoom, { duration: durationSec, easeLinearity: 0.22 });
       map.once('moveend', resolve);
     });
   }
@@ -606,10 +639,12 @@ const WorldChoirMap = (() => {
 
   async function onParticipationSuccess(pledge) {
     refreshMapData();
-    if (pledge?.latitude && pledge?.longitude) {
+    const lat = Number(pledge?.latitude);
+    const lng = Number(pledge?.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
       await runVoiceJoinedAnimation({
-        lat: pledge.latitude,
-        lng: pledge.longitude,
+        lat,
+        lng,
         city: pledge.city,
         country: pledge.country,
       });
@@ -816,14 +851,18 @@ const WorldChoirMap = (() => {
 
     window.addEventListener('wc-pledge-added', (e) => {
       pulseCity(`${e.detail?.city}|${e.detail?.country}`);
-      if (e.detail?.latitude != null && e.detail?.longitude != null) {
-        cacheUserMapHome(e.detail.latitude, e.detail.longitude);
+      const lat = Number(e.detail?.latitude);
+      const lng = Number(e.detail?.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        cacheUserMapHome(lat, lng);
       }
       void WorldChoirDB.syncMapAggregates?.().catch(() => {});
     });
     window.addEventListener('wc-pledge-updated', (e) => {
       refreshMapData();
-      if (e.detail?.latitude != null && e.detail?.longitude != null) {
+      const lat = Number(e.detail?.latitude);
+      const lng = Number(e.detail?.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
         applyUserHomeCenter({ force: true, animate: true });
       }
       void WorldChoirDB.syncMapAggregates?.().catch(() => {});
