@@ -1703,7 +1703,7 @@
 
 .fcc-don-metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
   width: 100%;
 }
@@ -3588,19 +3588,66 @@ body.is-fcc-analytics-open {
   color: #a8abb8;
 }
 
-/* ── Funnel placeholder ── */
+/* ── Conversion funnel ── */
+
+.fcc-don-grid--funnel {
+  margin-bottom: 0;
+}
+
+@media (min-width: 900px) {
+  .fcc-don-grid--funnel {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+}
 
 .fcc-funnel {
   display: grid;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 10px;
 }
 
 .fcc-funnel__stage {
+  position: relative;
   padding: 12px 14px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  color: #6b6f7d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  color: #d4d6de;
   font-size: 0.84rem;
+}
+
+.fcc-funnel__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--fcc-funnel-w, 8%);
+  background: linear-gradient(90deg, rgba(196, 162, 106, 0.22), rgba(196, 162, 106, 0.08));
+  pointer-events: none;
+}
+
+.fcc-funnel__row {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 1;
+}
+
+.fcc-funnel__label {
+  font-weight: 550;
+  color: #f0f1f4;
+}
+
+.fcc-funnel__count {
+  font-variant-numeric: tabular-nums;
+  color: #c8cad3;
+  white-space: nowrap;
+}
+
+.fcc-funnel__unique {
+  color: #8b8f9c;
+  font-weight: 400;
+  font-size: 0.78rem;
 }
 
 .fcc-split {

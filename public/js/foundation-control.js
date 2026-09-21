@@ -1628,6 +1628,9 @@ const FoundationControl = (() => {
       city: `<svg ${common}><path d="M12 21s-7-4.5-7-10a7 7 0 0114 0c0 5.5-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg>`,
       explorer: `<svg ${common}><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`,
       chart: `<svg ${common}><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15v-3"/><path d="M12 15V8"/><path d="M16 15v-5"/></svg>`,
+      funnel: `<svg ${common}><path d="M3 4h18l-6 7v6l-6 3v-9z"/></svg>`,
+      content: `<svg ${common}><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>`,
+      conversion: `<svg ${common}><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>`,
       person: `<svg ${common}><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`,
       returning: `<svg ${common}><circle cx="9" cy="7" r="4"/><path d="M1 21v-2a4 4 0 0 1 4-4h8"/><path d="M16 11l3-3-3-3"/><path d="M19 8a5 5 0 1 0-1 3.3"/></svg>`,
     };
@@ -1663,14 +1666,22 @@ const FoundationControl = (() => {
   function renderDonations() {
     const don = state.data?.donations || {};
     const geo = state.data?.geography || {};
+    const insights = state.data?.insights || {};
+    const funnel = insights.conversionFunnel || {};
+    const content = insights.contentPerformance || {};
+    const funnelStages = Array.isArray(funnel.stages) ? funnel.stages : [];
+    const contentProjects = Array.isArray(content.projects) ? content.projects : [];
     const explorer = don.explorer || [];
     const cities = geo.cities || [];
     const countries = geo.countries || [];
     const timeline = don.timeline || [];
     const timelineReady = hasTimelineData(timeline);
+    const conversionLabel = don.conversionRate != null
+      ? `${Number(don.conversionRate)}%`
+      : '—';
     const conversionNote = don.conversionRate == null
-      ? (don.conversionNote || 'Conversion rate requires Foundation page view tracking.')
-      : '';
+      ? (don.conversionNote || 'Conversion appears after page views are recorded (analytics consent).')
+      : (don.conversionNote || '');
     const canViewAmounts = don.canViewAmounts !== false;
     const feePercent = Number(don.platformFeePercent);
     const feePercentLabel = Number.isFinite(feePercent) ? String(feePercent) : '—';
@@ -1687,6 +1698,8 @@ const FoundationControl = (() => {
       netToFoundationLabel = money(grossRaised, currency());
     }
 
+    const maxFunnel = Math.max(1, ...funnelStages.map((s) => Number(s.count) || 0));
+
     return `
       <section class="fcc-donations">
         <div class="fcc-don-metrics" aria-label="Donation metrics">
@@ -1695,6 +1708,7 @@ const FoundationControl = (() => {
           ${donMetricCard('supporters', num(don.totalSupporters || 0), 'Supporters')}
           ${donMetricCard('average', don.averageDonation != null ? money(don.averageDonation, currency()) : '—', 'Average')}
           ${donMetricCard('median', don.medianDonation != null ? money(don.medianDonation, currency()) : '—', 'Median')}
+          ${donMetricCard('conversion', conversionLabel, 'Conversion')}
         </div>
 
         <article class="fcc-edit-card fcc-don-info">
@@ -1706,11 +1720,80 @@ const FoundationControl = (() => {
                 · World Choir fee ${esc(worldChoirFeeLabel)} (${esc(feePercentLabel)}%)
                 · New supporters ${esc(num(don.newSupporters || 0))}
                 · Returning supporters ${esc(num(don.repeatSupporters || 0))}
+                ${don.uniqueViewers != null ? `· Page viewers ${esc(num(don.uniqueViewers))}` : ''}
               </p>
               ${conversionNote ? `<p class="fcc-don-info__note">${esc(conversionNote)}</p>` : ''}
             </div>
           </div>
         </article>
+
+        <div class="fcc-don-grid fcc-don-grid--funnel">
+          <article class="fcc-edit-card fcc-don-panel fcc-don-panel--wide">
+            <header class="fcc-don-panel__head">
+              <div class="fcc-don-panel__title-row">
+                <span class="fcc-don-panel__icon" aria-hidden="true">${donIcon('funnel')}</span>
+                <h2 class="fcc-don-panel__title">Conversion funnel</h2>
+              </div>
+            </header>
+            <div class="fcc-don-panel__body">
+              ${funnel.available && funnelStages.length
+                ? `<div class="fcc-funnel" role="list">
+                    ${funnelStages.map((stage) => {
+                      const count = Number(stage.count) || 0;
+                      const unique = stage.unique != null ? Number(stage.unique) : null;
+                      const width = Math.max(8, Math.round((count / maxFunnel) * 100));
+                      return `
+                        <div class="fcc-funnel__stage" role="listitem">
+                          <div class="fcc-funnel__bar" style="--fcc-funnel-w:${width}%"></div>
+                          <div class="fcc-funnel__row">
+                            <span class="fcc-funnel__label">${esc(stage.label || stage.id || '')}</span>
+                            <span class="fcc-funnel__count">${esc(num(count))}${unique != null ? ` <span class="fcc-funnel__unique">${esc(num(unique))} unique</span>` : ''}</span>
+                          </div>
+                        </div>`;
+                    }).join('')}
+                  </div>
+                  ${funnel.trackingSince ? `<p class="fcc-note">Tracking since ${esc(funnel.trackingSince)}</p>` : ''}`
+                : donEmptyState(
+                  'funnel',
+                  'No funnel data yet',
+                  funnel.note || 'Stages appear after visitors open this Foundation page with analytics consent.'
+                )}
+            </div>
+          </article>
+
+          <article class="fcc-edit-card fcc-don-panel">
+            <header class="fcc-don-panel__head">
+              <div class="fcc-don-panel__title-row">
+                <span class="fcc-don-panel__icon" aria-hidden="true">${donIcon('content')}</span>
+                <h2 class="fcc-don-panel__title">Project engagement</h2>
+              </div>
+            </header>
+            <div class="fcc-don-panel__body">
+              ${content.available && contentProjects.length
+                ? `<div class="fcc-table-scroll">
+                    <table class="fcc-rank">
+                      <thead>
+                        <tr><th>Project</th><th class="num">Views</th><th class="num">Support</th></tr>
+                      </thead>
+                      <tbody>
+                        ${contentProjects.map((p) => `
+                          <tr>
+                            <td>${esc(p.title || p.projectId || 'Project')}</td>
+                            <td class="num">${esc(num(p.clicks || 0))}</td>
+                            <td class="num">${esc(num(p.supportClicks || 0))}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>`
+                : donEmptyState(
+                  'content',
+                  'No project engagement yet',
+                  content.note || 'Appears when visitors open or support a project on Donate.'
+                )}
+            </div>
+          </article>
+        </div>
 
         <div class="fcc-don-grid fcc-don-grid--top">
           <article class="fcc-edit-card fcc-don-panel fcc-don-panel--wide">

@@ -17,6 +17,7 @@ const {
   publicNotification,
   rolePermissions,
 } = require('./foundation-workspace');
+const { summarizeFoundationPageAnalytics } = require('./foundation-page-analytics');
 
 const SUCCESS_STATUSES = new Set(['succeeded', 'completed', 'paid']);
 const EXCLUDED_STATUSES = new Set([
@@ -1063,6 +1064,20 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
     workspace
   );
 
+  const pageAnalytics = await summarizeFoundationPageAnalytics(foundationId, {
+    from: rangeBound.from,
+    to: rangeBound.to,
+  }).catch(() => ({
+    available: false,
+    note: 'Page analytics temporarily unavailable.',
+    conversionRate: null,
+    conversionNote: 'Page analytics temporarily unavailable.',
+    funnel: { available: false, stages: [], note: 'Page analytics temporarily unavailable.' },
+    contentPerformance: { available: false, projects: [], note: 'Page analytics temporarily unavailable.' },
+    pageViews: 0,
+    uniqueViewers: 0,
+  }));
+
   const unavailable = [];
   if (!foundationDonations.length) {
     unavailable.push('Donation analytics will populate when verified payments are recorded.');
@@ -1070,7 +1085,9 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
   if (!geography.mapPoints.length) {
     unavailable.push('Map support locations require donations linked to participation cities.');
   }
-  unavailable.push('Page view / conversion funnel tracking is not connected yet.');
+  if (!pageAnalytics.available) {
+    unavailable.push(pageAnalytics.note || 'Foundation page analytics will appear after visitors open Donate with analytics consent.');
+  }
   unavailable.push('Two-factor authentication is not enabled yet.');
 
   let financial = {
@@ -1248,8 +1265,10 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
       repeatSupporters: canViewSupporters ? repeatSupporters : null,
       averageDonation: canViewAmounts ? (average(amounts) != null ? Math.round(average(amounts) * 100) / 100 : null) : null,
       medianDonation: canViewAmounts ? (median(amounts) != null ? Math.round(median(amounts) * 100) / 100 : null) : null,
-      conversionRate: null,
-      conversionNote: 'Conversion rate requires Foundation page view tracking.',
+      conversionRate: pageAnalytics.conversionRate,
+      conversionNote: pageAnalytics.conversionNote,
+      pageViews: pageAnalytics.pageViews,
+      uniqueViewers: pageAnalytics.uniqueViewers,
       timeline: canViewAmounts ? bucketSeries(ranged, 'amount') : [],
       explorer: canViewDetails ? ranged
         .slice()
@@ -1290,13 +1309,17 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
         byRaised: [...geography.cities].sort((a, b) => b.totalRaised - a.totalRaised).slice(0, 10),
       },
       conversionFunnel: {
-        available: false,
-        note: 'Funnel stages are not tracked yet.',
-        stages: [],
+        available: Boolean(pageAnalytics.funnel?.available),
+        note: pageAnalytics.funnel?.note || pageAnalytics.note || null,
+        stages: Array.isArray(pageAnalytics.funnel?.stages) ? pageAnalytics.funnel.stages : [],
+        trackingSince: pageAnalytics.trackingSince || null,
       },
       contentPerformance: {
-        available: false,
-        note: 'Content performance tracking is not connected yet.',
+        available: Boolean(pageAnalytics.contentPerformance?.available),
+        note: pageAnalytics.contentPerformance?.note || null,
+        projects: Array.isArray(pageAnalytics.contentPerformance?.projects)
+          ? pageAnalytics.contentPerformance.projects
+          : [],
       },
     },
     projects: projectsWithFunding,

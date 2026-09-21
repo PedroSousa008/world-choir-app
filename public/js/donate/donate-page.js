@@ -1681,6 +1681,12 @@ const WorldChoirDonate = (() => {
     if (opts.preserveScroll) window.scrollTo(0, scrollY);
     else window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    try {
+      WorldChoirFoundationAnalytics?.trackPageView?.(foundation.id);
+    } catch {
+      /* ignore */
+    }
+
     document.getElementById('donate-back')?.addEventListener('click', () => {
       if (closeFoundationLightbox()) return;
       selectedFoundation = null;
@@ -1690,6 +1696,11 @@ const WorldChoirDonate = (() => {
     });
 
     const openSupport = () => {
+      try {
+        WorldChoirFoundationAnalytics?.trackSupportClick?.(foundation.id);
+      } catch {
+        /* ignore */
+      }
       if (foundation.donationsEnabled) openDonateModal(foundation, null);
     };
     document.getElementById('cf-profile-donate')?.addEventListener('click', openSupport);
@@ -1705,6 +1716,11 @@ const WorldChoirDonate = (() => {
           btn.getAttribute('data-foundation'),
           btn.getAttribute('data-project')
         );
+        try {
+          WorldChoirFoundationAnalytics?.trackSupportClick?.(foundation.id, project);
+        } catch {
+          /* ignore */
+        }
         if (foundation.donationsEnabled) openDonateModal(foundation, project);
       });
     });

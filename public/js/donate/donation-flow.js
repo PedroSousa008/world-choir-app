@@ -798,6 +798,11 @@ const WorldChoirDonationFlow = (() => {
     state.error = '';
     state.step = 'payment';
     render();
+    try {
+      WorldChoirFoundationAnalytics?.trackCheckoutPayment?.(state.foundation?.id);
+    } catch {
+      /* ignore */
+    }
 
     try {
       await Promise.all([ensureStripe(), createIntent()]);
@@ -913,6 +918,12 @@ const WorldChoirDonationFlow = (() => {
 
       state.receipt = receipt;
       state.step = 'success';
+
+      try {
+        WorldChoirFoundationAnalytics?.trackCheckoutSuccess?.(state.foundation?.id);
+      } catch {
+        /* ignore */
+      }
 
       try {
         CreatorFoundationsStore.UserSupport.recordSuccessfulDonation({
@@ -1158,6 +1169,11 @@ const WorldChoirDonationFlow = (() => {
     }
     ensureShell();
     resetState(foundation, project);
+    try {
+      WorldChoirFoundationAnalytics?.trackCheckoutStart?.(foundation.id);
+    } catch {
+      /* ignore */
+    }
     try {
       config = null;
       await loadConfig();
