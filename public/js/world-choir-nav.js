@@ -604,8 +604,8 @@ const WorldChoirNav = (() => {
     home: [
       'index.html',
       'css/home.css?v=20260911guideGrey',
-      'js/world-choir-home.js?v=20260921geocode2',
-      'js/world-choir-db.js?v=20260921geocode2',
+      'js/world-choir-home.js?v=20260921geocode3',
+      'js/world-choir-db.js?v=20260921geocode3',
     ],
     map: [
       'map.html',
@@ -615,7 +615,7 @@ const WorldChoirNav = (() => {
       'js/map/sponsor-bar.js?v=20260905a',
       '/api/map-sponsors',
       'js/world-choir-map-tiles.js?v=20260921geocode2',
-      'js/world-choir-map.js?v=20260921geocode2',
+      'js/world-choir-map.js?v=20260921geocode3',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
       'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
@@ -642,7 +642,7 @@ const WorldChoirNav = (() => {
       'js/profile/daily-acts-peace.js?v=20260912dapFast',
       'js/profile/daily-acts-button.js?v=20260912dapFast',
       'js/world-choir-onboarding.js?v=20260816a',
-      'js/world-choir-db.js?v=20260921geocode2',
+      'js/world-choir-db.js?v=20260921geocode3',
       'passport.html',
       'css/passport.css?v=20260916ptwLinkFull2',
       'js/profile/passport-route.js?v=20260901b',

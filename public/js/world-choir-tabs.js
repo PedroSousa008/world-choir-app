@@ -29,7 +29,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
         'js/profile/daily-acts-peace.js?v=20260912dapFast',
-        'js/world-choir-home.js?v=20260921geocode2',
+        'js/world-choir-home.js?v=20260921geocode3',
       ],
       selectors: [
         '#earth-canvas',
@@ -70,7 +70,7 @@ const WorldChoirTabs = (() => {
         'js/map/sponsor-constants.js?v=20260902k',
         'js/map/sponsor-data.js?v=20260902a',
         'js/map/sponsor-bar.js?v=20260905a',
-        'js/world-choir-map.js?v=20260921geocode2',
+        'js/world-choir-map.js?v=20260921geocode3',
       ],
       selectors: ['.map-page__stars', '#map-shell', '#voice-joined'],
       bodySelectors: ['#participation-overlay'],

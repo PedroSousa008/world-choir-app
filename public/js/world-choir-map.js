@@ -630,9 +630,13 @@ const WorldChoirMap = (() => {
     const lat = Number(data?.lat);
     const lng = Number(data?.lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (voiceJoinedAnimating) return;
+
+    // Claim the session immediately so onTabShow + Home backup cannot double-run.
+    sessionStorage.removeItem('wc_voice_joined');
 
     // Wait until Map is visible and sized — flyTo on a 0×0 panel throws Invalid LatLng (NaN, NaN).
-    for (let i = 0; i < 20 && !isMapCameraReady(); i += 1) {
+    for (let i = 0; i < 40 && !isMapCameraReady(); i += 1) {
       try {
         map?.invalidateSize({ animate: false, pan: false });
       } catch { /* ignore */ }
@@ -640,6 +644,12 @@ const WorldChoirMap = (() => {
     }
     if (!isMapCameraReady()) {
       cacheUserMapHome(lat, lng);
+      // Put session back so a later onTabShow can still play the reveal.
+      try {
+        sessionStorage.setItem('wc_voice_joined', JSON.stringify({
+          lat, lng, city: data.city, country: data.country,
+        }));
+      } catch { /* ignore */ }
       return;
     }
 
@@ -650,6 +660,7 @@ const WorldChoirMap = (() => {
     const overlay = document.getElementById('voice-joined');
     overlay?.classList.add('active');
 
+    // Zoom in close on the new city light, then ease back out.
     await flyTo(lat, lng, 9, 2.2);
     await wait(2200);
     overlay?.classList.remove('active');
@@ -666,7 +677,6 @@ const WorldChoirMap = (() => {
     voiceJoinedAnimating = false;
     pulseCityKey = null;
     refreshMapData();
-    sessionStorage.removeItem('wc_voice_joined');
   }
 
   function flyTo(lat, lng, zoom, durationSec) {
@@ -903,9 +913,9 @@ const WorldChoirMap = (() => {
 
     WorldChoirDB.startMapAggregateSync({ intervalMs: 1500 });
 
-    WorldChoirParticipation.init({
-      onSuccess: onParticipationSuccess,
-    });
+    // Do not set a global onSuccess here — soft-tabs share Participation with Home.
+    // Map empty-state open() passes onParticipationSuccess explicitly.
+    WorldChoirParticipation.init({});
 
     document.getElementById('map-empty-btn')?.addEventListener('click', () => {
       if (WorldChoirPledgeState.isPledged()) return;

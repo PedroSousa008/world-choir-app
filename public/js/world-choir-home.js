@@ -246,10 +246,44 @@ const WorldChoirHome = (() => {
     }
 
     if (next.id === 'pledge-btn') {
-      next.addEventListener('click', () => WorldChoirParticipation.open());
+      next.addEventListener('click', () => openParticipationModal());
     } else if (next.id === 'pledged-actions') {
       bindPledgedActions(document);
     }
+  }
+
+  function openParticipationModal() {
+    WorldChoirParticipation.open({
+      onSuccess: afterPledgeJoinSuccess,
+    });
+  }
+
+  async function afterPledgeJoinSuccess(pledge) {
+    const lat = Number(pledge?.latitude);
+    const lng = Number(pledge?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      render();
+      return;
+    }
+    // Soft-tabs: Map may overwrite Participation.init onSuccess — always navigate from this path.
+    WorldChoirParticipation.triggerVoiceJoinedAnimation(pledge);
+    if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.navigateToPrimaryTab) {
+      WorldChoirNav.navigateToPrimaryTab('map');
+    } else {
+      window.location.href = 'map.html';
+      return;
+    }
+    // Backup kick: ensure zoom-in/out runs after the Map tab is showing.
+    window.setTimeout(() => {
+      if (typeof WorldChoirMap?.runVoiceJoinedAnimation !== 'function') return;
+      const raw = sessionStorage.getItem('wc_voice_joined');
+      if (!raw) return;
+      try {
+        WorldChoirMap.runVoiceJoinedAnimation(JSON.parse(raw));
+      } catch {
+        /* ignore */
+      }
+    }, 700);
   }
 
   /** Full-page skeleton matching the Home layout (shown only until data is ready). */
@@ -1073,7 +1107,7 @@ const WorldChoirHome = (() => {
   }
 
   function bindActions() {
-    document.getElementById('pledge-btn')?.addEventListener('click', () => WorldChoirParticipation.open());
+    document.getElementById('pledge-btn')?.addEventListener('click', () => openParticipationModal());
     bindPledgedActions(document);
     syncHomeGuideVisibility();
   }
@@ -1244,20 +1278,7 @@ const WorldChoirHome = (() => {
     });
 
     WorldChoirParticipation.init({
-      onSuccess: async (pledge) => {
-        const lat = Number(pledge?.latitude);
-        const lng = Number(pledge?.longitude);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          WorldChoirParticipation.triggerVoiceJoinedAnimation(pledge);
-          if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.navigateToPrimaryTab) {
-            WorldChoirNav.navigateToPrimaryTab('map');
-          } else {
-            window.location.href = 'map.html';
-          }
-        } else {
-          render();
-        }
-      },
+      onSuccess: afterPledgeJoinSuccess,
     });
 
     WorldChoirReminders.init();
