@@ -191,6 +191,57 @@ body.map-page {
   animation: cityLightPulse 1.1s ease-in-out infinite;
 }
 
+.city-light--appear {
+  animation: cityLightAppear 0.28s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+.city-light--appear .city-light__glow {
+  animation:
+    cityLightAppearGlow 0.32s cubic-bezier(0.2, 0.9, 0.2, 1) both,
+    cityLightPulse 1.1s ease-in-out 0.28s infinite;
+}
+
+.city-light--appear .city-light__core {
+  animation: cityLightAppearCore 0.28s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+@keyframes cityLightAppear {
+  0% {
+    transform: scale(0.15);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes cityLightAppearGlow {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes cityLightAppearCore {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @keyframes cityLightBreathe {
   0%,
   100% {

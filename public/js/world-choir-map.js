@@ -9,6 +9,8 @@ const WorldChoirMap = (() => {
   let pulseCityKey = null;
   let pulseClearTimer = null;
   let voiceJoinedAnimating = false;
+  /** Forced city marker during join reveal (aggregate may lag). */
+  let voiceJoinedSpotlight = null;
   let lastAppliedHomeKey = null;
   let lastMarkersSignature = '';
   let refreshScheduled = false;
@@ -228,13 +230,14 @@ const WorldChoirMap = (() => {
     return clamp(Math.round(14 + Math.sqrt(count) * 6), 16, 56);
   }
 
-  function createCityLightIcon(city) {
+  function createCityLightIcon(city, { appear = false } = {}) {
     const size = glowSize(city.count);
     const pulsing = cityKey(city) === pulseCityKey;
+    const appearClass = pulsing && appear ? ' city-light--appear' : '';
     return L.divIcon({
       className: 'city-light-icon',
       html:
-        `<div class="city-light${pulsing ? ' city-light--pulse' : ''}" style="--glow:${size}px">` +
+        `<div class="city-light${pulsing ? ' city-light--pulse' : ''}${appearClass}" style="--glow:${size}px">` +
         '<span class="city-light__glow"></span><span class="city-light__core"></span></div>',
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
@@ -252,24 +255,51 @@ const WorldChoirMap = (() => {
     });
   }
 
-  function getMarkersSignature() {
-    if (!WorldChoirDB.isMapDataReady?.() && !WorldChoirDB.isPledgesLoaded()) return '';
+  function citiesForMarkers() {
+    const cities = typeof WorldChoirDB.getAggregatedCities === 'function'
+      ? [...WorldChoirDB.getAggregatedCities()]
+      : [];
+    if (voiceJoinedSpotlight?.city && voiceJoinedSpotlight?.country) {
+      const key = cityKey(voiceJoinedSpotlight);
+      const idx = cities.findIndex((c) => cityKey(c) === key);
+      const spotlight = {
+        city: voiceJoinedSpotlight.city,
+        country: voiceJoinedSpotlight.country,
+        latitude: voiceJoinedSpotlight.latitude,
+        longitude: voiceJoinedSpotlight.longitude,
+        count: Math.max(1, Number(cities[idx]?.count) || 1),
+      };
+      if (idx >= 0) cities[idx] = { ...cities[idx], ...spotlight };
+      else cities.push(spotlight);
+    }
+    return cities;
+  }
 
-    const cities = WorldChoirDB.getAggregatedCities();
-    const gatherings = WorldChoirDB.getGatheringPlaces();
+  function getMarkersSignature() {
+    const hasData = WorldChoirDB.isMapDataReady?.() || WorldChoirDB.isPledgesLoaded?.();
+    if (!hasData && !voiceJoinedSpotlight) return '';
+
+    const cities = citiesForMarkers();
+    const gatherings = typeof WorldChoirDB.getGatheringPlaces === 'function'
+      ? WorldChoirDB.getGatheringPlaces()
+      : [];
     const citySig = cities
       .map((city) => `${city.city}|${city.country}:${city.count}:${city.latitude}:${city.longitude}`)
       .join(';');
     const gatheringSig = gatherings
       .map((g) => `${g.latitude}:${g.longitude}`)
       .join(';');
+    const spot = voiceJoinedSpotlight
+      ? `${voiceJoinedSpotlight.city}|${voiceJoinedSpotlight.country}`
+      : '';
 
-    return `${citySig}::${gatheringSig}::${pulseCityKey || ''}`;
+    return `${citySig}::${gatheringSig}::${pulseCityKey || ''}::${spot}`;
   }
 
   function rebuildMarkers() {
     if (!cityLightsLayer || !gatheringLayer) return;
-    if (!WorldChoirDB.isMapDataReady?.() && !WorldChoirDB.isPledgesLoaded()) return;
+    const hasData = WorldChoirDB.isMapDataReady?.() || WorldChoirDB.isPledgesLoaded?.();
+    if (!hasData && !voiceJoinedSpotlight) return;
 
     const signature = getMarkersSignature();
     if (signature && signature === lastMarkersSignature) return;
@@ -278,12 +308,14 @@ const WorldChoirMap = (() => {
     cityLightsLayer.clearLayers();
     gatheringLayer.clearLayers();
 
-    WorldChoirDB.getAggregatedCities().forEach((city) => {
+    const appearKey = voiceJoinedSpotlight ? cityKey(voiceJoinedSpotlight) : null;
+
+    citiesForMarkers().forEach((city) => {
       const lat = Number(city.latitude);
       const lng = Number(city.longitude);
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
       const marker = L.marker([lat, lng], {
-        icon: createCityLightIcon(city),
+        icon: createCityLightIcon(city, { appear: appearKey === cityKey(city) }),
         interactive: true,
         keyboard: false,
       });
@@ -294,18 +326,20 @@ const WorldChoirMap = (() => {
       cityLightsLayer.addLayer(marker);
     });
 
-    WorldChoirDB.getGatheringPlaces().forEach((g) => {
-      const lat = Number(g.latitude);
-      const lng = Number(g.longitude);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-      gatheringLayer.addLayer(
-        L.marker([lat, lng], {
-          icon: createGatheringIcon(),
-          interactive: false,
-          keyboard: false,
-        })
-      );
-    });
+    if (typeof WorldChoirDB.getGatheringPlaces === 'function') {
+      WorldChoirDB.getGatheringPlaces().forEach((g) => {
+        const lat = Number(g.latitude);
+        const lng = Number(g.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        gatheringLayer.addLayer(
+          L.marker([lat, lng], {
+            icon: createGatheringIcon(),
+            interactive: false,
+            keyboard: false,
+          })
+        );
+      });
+    }
   }
 
   function isDesktopPointerMap() {
@@ -672,36 +706,43 @@ const WorldChoirMap = (() => {
     const overlay = document.getElementById('voice-joined');
     overlay?.classList.add('active');
 
-    // City light stays off (no pulse) until close-up arrives.
-    pulseCityKey = null;
-    refreshMapData();
-
     const CLOSE_ZOOM = 9;
     const START_ZOOM = 3;
+    const cityLabel = {
+      city: data.city,
+      country: data.country,
+      latitude: lat,
+      longitude: lng,
+      count: 1,
+    };
+
+    // Light appears immediately (aggregate can lag) — before / as zoom-in starts.
+    voiceJoinedSpotlight = cityLabel;
+    pulseCityKey = `${data.city}|${data.country}`;
+    lastMarkersSignature = '';
+    rebuildMarkers();
 
     // Start pulled back so the zoom-in reads as a smooth journey.
     safeSetView([lat, lng], START_ZOOM, { animate: false, force: true });
-    await wait(120);
+    await wait(80);
 
-    // 1) Smooth zoom in on the city
+    // Smooth zoom in on the city (light already visible and pulsing)
     await flyTo(lat, lng, CLOSE_ZOOM, 2.4);
+    await wait(900);
 
-    // 2) At max zoom — light appears
-    pulseCityKey = `${data.city}|${data.country}`;
-    refreshMapData();
-    await wait(1600);
-
-    // 3) Zoom back out to normal home framing
+    // Zoom back out to normal home framing
     cacheUserMapHome(lat, lng);
     lastAppliedHomeKey = userHomeKey({ lat, lng });
     await flyTo(lat, lng, USER_HOME_ZOOM, 2.0);
 
-    // 4) Message leaves only after zoom-out has fully settled
+    // Message leaves only after zoom-out has fully settled
     overlay?.classList.remove('active');
-    await wait(500);
+    await wait(450);
 
     voiceJoinedAnimating = false;
     pulseCityKey = null;
+    voiceJoinedSpotlight = null;
+    lastMarkersSignature = '';
     refreshMapData();
   }
 

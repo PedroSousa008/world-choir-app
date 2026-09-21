@@ -54,7 +54,7 @@ const WorldChoirTabs = (() => {
       css: [
         'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
         'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
-        'css/map.css?v=20260921geocode4',
+        'css/map.css?v=20260921geocode5',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260912themeSlot',
         'css/daily-peace.css?v=20260810e',
@@ -70,7 +70,7 @@ const WorldChoirTabs = (() => {
         'js/map/sponsor-constants.js?v=20260902k',
         'js/map/sponsor-data.js?v=20260902a',
         'js/map/sponsor-bar.js?v=20260905a',
-        'js/world-choir-map.js?v=20260921geocode4',
+        'js/world-choir-map.js?v=20260921geocode5',
       ],
       selectors: ['.map-page__stars', '#map-shell', '#voice-joined'],
       bodySelectors: ['#participation-overlay'],
