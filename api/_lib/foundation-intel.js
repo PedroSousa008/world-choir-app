@@ -1071,8 +1071,59 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
     unavailable.push('Map support locations require donations linked to participation cities.');
   }
   unavailable.push('Page view / conversion funnel tracking is not connected yet.');
-  unavailable.push('Payout balances are not connected yet.');
   unavailable.push('Two-factor authentication is not enabled yet.');
+
+  let financial = {
+    available: false,
+    note: 'Payout accounts and balances are not connected yet.',
+    payoutAccount: null,
+    availableBalance: null,
+    pendingBalance: null,
+    paidOut: null,
+    history: [],
+    connect: null,
+  };
+  try {
+    const {
+      syncConnectAccount,
+      getConnectBalances,
+      publicConnectStatus,
+    } = require('./stripe-connect');
+    const connect = await syncConnectAccount(foundationId);
+    financial.connect = connect.ok ? connect : publicConnectStatus(influencer);
+    if (connect.ok && connect.ready) {
+      const balances = await getConnectBalances(foundationId);
+      financial = {
+        available: true,
+        note: balances.note || connect.note,
+        payoutAccount: connect.accountId,
+        availableBalance: balances.availableBalance,
+        pendingBalance: balances.pendingBalance,
+        paidOut: null,
+        history: [],
+        connect,
+        currency: balances.currency || 'EUR',
+      };
+    } else if (connect.ok) {
+      financial = {
+        available: false,
+        note: connect.note,
+        payoutAccount: connect.accountId,
+        availableBalance: null,
+        pendingBalance: null,
+        paidOut: null,
+        history: [],
+        connect,
+        currency: 'EUR',
+      };
+    }
+  } catch (finErr) {
+    financial.note = finErr.message || financial.note;
+  }
+
+  if (!financial.connect?.ready) {
+    unavailable.push('Payout balances are not connected yet.');
+  }
 
   const communityGrowth = canViewSupporters
     ? buildCommunityGrowthSeries(foundationDonations, range, pledgeIndex)
@@ -1254,15 +1305,7 @@ async function buildFoundationControlCenter(foundationId, { range = 'all', role 
     team,
     notifications,
     drafts: workspace.drafts || { page: null, card: null },
-    financial: {
-      available: false,
-      note: 'Payout accounts and balances are not connected yet.',
-      payoutAccount: null,
-      availableBalance: null,
-      pendingBalance: null,
-      paidOut: null,
-      history: [],
-    },
+    financial,
     verification: {
       status: verificationStatus,
       note: verificationStatus === 'verified'

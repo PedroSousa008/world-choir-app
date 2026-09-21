@@ -387,7 +387,8 @@ const CreatorFoundationsStore = (() => {
       causes: [],
       featured: foundation.featured === true,
       active: foundation.active !== false,
-      donationsEnabled: foundation.donationsEnabled !== false,
+      donationsEnabled: foundation.donationsEnabled === true,
+      payoutsReady: foundation.payoutsReady === true,
       sortOrder: Number.isFinite(foundation.sortOrder) ? foundation.sortOrder : 9999,
     };
   }

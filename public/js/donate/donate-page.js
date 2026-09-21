@@ -1135,7 +1135,9 @@ const WorldChoirDonate = (() => {
   }
 
   function supportCtaLabel(foundation) {
-    return foundation.donationsEnabled ? 'Support this foundation' : 'Temporarily unavailable';
+    if (foundation.donationsEnabled) return 'Support this foundation';
+    if (foundation.payoutsReady === false) return 'Payouts not connected yet';
+    return 'Temporarily unavailable';
   }
 
   function renderSupportCta(foundation, { id, secondary = false } = {}) {
@@ -1786,7 +1788,11 @@ const WorldChoirDonate = (() => {
 
   function openDonateModal(foundation, project) {
     if (!foundation.donationsEnabled) {
-      alert('Donations for this foundation are temporarily unavailable.');
+      alert(
+        foundation.payoutsReady === false
+          ? 'This foundation has not finished connecting payouts yet, so donations cannot be accepted.'
+          : 'Donations for this foundation are temporarily unavailable.'
+      );
       return;
     }
     if (typeof WorldChoirDonationFlow !== 'undefined' && WorldChoirDonationFlow.start) {

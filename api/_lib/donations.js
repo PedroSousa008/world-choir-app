@@ -1,6 +1,7 @@
 /**
  * Creator Foundation donations — fee math, ledger writes, Stripe helpers.
- * Platform collects 100%; ledger records 93.5% foundation / 6.5% World Choir.
+ * With Stripe Connect: destination charges send foundation share to the
+ * connected account; World Choir keeps PLATFORM_FEE_PERCENT as application_fee.
  * Never fake success. Never store raw card data.
  */
 const { randomUUID } = require('crypto');
@@ -295,6 +296,18 @@ async function assertFoundationDonatable(foundationId) {
   if (!row || row.active === false || row.published !== true) {
     const err = new Error('This Foundation is not available for donations.');
     err.code = 'FOUNDATION_UNAVAILABLE';
+    throw err;
+  }
+  const payoutsReady = Boolean(
+    row.stripeConnectAccountId
+    && row.stripeConnectChargesEnabled === true
+    && row.stripeConnectPayoutsEnabled === true
+  );
+  if (!payoutsReady) {
+    const err = new Error(
+      'This Foundation has not finished connecting payouts yet, so donations cannot be accepted.'
+    );
+    err.code = 'FOUNDATION_PAYOUTS_REQUIRED';
     throw err;
   }
   return row;

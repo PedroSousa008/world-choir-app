@@ -3717,6 +3717,116 @@ body.is-fcc-analytics-open {
     transparent 100%);
 }
 
+/* ─── Payouts card ─── */
+.fcc-set-card--payouts .fcc-set-card__head {
+  background: linear-gradient(135deg,
+    rgba(46, 184, 138, 0.08) 0%,
+    rgba(61, 124, 255, 0.04) 55%,
+    transparent 100%);
+}
+
+.fcc-set-card--payouts .fcc-set-card__icon {
+  background: rgba(46, 184, 138, 0.14);
+  color: #3ecf8e;
+}
+
+.fcc-set-payouts-body {
+  padding: 20px 28px 24px;
+}
+
+.fcc-set-payouts__loading {
+  margin: 0;
+  color: #8b90a0;
+  font-size: 0.9rem;
+}
+
+.fcc-set-payouts__state {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fcc-set-payouts__badge {
+  display: inline-flex;
+  align-self: flex-start;
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.fcc-set-payouts__state.is-ready .fcc-set-payouts__badge {
+  background: rgba(46, 184, 138, 0.16);
+  color: #5ee0a8;
+}
+
+.fcc-set-payouts__state.is-pending .fcc-set-payouts__badge {
+  background: rgba(240, 180, 70, 0.16);
+  color: #f0c46a;
+}
+
+.fcc-set-payouts__state.is-off .fcc-set-payouts__badge,
+.fcc-set-payouts__state.is-warn .fcc-set-payouts__badge {
+  background: rgba(255, 255, 255, 0.06);
+  color: #b8bcc8;
+}
+
+.fcc-set-payouts__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f4f4f6;
+}
+
+.fcc-set-payouts__copy {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: #8b90a0;
+}
+
+.fcc-set-payouts__balances {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.fcc-set-payouts__bal-label {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b6f7d;
+}
+
+.fcc-set-payouts__bal-value {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f4f4f6;
+}
+
+.fcc-set-payouts__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+@media (max-width: 640px) {
+  .fcc-set-payouts-body {
+    padding: 16px 18px 20px;
+  }
+
+  .fcc-set-payouts__balances {
+    grid-template-columns: 1fr;
+  }
+}
+
 .fcc-set-account-body {
   display: grid;
   grid-template-columns: auto 1fr;

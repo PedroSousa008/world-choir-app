@@ -70,11 +70,24 @@ async function handleCreateIntent(req, res) {
     req.headers['idempotency-key'] || body.idempotencyKey || `create-${donationId}`
   ).slice(0, 255);
 
+  const connectedAccountId = String(foundation.stripeConnectAccountId || '').trim();
+  if (!connectedAccountId) {
+    return res.status(409).json({
+      error: 'This Foundation has not finished connecting payouts yet.',
+      code: 'FOUNDATION_PAYOUTS_REQUIRED',
+    });
+  }
+
   const stripe = donations.getStripe();
   const paymentIntent = await stripe.paymentIntents.create({
     amount: split.amountGrossCents,
     currency: currency.toLowerCase(),
     automatic_payment_methods: { enabled: true },
+    // Destination charge: foundation receives net, platform keeps application fee.
+    application_fee_amount: split.platformFeeCents,
+    transfer_data: {
+      destination: connectedAccountId,
+    },
     description: `World Choir donation to ${foundation.foundationName || foundation.displayName || 'Creator Foundation'}`,
     metadata: {
       donationId,
@@ -83,6 +96,7 @@ async function handleCreateIntent(req, res) {
       deviceId: deviceId || '',
       platformFeeCents: String(split.platformFeeCents),
       foundationAmountCents: String(split.foundationAmountCents),
+      connectedAccountId,
       worldChoirApp: '1',
     },
   }, { idempotencyKey });
@@ -96,6 +110,8 @@ async function handleCreateIntent(req, res) {
     deviceId,
     paymentIntentId: paymentIntent.id,
   });
+  draft.stripe_connected_account_id = connectedAccountId;
+  draft.stripeConnectedAccountId = connectedAccountId;
   await donations.upsertDonation(draft, { mode: 'fast' });
 
   return res.status(200).json({
@@ -364,9 +380,10 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     console.error('api/donations error:', err);
     const status = err.code === 'FOUNDATION_UNAVAILABLE' ? 404
-      : err.code === 'AMOUNT_TOO_LOW' ? 400
-        : err.code === 'PAYMENTS_NOT_CONFIGURED' ? 503
-          : 503;
+      : err.code === 'FOUNDATION_PAYOUTS_REQUIRED' ? 409
+        : err.code === 'AMOUNT_TOO_LOW' ? 400
+          : err.code === 'PAYMENTS_NOT_CONFIGURED' ? 503
+            : 503;
     return res.status(status).json({
       error: err.message || 'Donation request failed.',
       code: err.code || 'DONATIONS_ERROR',

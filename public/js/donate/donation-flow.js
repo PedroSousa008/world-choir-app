@@ -752,7 +752,11 @@ const WorldChoirDonationFlow = (() => {
       }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Could not start payment.');
+    if (!res.ok) {
+      const err = new Error(data.error || 'Could not start payment.');
+      err.code = data.code || null;
+      throw err;
+    }
     state.donationId = data.donationId;
     state.clientSecret = data.clientSecret;
     state.paymentIntentId = data.paymentIntentId;
@@ -1116,7 +1120,10 @@ const WorldChoirDonationFlow = (() => {
 
   async function start(foundation, project = null) {
     if (!foundation?.donationsEnabled) {
-      alert('Donations for this foundation are temporarily unavailable.');
+      const payoutsMsg = foundation?.payoutsReady === false
+        ? 'This foundation has not finished connecting payouts yet, so donations cannot be accepted.'
+        : 'Donations for this foundation are temporarily unavailable.';
+      alert(payoutsMsg);
       return;
     }
     ensureShell();

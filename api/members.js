@@ -207,6 +207,70 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    if (action === 'connect-payouts-status' && req.method === 'GET') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      const {
+        syncConnectAccount,
+        getConnectBalances,
+      } = require('./_lib/stripe-connect');
+      const status = await syncConnectAccount(session.influencerId);
+      if (!status.ok) return res.status(400).json({ error: status.error });
+      let balances = null;
+      try {
+        balances = await getConnectBalances(session.influencerId);
+      } catch (balErr) {
+        balances = {
+          available: false,
+          note: balErr.message || 'Could not load Stripe balances.',
+          availableBalance: null,
+          pendingBalance: null,
+          currency: 'EUR',
+        };
+      }
+      return res.status(200).json({ ...status, balances });
+    }
+
+    if (action === 'connect-payouts-onboard' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (session.teamRole) {
+        return res.status(403).json({ error: 'Only the Foundation owner can connect payouts' });
+      }
+      const { createOnboardingLink } = require('./_lib/stripe-connect');
+      try {
+        const result = await createOnboardingLink(session.influencerId, req);
+        return res.status(200).json(result);
+      } catch (err) {
+        const status = err.code === 'COUNTRY_REQUIRED' ? 400
+          : err.code === 'PAYMENTS_NOT_CONFIGURED' ? 503
+            : 400;
+        return res.status(status).json({
+          error: err.message || 'Could not start Stripe Connect onboarding.',
+          code: err.code || 'CONNECT_ERROR',
+        });
+      }
+    }
+
+    if (action === 'connect-payouts-dashboard' && req.method === 'POST') {
+      const session = requireFoundationSession(req, res);
+      if (!session) return;
+      if (session.teamRole) {
+        return res.status(403).json({ error: 'Only the Foundation owner can open the Stripe dashboard' });
+      }
+      const { createExpressDashboardLink } = require('./_lib/stripe-connect');
+      try {
+        const result = await createExpressDashboardLink(session.influencerId);
+        return res.status(200).json(result);
+      } catch (err) {
+        const status = err.code === 'NOT_CONNECTED' ? 409 : 400;
+        return res.status(status).json({
+          error: err.message || 'Could not open Stripe dashboard.',
+          code: err.code || 'CONNECT_ERROR',
+        });
+      }
+    }
+
     if (action === 'search' && req.method === 'GET') {
       const session = requireFoundationSession(req, res);
       if (!session) return;

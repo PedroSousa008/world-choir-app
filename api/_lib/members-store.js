@@ -252,6 +252,31 @@ async function updateInfluencer(id, updates = {}, { allowEmailChange = false } =
   return { ok: true, influencer: publicInfluencer(next) };
 }
 
+/** Platform-only Stripe Connect fields — never exposed via public profile edit. */
+async function updateInfluencerStripeConnect(id, stripeFields = {}) {
+  const doc = await readInfluencersDoc();
+  const index = doc.influencers.findIndex((row) => row.id === id);
+  if (index === -1) return { ok: false, error: 'Influencer not found' };
+
+  const current = doc.influencers[index];
+  const next = { ...current };
+  const allowed = [
+    'stripeConnectAccountId',
+    'stripeConnectChargesEnabled',
+    'stripeConnectPayoutsEnabled',
+    'stripeConnectDetailsSubmitted',
+    'stripeConnectStatus',
+    'stripeConnectUpdatedAt',
+  ];
+  allowed.forEach((field) => {
+    if (stripeFields[field] !== undefined) next[field] = stripeFields[field];
+  });
+  next.updatedAt = new Date().toISOString();
+  doc.influencers[index] = next;
+  await writeInfluencersDoc(doc);
+  return { ok: true, influencer: next };
+}
+
 async function deleteInfluencer(id) {
   const foundationId = String(id || '').trim();
   if (!foundationId) return { ok: false, error: 'Influencer id is required' };
@@ -498,7 +523,18 @@ function influencerToFoundation(row, projects = []) {
     ].join('\n\n'),
     featured: true,
     active: row.active !== false,
-    donationsEnabled: true,
+    donationsEnabled: row.active !== false
+      && row.published === true
+      && Boolean(
+        row.stripeConnectAccountId
+        && row.stripeConnectChargesEnabled === true
+        && row.stripeConnectPayoutsEnabled === true
+      ),
+    payoutsReady: Boolean(
+      row.stripeConnectAccountId
+      && row.stripeConnectChargesEnabled === true
+      && row.stripeConnectPayoutsEnabled === true
+    ),
     sortOrder: 100,
     projects: publicProjects,
     causes: [],
@@ -589,6 +625,7 @@ module.exports = {
   findInfluencerById,
   createInfluencer,
   updateInfluencer,
+  updateInfluencerStripeConnect,
   deleteInfluencer,
   verifyInfluencerCredentials,
   changeInfluencerPassword,
