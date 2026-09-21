@@ -284,7 +284,7 @@ async function summarizeFoundationPageAnalytics(foundationId, bounds = {}) {
     available: hasAny,
     note: hasAny
       ? null
-      : 'No page analytics yet. Numbers appear after visitors open this Foundation with analytics consent.',
+      : 'Tracking is live. Numbers appear after visitors open this Foundation with analytics accepted.',
     trackingSince,
     pageViews: totals.pageViews,
     uniqueViewers,
@@ -298,7 +298,7 @@ async function summarizeFoundationPageAnalytics(foundationId, bounds = {}) {
       ? 'Unique visitors who completed a gift ÷ unique page viewers (analytics consent).'
       : (hasAny
         ? 'Conversion needs page views in this period.'
-        : 'Conversion appears after page views are recorded.'),
+        : 'Tracking is live. Conversion appears after consented page views are recorded.'),
     funnel: {
       available: hasAny,
       note: hasAny ? null : 'Funnel stages populate from Donate page activity.',

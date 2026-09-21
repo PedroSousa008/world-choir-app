@@ -1680,7 +1680,7 @@ const FoundationControl = (() => {
       ? `${Number(don.conversionRate)}%`
       : '—';
     const conversionNote = don.conversionRate == null
-      ? (don.conversionNote || 'Conversion appears after page views are recorded (analytics consent).')
+      ? (don.conversionNote || 'Tracking is live. Conversion appears after consented page views are recorded.')
       : (don.conversionNote || '');
     const canViewAmounts = don.canViewAmounts !== false;
     const feePercent = Number(don.platformFeePercent);
@@ -1755,8 +1755,8 @@ const FoundationControl = (() => {
                   ${funnel.trackingSince ? `<p class="fcc-note">Tracking since ${esc(funnel.trackingSince)}</p>` : ''}`
                 : donEmptyState(
                   'funnel',
-                  'No funnel data yet',
-                  funnel.note || 'Stages appear after visitors open this Foundation page with analytics consent.'
+                  'Waiting for page activity',
+                  funnel.note || 'Tracking is live. Stages appear after visitors open this Foundation with analytics accepted.'
                 )}
             </div>
           </article>
