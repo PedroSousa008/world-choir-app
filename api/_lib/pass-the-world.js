@@ -555,16 +555,122 @@ function seedState(itinerary) {
   };
 }
 
-async function readItinerary() {
+async function readItineraryRecord() {
   try {
     const data = await readBlobJson(ITINERARY_PATH);
-    if (Array.isArray(data?.entries) && data.entries.length) return data.entries;
+    if (Array.isArray(data?.entries) && data.entries.length) {
+      return {
+        entries: data.entries,
+        revision: Number(data.revision) || 0,
+        updatedAt: data.updatedAt || null,
+      };
+    }
   } catch { /* seed */ }
   return null;
 }
 
-async function writeItinerary(entries) {
-  await writeJson(ITINERARY_PATH, { entries, updatedAt: new Date().toISOString() }, { overwrite: true });
+async function readItinerary() {
+  const record = await readItineraryRecord();
+  return record?.entries || null;
+}
+
+/** Stable compare for itinerary rows (ignore volatile ordering noise via sequence normalize). */
+function itineraryFingerprint(entries) {
+  const rows = (entries || []).map((e) => ({
+    id: e.id,
+    city: e.city,
+    country: e.country,
+    countryCode: e.countryCode || null,
+    selectedAt: e.selectedAt || null,
+    departedAt: e.departedAt || null,
+    arrivedAt: e.arrivedAt || null,
+    calledByUserId: e.calledByUserId || null,
+    calledByVoiceNumber: e.calledByVoiceNumber ?? null,
+    latitude: e.latitude,
+    longitude: e.longitude,
+    isSeed: Boolean(e.isSeed),
+  }));
+  return JSON.stringify(rows);
+}
+
+/**
+ * Merge proposed itinerary onto live without dropping concurrent appends.
+ * Same id → prefer proposed fields (healed arrival/coords). New live-only ids are kept.
+ */
+function mergeItineraryPreservingLive(live, proposed) {
+  const byId = new Map();
+  for (const entry of live || []) {
+    if (entry?.id) byId.set(entry.id, entry);
+  }
+  for (const entry of proposed || []) {
+    if (!entry?.id) continue;
+    const prev = byId.get(entry.id);
+    byId.set(entry.id, prev ? { ...prev, ...entry } : entry);
+  }
+
+  const order = [];
+  const seen = new Set();
+  for (const entry of live || []) {
+    if (entry?.id && byId.has(entry.id) && !seen.has(entry.id)) {
+      order.push(entry.id);
+      seen.add(entry.id);
+    }
+  }
+  for (const entry of proposed || []) {
+    if (entry?.id && byId.has(entry.id) && !seen.has(entry.id)) {
+      order.push(entry.id);
+      seen.add(entry.id);
+    }
+  }
+  return dedupeItinerary(order.map((id) => byId.get(id)).filter(Boolean));
+}
+
+/**
+ * Write itinerary with race-safe merge.
+ * - Default: never drop live stops another request just appended.
+ * - allowShrink: intentional repairs (dedupe / invalid-leg prune).
+ */
+async function writeItinerary(entries, { allowShrink = false } = {}) {
+  let proposed = dedupeItinerary(entries || []);
+  const maxAttempts = 4;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const liveRecord = await readItineraryRecord();
+    const live = liveRecord?.entries || null;
+    const liveRevision = Number(liveRecord?.revision) || 0;
+
+    let next = proposed;
+    if (live?.length && !allowShrink) {
+      next = mergeItineraryPreservingLive(live, proposed);
+    } else {
+      next = dedupeItinerary(proposed);
+    }
+
+    if (live && itineraryFingerprint(live) === itineraryFingerprint(next)) {
+      return next;
+    }
+
+    const payload = {
+      entries: next,
+      revision: liveRevision + 1,
+      updatedAt: new Date().toISOString(),
+    };
+    await writeJson(ITINERARY_PATH, payload, { overwrite: true });
+
+    const confirmed = await readItineraryRecord();
+    const confirmedEntries = confirmed?.entries || next;
+    if (allowShrink) return dedupeItinerary(confirmedEntries);
+
+    // If another writer appended between our read and write, merge and retry.
+    const rematerialized = mergeItineraryPreservingLive(confirmedEntries, next);
+    if (itineraryFingerprint(rematerialized) !== itineraryFingerprint(confirmedEntries)) {
+      proposed = rematerialized;
+      continue;
+    }
+    return rematerialized;
+  }
+
+  return proposed;
 }
 
 /** Collapse duplicate stops created by repeated applyWinner heals. */
@@ -591,12 +697,12 @@ async function repairItineraryIfNeeded(state, itinerary) {
   if (cleaned.length === (itinerary || []).length) {
     return { state, itinerary };
   }
-  await writeItinerary(cleaned);
+  const written = await writeItinerary(cleaned, { allowShrink: true });
 
   let nextState = state;
-  const currentStillThere = cleaned.some((e) => e.id === state.currentItineraryEntryId);
-  if (!currentStillThere && cleaned.length) {
-    const last = cleaned[cleaned.length - 1];
+  const currentStillThere = written.some((e) => e.id === state.currentItineraryEntryId);
+  if (!currentStillThere && written.length) {
+    const last = written[written.length - 1];
     nextState = await writeState({
       ...state,
       currentCity: last.city,
@@ -610,7 +716,7 @@ async function repairItineraryIfNeeded(state, itinerary) {
       version: (Number(state.version) || 1) + 1,
     });
   }
-  return { state: nextState, itinerary: cleaned };
+  return { state: nextState, itinerary: written };
 }
 
 /**
@@ -651,7 +757,7 @@ async function healWorldLocation(state, itinerary, now = new Date()) {
       )),
     };
     const nextItinerary = entries.map((e) => (e.id === fixedTrip.id ? fixedTrip : e));
-    await writeItinerary(nextItinerary);
+    const written = await writeItinerary(nextItinerary);
     const nextState = await writeState({
       ...state,
       currentCity: origin.city,
@@ -662,7 +768,7 @@ async function healWorldLocation(state, itinerary, now = new Date()) {
       origin,
       version: (Number(state.version) || 1) + 1,
     });
-    return { state: nextState, itinerary: nextItinerary };
+    return { state: nextState, itinerary: written };
   }
 
   const present = resolveWorldPresentLocation(state, entries, clock);
@@ -751,8 +857,9 @@ async function repairInvalidJourney(state, itinerary) {
   }
 
   if (changed) {
-    if (cleaned.length !== (itinerary || []).length) {
-      await writeItinerary(cleaned);
+    if (cleaned.length !== (itinerary || []).length
+      || cleaned.some((entry, i) => entry.arrivedAt !== (itinerary || [])[i]?.arrivedAt)) {
+      cleaned = await writeItinerary(cleaned, { allowShrink: true });
     }
     if (nextState !== state) {
       nextState = await writeState(nextState);
@@ -766,31 +873,130 @@ async function readStateRaw() {
   try { return await readBlobJson(STATE_PATH); } catch { return null; }
 }
 
+/** Compare journey-significant state fields (ignore updatedAt / version). */
+function statePayloadEqual(a, b) {
+  if (!a || !b) return false;
+  const strip = (s) => {
+    const { updatedAt, version, ...rest } = s;
+    return rest;
+  };
+  return JSON.stringify(strip(a)) === JSON.stringify(strip(b));
+}
+
+function isMeaningfulStateTransition(live, intended) {
+  if (!live) return true;
+  if (live.status !== intended.status) return true;
+  if (live.currentItineraryEntryId !== intended.currentItineraryEntryId) return true;
+  if (live.arrivalAt !== intended.arrivalAt) return true;
+  if (live.departureAt !== intended.departureAt) return true;
+  if (live.activeRoundId !== intended.activeRoundId) return true;
+  if (live.revealStartAt !== intended.revealStartAt) return true;
+  if (live.revealEndAt !== intended.revealEndAt) return true;
+  const liveDest = `${live.destination?.city || ''}|${live.destination?.country || ''}`;
+  const nextDest = `${intended.destination?.city || ''}|${intended.destination?.country || ''}`;
+  if (liveDest !== nextDest) return true;
+  return false;
+}
+
+/**
+ * Never let a stale reader clobber an in-flight journey.
+ * Returns the state that should be written, or `live` to abort the write.
+ */
+function guardTravellingWrite(live, state) {
+  if (!(live?.status === STATUS.TRAVELLING && live.destination && live.arrivalAt)) {
+    return state;
+  }
+  const arrMs = new Date(live.arrivalAt).getTime();
+  if (!(Number.isFinite(arrMs) && arrMs > Date.now())) {
+    return state;
+  }
+  const sameTrip = Boolean(
+    state.currentItineraryEntryId
+    && live.currentItineraryEntryId
+    && state.currentItineraryEntryId === live.currentItineraryEntryId
+  );
+  if (state.status === STATUS.TRAVELLING) {
+    // Another TRAVELLING write for a different leg must not win the race.
+    if (!sameTrip) return live;
+    return state;
+  }
+  const completingSameFlight = state.status === STATUS.ARRIVED
+    && sameTrip
+    && !state.destination;
+  if (!completingSameFlight) return live;
+  return state;
+}
+
+/**
+ * Race-hardened state write:
+ * - travelling guard (existing)
+ * - skip no-op writes (poll spam)
+ * - version always advances past live
+ * - one confirm pass for lost trip-start recovery
+ */
 async function writeState(state) {
-  // Never let a stale reader clobber an in-flight journey.
-  const live = await readStateRaw();
-  if (live?.status === STATUS.TRAVELLING && live.destination && live.arrivalAt) {
-    const arrMs = new Date(live.arrivalAt).getTime();
-    if (Number.isFinite(arrMs) && arrMs > Date.now()) {
-      const sameTrip = Boolean(
-        state.currentItineraryEntryId
-        && live.currentItineraryEntryId
-        && state.currentItineraryEntryId === live.currentItineraryEntryId
-      );
-      if (state.status === STATUS.TRAVELLING) {
-        // Another TRAVELLING write for a different leg must not win the race.
-        if (!sameTrip) return live;
-      } else {
-        const completingSameFlight = state.status === STATUS.ARRIVED
-          && sameTrip
-          && !state.destination;
-        if (!completingSameFlight) return live;
+  const maxAttempts = 3;
+  let intended = state;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const live = await readStateRaw();
+    const guarded = guardTravellingWrite(live, intended);
+    if (guarded === live && live) return live;
+
+    if (live && statePayloadEqual(live, guarded)) {
+      return live;
+    }
+
+    // Stale poll updates (invite counts, etc.) must not fight a newer live version
+    // unless this is a real status / trip transition.
+    if (
+      live
+      && (Number(live.version) || 0) >= (Number(guarded.version) || 0)
+      && !isMeaningfulStateTransition(live, guarded)
+    ) {
+      const liveCount = Number(live.invitationCount) || 0;
+      const nextCount = Number(guarded.invitationCount) || 0;
+      const liveCities = JSON.stringify(live.invitedCities || []);
+      const nextCities = JSON.stringify(guarded.invitedCities || []);
+      if (nextCount <= liveCount && nextCities === liveCities) {
+        return live;
       }
     }
+
+    const nextVersion = Math.max(
+      (Number(live?.version) || 0) + 1,
+      Number(guarded.version) || 1
+    );
+    const next = {
+      ...guarded,
+      version: nextVersion,
+      updatedAt: new Date().toISOString(),
+    };
+    await writeJson(STATE_PATH, next, { overwrite: true });
+
+    const confirm = await readStateRaw();
+    if (!confirm || statePayloadEqual(confirm, next)) {
+      return confirm || next;
+    }
+
+    // Trip-start lost to a concurrent stale write — retry once with travelling priority.
+    if (
+      next.status === STATUS.TRAVELLING
+      && next.destination
+      && confirm.status !== STATUS.TRAVELLING
+    ) {
+      intended = {
+        ...next,
+        version: (Number(confirm.version) || 0) + 1,
+      };
+      continue;
+    }
+
+    // Otherwise accept confirmed live truth (another valid transition won).
+    return confirm;
   }
-  const next = { ...state, updatedAt: new Date().toISOString() };
-  await writeJson(STATE_PATH, next, { overwrite: true });
-  return next;
+
+  return readStateRaw();
 }
 
 async function ensureSeeded() {
@@ -799,7 +1005,7 @@ async function ensureSeeded() {
   let state = await readStateRaw();
   if (!itinerary?.length) {
     itinerary = seedItinerary();
-    await writeItinerary(itinerary);
+    itinerary = await writeItinerary(itinerary);
   }
   if (!state) {
     state = seedState(itinerary);
@@ -1018,7 +1224,7 @@ async function applyWinner(state, itinerary, winner, invitations, nowInput = new
       itinerary = itinerary.map((entry) => (
         entry.id === already.id ? { ...entry, arrivedAt: arrivalAt, departedAt: departureAt } : entry
       ));
-      await writeItinerary(itinerary);
+      itinerary = await writeItinerary(itinerary);
     }
     const nextState = await writeState({
       ...state,
@@ -1090,7 +1296,7 @@ async function applyWinner(state, itinerary, winner, invitations, nowInput = new
     isSeed: false,
   };
   const nextItinerary = [...itinerary, entry];
-  await writeItinerary(nextItinerary);
+  const written = await writeItinerary(nextItinerary);
   const nextState = await writeState({
     ...state,
     status: STATUS.TRAVELLING,
@@ -1121,7 +1327,7 @@ async function applyWinner(state, itinerary, winner, invitations, nowInput = new
     lastReveal: publicReveal(winner, origin),
     version: (Number(state.version) || 1) + 1,
   });
-  return { state: nextState, itinerary: nextItinerary };
+  return { state: nextState, itinerary: written };
 }
 
 async function beginRevealPhase(state, invitations, now) {
@@ -1304,7 +1510,7 @@ async function advanceStateMachine(nowInput) {
             ? { ...entry, arrivedAt: arrivalAt }
             : entry
         ));
-        await writeItinerary(itinerary);
+        itinerary = await writeItinerary(itinerary);
       }
     }
   }
@@ -1320,7 +1526,7 @@ async function advanceStateMachine(nowInput) {
       itinerary = itinerary.map((entry) => (
         entry.id === trip.id ? { ...entry, arrivedAt: landedAt } : entry
       ));
-      await writeItinerary(itinerary);
+      itinerary = await writeItinerary(itinerary);
     }
     state = await writeState({
       ...state,
@@ -1363,7 +1569,7 @@ async function advanceStateMachine(nowInput) {
             ? { ...entry, arrivedAt: arrivalAt }
             : entry
         ));
-        await writeItinerary(itinerary);
+        itinerary = await writeItinerary(itinerary);
       }
       // If that repair put arrival in the past, land immediately on next check —
       // re-run landing for this same tick.
@@ -1374,7 +1580,7 @@ async function advanceStateMachine(nowInput) {
           itinerary = itinerary.map((entry) => (
             entry.id === trip.id ? { ...entry, arrivedAt } : entry
           ));
-          await writeItinerary(itinerary);
+          itinerary = await writeItinerary(itinerary);
         }
         state = await writeState({
           ...state,
@@ -1867,7 +2073,41 @@ async function syncOpenRoundInvites(state) {
     ...state,
     invitationCount,
     invitedCities,
+    version: (Number(state.version) || 1) + 1,
   });
+}
+
+/** Owner / ops: detect state vs itinerary inconsistencies without mutating. */
+function collectJourneyConsistencyIssues(state, itinerary) {
+  const issues = [];
+  if (!state) {
+    issues.push({ type: 'missing_state' });
+    return issues;
+  }
+  if (!Array.isArray(itinerary) || !itinerary.length) {
+    issues.push({ type: 'missing_itinerary' });
+  }
+  if (state.currentItineraryEntryId && Array.isArray(itinerary) && itinerary.length) {
+    const found = itinerary.some((e) => e.id === state.currentItineraryEntryId);
+    if (!found) {
+      issues.push({
+        type: 'state_itinerary_entry_mismatch',
+        entryId: state.currentItineraryEntryId,
+      });
+    }
+  }
+  if (state.status === STATUS.TRAVELLING) {
+    if (!state.destination?.city) {
+      issues.push({ type: 'travelling_without_destination' });
+    }
+    if (!state.arrivalAt) {
+      issues.push({ type: 'travelling_without_arrival' });
+    }
+    if (state.origin && state.destination && isInvalidTravelLeg(state.origin, state.destination)) {
+      issues.push({ type: 'invalid_same_country_travel' });
+    }
+  }
+  return issues;
 }
 
 async function getPassTheWorld({ deviceId, eventId = 'world-choir-2027', now } = {}) {
@@ -2114,4 +2354,7 @@ module.exports = {
   isInvalidItineraryEntry,
   isInvalidTravelLeg,
   inviteEligibleForWorld,
+  collectJourneyConsistencyIssues,
+  mergeItineraryPreservingLive,
+  statePayloadEqual,
 };

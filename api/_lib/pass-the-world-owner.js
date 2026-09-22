@@ -15,6 +15,7 @@ const {
   REVEAL_WINDOW_MS,
   isInvalidItineraryEntry,
   isInvalidTravelLeg,
+  collectJourneyConsistencyIssues,
 } = require('./pass-the-world');
 
 const ROOT = 'wc-data/pass-the-world';
@@ -594,6 +595,7 @@ async function buildPassTheWorldOwnerIntel({ range = 'all', roundId = null } = {
       healthIssues.push({ type: 'missing_coords', entryId: entry.id });
     }
   }
+  healthIssues.push(...collectJourneyConsistencyIssues(stateRaw, itineraryScoped));
 
   const mapInvitations = byCity
     .filter((c) => c.latitude != null && c.longitude != null)
