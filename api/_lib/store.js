@@ -343,6 +343,29 @@ async function allocateVoiceNumber(eventId) {
   throw new Error('Could not assign a voice number. Please try again.');
 }
 
+/**
+ * Free a voice number that was claimed but never persisted as a pledge.
+ * Prevents permanent gaps (Voices count stays behind max voice #).
+ */
+async function releaseVoiceNumberClaim(eventId, voiceNumber) {
+  const n = Number(voiceNumber);
+  if (!Number.isFinite(n) || n < 1) return;
+  try {
+    const { del } = require('@vercel/blob');
+    await del(claimPath(eventId, n));
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+  }
+  try {
+    const current = await readCounter(eventId);
+    if (current === n) {
+      await saveCounter(eventId, Math.max(0, n - 1));
+    }
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+  }
+}
+
 async function ensureUser(deviceId) {
   assertBlobConfigured();
   const trimmed = String(deviceId).trim();
@@ -490,46 +513,63 @@ async function joinWorldChoir({ deviceId, eventId, city, country, latitude, long
   );
 
   const voiceNumber = await allocateVoiceNumber(trimmedEvent);
-  const now = new Date().toISOString();
-
-  let existingPledges = await readPledgesIndex(trimmedEvent);
-  if (!existingPledges) {
-    existingPledges = await loadPledgesFromFiles(trimmedEvent);
-  }
-  const mapPioneerForCountry = countMapPioneerAwardsForCountry(existingPledges, trimmedCountry) < MAP_PIONEER_LIMIT
-    ? trimmedCountry
-    : null;
-
-  const pledge = {
-    id: randomUUID(),
-    user_id: user.id,
-    event_id: trimmedEvent,
-    voice_number: voiceNumber,
-    voice_name: `Voice ${voiceNumber}`,
-    city: trimmedCity,
-    country: trimmedCountry,
-    latitude: coords.latitude,
-    longitude: coords.longitude,
-    pledged_at: now,
-    updated_at: now,
-    map_pioneer_for_country: mapPioneerForCountry,
-  };
-
+  let pledgeCommitted = false;
   try {
-    await writeJson(pledgePath(trimmedEvent, user.id), pledge, { overwrite: false });
-  } catch (err) {
-    if (isBlobUnavailable(err)) throw wrapBlobError(err);
-    const raced = await readPledge(trimmedEvent, user.id);
-    if (raced) {
-      await upsertPledgeIntoIndex(trimmedEvent, raced);
-      return raced;
+    // Concurrent double-submit may have written a pledge after our empty read.
+    const racedEarly = await readPledge(trimmedEvent, user.id);
+    if (racedEarly) {
+      await upsertPledgeIntoIndex(trimmedEvent, racedEarly).catch(() => {});
+      return racedEarly;
     }
-    throw new Error('Could not save participation. Please try again.');
-  }
 
-  await upsertPledgeIntoIndex(trimmedEvent, pledge);
-  refreshEventMilestones(trimmedEvent).catch(() => {});
-  return pledge;
+    const now = new Date().toISOString();
+
+    let existingPledges = await readPledgesIndex(trimmedEvent);
+    if (!existingPledges) {
+      existingPledges = await loadPledgesFromFiles(trimmedEvent);
+    }
+    const mapPioneerForCountry = countMapPioneerAwardsForCountry(existingPledges, trimmedCountry) < MAP_PIONEER_LIMIT
+      ? trimmedCountry
+      : null;
+
+    const pledge = {
+      id: randomUUID(),
+      user_id: user.id,
+      event_id: trimmedEvent,
+      voice_number: voiceNumber,
+      voice_name: `Voice ${voiceNumber}`,
+      city: trimmedCity,
+      country: trimmedCountry,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      pledged_at: now,
+      updated_at: now,
+      map_pioneer_for_country: mapPioneerForCountry,
+    };
+
+    try {
+      await writeJson(pledgePath(trimmedEvent, user.id), pledge, { overwrite: false });
+    } catch (err) {
+      if (isBlobUnavailable(err)) throw wrapBlobError(err);
+      const raced = await readPledge(trimmedEvent, user.id);
+      if (raced) {
+        await upsertPledgeIntoIndex(trimmedEvent, raced);
+        return raced;
+      }
+      throw new Error('Could not save participation. Please try again.');
+    }
+
+    pledgeCommitted = true;
+    await upsertPledgeIntoIndex(trimmedEvent, pledge);
+    refreshEventMilestones(trimmedEvent).catch(() => {});
+    return pledge;
+  } finally {
+    // If we claimed a number but never saved a pledge, free it so Voices and
+    // voice numbers stay aligned for the next successful join.
+    if (!pledgeCommitted) {
+      await releaseVoiceNumberClaim(trimmedEvent, voiceNumber).catch(() => {});
+    }
+  }
 }
 
 async function updatePledgeLocation({ deviceId, eventId, city, country, latitude, longitude }) {
