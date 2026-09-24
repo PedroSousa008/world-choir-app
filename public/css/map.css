@@ -20,8 +20,11 @@ body.map-page {
 
 .map-shell {
   position: relative;
-  height: calc(100dvh - var(--nav-height) - env(safe-area-inset-bottom, 0px));
-  height: calc(100vh - var(--nav-height) - env(safe-area-inset-bottom, 0px)); /* fallback */
+  /* Nav is fixed at bottom with height --nav-height (safe-area is padding inside
+     the bar via border-box). Do not also subtract safe-area here — that leaves
+     a black gap between the map and the tab bar. */
+  height: calc(100dvh - var(--nav-height));
+  height: calc(100vh - var(--nav-height)); /* fallback */
   z-index: 1;
   --map-stat-block-height: 58px;
 }

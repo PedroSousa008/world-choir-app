@@ -1,15 +1,15 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
   Platform,
   Pressable,
+  StatusBar as RNStatusBar,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView, WebViewNavigation } from 'react-native-webview';
 
 /** Live World Choir product — website remains the source of truth. */
@@ -41,6 +41,15 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
+  useEffect(() => {
+    // Edge-to-edge: let the website draw under the status bar / home indicator.
+    // Safe areas are handled by the site (viewport-fit=cover + env(safe-area-inset-*)).
+    if (Platform.OS === 'android') {
+      RNStatusBar.setTranslucent(true);
+      RNStatusBar.setBackgroundColor('transparent');
+    }
+  }, []);
+
   const retry = useCallback(() => {
     setError(null);
     setLoading(true);
@@ -62,70 +71,79 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
+    <View style={styles.root}>
       <StatusBar style="light" />
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <View style={styles.shell}>
-          {!error ? (
-            <WebView
-              key={reloadKey}
-              ref={webRef}
-              source={{ uri: APP_URL }}
-              style={styles.webview}
-              onLoadStart={() => {
-                setLoading(true);
-                setError(null);
-              }}
-              onLoadEnd={() => setLoading(false)}
-              onError={() => {
+      <View style={styles.shell}>
+        {!error ? (
+          <WebView
+            key={reloadKey}
+            ref={webRef}
+            source={{ uri: APP_URL }}
+            style={styles.webview}
+            onLoadStart={() => {
+              setLoading(true);
+              setError(null);
+            }}
+            onLoadEnd={() => setLoading(false)}
+            onError={() => {
+              setLoading(false);
+              setError("Couldn't connect to World Choir. Check your connection and try again.");
+            }}
+            onHttpError={(e) => {
+              const code = e.nativeEvent.statusCode;
+              if (code >= 500) {
                 setLoading(false);
-                setError("Couldn't connect to World Choir. Check your connection and try again.");
-              }}
-              onHttpError={(e) => {
-                const code = e.nativeEvent.statusCode;
-                if (code >= 500) {
-                  setLoading(false);
-                  setError('World Choir is temporarily unavailable. Please try again.');
-                }
-              }}
-              onNavigationStateChange={onNavigationStateChange}
-              onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
-              allowsBackForwardNavigationGestures
-              allowsInlineMediaPlayback
-              mediaPlaybackRequiresUserAction={false}
-              javaScriptEnabled
-              domStorageEnabled
-              sharedCookiesEnabled
-              thirdPartyCookiesEnabled
-              setSupportMultipleWindows={false}
-              originWhitelist={['https://*', 'http://*']}
-              applicationNameForUserAgent={`WorldChoirApp/${Platform.OS}`}
-              startInLoadingState={false}
-            />
-          ) : (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorTitle}>World Choir App</Text>
-              <Text style={styles.errorBody}>{error}</Text>
-              <Pressable style={styles.retryBtn} onPress={retry} accessibilityRole="button">
-                <Text style={styles.retryLabel}>Retry</Text>
-              </Pressable>
-            </View>
-          )}
+                setError('World Choir is temporarily unavailable. Please try again.');
+              }
+            }}
+            onNavigationStateChange={onNavigationStateChange}
+            onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
+            allowsBackForwardNavigationGestures
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            javaScriptEnabled
+            domStorageEnabled
+            sharedCookiesEnabled
+            thirdPartyCookiesEnabled
+            setSupportMultipleWindows={false}
+            originWhitelist={['https://*', 'http://*']}
+            applicationNameForUserAgent={`WorldChoirApp/${Platform.OS}`}
+            startInLoadingState={false}
+            // Critical: do not let WKWebView add its own safe-area letterboxing.
+            automaticallyAdjustContentInsets={false}
+            contentInsetAdjustmentBehavior="never"
+            automaticallyAdjustsScrollIndicatorInsets={false}
+            // Mark the page so CSS can treat the native shell if needed later.
+            injectedJavaScriptBeforeContentLoaded={`
+              try {
+                document.documentElement.classList.add('wc-native-app');
+              } catch (e) {}
+              true;
+            `}
+          />
+        ) : (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>World Choir App</Text>
+            <Text style={styles.errorBody}>{error}</Text>
+            <Pressable style={styles.retryBtn} onPress={retry} accessibilityRole="button">
+              <Text style={styles.retryLabel}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
 
-          {loading && !error ? (
-            <View style={styles.loadingOverlay} pointerEvents="none">
-              <ActivityIndicator size="large" color="#4ec5e8" />
-              <Text style={styles.loadingLabel}>Loading World Choir…</Text>
-            </View>
-          ) : null}
-        </View>
-      </SafeAreaView>
-    </SafeAreaProvider>
+        {loading && !error ? (
+          <View style={styles.loadingOverlay} pointerEvents="none">
+            <ActivityIndicator size="large" color="#4ec5e8" />
+            <Text style={styles.loadingLabel}>Loading World Choir…</Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
+  root: {
     flex: 1,
     backgroundColor: '#000000',
   },

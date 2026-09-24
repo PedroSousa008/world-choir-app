@@ -609,7 +609,7 @@ const WorldChoirNav = (() => {
     ],
     map: [
       'map.html',
-      'css/map.css?v=20260921geocode5',
+      'css/map.css?v=20260924edge1',
       'js/map/sponsor-constants.js?v=20260902k',
       'js/map/sponsor-data.js?v=20260902a',
       'js/map/sponsor-bar.js?v=20260905a',
