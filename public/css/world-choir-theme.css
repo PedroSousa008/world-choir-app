@@ -711,6 +711,10 @@ body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
   transition: color var(--nav-indicator-duration) var(--nav-indicator-ease);
   position: relative;
   z-index: 2;
+  /* Safe-area is padding inside the 84px bar, so flex centers too high.
+     Nudge the icon+label stack down by half that inset (minus ½ border)
+     so top-of-icon and bottom-of-label sit equal from the bar edges. */
+  top: calc((env(safe-area-inset-bottom, 0px) - 1px) / 2);
 }
 
 .nav-item:focus-visible {
