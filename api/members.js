@@ -16,6 +16,7 @@ const {
   publicInfluencer,
 } = require('./_lib/members-store');
 const { putPrivateBinary, mediaProxyUrl, assertBlobConfigured } = require('./_lib/store');
+const { normalizeUploadImage } = require('./_lib/normalize-upload-image');
 const { randomUUID } = require('crypto');
 
 const IMAGE_MIME_RE = /^image\/[a-z0-9.+-]+$/i;
@@ -351,23 +352,39 @@ module.exports = async function handler(req, res) {
         return res.status(400).json({ error: 'That file is not a supported image' });
       }
 
-      const subtype = contentType.replace(/^image\//, '');
-      const ext = IMAGE_EXT_MAP[subtype] || subtype.replace(/[^a-z0-9]/gi, '') || 'img';
-      const buffer = Buffer.from(match[2], 'base64');
+      const rawBuffer = Buffer.from(match[2], 'base64');
       const maxBytes = 4 * 1024 * 1024;
-      if (!buffer.length) {
+      if (!rawBuffer.length) {
         return res.status(400).json({ error: 'Image file was empty' });
       }
-      if (buffer.length > maxBytes) {
+      if (rawBuffer.length > maxBytes) {
         return res.status(400).json({ error: 'Image must be under 4 MB' });
       }
 
+      let normalized;
+      try {
+        normalized = await normalizeUploadImage(rawBuffer, {
+          contentType,
+          fileName: String(fileName || ''),
+        });
+      } catch (err) {
+        return res.status(err.statusCode || 400).json({
+          error: err.message || 'Could not process that image',
+        });
+      }
+
       assertBlobConfigured();
-      const pathname = `wc-data/members/media/${session.influencerId}/${field}-${randomUUID()}.${ext}`;
-      await putPrivateBinary(pathname, buffer, contentType, { overwrite: true });
+      const pathname = `wc-data/members/media/${session.influencerId}/${field}-${randomUUID()}.${normalized.ext}`;
+      await putPrivateBinary(pathname, normalized.buffer, normalized.contentType, { overwrite: true });
       const url = mediaProxyUrl(pathname);
 
-      return res.status(200).json({ ok: true, url, path: pathname, kind: field });
+      return res.status(200).json({
+        ok: true,
+        url,
+        path: pathname,
+        kind: field,
+        converted: Boolean(normalized.converted),
+      });
     }
 
     if (action === 'influencer-update-profile' && req.method === 'POST') {

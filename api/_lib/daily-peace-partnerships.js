@@ -16,6 +16,7 @@ const {
   mediaProxyUrl,
   assertBlobConfigured,
 } = require('./store');
+const { normalizeUploadImage } = require('./normalize-upload-image');
 
 const PARTNERSHIPS_ROOT = 'wc-data/daily-peace/partnerships';
 const PARTNERSHIPS_INDEX = `${PARTNERSHIPS_ROOT}/index.json`;
@@ -1208,8 +1209,6 @@ async function uploadPartnershipLogo(partnershipId, dataUrl, fileName = '') {
     contentType = 'image/png';
   }
 
-  const subtype = contentType.replace(/^image\//, '');
-  const ext = IMAGE_EXT_MAP[subtype] || subtype.replace(/[^a-z0-9]/gi, '') || 'img';
   const buffer = Buffer.from(match[2], 'base64');
   if (!buffer.length) {
     throw new Error('Image file was empty');
@@ -1218,8 +1217,10 @@ async function uploadPartnershipLogo(partnershipId, dataUrl, fileName = '') {
     throw new Error('Image must be under 8 MB');
   }
 
+  const normalized = await normalizeUploadImage(buffer, { contentType, fileName });
+  const ext = normalized.ext || 'jpg';
   const pathname = `${PARTNERSHIPS_ROOT}/media/${partnershipId}/logo-${randomUUID().slice(0, 8)}.${ext}`;
-  await putPrivateBinary(pathname, buffer, contentType);
+  await putPrivateBinary(pathname, normalized.buffer, normalized.contentType);
   const url = mediaProxyUrl(pathname);
 
   const updated = {

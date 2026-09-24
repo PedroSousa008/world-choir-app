@@ -1187,8 +1187,8 @@ const FoundationControl = (() => {
       ? 'A wide image generally works best, though any aspect ratio can be uploaded.'
       : 'A clear, recognizable square image generally works best.';
     const hint = isCover
-      ? 'Recommended: Wide image · JPG, PNG, WebP, HEIC, and other images · Max 4 MB'
-      : 'Recommended: Square image (1:1) · JPG, PNG, WebP, HEIC, and other images · Max 4 MB';
+      ? 'Recommended: Wide image · JPG, PNG, WebP (HEIC auto-converted) · Max 4 MB'
+      : 'Recommended: Square image (1:1) · JPG, PNG, WebP (HEIC auto-converted) · Max 4 MB';
     const alt = `${name} ${isCover ? 'cover' : 'profile'} image`;
     const pickLabel = has ? 'Replace' : 'Add image';
 

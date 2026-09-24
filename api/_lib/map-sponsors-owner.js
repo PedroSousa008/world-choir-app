@@ -13,6 +13,7 @@ const {
   mediaProxyUrl,
   assertBlobConfigured,
 } = require('./store');
+const { normalizeUploadImage } = require('./normalize-upload-image');
 
 const SPONSORS_ROOT = 'wc-data/map-sponsors';
 const SPONSORS_INDEX = `${SPONSORS_ROOT}/index.json`;
@@ -577,14 +578,18 @@ async function uploadMapSponsorLogo(sponsorId, dataUrl, fileName = '') {
   const sponsor = await getSponsorById(sponsorId);
   if (!sponsor) throw new Error('Company not found');
 
-  const { contentType, buffer } = parseDataUrl(dataUrl, fileName);
-  if (!IMAGE_MIME_RE.test(contentType) && !/\.(png|jpe?g|webp|gif|svg)$/i.test(fileName)) {
-    throw new Error('Logo must be PNG, WebP, GIF, JPEG, or SVG');
+  const parsed = parseDataUrl(dataUrl, fileName);
+  let contentType = parsed.contentType;
+  let buffer = parsed.buffer;
+  if (!IMAGE_MIME_RE.test(contentType) && !/\.(png|jpe?g|webp|gif|svg|heic|heif)$/i.test(fileName)) {
+    throw new Error('Logo must be PNG, WebP, GIF, JPEG, SVG, or HEIC');
   }
   if (buffer.length > MAX_LOGO_BYTES) throw new Error('Logo must be under 8 MB');
 
-  const subtype = contentType.replace(/^image\//, '');
-  const ext = IMAGE_EXT_MAP[subtype] || subtype.replace(/[^a-z0-9]/gi, '') || 'img';
+  const normalized = await normalizeUploadImage(buffer, { contentType, fileName });
+  contentType = normalized.contentType;
+  buffer = normalized.buffer;
+  const ext = normalized.ext || 'img';
   const pathname = `${SPONSORS_MEDIA_ROOT}/${sponsorId}/logo-${randomUUID().slice(0, 8)}.${ext}`;
   await putPrivateBinary(pathname, buffer, contentType);
   const url = mediaProxyUrl(pathname);

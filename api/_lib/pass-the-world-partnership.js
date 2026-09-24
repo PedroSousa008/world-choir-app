@@ -12,6 +12,7 @@ const {
   assertBlobConfigured,
   mediaProxyUrl,
 } = require('./store');
+const { normalizeUploadImage } = require('./normalize-upload-image');
 
 const ROOT = 'wc-data/pass-the-world/partnership';
 const STATE_PATH = `${ROOT}/state.json`;
@@ -406,13 +407,19 @@ async function uploadPartnershipImage({ field, dataUrl, fileName = '', actor = n
   if (!IMAGE_FIELDS.has(field)) {
     throw Object.assign(new Error('Unknown image field'), { statusCode: 400 });
   }
-  const { contentType, buffer, ext, fileName: name } = parseDataUrl(dataUrl, fileName);
+  const parsed = parseDataUrl(dataUrl, fileName);
+  const normalized = await normalizeUploadImage(parsed.buffer, {
+    contentType: parsed.contentType,
+    fileName: parsed.fileName || fileName,
+  });
+  const ext = normalized.ext || parsed.ext || 'jpg';
+  const contentType = normalized.contentType;
   const pathname = `${MEDIA_ROOT}/${field}-${randomUUID().slice(0, 12)}.${ext}`;
-  await putPrivateBinary(pathname, buffer, contentType, { overwrite: false });
+  await putPrivateBinary(pathname, normalized.buffer, contentType, { overwrite: false });
   const image = {
     url: mediaProxyUrl(pathname),
     pathname,
-    fileName: name || `${field}.${ext}`,
+    fileName: (parsed.fileName || `${field}.${ext}`).replace(/\.(heic|heif)$/i, '.jpg'),
     contentType,
     uploadedAt: nowIso(),
   };
