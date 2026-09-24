@@ -908,7 +908,7 @@ body.map-page {
 
 @media (max-width: 480px) {
   .map-shell {
-    --map-overlay-bottom: 25px;
+    --map-overlay-bottom: 15px;
     --map-stat-block-height: 54px;
   }
 
