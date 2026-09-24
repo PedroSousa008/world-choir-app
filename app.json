@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.worldchoir.app",
       "buildNumber": "1",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "World Choir App uses location to show your city on the global participation map.",
         "NSCalendarsUsageDescription": "World Choir App needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar.",
