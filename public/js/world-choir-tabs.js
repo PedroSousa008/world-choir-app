@@ -54,7 +54,7 @@ const WorldChoirTabs = (() => {
       css: [
         'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
         'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
-        'css/map.css?v=20260924edge1',
+        'css/map.css?v=20260924mapPad1',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260924safeTop1',
         'css/daily-peace.css?v=20260810e',
