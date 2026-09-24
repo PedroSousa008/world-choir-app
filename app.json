@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "scheme": "worldchoir",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -49,20 +50,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Allow World Choir App to use your location to show your city on the global map."
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#ffffff"
-        }
-      ],
-      "expo-calendar"
+      "expo-font"
     ]
   }
 }
