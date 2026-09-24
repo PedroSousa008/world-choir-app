@@ -4,7 +4,8 @@
   position: relative;
   z-index: 1;
   min-height: 100vh;
-  padding: 24px 20px calc(var(--nav-height) + 24px);
+  /* 24px content gap + safe-area so chrome matches pre–edge-to-edge distance */
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 20px calc(var(--nav-height) + 24px);
   max-width: 480px;
   margin: 0 auto;
   width: 100%;
@@ -1024,7 +1025,7 @@ html[data-theme="light"] .countdown-name {
   align-items: center;
   box-sizing: border-box;
   width: 100%;
-  padding: clamp(20px, 6vw, 28px) 20px clamp(24px, 7vw, 36px);
+  padding: calc(clamp(20px, 6vw, 28px) + env(safe-area-inset-top, 0px)) 20px clamp(24px, 7vw, 36px);
   text-align: center;
   line-height: normal;
   pointer-events: none;

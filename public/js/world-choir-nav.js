@@ -603,7 +603,7 @@ const WorldChoirNav = (() => {
   const TAB_ASSETS = {
     home: [
       'index.html',
-      'css/home.css?v=20260911guideGrey',
+      'css/home.css?v=20260924safeTop1',
       'js/world-choir-home.js?v=20260921geocode3',
       'js/world-choir-db.js?v=20260921geocode3',
     ],
@@ -637,7 +637,7 @@ const WorldChoirNav = (() => {
     ],
     profile: [
       'profile.html',
-      'css/profile.css?v=20260912themeSlot',
+      'css/profile.css?v=20260924safeTop1',
       'js/profile/profile-page.js?v=20260912tabRoot',
       'js/profile/daily-acts-peace.js?v=20260912dapFast',
       'js/profile/daily-acts-button.js?v=20260912dapFast',

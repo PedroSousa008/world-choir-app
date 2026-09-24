@@ -6,6 +6,8 @@
   width: 100%;
   max-width: 100%;
   overflow-x: clip;
+  /* .page uses 32px top — add safe-area so logo matches pre–edge-to-edge */
+  padding-top: calc(32px + env(safe-area-inset-top, 0px));
 }
 
 /* Hide legal footer until Profile content paints — avoids a flash of
@@ -24,7 +26,7 @@
    (Donate: padding 14/20 + margin-right -8 → 14px top, 12px right). */
 .profile-theme-toggle {
   position: absolute;
-  top: 14px;
+  top: calc(14px + env(safe-area-inset-top, 0px));
   right: 12px;
   width: 44px;
   height: 44px;
