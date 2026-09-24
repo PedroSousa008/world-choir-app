@@ -626,7 +626,7 @@ const WorldChoirNav = (() => {
     donate: [
       'donate.html',
       'css/foundation-public-card.css?v=20260904cd',
-      'css/donate.css?v=20260917rmCauses1',
+      'css/donate.css?v=20260924safeTop1',
       'js/donate/creator-foundations-store.js?v=20260921connect1',
       'js/donate/foundation-analytics.js?v=20260921funnel2',
       'js/donate/donation-flow.js?v=20260921funnel2',

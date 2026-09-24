@@ -83,7 +83,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — Donate',
       css: [
         'css/foundation-public-card.css?v=20260904cd',
-        'css/donate.css?v=20260912fpText2',
+        'css/donate.css?v=20260924safeTop1',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260912themeSlot',
         'css/daily-peace.css?v=20260810e',
@@ -148,7 +148,7 @@ const WorldChoirTabs = (() => {
       href: 'memory.html',
       title: 'World Choir — The World Sang',
       css: [
-        'css/donate.css?v=20260912fpText2',
+        'css/donate.css?v=20260924safeTop1',
         'css/passport.css?v=20260914ptwInvite',
         'css/profile.css?v=20260912themeSlot',
         'css/daily-peace.css?v=20260810e',
