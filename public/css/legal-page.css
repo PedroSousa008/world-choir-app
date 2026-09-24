@@ -1,7 +1,8 @@
 /* World Choir — legal / policy pages */
 
 .legal-page {
-  padding-top: 24px;
+  /* Overrides .page 32px top — keep 24px content gap + safe-area for edge-to-edge */
+  padding-top: calc(24px + env(safe-area-inset-top, 0px));
 }
 
 .legal-back {

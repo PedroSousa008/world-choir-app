@@ -1,7 +1,8 @@
 /* World Choir — Contact page (mobile-first, desktop-ready) */
 
 .contact-page {
-  padding-top: 12px;
+  /* Overrides .page 32px top — keep 12px content gap + safe-area for edge-to-edge */
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
   width: 100%;
   max-width: 480px;
   margin-left: auto;

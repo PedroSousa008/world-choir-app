@@ -178,7 +178,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — Daily Acts of Peace',
       css: [
         'css/daily-peace.css?v=20260813g',
-        'css/daily-acts-page.css?v=20260911sheetGrey',
+        'css/daily-acts-page.css?v=20260924safeTop1',
         'css/daily-acts-walkthrough.css?v=20260904c',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260924safeTop1',
