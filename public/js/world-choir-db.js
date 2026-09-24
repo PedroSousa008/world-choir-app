@@ -312,6 +312,15 @@ const WorldChoirDB = (() => {
     }
   }
 
+  function choirVoiceCount(uniquePledges) {
+    let maxVoice = 0;
+    for (const p of uniquePledges || []) {
+      const n = Number(p.voiceNumber ?? p.voice_number);
+      if (Number.isFinite(n) && n > maxVoice) maxVoice = n;
+    }
+    return Math.max((uniquePledges || []).length, maxVoice);
+  }
+
   function buildAggregateFromCachedPledges(eventId) {
     const unique = getUniquePledgesForEvent(eventId);
     const withCoords = unique.filter(
@@ -334,16 +343,17 @@ const WorldChoirDB = (() => {
     const withLocation = unique.filter((p) => p.city && p.country);
     const cityKeys = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
     const countries = new Set(withLocation.map((p) => p.country));
+    const voices = choirVoiceCount(unique);
     return {
       eventId,
       stats: {
-        voices: unique.length,
+        voices,
         cities: cityKeys.size,
         countries: countries.size,
       },
       cities: Object.values(cityMap),
       meta: {
-        count: unique.length,
+        count: voices,
         updated_at: new Date().toISOString(),
       },
     };
@@ -1051,7 +1061,7 @@ const WorldChoirDB = (() => {
     const cities = new Set(withLocation.map((p) => `${p.city}|${p.country}`));
     const countries = new Set(withLocation.map((p) => p.country));
     return {
-      voices: pledges.length,
+      voices: choirVoiceCount(pledges),
       cities: cities.size,
       countries: countries.size,
     };

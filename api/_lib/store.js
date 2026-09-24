@@ -664,7 +664,9 @@ async function writeMapAggregateSnapshot(eventId, pledges, updatedAt = new Date(
   const payload = {
     eventId: trimmedEvent,
     meta: {
-      count: Array.isArray(pledges) ? pledges.length : (stats?.voices || 0),
+      // Align live-sync signature with the Voices counter (may exceed pledge file count
+      // when a voice number was claimed but the pledge write failed).
+      count: stats?.voices || (Array.isArray(pledges) ? pledges.length : 0),
       updated_at: updatedAt,
     },
     stats,
@@ -717,17 +719,32 @@ async function getPledgesMeta(eventId) {
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
+  // Prefer map-aggregate snapshot — its count matches the Voices counter.
+  try {
+    const snap = await readBlobJson(mapAggregatePath(trimmedEvent));
+    if (snap?.stats && typeof snap.stats.voices === 'number') {
+      return cacheSet(cacheKey, {
+        count: snap.stats.voices,
+        updated_at: snap.meta?.updated_at || null,
+      }, 1500);
+    }
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+  }
+
   try {
     const index = await readBlobJson(pledgesIndexPath(trimmedEvent));
-    if (index && typeof index.count === 'number') {
+    if (index && Array.isArray(index.pledges) && index.pledges.length) {
+      const mapped = index.pledges.map(mapPledgeRow).filter(Boolean);
+      const { stats } = computeMapAggregateFromMappedPledges(mapped, trimmedEvent);
       return cacheSet(cacheKey, {
-        count: index.count,
+        count: stats.voices,
         updated_at: index.updated_at || null,
       }, 1500);
     }
-    if (Array.isArray(index?.pledges)) {
+    if (index && typeof index.count === 'number') {
       return cacheSet(cacheKey, {
-        count: index.pledges.length,
+        count: index.count,
         updated_at: index.updated_at || null,
       }, 1500);
     }
@@ -735,8 +752,10 @@ async function getPledgesMeta(eventId) {
     if (isBlobUnavailable(err)) throw wrapBlobError(err);
   }
   const pledges = await listPledges(trimmedEvent);
+  const mapped = pledges.map(mapPledgeRow).filter(Boolean);
+  const { stats } = computeMapAggregateFromMappedPledges(mapped, trimmedEvent);
   return cacheSet(cacheKey, {
-    count: pledges.length,
+    count: stats.voices,
     updated_at: new Date().toISOString(),
   }, 1500);
 }
@@ -745,7 +764,20 @@ async function getPledgesMeta(eventId) {
  * Map aggregate — MUST mirror public/js/world-choir-db.js:
  * getUniquePledgesForEvent → getMapStats / getAggregatedCities
  * (dedupe by first user_id occurrence; city key `${city}|${country}`; first coords win).
+ *
+ * Voices follows the choir numbering: max(people, highest voice #). A burned
+ * claim can leave a gap (e.g. people=45, max voice=46) — Voices shows 46 so
+ * "Voice 46" and the Voices counter stay consistent.
  */
+function choirVoiceCount(uniquePledges) {
+  let maxVoice = 0;
+  for (const p of uniquePledges || []) {
+    const n = Number(p.voice_number ?? p.voiceNumber);
+    if (Number.isFinite(n) && n > maxVoice) maxVoice = n;
+  }
+  return Math.max((uniquePledges || []).length, maxVoice);
+}
+
 function computeMapAggregateFromMappedPledges(mappedPledges, eventId) {
   const trimmedEvent = String(eventId || '').trim();
   const eventPledges = (mappedPledges || []).filter(
@@ -765,7 +797,7 @@ function computeMapAggregateFromMappedPledges(mappedPledges, eventId) {
   const countrySet = new Set(withLocation.map((p) => p.country));
 
   const stats = {
-    voices: unique.length,
+    voices: choirVoiceCount(unique),
     cities: cityKeySet.size,
     countries: countrySet.size,
   };
@@ -1066,7 +1098,7 @@ function computeWorldChoirStatsFromPledges(pledges) {
   const majorCities = computeMajorCitiesFromPledges(unique);
 
   return {
-    voices: unique.length,
+    voices: choirVoiceCount(unique),
     cities: cities.size,
     countries: countries.size,
     continents: representedContinents.length,
