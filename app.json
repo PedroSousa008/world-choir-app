@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "World Choir",
+    "name": "World Choir App",
     "slug": "world-choir-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,15 +14,21 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.worldchoir.app",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "This app uses location to show your city on the global participation map.",
-        "NSCalendarsUsageDescription": "World Choir needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar.",
-        "NSCalendarsWriteOnlyAccessUsageDescription": "World Choir needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar.",
-        "NSRemindersUsageDescription": "World Choir needs access to Reminders to create a reminder when you tap Remind Me.",
-        "NSRemindersFullAccessUsageDescription": "World Choir needs access to Reminders to create a reminder when you tap Remind Me."
+        "NSLocationWhenInUseUsageDescription": "World Choir App uses location to show your city on the global participation map.",
+        "NSCalendarsUsageDescription": "World Choir App needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar.",
+        "NSCalendarsWriteOnlyAccessUsageDescription": "World Choir App needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar.",
+        "NSRemindersUsageDescription": "World Choir App needs access to Reminders to create a reminder when you tap Remind Me.",
+        "NSRemindersFullAccessUsageDescription": "World Choir App needs access to Reminders to create a reminder when you tap Remind Me.",
+        "NSCameraUsageDescription": "World Choir App may use the camera for Memory and profile photos when you choose to share one.",
+        "NSPhotoLibraryUsageDescription": "World Choir App may access your photos when you choose an image to share."
       }
     },
     "android": {
+      "package": "com.worldchoir.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
@@ -32,7 +38,11 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "READ_CALENDAR",
-        "WRITE_CALENDAR"
+        "WRITE_CALENDAR",
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS",
+        "INTERNET"
       ]
     },
     "web": {
@@ -42,13 +52,13 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow World Choir to use your location to show your city on the global map."
+          "locationAlwaysAndWhenInUsePermission": "Allow World Choir App to use your location to show your city on the global map."
         }
       ],
       [
         "expo-notifications",
         {
-          "icon": "./assets/notification-icon.png",
+          "icon": "./assets/icon.png",
           "color": "#ffffff"
         }
       ],
