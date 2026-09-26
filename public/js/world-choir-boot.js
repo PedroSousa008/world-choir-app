@@ -8,6 +8,17 @@
  * Tab handoff: WorldChoirNav can hold the black overlay until the shared
  * tab indicator finishes arriving, so the page “opens” with the indicator.
  */
+(function markNativeAppShell() {
+  try {
+    const fromUa = /WorldChoirApp/i.test(navigator.userAgent || '');
+    const fromSession = sessionStorage.getItem('wc_native_app') === '1';
+    if (fromUa || fromSession) {
+      document.documentElement.classList.add('wc-native-app');
+      if (fromUa) sessionStorage.setItem('wc_native_app', '1');
+    }
+  } catch (_) { /* ignore */ }
+})();
+
 const WorldChoirBoot = (() => {
   let done = false;
   let contentReady = false;

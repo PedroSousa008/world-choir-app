@@ -908,8 +908,14 @@ body.map-page {
 
 @media (max-width: 480px) {
   .map-shell {
-    --map-overlay-bottom: 15px;
+    /* Website mobile: original clearance above the tab bar */
+    --map-overlay-bottom: 50px;
     --map-stat-block-height: 54px;
+  }
+
+  /* Native Expo shell only — tighter 15px clearance agreed for the app */
+  html.wc-native-app .map-shell {
+    --map-overlay-bottom: 15px;
   }
 
   .map-header {

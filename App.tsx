@@ -113,10 +113,18 @@ export default function App() {
             automaticallyAdjustContentInsets={false}
             contentInsetAdjustmentBehavior="never"
             automaticallyAdjustsScrollIndicatorInsets={false}
-            // Mark the page so CSS can treat the native shell if needed later.
+            // Mark the page so CSS can treat the native shell (e.g. Map overlay inset).
             injectedJavaScriptBeforeContentLoaded={`
               try {
                 document.documentElement.classList.add('wc-native-app');
+                sessionStorage.setItem('wc_native_app', '1');
+              } catch (e) {}
+              true;
+            `}
+            injectedJavaScript={`
+              try {
+                document.documentElement.classList.add('wc-native-app');
+                sessionStorage.setItem('wc_native_app', '1');
               } catch (e) {}
               true;
             `}
