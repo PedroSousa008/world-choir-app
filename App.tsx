@@ -82,7 +82,7 @@ export default function App() {
             style={styles.webview}
             scrollEnabled
             bounces
-            nestedScrollEnabled
+            decelerationRate="normal"
             onLoadStart={() => {
               setLoading(true);
               setError(null);

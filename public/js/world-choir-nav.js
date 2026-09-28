@@ -807,6 +807,14 @@ const WorldChoirNav = (() => {
   let navPinScrollStopTimer = null;
   let navPinLastBottom = null;
 
+  function isNativeAppShell() {
+    try {
+      return document.documentElement.classList.contains('wc-native-app');
+    } catch {
+      return false;
+    }
+  }
+
   function isTextFieldFocused() {
     const el = document.activeElement;
     if (!el || el === document.body) return false;
@@ -824,24 +832,13 @@ const WorldChoirNav = (() => {
    * and made the tab bar visibly slide during fast scroll-up. Stay at
    * bottom:0 (stylesheet) unless a text field is focused and the keyboard
    * is clearly open.
+   *
+   * Also critical for Expo WKWebView: never rewrite styles during an active
+   * scroll gesture — any layout/style thrash cancels momentum scrolling.
    */
   function pinNavToVisualViewport() {
     const root = document.getElementById('nav-root');
     if (!root || root.hasAttribute('hidden')) return;
-    if (root.parentElement !== document.body) {
-      document.body.appendChild(root);
-    }
-
-    root.style.setProperty('position', 'fixed', 'important');
-    root.style.setProperty('left', '0px', 'important');
-    root.style.setProperty('right', '0px', 'important');
-    root.style.setProperty('top', 'auto', 'important');
-    root.style.setProperty('width', '100%', 'important');
-    root.style.setProperty('max-width', '100%', 'important');
-    root.style.setProperty('transform', 'none', 'important');
-    root.style.zIndex = '100';
-    root.style.pointerEvents = 'none';
-    root.style.margin = '0';
 
     let bottom = 0;
     const vv = window.visualViewport;
@@ -852,13 +849,46 @@ const WorldChoirNav = (() => {
       if (inset >= 80) bottom = inset;
     }
 
-    if (bottom === navPinLastBottom) return;
+    const needsReparent = root.parentElement !== document.body;
+    // Bail before any style writes — WKWebView drops inertia if we thrash here.
+    if (!needsReparent && bottom === navPinLastBottom) return;
+
+    if (needsReparent) {
+      document.body.appendChild(root);
+    }
+
     navPinLastBottom = bottom;
+
     if (bottom > 0) {
+      root.style.setProperty('position', 'fixed', 'important');
+      root.style.setProperty('left', '0px', 'important');
+      root.style.setProperty('right', '0px', 'important');
+      root.style.setProperty('top', 'auto', 'important');
+      root.style.setProperty('width', '100%', 'important');
+      root.style.setProperty('max-width', '100%', 'important');
+      root.style.setProperty('transform', 'none', 'important');
       root.style.setProperty('bottom', `${bottom}px`, 'important');
-    } else {
-      // Let stylesheet `bottom: 0 !important` win — no inline fighting compositor.
-      root.style.removeProperty('bottom');
+      root.style.zIndex = '100';
+      root.style.pointerEvents = 'none';
+      root.style.margin = '0';
+      return;
+    }
+
+    // Resting state: stylesheet owns fixed chrome. Clear inline lift only.
+    root.style.removeProperty('bottom');
+    // On native, skip reinforcing other inline props — CSS !important is enough
+    // and avoids scroll jank in Expo WKWebView.
+    if (!isNativeAppShell()) {
+      root.style.setProperty('position', 'fixed', 'important');
+      root.style.setProperty('left', '0px', 'important');
+      root.style.setProperty('right', '0px', 'important');
+      root.style.setProperty('top', 'auto', 'important');
+      root.style.setProperty('width', '100%', 'important');
+      root.style.setProperty('max-width', '100%', 'important');
+      root.style.setProperty('transform', 'none', 'important');
+      root.style.zIndex = '100';
+      root.style.pointerEvents = 'none';
+      root.style.margin = '0';
     }
   }
 
@@ -872,9 +902,19 @@ const WorldChoirNav = (() => {
 
   /**
    * Mark an active scroll gesture so keyboard inset logic stays frozen.
-   * Do not rewrite styles every frame — that thrash was part of the drift.
+   * Do not rewrite styles during the gesture — that kills WKWebView momentum.
    */
   function markNavScrolling() {
+    if (isNativeAppShell()) {
+      // Flag only. Zero DOM / style work while the user is panning or coasting.
+      navPinScrolling = true;
+      if (navPinScrollStopTimer) clearTimeout(navPinScrollStopTimer);
+      navPinScrollStopTimer = setTimeout(() => {
+        navPinScrolling = false;
+      }, 480);
+      return;
+    }
+
     const root = document.getElementById('nav-root');
     if (root && root.parentElement !== document.body) {
       document.body.appendChild(root);
@@ -899,10 +939,16 @@ const WorldChoirNav = (() => {
     navPinBound = true;
     const vv = window.visualViewport;
     const onScrollGesture = () => markNavScrolling();
+    const native = isNativeAppShell();
+
     window.addEventListener('scroll', onScrollGesture, { passive: true, capture: true });
     window.addEventListener('wheel', onScrollGesture, { passive: true, capture: true });
-    window.addEventListener('touchmove', onScrollGesture, { passive: true, capture: true });
-    window.addEventListener('touchstart', onScrollGesture, { passive: true, capture: true });
+    // touchstart/touchmove style thrash cancels Expo WebView inertia —
+    // only needed on mobile Safari for keyboard-freeze timing.
+    if (!native) {
+      window.addEventListener('touchmove', onScrollGesture, { passive: true, capture: true });
+      window.addEventListener('touchstart', onScrollGesture, { passive: true, capture: true });
+    }
     window.addEventListener('resize', scheduleNavPin, { passive: true });
     window.addEventListener('orientationchange', scheduleNavPin, { passive: true });
     document.addEventListener('scroll', onScrollGesture, { passive: true, capture: true });
@@ -912,8 +958,10 @@ const WorldChoirNav = (() => {
     if (typeof window !== 'undefined' && 'onscrollend' in window) {
       window.addEventListener('scrollend', () => {
         navPinScrolling = false;
-        navPinLastBottom = null;
-        pinNavToVisualViewport();
+        if (!isNativeAppShell()) {
+          navPinLastBottom = null;
+          pinNavToVisualViewport();
+        }
       }, { passive: true });
     }
     // Keyboard open/close only — never visualViewport.scroll (that moves the bar).
@@ -937,6 +985,8 @@ const WorldChoirNav = (() => {
         }
       }).observe(document.body, { childList: true });
     }
+
+    pinNavToVisualViewport();
   }
 
   function mount(activePage) {

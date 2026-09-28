@@ -618,32 +618,40 @@ body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
 
 /*
  * Native Expo WKWebView only.
- * Tab-shell height:100% + #wc-tab-host min-height:0 / overflow-x:clip freezes
- * UIScrollView contentSize, so Donate / Profile / World Chain / Daily Acts
- * cannot document-scroll. Mobile Safari is fine with the shared rules above.
+ * Soft-tab shell uses height:100% flex + overflow-x:clip which freezes
+ * WKWebView document scrolling / kills momentum. Safari is fine with the
+ * shared rules above — change only the native shell.
  * Leave body.map-page (Map scroll lock) unchanged. Never overflow html/body.
  */
 html.wc-native-app.wc-tab-shell {
-  height: auto;
+  height: auto !important;
   min-height: 100%;
   min-height: 100dvh;
 }
 
 html.wc-native-app body.wc-tab-shell:not(.map-page) {
-  height: auto;
+  /* Exit the flex clamp so tall tabs size like a normal website document. */
+  display: block !important;
+  height: auto !important;
   min-height: 100%;
   min-height: 100dvh;
+  overflow: visible;
 }
 
 html.wc-native-app body.wc-tab-shell:not(.map-page) #wc-tab-host.wc-tab-host {
-  flex: 1 0 auto; /* grow with panel content → document scrollHeight expands */
-  min-height: auto;
-  overflow: visible; /* avoid clip creating a scrollport WKWebView won't pan */
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 0;
+  flex: none;
+  overflow: visible;
 }
 
 html.wc-native-app body.wc-tab-shell:not(.map-page) .wc-tab-panel.is-active {
+  display: block;
   height: auto;
-  min-height: auto;
+  min-height: 0;
 }
 
 /*
