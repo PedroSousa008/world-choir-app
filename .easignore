@@ -1,0 +1,44 @@
+# Native shell only — website lives on worldchoirapp.com, not in the APK/IPA.
+# When .easignore exists it REPLACES .gitignore for the upload archive.
+
+# Dependencies (installed on EAS builders)
+node_modules/
+
+# Local tooling / VCS / caches
+.tools/
+.git/
+.expo/
+.vercel/
+.cursor/
+.DS_Store
+**/.DS_Store
+*.log
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Full website tree (served from production, not bundled)
+public/
+api/
+scripts/
+dist/
+web/
+supabase/
+src/
+
+# Docs / misc not needed to compile the WebView shell
+DELIVERABLES.md
+README.md
+webpack.config.js
+vercel.json
+
+# Heavy / unused assets
+assets/originals-pre-perf-phase2a/
+assets/expo-go-qr.png
+assets/expo-go-qr-url.txt
+**/*.mp4
+**/*.mov
+**/*.psd
+**/*.{mp3,wav,flac}

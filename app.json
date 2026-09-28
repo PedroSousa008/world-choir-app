@@ -19,6 +19,7 @@
       "buildNumber": "1",
       "icon": "./assets/icon.png",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "World Choir App uses location to show your city on the global participation map.",
         "NSCalendarsUsageDescription": "World Choir App needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar.",
         "NSCalendarsWriteOnlyAccessUsageDescription": "World Choir App needs calendar access to add World Choir 2027 to your calendar when you tap Add to Calendar.",
@@ -52,6 +53,12 @@
     },
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a8a5f9c6-b812-4640-8f56-5043bae5abe2"
+      }
+    },
+    "owner": "pedrosousa10"
   }
 }
