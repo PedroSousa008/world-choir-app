@@ -80,6 +80,9 @@ export default function App() {
             ref={webRef}
             source={{ uri: APP_URL }}
             style={styles.webview}
+            scrollEnabled
+            bounces
+            nestedScrollEnabled
             onLoadStart={() => {
               setLoading(true);
               setError(null);

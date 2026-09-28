@@ -617,6 +617,36 @@ body.wc-tab-shell.map-page .wc-tab-panel.is-preparing {
 }
 
 /*
+ * Native Expo WKWebView only.
+ * Tab-shell height:100% + #wc-tab-host min-height:0 / overflow-x:clip freezes
+ * UIScrollView contentSize, so Donate / Profile / World Chain / Daily Acts
+ * cannot document-scroll. Mobile Safari is fine with the shared rules above.
+ * Leave body.map-page (Map scroll lock) unchanged. Never overflow html/body.
+ */
+html.wc-native-app.wc-tab-shell {
+  height: auto;
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+html.wc-native-app body.wc-tab-shell:not(.map-page) {
+  height: auto;
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+html.wc-native-app body.wc-tab-shell:not(.map-page) #wc-tab-host.wc-tab-host {
+  flex: 1 0 auto; /* grow with panel content → document scrollHeight expands */
+  min-height: auto;
+  overflow: visible; /* avoid clip creating a scrollport WKWebView won't pan */
+}
+
+html.wc-native-app body.wc-tab-shell:not(.map-page) .wc-tab-panel.is-active {
+  height: auto;
+  min-height: auto;
+}
+
+/*
  * Bottom tab bar — ALWAYS glued to the visible screen bottom.
  * CSS position:fixed + bottom:0 is the source of truth during page scroll.
  * WorldChoirNav.pinNavToVisualViewport() must NOT chase visualViewport while
