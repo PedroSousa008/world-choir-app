@@ -34,6 +34,7 @@
     "expo-notifications": "~57.0.21",
     "expo-sharing": "~57.0.22",
     "expo-status-bar": "~57.0.1",
+    "hasown": "^2.0.4",
     "heic-convert": "^2.1.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
