@@ -1,6 +1,7 @@
 # World Choir — https://worldchoirapp.com
 User-agent: *
 Allow: /
+Allow: /images/
 
 # Internal / admin surfaces (also marked noindex where applicable)
 Disallow: /owner
@@ -14,5 +15,25 @@ Disallow: /setup-ai.html
 Disallow: /lyric-player.html
 Disallow: /imagine-lyric-player.html
 Disallow: /pitch/
+
+# Google Search / image crawlers — favicon and brand assets stay crawlable
+User-agent: Googlebot
+Allow: /
+Allow: /images/
+Disallow: /owner
+Disallow: /owner.html
+Disallow: /owner-database
+Disallow: /owner-database.html
+Disallow: /members
+Disallow: /members.html
+Disallow: /admin-upload.html
+Disallow: /setup-ai.html
+Disallow: /lyric-player.html
+Disallow: /imagine-lyric-player.html
+Disallow: /pitch/
+
+User-agent: Googlebot-Image
+Allow: /
+Allow: /images/
 
 Sitemap: https://worldchoirapp.com/sitemap.xml
