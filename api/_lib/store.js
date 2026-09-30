@@ -997,10 +997,13 @@ function assembleOwnerDatabaseRows(users = [], pledges = [], promises = []) {
     return new Date(a.createdAt) - new Date(b.createdAt);
   });
 
+  // Voices KPI matches Map / public choir numbering: max(people, highest voice #).
+  // A burned claim can leave a gap (e.g. 49 people, Voice #50) — show 50.
   return {
     totals: {
       users: allUserIds.size,
-      participants: pledges.length,
+      participants: choirVoiceCount(pledges),
+      pledgedPeople: pledges.length,
     },
     rows,
   };
