@@ -151,7 +151,7 @@ const NOTIFICATION_SOUNDS = Object.freeze([
 const DESTINATION_TYPES = Object.freeze([
   { key: 'home', label: 'Home', route: 'index.html' },
   { key: 'daily_act', label: 'Daily Act of Peace', route: 'profile.html?tab=daily-acts' },
-  { key: 'pass_the_world', label: 'Pass the World', route: 'map.html?focus=pass-the-world' },
+  { key: 'pass_the_world', label: 'Pass the World', route: 'passport.html?page=story' },
   { key: 'world_chain', label: 'World Chain', route: 'world-chain.html' },
   { key: 'passport', label: 'Passport', route: 'passport.html' },
   { key: 'practice', label: 'Practice', route: 'index.html?focus=practice' },

@@ -849,13 +849,14 @@ const PassTheWorldMap = (() => {
 
   async function mount(id = 'ptw-map') {
     if (typeof L === 'undefined') {
-      console.error('Leaflet required for PassTheWorldMap');
-      return null;
+      throw new Error('Map could not load. Check your connection and try again.');
     }
     destroy();
     containerId = id;
     const el = document.getElementById(containerId);
-    if (!el) return null;
+    if (!el) {
+      throw new Error('Map could not load. Check your connection and try again.');
+    }
 
     userHasZoomed = false;
 

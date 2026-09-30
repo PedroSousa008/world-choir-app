@@ -81,15 +81,25 @@ const PassTheWorld = (() => {
         return;
       }
       const srcKey = asset.href.split('?')[0];
-      if ([...document.scripts].some((s) => s.src && s.src.includes(srcKey.split('/').pop()))) {
-        resolve();
-        return;
-      }
-      const existing = document.querySelector(`script[src="${asset.href}"]`);
-      if (existing) {
-        existing.addEventListener('load', () => resolve());
-        existing.addEventListener('error', () => reject(new Error(`Failed ${asset.href}`)));
-        if (existing.dataset.loaded === '1') resolve();
+      const fileName = srcKey.split('/').pop();
+      const existingBySrc = document.querySelector(`script[src="${asset.href}"]`);
+      const existingAny = existingBySrc
+        || [...document.scripts].find((s) => s.src && s.src.includes(fileName));
+      if (existingAny) {
+        if (existingAny.dataset.loaded === '1') {
+          resolve();
+          return;
+        }
+        existingAny.addEventListener('load', () => {
+          existingAny.dataset.loaded = '1';
+          resolve();
+        });
+        existingAny.addEventListener('error', () => reject(new Error(`Failed ${asset.href}`)));
+        // Already finished loading before we attached listeners.
+        if (existingAny.readyState === 'complete' || existingAny.readyState === 'loaded') {
+          existingAny.dataset.loaded = '1';
+          resolve();
+        }
         return;
       }
       const script = document.createElement('script');
@@ -460,11 +470,12 @@ const PassTheWorld = (() => {
     if (status === 'TRAVELLING' || status === 'REVEAL_PENDING') return false;
     if (viewer.sameCountry && viewer.countryLoaded) return false;
     if (!viewer.countryEligible) return false;
-    // Active during open / first-call; muted preview while waiting for today's ritual.
+    // Active during open / first-call; show muted only if they already invited today.
     if (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL') {
       return isVisitButtonActive(journey) || viewer.hasInvited !== true;
     }
-    if (status === 'ARRIVED' || status === 'INITIAL') return true;
+    // ARRIVED / INITIAL: only show when inviting is actually open (never a dead muted button).
+    if (status === 'ARRIVED' || status === 'INITIAL') return isVisitButtonActive(journey);
     return false;
   }
 

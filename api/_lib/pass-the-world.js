@@ -274,10 +274,20 @@ const COUNTRY_NAME_TO_ISO2 = {
   venezuela: 'VE', vietnam: 'VN', yemen: 'YE', zambia: 'ZM', zimbabwe: 'ZW',
 };
 
+/** Common ISO2 aliases that are not the official codes. */
+const COUNTRY_CODE_ALIASES = Object.freeze({
+  UK: 'GB',
+  EL: 'GR',
+  EN: 'GB',
+});
+
 function resolveCountryCode(countryOrCode) {
   const raw = String(countryOrCode || '').trim();
   if (!raw) return null;
-  if (/^[A-Za-z]{2}$/.test(raw)) return raw.toUpperCase();
+  if (/^[A-Za-z]{2}$/.test(raw)) {
+    const code = raw.toUpperCase();
+    return COUNTRY_CODE_ALIASES[code] || code;
+  }
   return COUNTRY_NAME_TO_ISO2[raw.toLowerCase()] || null;
 }
 
@@ -1423,7 +1433,12 @@ async function settleInvitationRound(state, itinerary, now) {
       selectedAt: now.toISOString(),
       selectionMode: 'window',
     };
-    await claimWinner(roundId, winnerPayload);
+    await claimWinner(roundId, winnerPayload, state);
+    // If a stale ineligible winner somehow remains, force the eligible pick.
+    const claimed = await readWinner(roundId);
+    if (!winnerEligibleForWorld(claimed, state)) {
+      await writeJson(roundWinnerPath(roundId), winnerPayload, { overwrite: true });
+    }
   }
   try {
     const winner = await readWinner(roundId);
