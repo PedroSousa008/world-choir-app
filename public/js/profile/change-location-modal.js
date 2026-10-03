@@ -83,7 +83,7 @@ const ChangeLocationModal = (() => {
       if (onSuccessCallback) await onSuccessCallback({ city, country, mode });
     } catch (err) {
       console.error(err);
-      alert('Could not save location. Please try again.');
+      alert(err.message || 'Could not save location. Please try again.');
     } finally {
       btn.disabled = false;
       btn.textContent = mode === 'pledge' ? 'Confirm Participation' : 'Save Location';

@@ -27,8 +27,8 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ pledge: mapPledgeRow(pledge) });
   } catch (err) {
     console.error('api/join error:', err);
-    if (err.code === 'GEOCODE_FAILED') {
-      return res.status(400).json({ error: err.message || 'Could not locate that city' });
+    if (err.code === 'GEOCODE_FAILED' || err.code === 'LOCATION_MISMATCH') {
+      return res.status(400).json({ error: err.message || 'Could not locate that city', code: err.code });
     }
     const payload = await jsonStorageError(err);
     return res.status(503).json(payload);

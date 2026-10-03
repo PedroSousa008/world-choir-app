@@ -693,6 +693,52 @@ async function upsertPledgeIntoIndex(eventId, pledge) {
   return writePledgesIndex(eventId, next);
 }
 
+async function removePledgeFromIndex(eventId, userId) {
+  const trimmedEvent = String(eventId || '').trim();
+  const trimmedUser = String(userId || '').trim();
+  if (!trimmedEvent || !trimmedUser) return [];
+  let pledges = await readPledgesIndex(trimmedEvent);
+  if (!pledges) {
+    pledges = await loadPledgesFromFiles(trimmedEvent);
+  }
+  const next = pledges.filter((p) => p.user_id !== trimmedUser);
+  return writePledgesIndex(trimmedEvent, next);
+}
+
+/**
+ * Permanently remove a pledged voice (Owner / ops cleanup).
+ * Deletes the pledge blob, drops it from the index, and frees the voice claim
+ * when it is the current max so Voices numbering can reuse it.
+ */
+async function deletePledgeVoice({ eventId, userId }) {
+  assertBlobConfigured();
+  const trimmedEvent = String(eventId || '').trim();
+  const trimmedUser = String(userId || '').trim();
+  if (!trimmedEvent || !trimmedUser) throw new Error('eventId and userId are required');
+
+  const existing = await readPledge(trimmedEvent, trimmedUser);
+  if (!existing) throw new Error('pledge not found');
+
+  const voiceNumber = Number(existing.voice_number);
+  const { del } = require('@vercel/blob');
+  try {
+    await del(pledgePath(trimmedEvent, trimmedUser));
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+  }
+
+  await removePledgeFromIndex(trimmedEvent, trimmedUser);
+  if (Number.isFinite(voiceNumber) && voiceNumber >= 1) {
+    await releaseVoiceNumberClaim(trimmedEvent, voiceNumber).catch(() => {});
+  }
+
+  memCache.delete(`pledges:${trimmedEvent}`);
+  memCache.delete('pledges:all');
+  memCache.delete(`pledges-meta:${trimmedEvent}`);
+  refreshEventMilestones(trimmedEvent).catch(() => {});
+  return { deleted: true, userId: trimmedUser, voiceNumber: voiceNumber || null, pledge: existing };
+}
+
 async function reconcilePledges(eventId) {
   const pledges = await loadPledgesFromFiles(eventId);
   try {
@@ -1334,6 +1380,7 @@ module.exports = {
   setSongWeSangLetterFlags,
   joinWorldChoir,
   updatePledgeLocation,
+  deletePledgeVoice,
   listPledges,
   getPledgesMeta,
   getMapAggregate,
