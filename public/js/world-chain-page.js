@@ -2059,14 +2059,20 @@ const WorldChainPage = (() => {
             state.connectLock = false;
             state.feedback = null;
             state.connectDraft = '';
+            // Re-fetch from server so UI matches durable progress (not a stale race).
+            try {
+              await refreshChain(chainId);
+            } catch {
+              /* keep connect response */
+            }
             if (body.photoBookOffer) {
               openPhotoBookContribute(body.photoBookOffer);
               return;
             }
-            // Stay on the turn sheet if this Voice still has the next hop.
+            const live = findChain(chainId) || body.chain;
             const stillTurn = !!(
-              body.chain.viewer?.isActiveTurn
-              || body.chain.viewer?.needsStart
+              live.viewer?.isActiveTurn
+              || live.viewer?.needsStart
             );
             if (!stillTurn) state.turnSheetOpen = false;
             render();

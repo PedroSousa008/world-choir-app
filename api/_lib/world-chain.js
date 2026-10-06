@@ -754,6 +754,85 @@ async function writeChain(eventId, day, chain) {
   return chain;
 }
 
+/** Higher = more real World Chain progress (connections beat start-only heals). */
+function chainProgressScore(chain) {
+  if (!chain) return -1;
+  const route = chain.route || [];
+  const connected = route.filter((s) => s.status === 'connected').length;
+  const activePos = route.find((s) => s.status === 'active')?.position ?? -1;
+  const started = chain.starterAccepted ? 1 : 0;
+  const completed = (chain.status === Status.COMPLETED || chain.completedAt) ? 1 : 0;
+  const step = Number(chain.currentStep) || 0;
+  const progressAt = Date.parse(chain.lastProgressAt || '') || 0;
+  return (
+    completed * 1_000_000
+    + connected * 10_000
+    + started * 1_000
+    + Math.max(activePos, 0) * 100
+    + step * 10
+    + Math.min(Math.floor(progressAt / 1000), 9)
+  );
+}
+
+function mergeFollowerIds(primary, secondary) {
+  const set = new Set([
+    ...(Array.isArray(primary) ? primary : []),
+    ...(Array.isArray(secondary) ? secondary : []),
+  ]);
+  return [...set].slice(-5000);
+}
+
+/**
+ * Never clobber newer chain progress with a stale full-document write.
+ * Blob storage is last-write-wins — follower increments and start-heals were
+ * wiping successful connects when they raced.
+ */
+async function writeChainSafe(eventId, day, chain, { reason = 'update' } = {}) {
+  if (!chain?.id) return chain;
+  const latest = await readChain(eventId, day, chain.id);
+  if (latest) {
+    const latestScore = chainProgressScore(latest);
+    const nextScore = chainProgressScore(chain);
+    if (latestScore > nextScore) {
+      // Stale writer — keep progress; optionally fold in newer follower ids only.
+      const followers = mergeFollowerIds(latest.followerIds, chain.followerIds);
+      if (followers.length !== (latest.followerIds || []).length) {
+        latest.followerIds = followers;
+        latest.followersCount = followers.length;
+        await writeChain(eventId, day, latest);
+      }
+      console.warn('world-chain writeChainSafe refused downgrade', {
+        chainId: chain.id,
+        reason,
+        latestScore,
+        nextScore,
+      });
+      return latest;
+    }
+    // Preserve followers collected on the latest blob.
+    chain.followerIds = mergeFollowerIds(chain.followerIds, latest.followerIds);
+    chain.followersCount = (chain.followerIds || []).length;
+  }
+  await writeChain(eventId, day, chain);
+  return chain;
+}
+
+/** Patch followers on the latest blob only — never rewrite route/progress from a stale read. */
+async function addChainFollower(eventId, day, chainId, userId) {
+  if (!userId || !chainId) return null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const latest = await readChain(eventId, day, chainId);
+    if (!latest) return null;
+    const ids = Array.isArray(latest.followerIds) ? latest.followerIds : [];
+    if (ids.includes(userId)) return latest;
+    latest.followerIds = [...ids, userId].slice(-5000);
+    latest.followersCount = latest.followerIds.length;
+    const written = await writeChainSafe(eventId, day, latest, { reason: 'follower' });
+    if ((written.followerIds || []).includes(userId)) return written;
+  }
+  return readChain(eventId, day, chainId);
+}
+
 async function readArchiveIndex(eventId) {
   try {
     return await readBlobJson(archiveIndexPath(eventId));
@@ -1043,6 +1122,17 @@ async function ensureDailyChains(eventId = DEFAULT_EVENT_ID, now = new Date()) {
       if (chain) chains.push(chain);
     }
     if (isValidTestDay(existing, chains, bounds)) return existing;
+    // Never rebuild a day that already has live progress — that wipes connects.
+    const hasLiveProgress = chains.some((c) => (
+      c.starterAccepted
+      || c.completedAt
+      || c.status === Status.COMPLETED
+      || (c.route || []).some((s) => s.status === 'connected' || s.status === 'active')
+    ));
+    if (hasLiveProgress) {
+      console.warn('world-chain ensureDailyChains skipped rebuild (live progress)', { day, eventId });
+      return existing;
+    }
     previousNumbers = chains
       .map((c) => Number(c.dailyChainNumber))
       .filter((n) => Number.isFinite(n) && n > 0);
@@ -1249,12 +1339,13 @@ async function getChainPayload(chainId, deviceId, eventId = DEFAULT_EVENT_ID) {
   }
 
   // Soft-count followers when someone opens this chain (viewer detail).
+  // Must never rewrite route/progress from a stale in-memory snapshot.
   if (viewer?.userId && !fromArchive) {
-    const ids = Array.isArray(chain.followerIds) ? chain.followerIds : [];
-    if (!ids.includes(viewer.userId)) {
-      chain.followerIds = [...ids, viewer.userId].slice(-5000);
-      chain.followersCount = chain.followerIds.length;
-      writeChain(eventId, day, chain).catch(() => {});
+    try {
+      const updated = await addChainFollower(eventId, day, chain.id, viewer.userId);
+      if (updated) chain = updated;
+    } catch {
+      /* follower count is best-effort */
     }
   }
 
@@ -1350,13 +1441,16 @@ async function acceptStart(deviceId, chainId, eventId = DEFAULT_EVENT_ID) {
   // Idempotent — already started is success (never error the client into a dead end).
   if (!chain.starterAccepted) {
     applyStarterAccepted(chain, viewer, now);
-    await writeChain(eventId, day, chain);
+    chain = await writeChainSafe(eventId, day, chain, { reason: 'accept-start' });
   } else {
     // Heal a partial write where accepted flipped but destination never activated.
     const dest = chain.route?.[1];
-    if (dest && dest.status === 'future') {
+    const hasLaterProgress = (chain.route || []).some((s) => (
+      s.status === 'connected' || (s.position > 1 && s.status === 'active')
+    ));
+    if (!hasLaterProgress && dest && dest.status === 'future') {
       applyStarterAccepted(chain, viewer, now);
-      await writeChain(eventId, day, chain);
+      chain = await writeChainSafe(eventId, day, chain, { reason: 'accept-start-heal' });
     }
   }
 
@@ -1386,11 +1480,11 @@ async function ensureStartedForConnect(chain, viewer, eventId, day, now) {
   if (chain.starterAccepted) {
     const active = (chain.route || []).find((s) => s.status === 'active');
     if (active) return chain;
-    // Accepted but no active hop — heal destination 1.
-    if (chain.startingVoiceId === viewer.userId && chain.route?.[1]) {
+    // Accepted but no active hop — heal destination 1 only if no later progress.
+    const hasLaterProgress = (chain.route || []).some((s) => s.status === 'connected');
+    if (!hasLaterProgress && chain.startingVoiceId === viewer.userId && chain.route?.[1]) {
       applyStarterAccepted(chain, viewer, now);
-      await writeChain(eventId, day, chain);
-      return chain;
+      return writeChainSafe(eventId, day, chain, { reason: 'ensure-start-active' });
     }
     return chain;
   }
@@ -1399,12 +1493,14 @@ async function ensureStartedForConnect(chain, viewer, eventId, day, now) {
   // where UI already moved to CONNECT after a prior acceptStart response).
   if (chain.startingVoiceId === viewer.userId) {
     applyStarterAccepted(chain, viewer, now);
-    await writeChain(eventId, day, chain);
-    // Confirm read — if still stale, keep the in-memory started chain.
+    chain = await writeChainSafe(eventId, day, chain, { reason: 'ensure-start' });
+    // If a concurrent connect already advanced further, use that blob.
     for (let i = 0; i < 3; i += 1) {
       await new Promise((r) => setTimeout(r, 120 * (i + 1)));
       const again = await readChain(eventId, day, chain.id);
-      if (again?.starterAccepted) {
+      if (!again) continue;
+      if (chainProgressScore(again) > chainProgressScore(chain)) return again;
+      if (again.starterAccepted) {
         const active = (again.route || []).find((s) => s.status === 'active');
         if (active) return again;
       }
@@ -1456,8 +1552,8 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   let active = (chain.route || []).find((s) => s.status === 'active');
   if (!active && chain.route?.[1]) {
     applyStarterAccepted(chain, viewer, now);
-    await writeChain(eventId, day, chain);
-    active = chain.route.find((s) => s.status === 'active');
+    chain = await writeChainSafe(eventId, day, chain, { reason: 'connect-activate' });
+    active = (chain.route || []).find((s) => s.status === 'active');
   }
   if (!active) {
     const err = new Error('No active destination on this chain');
@@ -1531,7 +1627,8 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
       usedIds
     );
     active.eligibleVoiceCount = Object.keys(active.eligibleVoices).length;
-    await writeChain(eventId, day, chain);
+    chain = await writeChainSafe(eventId, day, chain, { reason: 'eligible-heal' });
+    active = (chain.route || []).find((s) => s.status === 'active') || active;
   }
 
   const entry = active.eligibleVoices[String(voiceNum)] || null;
@@ -1595,7 +1692,17 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
 
   chain.lastProgressAt = now.toISOString();
   chain.starterAccepted = true;
-  await writeChain(eventId, day, chain);
+  chain = await writeChainSafe(eventId, day, chain, { reason: 'connect' });
+  // If a concurrent stale writer raced us, re-read and prefer the advanced blob.
+  {
+    const confirmed = await readChain(eventId, day, chain.id);
+    if (confirmed && chainProgressScore(confirmed) >= chainProgressScore(chain)) {
+      chain = confirmed;
+    } else if (confirmed && chainProgressScore(chain) > chainProgressScore(confirmed)) {
+      // Our progress didn't stick — write once more.
+      chain = await writeChainSafe(eventId, day, chain, { reason: 'connect-confirm' });
+    }
+  }
 
   const completed = chain.status === Status.COMPLETED;
   if (completed) {
