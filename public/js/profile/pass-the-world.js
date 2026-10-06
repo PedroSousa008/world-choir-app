@@ -1270,25 +1270,16 @@ const PassTheWorld = (() => {
     if (submitting) return;
     submitting = true;
     const btn = root?.querySelector('[data-ptw-invite]');
-    if (btn) btn.disabled = true;
+    const label = btn?.querySelector('.ptw-visit-label');
+    const prevLabel = label?.textContent || 'VISIT MY CITY';
+    if (btn) {
+      btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
+    }
+    if (label) label.textContent = 'SENDING…';
     try {
-      let result;
-      try {
-        result = await sendInvite();
-      } catch (firstErr) {
-        // If the client was still on ARRIVED after the empty window, refresh and retry once.
-        if (/Invitations are not open/i.test(String(firstErr.message || ''))) {
-          await refresh();
-          const status = lastPayload?.journey?.status;
-          if (status === 'WAITING_FOR_FIRST_CALL' || status === 'INVITATION_OPEN') {
-            result = await sendInvite();
-          } else {
-            throw firstErr;
-          }
-        } else {
-          throw firstErr;
-        }
-      }
+      // Server heals ARRIVED → WAITING in the same invite request; no refresh/retry.
+      const result = await sendInvite();
       lastPayload = {
         ...lastPayload,
         journey: result.journey || lastPayload?.journey,
@@ -1308,6 +1299,11 @@ const PassTheWorld = (() => {
       }
     } catch (err) {
       const msg = String(err.message || '');
+      if (label) label.textContent = prevLabel;
+      if (btn) {
+        btn.disabled = false;
+        btn.removeAttribute('aria-busy');
+      }
       if (/already moving|already chosen|Invitations are not/i.test(msg)) {
         try { await refresh(); } catch { /* keep */ }
         paintBody(lastPayload);

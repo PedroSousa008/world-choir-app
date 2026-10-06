@@ -53,6 +53,21 @@ module.exports = async function handler(req, res) {
       return res.status(404).json({ error: 'Media not found' });
     }
 
+    // Prefer a previously converted JPEG sibling for HEIC so partnership Link /
+    // Tab / Map logos paint immediately (no on-request HEIC convert).
+    if (/\.(heic|heif)$/i.test(pathname)) {
+      const jpegPath = pathname.replace(/\.(heic|heif)$/i, '.jpg');
+      try {
+        const cached = await readPrivateBinary(jpegPath);
+        if (cached?.buffer?.length) {
+          res.setHeader('Content-Type', 'image/jpeg');
+          res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+          res.setHeader('Content-Length', cached.buffer.length);
+          return res.status(200).send(cached.buffer);
+        }
+      } catch { /* convert below */ }
+    }
+
     const { buffer, contentType } = await readPrivateBinary(pathname);
     let outBuffer = buffer;
     let outType = contentType || 'application/octet-stream';

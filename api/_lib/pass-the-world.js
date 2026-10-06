@@ -1024,47 +1024,57 @@ async function ensureSeeded() {
   return { state, itinerary };
 }
 
-async function readRoundInvites(roundId) {
+/**
+ * Read invitations for a round.
+ * Default: trust the index (fast). Blob listing is expensive on cold/empty rounds
+ * and made the first Visit My City after an empty window feel stuck.
+ * Pass `{ reconcile: true }` only when recovering from a known race.
+ */
+async function readRoundInvites(roundId, { reconcile = false } = {}) {
   if (!roundId) return [];
 
   const byUser = new Map();
+  let indexLoaded = false;
 
-  // Index is a fast cache — may miss concurrent writes.
   try {
     const index = await readBlobJson(roundInvitesIndexPath(roundId));
+    indexLoaded = true;
     (index?.invitations || []).forEach((inv) => {
       if (inv?.userId) byUser.set(inv.userId, inv);
     });
-  } catch { /* empty */ }
+  } catch { /* no index yet */ }
 
-  // Per-user files are authoritative — union fixes index races.
-  try {
-    const prefix = `${ROOT}/rounds/${roundId}/invitations/`;
-    const blobs = await listBlobs(prefix);
-    const files = (blobs || []).filter((b) => {
-      const pathname = String(b.pathname || '');
-      return pathname.endsWith('.json') && !pathname.endsWith('/invitations-index.json');
-    });
-    await Promise.all(files.map(async (blob) => {
-      try {
-        const data = await readBlobJson(blob.pathname);
-        if (!data?.userId) return;
-        byUser.set(data.userId, {
-          id: data.id,
-          userId: data.userId,
-          voiceNumber: data.voiceNumber,
-          city: data.city,
-          country: data.country,
-          countryCode: data.countryCode,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          submittedAt: data.submittedAt,
-          firstTimeEver: data.firstTimeEver,
-          secondsAfterOpen: data.secondsAfterOpen,
-        });
-      } catch { /* skip unreadable */ }
-    }));
-  } catch { /* listing unavailable — keep index */ }
+  // Reconcile via per-user files only when asked, or when the index is missing
+  // (first read of a brand-new round after a partial write).
+  if (reconcile || !indexLoaded) {
+    try {
+      const prefix = `${ROOT}/rounds/${roundId}/invitations/`;
+      const blobs = await listBlobs(prefix);
+      const files = (blobs || []).filter((b) => {
+        const pathname = String(b.pathname || '');
+        return pathname.endsWith('.json') && !pathname.endsWith('/invitations-index.json');
+      });
+      await Promise.all(files.map(async (blob) => {
+        try {
+          const data = await readBlobJson(blob.pathname);
+          if (!data?.userId) return;
+          byUser.set(data.userId, {
+            id: data.id,
+            userId: data.userId,
+            voiceNumber: data.voiceNumber,
+            city: data.city,
+            country: data.country,
+            countryCode: data.countryCode,
+            latitude: data.latitude,
+            longitude: data.longitude,
+            submittedAt: data.submittedAt,
+            firstTimeEver: data.firstTimeEver,
+            secondsAfterOpen: data.secondsAfterOpen,
+          });
+        } catch { /* skip unreadable */ }
+      }));
+    } catch { /* listing unavailable — keep index */ }
+  }
 
   return Array.from(byUser.values()).sort((a, b) => (
     String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''))
@@ -1072,34 +1082,37 @@ async function readRoundInvites(roundId) {
 }
 
 async function writeRoundInvite(roundId, invitation, roundOpenAt = null) {
-  let enriched = invitation;
-  try {
-    enriched = await recordParticipantInvite(invitation, roundOpenAt);
-  } catch { /* analytics must not block invites */ }
-
-  const summary = {
-    id: enriched.id,
-    userId: enriched.userId,
-    voiceNumber: enriched.voiceNumber,
-    city: enriched.city,
-    country: enriched.country,
-    countryCode: enriched.countryCode,
-    latitude: enriched.latitude,
-    longitude: enriched.longitude,
-    submittedAt: enriched.submittedAt,
-    firstTimeEver: enriched.firstTimeEver,
-    secondsAfterOpen: enriched.secondsAfterOpen,
+  // Analytics must never delay the plane leaving — especially first_call after
+  // an empty 2-minute window when blob cold-starts already add latency.
+  const summaryBase = {
+    id: invitation.id,
+    userId: invitation.userId,
+    voiceNumber: invitation.voiceNumber,
+    city: invitation.city,
+    country: invitation.country,
+    countryCode: invitation.countryCode,
+    latitude: invitation.latitude,
+    longitude: invitation.longitude,
+    submittedAt: invitation.submittedAt,
+    firstTimeEver: undefined,
+    secondsAfterOpen: undefined,
   };
 
-  // Authoritative write: per-user file first (survives concurrent index races).
-  await writeJson(roundInvitationPath(roundId, enriched.userId), enriched, { overwrite: true });
+  recordParticipantInvite(invitation, roundOpenAt).catch(() => {});
 
-  // Merge into index with retries so concurrent invites are not overwritten.
-  let merged = [];
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const existing = await readRoundInvites(roundId);
+  // Authoritative write: per-user file first (survives concurrent index races).
+  await writeJson(roundInvitationPath(roundId, invitation.userId), invitation, { overwrite: true });
+
+  // Merge into index with retries — index-only reads (no listBlobs) for speed.
+  let merged = [summaryBase];
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const existing = await readRoundInvites(roundId, { reconcile: false });
     const byUser = new Map(existing.map((inv) => [inv.userId, inv]));
-    byUser.set(enriched.userId, summary);
+    byUser.set(invitation.userId, {
+      ...summaryBase,
+      ...(byUser.get(invitation.userId) || {}),
+      ...summaryBase,
+    });
     merged = Array.from(byUser.values()).sort((a, b) => (
       String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''))
     ));
@@ -1108,8 +1121,8 @@ async function writeRoundInvite(roundId, invitation, roundOpenAt = null) {
       updatedAt: new Date().toISOString(),
     }, { overwrite: true });
 
-    const verified = await readRoundInvites(roundId);
-    if (verified.some((inv) => inv.userId === enriched.userId)) {
+    const verified = await readRoundInvites(roundId, { reconcile: false });
+    if (verified.some((inv) => inv.userId === invitation.userId)) {
       return verified;
     }
   }
@@ -1408,9 +1421,9 @@ async function settleInvitationRound(state, itinerary, now) {
   const allInvitations = await readRoundInvites(roundId);
   const invitations = filterInvitesForWorld(allInvitations, state);
   if (!invitations.length) {
-    try {
-      await finalizeRoundMeta(roundId, { invitations: allInvitations, wasEmpty: true, state, now });
-    } catch { /* non-blocking */ }
+    // Never block Visit My City / first_call on owner analytics writes.
+    finalizeRoundMeta(roundId, { invitations: allInvitations, wasEmpty: true, state, now })
+      .catch(() => {});
     const next = await writeState({
       ...state,
       status: STATUS.WAITING_FOR_FIRST_CALL,
@@ -1440,16 +1453,15 @@ async function settleInvitationRound(state, itinerary, now) {
       await writeJson(roundWinnerPath(roundId), winnerPayload, { overwrite: true });
     }
   }
-  try {
-    const winner = await readWinner(roundId);
-    await finalizeRoundMeta(roundId, {
+  readWinner(roundId)
+    .then((winner) => finalizeRoundMeta(roundId, {
       invitations: allInvitations,
       winner: winnerEligibleForWorld(winner, state) ? winner : null,
       state,
       now,
       wasEmpty: false,
-    });
-  } catch { /* non-blocking */ }
+    }))
+    .catch(() => {});
 
   const closeAt = state.invitationCloseAt
     || new Date(todayInvitationOpenAt(now).getTime() + INVITATION_WINDOW_MS).toISOString();
@@ -1783,13 +1795,21 @@ async function advanceStateMachine(nowInput) {
   }
 
   // After today's empty window with no round opened yet → waiting for first call.
+  // Also migrate stale early-WAITING (preRoundId) onto today's round so the first
+  // Visit My City after 16:02 UTC does not heal against yesterday's early bucket.
   if (
-    (state.status === STATUS.ARRIVED || state.status === STATUS.INITIAL)
+    (
+      state.status === STATUS.ARRIVED
+      || state.status === STATUS.INITIAL
+      || state.status === STATUS.WAITING_FOR_FIRST_CALL
+    )
     && now.getTime() >= todayClose.getTime()
   ) {
-    const allInvitations = await readRoundInvites(todayRoundId);
+    const [allInvitations, winner] = await Promise.all([
+      readRoundInvites(todayRoundId),
+      readWinner(todayRoundId),
+    ]);
     const invitations = filterInvitesForWorld(allInvitations, state);
-    const winner = await readWinner(todayRoundId);
     const hasRealWinner = Boolean(
       winner?.invitationId
       && invitations.length
@@ -2160,10 +2180,15 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     throw err;
   }
 
-  const advanced = await advanceStateMachine(now ? new Date(now) : new Date());
+  // Advance ritual + resolve viewer in parallel — first Visit My City after an
+  // empty window used to wait on both sequentially before any write started.
+  const clockHint = now ? new Date(now) : new Date();
+  const [advanced, viewer] = await Promise.all([
+    advanceStateMachine(clockHint),
+    getViewerContext(deviceId, eventId),
+  ]);
   let { state, itinerary } = advanced;
   const clock = advanced.now;
-  const viewer = await getViewerContext(deviceId, eventId);
 
   if (!viewer.userId) {
     const err = new Error('Join World Choir to invite the World.');
@@ -2190,10 +2215,35 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
     err.statusCode = 409;
     throw err;
   }
+
+  // Defense in depth: if advance left ARRIVED/INITIAL after today's window (or
+  // before it with nobody inviting yet), open first-call here so the invite is
+  // accepted in this same request — no client refresh/retry round-trip.
   if (state.status !== STATUS.INVITATION_OPEN && state.status !== STATUS.WAITING_FOR_FIRST_CALL) {
-    const err = new Error('Invitations are not open right now.');
-    err.statusCode = 409;
-    throw err;
+    const todayOpen = todayInvitationOpenAt(clock);
+    const todayClose = new Date(todayOpen.getTime() + INVITATION_WINDOW_MS);
+    const afterWindow = clock.getTime() >= todayClose.getTime();
+    const beforeWindow = clock.getTime() < todayOpen.getTime();
+    const parked = state.status === STATUS.ARRIVED || state.status === STATUS.INITIAL;
+    if (parked && (afterWindow || beforeWindow)) {
+      const roundId = beforeWindow
+        ? earlyFirstCallRoundId(todayOpen)
+        : `round-${todayOpen.toISOString()}`;
+      state = await writeState({
+        ...state,
+        status: STATUS.WAITING_FOR_FIRST_CALL,
+        activeRoundId: roundId,
+        invitationOpenAt: todayOpen.toISOString(),
+        invitationCloseAt: todayClose.toISOString(),
+        invitationCount: 0,
+        invitedCities: [],
+        version: (Number(state.version) || 1) + 1,
+      });
+    } else {
+      const err = new Error('Invitations are not open right now.');
+      err.statusCode = 409;
+      throw err;
+    }
   }
 
   if (!state.activeRoundId) {
@@ -2238,7 +2288,6 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
 
   // After the empty invitation window: first click sends the plane immediately (no collecting).
   if (state.status === STATUS.WAITING_FOR_FIRST_CALL) {
-    let invites = await readRoundInvites(roundId);
     if (!alreadyInvited) {
       const invitation = {
         id: randomUUID(),
@@ -2252,14 +2301,16 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
         longitude: Number(viewer.longitude),
         submittedAt: clock.toISOString(),
       };
-      invites = await writeRoundInvite(roundId, invitation, state.invitationOpenAt);
+      // Write invite + claim winner together — do not pre-list an empty round.
+      const invitesPromise = writeRoundInvite(roundId, invitation, state.invitationOpenAt);
       const winnerPayload = {
         ...invitation,
         invitationId: invitation.id,
         selectedAt: clock.toISOString(),
         selectionMode: 'first_call',
       };
-      const { winner, created } = await claimWinner(roundId, winnerPayload, state);
+      const claimPromise = claimWinner(roundId, winnerPayload, state);
+      const [invites, { winner, created }] = await Promise.all([invitesPromise, claimPromise]);
       const applied = await applyWinner(state, itinerary, winner, invites);
       const started = applied.state.status === STATUS.TRAVELLING;
       return {
@@ -2274,6 +2325,8 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
         stats: computeStats(applied.itinerary, applied.state, clock),
       };
     }
+
+    let invites = await readRoundInvites(roundId);
 
     // Already invited but trip never started — heal and start travelling.
     const healed = await resolveFirstCallIfPending(state, itinerary, clock);
