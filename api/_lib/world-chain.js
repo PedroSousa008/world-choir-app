@@ -24,7 +24,10 @@ const CHAIN_DURATION_MS = 24 * 60 * 60 * 1000;
 const CYCLE_HOUR_UTC = 14;
 const STUCK_AFTER_MS = 3 * 60 * 60 * 1000;
 const ACCOUNT_AGE_MS = 24 * 60 * 60 * 1000;
-const COOLDOWNS_MS = [10 * 60 * 1000, 30 * 60 * 1000, 60 * 60 * 1000];
+/** 1st wrong guess: message only. 2nd+ wrong: 5-minute typing lock. */
+const FIRST_MISS_COOLDOWN_MS = 0;
+const REPEAT_MISS_COOLDOWN_MS = 5 * 60 * 1000;
+const COOLDOWNS_MS = [FIRST_MISS_COOLDOWN_MS, REPEAT_MISS_COOLDOWN_MS];
 
 const Status = {
   IN_PROGRESS: 'IN_PROGRESS',
@@ -384,12 +387,15 @@ function resolveForcedStarter(byVoice) {
 }
 
 /** Short design chain: starter country → fixed final city (one connection to complete). */
-function buildForcedDesignChain(forcedStarter, eventId, day, now, bounds) {
+function buildForcedDesignChain(forcedStarter, eventId, day, now, bounds, pledges = []) {
   const startCountry = normalizeCountry(forcedStarter.country)
     || normalizeCountry(TEST_FORCE_STARTER.startCountry);
   const destCountry = normalizeCountry(TEST_FORCE_STARTER.destinationCountry);
   const destCity = String(TEST_FORCE_STARTER.destinationCity || '').trim();
   if (!startCountry || !destCountry || !destCity) return null;
+
+  const exclude = new Set(forcedStarter.user_id ? [forcedStarter.user_id] : []);
+  const destEligible = buildEligibleVoicesForDestination(destCountry, destCity, pledges, exclude);
 
   const route = [
     {
@@ -404,6 +410,8 @@ function buildForcedDesignChain(forcedStarter, eventId, day, now, bounds) {
       connectedAt: null,
       activatedAt: null,
       status: 'selected',
+      eligibleVoices: {},
+      eligibleVoiceCount: 0,
     },
     {
       position: 1,
@@ -417,6 +425,8 @@ function buildForcedDesignChain(forcedStarter, eventId, day, now, bounds) {
       connectedAt: null,
       activatedAt: null,
       status: 'future',
+      eligibleVoices: destEligible,
+      eligibleVoiceCount: Object.keys(destEligible).length,
     },
   ];
 
@@ -449,7 +459,34 @@ function placeDesignChain(otherChains, designChain) {
   return out.slice(0, DAILY_CHAIN_COUNT);
 }
 
-function buildRouteSteps(countries, citiesByCountry, startingPledge) {
+/**
+ * Snapshot every pledged Voice that can legally complete this destination.
+ * Stored on the route step at chain creation so connect is an O(1) allowlist check.
+ * Never exposed to clients (stripped in publicStep).
+ */
+function buildEligibleVoicesForDestination(country, requiredCity, pledges, excludeUserIds = new Set()) {
+  const out = {};
+  for (const pledge of pledges || []) {
+    if (!pledge?.user_id || excludeUserIds.has(pledge.user_id)) continue;
+    const voice = Number(pledge.voice_number ?? pledge.voiceNumber);
+    if (!Number.isFinite(voice) || voice <= 0) continue;
+    if (!countriesEqual(pledge.country, country)) continue;
+    if (requiredCity && !citiesEqual(pledge.city, requiredCity)) continue;
+    out[String(voice)] = {
+      userId: pledge.user_id,
+      voiceNumber: voice,
+      city: String(pledge.city || '').trim() || null,
+      country: normalizeCountry(pledge.country),
+      latitude: pledge.latitude ?? null,
+      longitude: pledge.longitude ?? null,
+      pledgedAt: pledge.pledged_at || null,
+    };
+  }
+  return out;
+}
+
+function buildRouteSteps(countries, citiesByCountry, startingPledge, pledges = []) {
+  const exclude = new Set(startingPledge?.user_id ? [startingPledge.user_id] : []);
   return countries.map((country, index) => {
     const isFinal = index === countries.length - 1;
     let requiredCity = null;
@@ -469,6 +506,9 @@ function buildRouteSteps(countries, citiesByCountry, startingPledge) {
       latitude = first?.latitude ?? null;
       longitude = first?.longitude ?? null;
     }
+    const eligibleVoices = index === 0
+      ? {}
+      : buildEligibleVoicesForDestination(country, requiredCity, pledges, exclude);
     return {
       position: index,
       country,
@@ -478,10 +518,12 @@ function buildRouteSteps(countries, citiesByCountry, startingPledge) {
       assignedCity: index === 0 ? (startingPledge?.city || null) : null,
       latitude,
       longitude,
-      // Fresh chain: starter is selected, but no connection has been made yet.
       connectedAt: null,
       activatedAt: null,
       status: index === 0 ? 'selected' : 'future',
+      // Server-only allowlist — never sent to the browser.
+      eligibleVoices,
+      eligibleVoiceCount: Object.keys(eligibleVoices).length,
     };
   });
 }
@@ -514,6 +556,7 @@ function publicStep(step) {
     assignedVoiceNumber: step.assignedVoiceNumber || null,
     assignedCity: step.assignedCity || null,
     selectedByVoiceNumber: step.selectedByVoiceNumber || null,
+    // eligibleVoices intentionally omitted — private allowlist.
   };
 }
 
@@ -838,7 +881,7 @@ async function generateDailyChains(eventId, day, now = new Date(), opts = {}) {
   const forcedStarter = resolveForcedStarter(byVoice);
   let designChain = null;
   if (forcedStarter) {
-    designChain = buildForcedDesignChain(forcedStarter, eventId, day, now, bounds);
+    designChain = buildForcedDesignChain(forcedStarter, eventId, day, now, bounds, pledges);
     if (designChain) {
       usedStartVoices.add(forcedStarter.user_id);
       usedStartCountries.add(normalizeCountry(forcedStarter.country).toLowerCase());
@@ -885,11 +928,19 @@ async function generateDailyChains(eventId, day, now = new Date(), opts = {}) {
     usedStartVoices.add(starter.user_id);
     usedStartCountries.add(startCountry.toLowerCase());
 
-    const route = buildRouteSteps(routeCountries, citiesByCountry, starter);
+    const route = buildRouteSteps(routeCountries, citiesByCountry, starter, pledges);
     if (finalCity?.city) {
-      route[route.length - 1].requiredCity = finalCity.city;
-      route[route.length - 1].latitude = finalCity.latitude;
-      route[route.length - 1].longitude = finalCity.longitude;
+      const last = route[route.length - 1];
+      last.requiredCity = finalCity.city;
+      last.latitude = finalCity.latitude;
+      last.longitude = finalCity.longitude;
+      last.eligibleVoices = buildEligibleVoicesForDestination(
+        finalCountry,
+        finalCity.city,
+        pledges,
+        new Set([starter.user_id])
+      );
+      last.eligibleVoiceCount = Object.keys(last.eligibleVoices).length;
     }
 
     otherChains.push({
@@ -1328,15 +1379,7 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     throw err;
   }
 
-  // Blob reads can briefly lag right after START / a prior connect. Re-read once
-  // before treating the chain as not ready — this is the refresh-then-works case.
-  const refreshChain = async () => {
-    await new Promise((r) => setTimeout(r, 200));
-    const again = await readChain(eventId, day, chainId);
-    if (again) chain = again;
-  };
-
-  let liveStatus = deriveStatus(chain, nowMs);
+  const liveStatus = deriveStatus(chain, nowMs);
   if (liveStatus === Status.COMPLETED) {
     const err = new Error('This chain is already complete');
     err.statusCode = 409;
@@ -1347,10 +1390,6 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     err.statusCode = 409;
     throw err;
   }
-
-  if (!chain.starterAccepted) {
-    await refreshChain();
-  }
   if (!chain.starterAccepted) {
     const err = new Error('This chain has not been started yet');
     err.statusCode = 409;
@@ -1359,18 +1398,9 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
 
   let active = chain.route.find((s) => s.status === 'active');
   if (!active) {
-    await refreshChain();
-    active = chain.route.find((s) => s.status === 'active');
-  }
-  if (!active) {
     const err = new Error('No active destination on this chain');
     err.statusCode = 409;
     throw err;
-  }
-
-  if (active.assignedVoiceId !== viewer.userId) {
-    await refreshChain();
-    active = chain.route.find((s) => s.status === 'active') || active;
   }
   if (active.assignedVoiceId !== viewer.userId) {
     const err = new Error('It is not your turn on this chain');
@@ -1383,26 +1413,30 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     attempts.cooldownUntil && new Date(attempts.cooldownUntil).getTime() > nowMs
   );
 
+  // Hard lock after the 2nd wrong guess — no typing / submitting until it lifts.
+  if (onCooldown) {
+    const waitMs = new Date(attempts.cooldownUntil).getTime() - nowMs;
+    const public = publicChain(chain, nowMs, viewer);
+    await attachViewerConnectCooldown(public, eventId, day, viewer, nowMs);
+    return {
+      ...rejectionMessage(),
+      code: 'CONNECT_COOLDOWN',
+      title: 'TRY AGAIN SOON',
+      message: "That last Voice didn't match this destination.",
+      cooldownMs: waitMs,
+      cooldownLabel: formatDuration(waitMs),
+      cooldownUntil: attempts.cooldownUntil,
+      retryLabel: `You can try again in: ${formatDuration(waitMs)}`,
+      chain: public,
+    };
+  }
+
   const voiceNum = Number(String(submittedVoiceNumber || '').replace(/[^\d]/g, ''));
   if (!Number.isFinite(voiceNum) || voiceNum <= 0) {
-    if (onCooldown) {
-      const waitMs = new Date(attempts.cooldownUntil).getTime() - nowMs;
-      const public = publicChain(chain, nowMs, viewer);
-      await attachViewerConnectCooldown(public, eventId, day, viewer, nowMs);
-      return {
-        ...rejectionMessage(),
-        cooldownMs: waitMs,
-        cooldownLabel: formatDuration(waitMs),
-        cooldownUntil: attempts.cooldownUntil,
-        retryLabel: `You can try again in: ${formatDuration(waitMs)}`,
-        chain: public,
-      };
-    }
     return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
   }
 
-  // Idempotent: if this Voice already completed the active destination (double-submit
-  // / retry after a success the UI missed), return success instead of "not found".
+  // Idempotent success if this Voice already completed the hop (twin submit).
   const alreadyConnected = chain.route.find((s) => (
     s.status === 'connected'
     && Number(s.assignedVoiceNumber) === voiceNum
@@ -1419,78 +1453,43 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     };
   }
 
-  const loadTarget = async (forceReconcile = false) => {
-    let pledges = forceReconcile
-      ? await reconcilePledges(eventId)
-      : await listPledges(eventId);
-    const { byVoice } = buildPledgeIndexes(pledges, new Map(), nowMs);
-    return byVoice.get(voiceNum) || null;
-  };
-
-  const evaluate = (target, activeStep) => {
-    if (!target) return false;
-    if (target.user_id === viewer.userId) return false;
-    if (!countriesEqual(target.country, activeStep.country)) return false;
-    if (activeStep.requiredCity && !citiesEqual(target.city, activeStep.requiredCity)) return false;
-    if (!isConnectTargetEligible(null, target, activeStep, nowMs)) return false;
-    if (chain.route.some((s) => s.assignedVoiceId === target.user_id)) return false;
-    return true;
-  };
-
-  let target = await loadTarget(false);
-  let valid = evaluate(target, active);
-
-  // One heal pass for index lag / stale active step (the refresh-then-works case).
-  if (!valid) {
-    await refreshChain();
-    active = chain.route.find((s) => s.status === 'active') || active;
-    if (active.assignedVoiceId === viewer.userId) {
-      target = await loadTarget(true);
-      valid = evaluate(target, active);
-    }
+  // Ensure this destination has a precomputed Voice allowlist (heal older chains).
+  if (!active.eligibleVoices || typeof active.eligibleVoices !== 'object') {
+    const pledges = await listPledges(eventId);
+    const usedIds = new Set(
+      (chain.route || [])
+        .filter((s) => s.assignedVoiceId && s.status !== 'active')
+        .map((s) => s.assignedVoiceId)
+    );
+    usedIds.add(viewer.userId);
+    active.eligibleVoices = buildEligibleVoicesForDestination(
+      active.country,
+      active.requiredCity,
+      pledges,
+      usedIds
+    );
+    active.eligibleVoiceCount = Object.keys(active.eligibleVoices).length;
+    await writeChain(eventId, day, chain);
   }
 
-  if (!valid) {
-    if (onCooldown) {
-      const waitMs = new Date(attempts.cooldownUntil).getTime() - nowMs;
-      const public = publicChain(chain, nowMs, viewer);
-      await attachViewerConnectCooldown(public, eventId, day, viewer, nowMs);
-      return {
-        ...rejectionMessage(),
-        cooldownMs: waitMs,
-        cooldownLabel: formatDuration(waitMs),
-        cooldownUntil: attempts.cooldownUntil,
-        retryLabel: `You can try again in: ${formatDuration(waitMs)}`,
-        chain: public,
-      };
-    }
+  const entry = active.eligibleVoices[String(voiceNum)] || null;
+  const alreadyUsed = entry
+    && chain.route.some((s) => s.assignedVoiceId === entry.userId && s.status !== 'active');
+
+  // Instant allowlist check — no full pledge scan on the hot path.
+  if (!entry || alreadyUsed || entry.userId === viewer.userId) {
     return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
   }
 
-  // Success — advance chain. Re-read once more so a twin in-flight connect cannot
-  // duplicate the destination.
-  await refreshChain();
-  active = chain.route.find((s) => s.status === 'active');
-  if (!active || active.assignedVoiceId !== viewer.userId) {
-    const twin = chain.route.find((s) => (
-      s.status === 'connected'
-      && Number(s.assignedVoiceNumber) === voiceNum
-    ));
-    if (twin) {
-      return {
-        ok: true,
-        code: chain.status === Status.COMPLETED ? 'CHAIN_COMPLETE' : 'CONNECTION_MADE',
-        title: chain.status === Status.COMPLETED ? 'CONNECTION COMPLETE' : 'CONNECTION MADE',
-        chain: publicChain(chain, nowMs, viewer),
-        photoBookOffer: null,
-        alreadyConnected: true,
-      };
-    }
-    const err = new Error('It is not your turn on this chain');
-    err.statusCode = 403;
-    throw err;
-  }
-  if (!evaluate(target, active)) {
+  // Optional age gate using snapshot pledgedAt (no user listing).
+  if (
+    !isConnectTargetEligible(
+      null,
+      { pledged_at: entry.pledgedAt, user_id: entry.userId },
+      active,
+      nowMs
+    )
+  ) {
     return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
   }
 
@@ -1508,21 +1507,21 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
 
   active.status = 'connected';
   active.connectedAt = now.toISOString();
-  active.assignedVoiceId = target.user_id;
-  active.assignedVoiceNumber = Number(target.voice_number);
-  active.assignedCity = target.city || null;
+  active.assignedVoiceId = entry.userId;
+  active.assignedVoiceNumber = Number(entry.voiceNumber);
+  active.assignedCity = entry.city || null;
   active.selectedByVoiceId = viewer.userId;
   active.selectedByVoiceNumber = viewer.voiceNumber || null;
-  active.latitude = target.latitude ?? active.latitude;
-  active.longitude = target.longitude ?? active.longitude;
+  active.latitude = entry.latitude ?? active.latitude;
+  active.longitude = entry.longitude ?? active.longitude;
 
   const nextIndex = active.position + 1;
   const next = chain.route[nextIndex];
   if (next) {
     next.status = 'active';
-    next.assignedVoiceId = target.user_id;
-    next.assignedVoiceNumber = Number(target.voice_number);
-    next.assignedCity = target.city || null;
+    next.assignedVoiceId = entry.userId;
+    next.assignedVoiceNumber = Number(entry.voiceNumber);
+    next.assignedCity = entry.city || null;
     next.activatedAt = now.toISOString();
     chain.currentStep = nextIndex;
   } else {
@@ -1557,8 +1556,11 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
 
 async function failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain = null) {
   const streak = (attempts.incorrectStreak || 0) + 1;
-  const cooldownMs = COOLDOWNS_MS[Math.min(streak, COOLDOWNS_MS.length) - 1];
-  const cooldownUntil = new Date(nowMs + cooldownMs).toISOString();
+  // 1st miss → message only. 2nd+ miss → 5-minute typing lock.
+  const cooldownMs = streak <= 1 ? FIRST_MISS_COOLDOWN_MS : REPEAT_MISS_COOLDOWN_MS;
+  const cooldownUntil = cooldownMs > 0
+    ? new Date(nowMs + cooldownMs).toISOString()
+    : null;
   const next = {
     incorrectStreak: streak,
     cooldownUntil,
@@ -1567,10 +1569,13 @@ async function failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain
   await writeAttempts(eventId, day, chainId, viewer.voiceNumber, next);
   const payload = {
     ...rejectionMessage(),
+    incorrectStreak: streak,
     cooldownMs,
-    cooldownLabel: formatDuration(cooldownMs),
+    cooldownLabel: cooldownMs > 0 ? formatDuration(cooldownMs) : '',
     cooldownUntil,
-    retryLabel: `You can try again in: ${formatDuration(cooldownMs)}`,
+    retryLabel: cooldownMs > 0
+      ? `You can try again in: ${formatDuration(cooldownMs)}`
+      : '',
   };
   if (chain) {
     const public = publicChain(chain, nowMs, viewer);
@@ -1601,4 +1606,6 @@ module.exports = {
   publicChain,
   deriveStatus,
   listOwnerWorldChainSnapshots,
+  buildEligibleVoicesForDestination,
+  buildRouteSteps,
 };

@@ -1437,9 +1437,8 @@ const WorldChainPage = (() => {
     const onCooldown = isConnectOnCooldown(viewer);
     const cooldownLabel = viewer.connectCooldownLabel
       || (state.feedback?.retryLabel ? String(state.feedback.retryLabel).replace(/^You can try again in:\s*/i, '') : '');
-    // Cooldown only blocks wrong guesses — keep the field open so a correct Voice
-    // can still be submitted immediately.
-    const locked = !!state.busy;
+    // During the 5-minute suspension after a 2nd wrong guess, lock typing entirely.
+    const locked = !!state.busy || onCooldown;
     return `
       <section class="wc-chain-turn">
         <p class="wc-chain-turn__eyebrow">It's your turn</p>
@@ -1467,8 +1466,7 @@ const WorldChainPage = (() => {
           <div class="wc-chain-feedback" role="status">
             <strong>TRY AGAIN SOON</strong><br>
             That last Voice didn’t match this destination.<br>
-            You can try again in: ${esc(cooldownLabel || 'a few minutes')}<br>
-            If you find the correct Voice number, you can connect it right away.
+            You can try again in: ${esc(cooldownLabel || '5 minutes')}
           </div>
         ` : ''}
         <button type="button" class="wc-chain-card__cta" style="margin-top:12px" data-share-help="${esc(chain.id)}">

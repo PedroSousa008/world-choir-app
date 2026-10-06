@@ -205,7 +205,7 @@ const WorldChoirTabs = (() => {
       ],
       scripts: [
         'js/world-choir-flags.js?v=20260905s',
-        'js/world-chain-page.js?v=20261006connectRetry2',
+        'js/world-chain-page.js?v=20261006eligibleVoices',
       ],
       selectors: ['.ambient-bg', '#world-chain-page'],
       init: () => tabApi('world-chain')?.init?.(),
