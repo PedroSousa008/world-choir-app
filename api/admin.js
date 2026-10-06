@@ -908,6 +908,7 @@ module.exports = async function handler(req, res) {
 
     if (action === 'qr-analytics' && req.method === 'GET') {
       if (!requireOwner(req, res)) return;
+      res.setHeader('Cache-Control', 'no-store');
       const origin = publicOrigin(req);
       const campaignId = String(req.query.campaignId || '').trim() || null;
       const range = String(req.query.range || 'all').trim() || 'all';
@@ -918,11 +919,13 @@ module.exports = async function handler(req, res) {
         analytics,
         campaigns,
         campaignTypes: CAMPAIGN_TYPES,
+        generatedAt: new Date().toISOString(),
       });
     }
 
     if (action === 'qr-campaign' && req.method === 'GET') {
       if (!requireOwner(req, res)) return;
+      res.setHeader('Cache-Control', 'no-store');
       const id = String(req.query.id || '').trim();
       const range = String(req.query.range || 'all').trim() || 'all';
       const detail = await getCampaignDetail(id, { range, origin: publicOrigin(req) });

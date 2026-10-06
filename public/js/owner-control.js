@@ -61,6 +61,8 @@ const OwnerControl = (() => {
     qrForm: null,
     qrBusy: false,
     qrShowAllCampaigns: false,
+    qrLoadGen: 0,
+    qrLastLoadedAt: null,
     growthRangeOpen: false,
     citySort: 'voices',
     countrySort: 'voices',
@@ -547,19 +549,30 @@ const OwnerControl = (() => {
       state.data = null;
       render();
     });
-    document.getElementById('owner-refresh')?.addEventListener('click', () => {
+    document.getElementById('owner-refresh')?.addEventListener('click', async () => {
       if (typeof OwnerVoiceActivity !== 'undefined' && OwnerVoiceActivity.onRefresh({ state, api, render })) {
         return;
       }
       if (state.section === 'world-chain-photo-book') {
-        ensureWcpbLoaded(false).then(() => render());
+        await ensureWcpbLoaded(false);
+        render();
+        setFlash('Refreshed.', 'ok');
         return;
       }
       if (state.section === 'qr-analytics') {
-        ensureQrAnalyticsLoaded(false).then(() => render());
+        await ensureQrAnalyticsLoaded(false);
+        render();
+        setFlash('QR analytics updated.', 'ok');
         return;
       }
-      loadCenter();
+      if (state.section === 'promise-memory') {
+        await ensurePromiseMemoryLoaded(false);
+        render();
+        setFlash('Refreshed.', 'ok');
+        return;
+      }
+      await loadCenter();
+      setFlash('Refreshed.', 'ok');
     });
     document.getElementById('owner-open-search')?.addEventListener('click', openSearch);
     document.getElementById('owner-open-search-top')?.addEventListener('click', openSearch);
@@ -3084,24 +3097,29 @@ const OwnerControl = (() => {
   }
 
   async function ensureQrAnalyticsLoaded(silent = false) {
-    if (state.qrLoading && !silent) return;
-    state.qrLoading = true;
+    const gen = (state.qrLoadGen = (state.qrLoadGen || 0) + 1);
+    if (!silent) state.qrLoading = true;
     if (!silent) render();
     try {
       const campaignQ = state.qrCampaignFilter
         ? `&campaignId=${encodeURIComponent(state.qrCampaignFilter)}`
         : '';
       const rangeQ = `&range=${encodeURIComponent(state.qrRange || 'all')}`;
-      state.qrAnalytics = await api('qr-analytics', { query: `${campaignQ}${rangeQ}` });
+      // Cache-bust so Refresh / live poll always hits a fresh analytics snapshot
+      const bust = `&_=${Date.now()}`;
+      const data = await api('qr-analytics', { query: `${campaignQ}${rangeQ}${bust}` });
+      if (gen !== state.qrLoadGen) return; // superseded by a newer load
+      state.qrAnalytics = data;
       if (state.qrView === 'detail' && state.qrDetailId) {
         state.qrDetail = await api('qr-campaign', {
-          query: `&id=${encodeURIComponent(state.qrDetailId)}&range=${encodeURIComponent(state.qrRange || 'all')}`,
+          query: `&id=${encodeURIComponent(state.qrDetailId)}&range=${encodeURIComponent(state.qrRange || 'all')}${bust}`,
         });
       }
+      state.qrLastLoadedAt = new Date().toISOString();
     } catch (err) {
       if (!silent) setFlash(err.message || 'Could not load QR Code Analytics.', 'err');
     } finally {
-      state.qrLoading = false;
+      if (gen === state.qrLoadGen) state.qrLoading = false;
     }
   }
 
@@ -4589,9 +4607,18 @@ const OwnerControl = (() => {
         onRender: () => render(),
         setFlash,
         loadData: async (silent) => {
-          await ensureQrAnalyticsLoaded(silent);
+          await ensureQrAnalyticsLoaded(!!silent);
+          if (silent) render();
         },
       });
+      OwnerQrAnalytics.startPolling?.({
+        loadData: async () => {
+          await ensureQrAnalyticsLoaded(true);
+          render();
+        },
+      });
+    } else if (typeof OwnerQrAnalytics !== 'undefined') {
+      OwnerQrAnalytics.stopPolling?.();
     }
 
     if (typeof OwnerPromiseMemory !== 'undefined' && state.section === 'promise-memory') {

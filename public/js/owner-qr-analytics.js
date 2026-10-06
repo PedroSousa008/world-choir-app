@@ -369,14 +369,14 @@ const OwnerQrAnalytics = (() => {
     rootEl.querySelectorAll('[data-qr-range]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         state.qrRange = btn.getAttribute('data-qr-range');
-        await ctx.loadData?.(true);
+        await ctx.loadData?.(false);
         ctx.onRender?.();
       });
     });
 
     rootEl.querySelector('[data-qr-campaign-filter]')?.addEventListener('change', async (e) => {
       state.qrCampaignFilter = e.target.value || '';
-      await ctx.loadData?.(true);
+      await ctx.loadData?.(false);
       ctx.onRender?.();
     });
 
@@ -431,7 +431,7 @@ const OwnerQrAnalytics = (() => {
           }
         }
         state.qrModalOpen = false;
-        await ctx.loadData?.(true);
+        await ctx.loadData?.(false);
         if (state.qrView === 'detail' && state.qrDetailId) {
           state.qrDetail = await ctx.api('qr-campaign', { query: `&id=${encodeURIComponent(state.qrDetailId)}&range=${encodeURIComponent(state.qrRange || 'all')}` });
         }
@@ -493,7 +493,7 @@ const OwnerQrAnalytics = (() => {
         state.qrDetail = await ctx.api('qr-campaign', {
           query: `&id=${encodeURIComponent(id)}&range=${encodeURIComponent(state.qrRange || 'all')}`,
         });
-        await ctx.loadData?.(true);
+        await ctx.loadData?.(false);
       } catch (err) {
         ctx.setFlash?.(err.message || 'Could not update status', 'err');
       }
@@ -511,5 +511,24 @@ const OwnerQrAnalytics = (() => {
     });
   }
 
-  return { render, bind };
+  let pollTimer = null;
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function startPolling(ctx) {
+    stopPolling();
+    if (!ctx?.loadData) return;
+    // Live refresh while Owner is on QR Analytics (Refresh remains a manual complement)
+    pollTimer = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      Promise.resolve(ctx.loadData()).catch(() => {});
+    }, 8000);
+  }
+
+  return { render, bind, startPolling, stopPolling };
 })();

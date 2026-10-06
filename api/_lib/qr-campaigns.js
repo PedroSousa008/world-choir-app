@@ -65,6 +65,13 @@ function referralPath(token) {
 function dayPath(day) {
   return `${ROOT}/days/${day}.json`;
 }
+function scanEventPath(day, eventId) {
+  return `${ROOT}/scan-events/${day}/${encodeURIComponent(eventId)}.json`;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function utcDayKey(date = new Date()) {
   return new Date(date).toISOString().slice(0, 10);
@@ -76,7 +83,11 @@ function makeCampaignId() {
 }
 
 function makeVisitorKey(deviceId, anonId) {
-  const seed = String(deviceId || anonId || '').trim() || randomUUID();
+  // Prefer deviceId; when both exist, combine so anon-only and device-only paths
+  // from the same handset still converge on one key when deviceId is present.
+  const device = String(deviceId || '').trim();
+  const anon = String(anonId || '').trim();
+  const seed = device || anon || randomUUID();
   return createHash('sha256').update(`wc-qr-v1:${seed}`).digest('hex').slice(0, 32);
 }
 
@@ -240,96 +251,223 @@ async function writeVisitor(visitor) {
 
 async function bumpDay(campaignId, eventType, { unique = false, visitorKey = null } = {}) {
   const day = utcDayKey();
-  let row;
-  try {
-    row = await readBlobJson(dayPath(day));
-  } catch {
-    row = { day, campaigns: {}, updatedAt: null };
-  }
-  if (!row.campaigns[campaignId]) {
-    row.campaigns[campaignId] = {
-      scans: 0,
-      uniqueScanKeys: [],
-      appOpens: 0,
-      appOpenKeys: [],
-      illSing: 0,
-      voices: 0,
-      shares: 0,
-      voicesFromShares: 0,
-      openedMap: 0,
-      practicedSong: 0,
-      dailyAct: 0,
-      worldChain: 0,
-      returnD1: 0,
-      returnD7: 0,
-      returnD30: 0,
-    };
-  }
-  const c = row.campaigns[campaignId];
-  const addUnique = (arrName, counter) => {
-    if (!visitorKey) {
-      c[counter] = (c[counter] || 0) + 1;
-      return;
+  let lastErr = null;
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    try {
+      let row;
+      try {
+        row = await readBlobJson(dayPath(day));
+      } catch {
+        row = { day, campaigns: {}, updatedAt: null };
+      }
+      if (!row.campaigns[campaignId]) {
+        row.campaigns[campaignId] = {
+          scans: 0,
+          uniqueScanKeys: [],
+          uniqueScans: 0,
+          appOpens: 0,
+          appOpenKeys: [],
+          illSing: 0,
+          voices: 0,
+          shares: 0,
+          voicesFromShares: 0,
+          openedMap: 0,
+          practicedSong: 0,
+          dailyAct: 0,
+          worldChain: 0,
+          returnD1: 0,
+          returnD7: 0,
+          returnD30: 0,
+        };
+      }
+      const c = row.campaigns[campaignId];
+      const beforeScans = Number(c.scans) || 0;
+      const addUnique = (arrName, counter) => {
+        if (!visitorKey) {
+          c[counter] = (c[counter] || 0) + 1;
+          return;
+        }
+        const arr = Array.isArray(c[arrName]) ? c[arrName] : [];
+        if (!arr.includes(visitorKey)) {
+          arr.push(visitorKey);
+          if (arr.length > 5000) arr.splice(0, arr.length - 5000);
+          c[arrName] = arr;
+          c[counter] = arr.length;
+        } else if (Array.isArray(c[arrName])) {
+          c[counter] = c[arrName].length;
+        }
+      };
+
+      switch (eventType) {
+        case EVENT_TYPES.QR_SCAN:
+          c.scans = beforeScans + 1;
+          addUnique('uniqueScanKeys', 'uniqueScans');
+          break;
+        case EVENT_TYPES.APP_OPEN:
+          addUnique('appOpenKeys', 'appOpens');
+          break;
+        case EVENT_TYPES.ILL_SING:
+          c.illSing = (Number(c.illSing) || 0) + 1;
+          break;
+        case EVENT_TYPES.VOICE_CREATED:
+          c.voices = (Number(c.voices) || 0) + 1;
+          break;
+        case EVENT_TYPES.SHARE_CLICKED:
+          c.shares = (Number(c.shares) || 0) + 1;
+          break;
+        case EVENT_TYPES.REFERRED_VOICE:
+          c.voicesFromShares = (Number(c.voicesFromShares) || 0) + 1;
+          break;
+        case EVENT_TYPES.OPENED_MAP:
+          c.openedMap = (Number(c.openedMap) || 0) + 1;
+          break;
+        case EVENT_TYPES.PRACTICED_SONG:
+          c.practicedSong = (Number(c.practicedSong) || 0) + 1;
+          break;
+        case EVENT_TYPES.DAILY_ACT:
+          c.dailyAct = (Number(c.dailyAct) || 0) + 1;
+          break;
+        case EVENT_TYPES.WORLD_CHAIN:
+          c.worldChain = (Number(c.worldChain) || 0) + 1;
+          break;
+        case EVENT_TYPES.RETURN_D1:
+          c.returnD1 = (Number(c.returnD1) || 0) + 1;
+          break;
+        case EVENT_TYPES.RETURN_D7:
+          c.returnD7 = (Number(c.returnD7) || 0) + 1;
+          break;
+        case EVENT_TYPES.RETURN_D30:
+          c.returnD30 = (Number(c.returnD30) || 0) + 1;
+          break;
+        default:
+          break;
+      }
+      if (Array.isArray(c.uniqueScanKeys)) c.uniqueScans = c.uniqueScanKeys.length;
+      row.updatedAt = new Date().toISOString();
+      await writeJson(dayPath(day), row, { overwrite: true });
+
+      // Verify scan increments survived concurrent writers
+      if (eventType === EVENT_TYPES.QR_SCAN) {
+        try {
+          const verify = await readBlobJson(dayPath(day));
+          const v = verify?.campaigns?.[campaignId];
+          if (v && Number(v.scans) >= beforeScans + 1) return verify;
+        } catch {
+          return row;
+        }
+        await sleep(25 * (attempt + 1));
+        continue;
+      }
+      return row;
+    } catch (err) {
+      lastErr = err;
+      await sleep(25 * (attempt + 1));
     }
-    const arr = Array.isArray(c[arrName]) ? c[arrName] : [];
-    if (!arr.includes(visitorKey)) {
-      arr.push(visitorKey);
-      if (arr.length > 5000) arr.splice(0, arr.length - 5000);
-      c[arrName] = arr;
-      c[counter] = (c[counter] || 0) + 1;
-    }
+  }
+  if (lastErr) throw lastErr;
+  return null;
+}
+
+async function appendScanEvent({ campaignId, visitorKey, deviceId = null, anonId = null }) {
+  const day = utcDayKey();
+  const eventId = `${Date.now()}_${randomBytes(5).toString('hex')}`;
+  const row = {
+    id: eventId,
+    type: EVENT_TYPES.QR_SCAN,
+    campaignId,
+    visitorKey,
+    deviceId: deviceId || null,
+    anonId: anonId || null,
+    at: new Date().toISOString(),
+    day,
+  };
+  await writeJson(scanEventPath(day, eventId), row, { overwrite: false });
+  return row;
+}
+
+async function loadScanEvents(fromDay, toDay) {
+  const out = [];
+  const seen = new Set();
+  const push = (row) => {
+    if (!row?.id || seen.has(row.id)) return;
+    seen.add(row.id);
+    out.push(row);
   };
 
-  switch (eventType) {
-    case EVENT_TYPES.QR_SCAN:
-      c.scans += 1;
-      if (unique || visitorKey) addUnique('uniqueScanKeys', 'uniqueScans');
-      else c.uniqueScans = c.uniqueScans || 0;
-      break;
-    case EVENT_TYPES.APP_OPEN:
-      addUnique('appOpenKeys', 'appOpens');
-      break;
-    case EVENT_TYPES.ILL_SING:
-      c.illSing += 1;
-      break;
-    case EVENT_TYPES.VOICE_CREATED:
-      c.voices += 1;
-      break;
-    case EVENT_TYPES.SHARE_CLICKED:
-      c.shares += 1;
-      break;
-    case EVENT_TYPES.REFERRED_VOICE:
-      c.voicesFromShares += 1;
-      break;
-    case EVENT_TYPES.OPENED_MAP:
-      c.openedMap += 1;
-      break;
-    case EVENT_TYPES.PRACTICED_SONG:
-      c.practicedSong += 1;
-      break;
-    case EVENT_TYPES.DAILY_ACT:
-      c.dailyAct += 1;
-      break;
-    case EVENT_TYPES.WORLD_CHAIN:
-      c.worldChain += 1;
-      break;
-    case EVENT_TYPES.RETURN_D1:
-      c.returnD1 += 1;
-      break;
-    case EVENT_TYPES.RETURN_D7:
-      c.returnD7 += 1;
-      break;
-    case EVENT_TYPES.RETURN_D30:
-      c.returnD30 += 1;
-      break;
-    default:
-      break;
+  try {
+    const blobs = await listBlobs(`${ROOT}/scan-events/`);
+    for (const b of blobs || []) {
+      const pathname = b?.pathname || '';
+      if (!pathname.endsWith('.json')) continue;
+      const parts = pathname.split('/');
+      const day = parts[parts.length - 2];
+      if (fromDay && day < fromDay) continue;
+      if (toDay && day > toDay) continue;
+      try {
+        push(await readBlobJson(pathname));
+      } catch { /* skip */ }
+    }
+  } catch (err) {
+    console.warn('qr loadScanEvents list failed:', err?.message || err);
   }
-  // Derive uniqueScans count from keys when present
-  if (Array.isArray(c.uniqueScanKeys)) c.uniqueScans = c.uniqueScanKeys.length;
-  row.updatedAt = new Date().toISOString();
-  await writeJson(dayPath(day), row, { overwrite: true });
-  return row;
+
+  // Fresh writes can lag in list — always probe today (+ yesterday).
+  const probeDays = [utcDayKey()];
+  const y = new Date();
+  y.setUTCDate(y.getUTCDate() - 1);
+  probeDays.push(utcDayKey(y));
+  for (const day of probeDays) {
+    if (fromDay && day < fromDay) continue;
+    if (toDay && day > toDay) continue;
+    try {
+      const blobs = await listBlobs(`${ROOT}/scan-events/${day}/`);
+      for (const b of blobs || []) {
+        if (!b?.pathname?.endsWith('.json')) continue;
+        try {
+          push(await readBlobJson(b.pathname));
+        } catch { /* skip */ }
+      }
+    } catch { /* none */ }
+  }
+
+  return out;
+}
+
+function aggregateScanEvents(events, scopeIds) {
+  const scope = new Set(scopeIds);
+  const byCampaign = new Map();
+  const byDay = new Map();
+  const uniqueAll = new Set();
+  let scans = 0;
+
+  for (const e of events || []) {
+    if (!e?.campaignId || !scope.has(e.campaignId)) continue;
+    scans += 1;
+    if (e.visitorKey) uniqueAll.add(e.visitorKey);
+
+    if (!byCampaign.has(e.campaignId)) {
+      byCampaign.set(e.campaignId, { scans: 0, unique: new Set() });
+    }
+    const c = byCampaign.get(e.campaignId);
+    c.scans += 1;
+    if (e.visitorKey) c.unique.add(e.visitorKey);
+
+    const day = e.day || String(e.at || '').slice(0, 10);
+    if (day) {
+      if (!byDay.has(day)) byDay.set(day, { scans: 0, unique: new Set() });
+      const d = byDay.get(day);
+      d.scans += 1;
+      if (e.visitorKey) d.unique.add(e.visitorKey);
+    }
+  }
+
+  return {
+    scans,
+    uniqueScans: uniqueAll.size,
+    byCampaign,
+    byDay,
+  };
 }
 
 async function recordScan({ campaignId, deviceId, anonId, userAgent = null }) {
@@ -378,13 +516,29 @@ async function recordScan({ campaignId, deviceId, anonId, userAgent = null }) {
     // First-touch preserved — do not overwrite firstCampaignId
   }
   await writeVisitor(visitor);
-  await bumpDay(campaignId, EVENT_TYPES.QR_SCAN, { unique: isNewUnique, visitorKey });
+  // Immutable scan event first (source of truth — survives day-aggregate races)
+  try {
+    await appendScanEvent({
+      campaignId,
+      visitorKey,
+      deviceId: deviceId || null,
+      anonId: anonId || null,
+    });
+  } catch (err) {
+    console.warn('qr appendScanEvent failed:', err?.message || err);
+  }
+  try {
+    await bumpDay(campaignId, EVENT_TYPES.QR_SCAN, { unique: isNewUnique, visitorKey });
+  } catch (err) {
+    console.warn('qr bumpDay scan failed:', err?.message || err);
+  }
   return {
     ok: true,
     campaignId,
     visitorKey,
     firstTouch: visitor.firstCampaignId === campaignId,
     campaignName: campaign.name,
+    scanCount: visitor.scanCount,
   };
 }
 
@@ -760,9 +914,26 @@ async function buildAnalytics({ campaignId = null, range = 'all', origin = '' } 
     }
   }
 
-  // Unique scans across days can over-count if summed — for ALL range use max of
-  // uniqueScanKeys union when single campaign; for multi-campaign sum is acceptable approx.
-  // Prefer stored uniqueScans sum as reported unique-scan-events; document as window unique approx.
+  // Authoritative scan / unique-scan counts from immutable scan-event log.
+  // Day aggregates can lose increments under concurrent writes; take the max.
+  const scanEvents = await loadScanEvents(fromDay, toDay);
+  const eventStats = aggregateScanEvents(scanEvents, scopeIds);
+  totals.scans = Math.max(Number(totals.scans) || 0, eventStats.scans);
+  totals.uniqueScans = Math.max(Number(totals.uniqueScans) || 0, eventStats.uniqueScans);
+
+  for (const [id, es] of eventStats.byCampaign.entries()) {
+    if (!byCampaign.has(id)) byCampaign.set(id, emptyTotals());
+    const m = byCampaign.get(id);
+    m.scans = Math.max(Number(m.scans) || 0, es.scans);
+    m.uniqueScans = Math.max(Number(m.uniqueScans) || 0, es.unique.size);
+  }
+
+  for (const [dayKey, es] of eventStats.byDay.entries()) {
+    if (!seriesMap.has(dayKey)) seriesMap.set(dayKey, emptyTotals());
+    const series = seriesMap.get(dayKey);
+    series.scans = Math.max(Number(series.scans) || 0, es.scans);
+    series.uniqueScans = Math.max(Number(series.uniqueScans) || 0, es.unique.size);
+  }
 
   const t = totals;
   // Retention denominators: only Voices old enough for each window.
