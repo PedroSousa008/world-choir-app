@@ -20,6 +20,7 @@ const WorldChainPage = (() => {
     detailReturnView: 'landing',
     busy: false,
     feedback: null,
+    connectDraft: '',
     turnSheetOpen: false,
     photoBookOffer: null,
     photoBookDraft: {
@@ -1452,7 +1453,7 @@ const WorldChainPage = (() => {
         </p>
         <form class="wc-chain-form" data-connect-form="${esc(chain.id)}">
           <label for="wc-chain-voice-input">Voice Number</label>
-          <input id="wc-chain-voice-input" name="voiceNumber" inputmode="numeric" autocomplete="off" placeholder="# __________" required ${locked ? 'disabled' : ''}>
+          <input id="wc-chain-voice-input" name="voiceNumber" inputmode="numeric" autocomplete="off" placeholder="# __________" required value="${esc(state.connectDraft || '')}" ${locked ? 'disabled' : ''}>
           <button type="submit" class="wc-chain-primary" ${locked ? 'disabled' : ''}>CONNECT VOICE</button>
         </form>
         ${state.feedback ? `
@@ -1953,8 +1954,10 @@ const WorldChainPage = (() => {
         const chainId = form.getAttribute('data-connect-form');
         if (state.busy) return;
         const input = form.querySelector('input[name="voiceNumber"]');
-        const voiceNumber = String(input?.value || '').trim();
+        const voiceNumber = String(input?.value || state.connectDraft || '').trim();
         if (!voiceNumber) return;
+        // Keep the typed number across re-renders so a slow reply never looks empty.
+        state.connectDraft = voiceNumber;
         state.busy = true;
         state.feedback = null;
         render();
@@ -1976,11 +1979,11 @@ const WorldChainPage = (() => {
           } catch {
             body = null;
           }
-          if (!res.ok && !body) {
+          if (!res.ok) {
             state.feedback = {
               ok: false,
               title: 'CONNECTION FAILED',
-              message: 'Could not reach World Chain. Please try again.',
+              message: body?.error || body?.message || 'Could not reach World Chain. Please try again.',
             };
             state.busy = false;
             render();
@@ -1990,6 +1993,7 @@ const WorldChainPage = (() => {
             mergeChainIntoState(body.chain);
             state.busy = false;
             state.feedback = null;
+            state.connectDraft = '';
             // Connection already persisted — optional Photo Book step next.
             if (body.photoBookOffer) {
               openPhotoBookContribute(body.photoBookOffer);
@@ -2008,12 +2012,31 @@ const WorldChainPage = (() => {
           } else if (body) {
             applyConnectCooldownToChain(chainId, body);
           }
-          state.feedback = {
-            ok: !!body?.ok,
-            title: body?.title || (body?.ok ? 'CONNECTION MADE' : 'VOICE NOT FOUND'),
-            message: body?.message || "That Voice doesn't match this destination.",
-            retryLabel: body?.retryLabel || '',
-          };
+          // Only show VOICE NOT FOUND for a real wrong-number response — never
+          // for transport/server errors (those used to look identical and forced a refresh).
+          if (body?.code === 'VOICE_NOT_FOUND' || body?.title === 'VOICE NOT FOUND') {
+            state.feedback = {
+              ok: false,
+              title: body.title || 'VOICE NOT FOUND',
+              message: body.message || "That Voice doesn't match this destination.",
+              retryLabel: body.retryLabel || '',
+            };
+          } else if (body?.ok) {
+            state.feedback = {
+              ok: true,
+              title: body.title || 'CONNECTION MADE',
+              message: body.message || '',
+              retryLabel: '',
+            };
+            state.connectDraft = '';
+          } else {
+            state.feedback = {
+              ok: false,
+              title: body?.title || 'CONNECTION FAILED',
+              message: body?.message || body?.error || 'Could not connect that Voice. Please try again.',
+              retryLabel: body?.retryLabel || '',
+            };
+          }
         } catch {
           state.feedback = {
             ok: false,

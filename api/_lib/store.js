@@ -1382,6 +1382,7 @@ module.exports = {
   updatePledgeLocation,
   deletePledgeVoice,
   listPledges,
+  reconcilePledges,
   getPledgesMeta,
   getMapAggregate,
   computeMapAggregateFromMappedPledges,

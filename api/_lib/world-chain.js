@@ -6,6 +6,7 @@
 const { randomUUID } = require('crypto');
 const {
   listPledges,
+  reconcilePledges,
   listAllUsers,
   findUserByDevice,
   readPledge,
@@ -13,6 +14,7 @@ const {
   writeJson,
   assertBlobConfigured,
 } = require('./store');
+const { resolveCountryCode } = require('./country-iso2');
 
 const DEFAULT_EVENT_ID = 'world-choir-2027';
 const DAILY_CHAIN_COUNT = 5;
@@ -126,7 +128,14 @@ function citiesEqual(a, b) {
 }
 
 function countriesEqual(a, b) {
-  return normalizeCountry(a).toLowerCase() === normalizeCountry(b).toLowerCase();
+  const left = normalizeCountry(a);
+  const right = normalizeCountry(b);
+  if (!left || !right) return false;
+  if (left.toLowerCase() === right.toLowerCase()) return true;
+  // Spain / ES / España-style aliases must match the destination country.
+  const leftCode = resolveCountryCode(left);
+  const rightCode = resolveCountryCode(right);
+  return Boolean(leftCode && rightCode && leftCode === rightCode);
 }
 
 function haversineKm(lat1, lon1, lat2, lon2) {
@@ -1374,13 +1383,22 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
   }
 
-  const [pledges, users] = await Promise.all([
-    listPledges(eventId),
-    listAllUsers().catch(() => []),
-  ]);
-  const usersById = buildUserMaps(users);
-  const { byVoice } = buildPledgeIndexes(pledges, usersById, nowMs);
-  const target = byVoice.get(voiceNum);
+  // Fast path: pledges index only. Do NOT list every user on connect — that
+  // cold path was slow/flaky and made correct Voices look like "not found".
+  let pledges = await listPledges(eventId);
+  let { byVoice } = buildPledgeIndexes(pledges, new Map(), nowMs);
+  let target = byVoice.get(voiceNum);
+
+  // Index can lag a fresh join — reconcile once before rejecting.
+  if (!target) {
+    try {
+      pledges = await reconcilePledges(eventId);
+      ({ byVoice } = buildPledgeIndexes(pledges, new Map(), nowMs));
+      target = byVoice.get(voiceNum);
+    } catch {
+      /* keep miss */
+    }
+  }
 
   // Privacy-preserving: all failure reasons collapse to the same message.
   // Always evaluate the number first — a correct Voice must never be blocked by
@@ -1390,10 +1408,7 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   else if (target.user_id === viewer.userId) valid = false;
   else if (!countriesEqual(target.country, active.country)) valid = false;
   else if (active.requiredCity && !citiesEqual(target.city, active.requiredCity)) valid = false;
-  else {
-    const targetUser = usersById.get(target.user_id);
-    if (!isConnectTargetEligible(targetUser, target, active, nowMs)) valid = false;
-  }
+  else if (!isConnectTargetEligible(null, target, active, nowMs)) valid = false;
   // Already used in this chain?
   if (valid && chain.route.some((s) => s.assignedVoiceId === target.user_id)) {
     valid = false;
