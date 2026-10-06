@@ -1,15 +1,17 @@
 /**
- * QR acquisition attribution + 3-minute global Share World Choir experience.
- * Persists eligibility across navigations via localStorage (enteredAt).
+ * QR acquisition attribution + 3-minute Share World Choir invite.
  *
- * Attribution rules (client):
- * - First-touch campaignId / referredByToken in wc_qr_attr is never overwritten here.
- * - Share invite only for QR first-touch visitors (campaignId present).
- * - enteredAt survives tab/page changes; timer does not restart on navigation.
+ * Rules:
+ * - Only QR first-touch visitors (campaignId) get the share FAB.
+ * - After 3 minutes, show FAB (bottom-right above tab bar) with subtle shimmer.
+ * - Modal opens ONLY when the user taps the FAB — never auto-opens.
+ * - After Share or Not now (or backdrop dismiss), invite is permanently done
+ *   for that visitor (shareInviteDone) and never shown again.
  */
 const WorldChoirQrAttribution = (() => {
   const ATTR_KEY = 'wc_qr_attr';
   const ANON_KEY = 'wc_qr_anon';
+  const PENDING_KEY = 'wc_qr_pending';
   const SHARE_MS = 3 * 60 * 1000;
   const DAY_MS = 86400000;
   const EVENT = {
@@ -30,7 +32,6 @@ const WorldChoirQrAttribution = (() => {
 
   let bootstrapped = false;
   let shareTimer = null;
-  let uiMounted = false;
 
   function readAttr() {
     try {
@@ -64,15 +65,27 @@ const WorldChoirQrAttribution = (() => {
 
   function deviceId() {
     try {
-      return (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getDeviceId?.()) || '';
+      return (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getDeviceId?.())
+        || localStorage.getItem('wc_anonymous_device_id')
+        || '';
     } catch {
       return '';
     }
   }
 
+  function isQrFirstTouch() {
+    const a = readAttr();
+    return !!(a && a.campaignId);
+  }
+
   function hasAttribution() {
     const a = readAttr();
     return !!(a && (a.campaignId || a.referredByToken));
+  }
+
+  function shareInviteDone() {
+    const a = readAttr();
+    return !!(a && (a.shareInviteDone || a.shareDismissedSession));
   }
 
   async function postEvent(type, extra = {}) {
@@ -95,15 +108,49 @@ const WorldChoirQrAttribution = (() => {
     } catch { /* best-effort */ }
   }
 
+  async function flushPending() {
+    let pending;
+    try {
+      pending = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null');
+    } catch {
+      pending = null;
+    }
+    if (!pending?.kind || !pending?.payload) return;
+    try {
+      const action = pending.kind === 'referral-open' ? 'referral-open' : 'scan';
+      const res = await fetch(`/api/qr?action=${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...pending.payload,
+          deviceId: pending.payload.deviceId || deviceId(),
+          anonId: pending.payload.anonId || anonId(),
+        }),
+        keepalive: true,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        writeAttr({
+          visitorKey: body.visitorKey || readAttr()?.visitorKey || null,
+          campaignId: readAttr()?.campaignId || body.campaignId || pending.payload.campaignId || null,
+          referredByToken: readAttr()?.referredByToken || pending.payload.token || null,
+        });
+        localStorage.removeItem(PENDING_KEY);
+      }
+    } catch { /* retry later */ }
+  }
+
   function ensureShareUi() {
     if (document.getElementById('wc-qr-share-fab')) return;
+
     const fab = document.createElement('button');
     fab.type = 'button';
     fab.id = 'wc-qr-share-fab';
     fab.className = 'wc-qr-share-fab';
     fab.hidden = true;
     fab.setAttribute('aria-label', 'Share World Choir');
-    fab.innerHTML = `<span class="wc-qr-share-fab__glow" aria-hidden="true"></span>
+    fab.innerHTML = `
+      <span class="wc-qr-share-fab__ring" aria-hidden="true"></span>
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="18" cy="5" r="2.4"/><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="19" r="2.4"/>
         <path d="M8.2 13.1 15.7 17M15.8 7 8.3 10.9"/>
@@ -114,6 +161,7 @@ const WorldChoirQrAttribution = (() => {
     overlay.id = 'wc-qr-share-overlay';
     overlay.className = 'wc-qr-share-overlay';
     overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
     overlay.innerHTML = `
       <div class="wc-qr-share-sheet" role="dialog" aria-modal="true" aria-labelledby="wc-qr-share-title">
         <h2 id="wc-qr-share-title" class="wc-qr-share-sheet__title">Connect someone to this moment.</h2>
@@ -127,14 +175,14 @@ const WorldChoirQrAttribution = (() => {
 
     fab.addEventListener('click', () => openShareSheet());
     overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) closeShareSheet(false);
+      if (e.target === overlay) completeInvite(false);
     });
-    overlay.querySelector('[data-wc-qr-dismiss]')?.addEventListener('click', () => closeShareSheet(true));
+    overlay.querySelector('[data-wc-qr-dismiss]')?.addEventListener('click', () => completeInvite(false));
     overlay.querySelector('[data-wc-qr-share]')?.addEventListener('click', () => void shareNow());
-    uiMounted = true;
   }
 
   function showFab(animate) {
+    if (!isQrFirstTouch() || shareInviteDone()) return;
     ensureShareUi();
     const fab = document.getElementById('wc-qr-share-fab');
     if (!fab) return;
@@ -144,7 +192,6 @@ const WorldChoirQrAttribution = (() => {
       fab.classList.remove('is-attention');
       void fab.offsetWidth;
       fab.classList.add('is-attention');
-      setTimeout(() => fab.classList.remove('is-attention'), 4800);
     }
   }
 
@@ -156,20 +203,33 @@ const WorldChoirQrAttribution = (() => {
     }
   }
 
+  function hideOverlay() {
+    const overlay = document.getElementById('wc-qr-share-overlay');
+    if (overlay) {
+      overlay.hidden = true;
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+  }
+
   async function openShareSheet() {
+    if (!isQrFirstTouch() || shareInviteDone()) return;
     ensureShareUi();
     const overlay = document.getElementById('wc-qr-share-overlay');
-    if (overlay) overlay.hidden = false;
+    if (!overlay) return;
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
     await postEvent(EVENT.SHARE_OPENED);
   }
 
-  function closeShareSheet(dismiss) {
-    const overlay = document.getElementById('wc-qr-share-overlay');
-    if (overlay) overlay.hidden = true;
-    if (dismiss) {
-      writeAttr({ shareDismissedSession: true });
-      hideFab();
-    }
+  function completeInvite(shared) {
+    writeAttr({
+      shareInviteDone: true,
+      shareDismissedSession: true,
+      shareCompletedAt: new Date().toISOString(),
+      shareDidShare: !!shared,
+    });
+    hideOverlay();
+    hideFab();
   }
 
   async function shareNow() {
@@ -187,7 +247,7 @@ const WorldChoirQrAttribution = (() => {
       });
       const body = await res.json().catch(() => ({}));
       if (res.ok && body.url) shareUrl = body.url;
-      else if (res.ok && body.urlPath) shareUrl = `${window.location.origin}${body.urlPath}`;
+      else if (res.ok && body.path) shareUrl = `${window.location.origin}${body.path}`;
     } catch { /* fallback home */ }
 
     const text = 'I\'m joining World Choir 2027. Once a year, the entire world sings together. Add your voice.';
@@ -197,29 +257,32 @@ const WorldChoirQrAttribution = (() => {
       } else if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(`${text} ${shareUrl}`);
       }
-    } catch { /* user cancelled */ }
+    } catch { /* user cancelled share sheet — still complete invite */ }
     await postEvent(EVENT.SHARE_CLICKED);
-    closeShareSheet(true);
+    completeInvite(true);
   }
 
   function scheduleShareEligibility() {
     if (shareTimer) clearTimeout(shareTimer);
-    const a = readAttr();
-    if (!a?.campaignId) return;
-    if (a.shareDismissedSession) return;
+    if (!isQrFirstTouch() || shareInviteDone()) {
+      hideFab();
+      hideOverlay();
+      return;
+    }
 
+    const a = readAttr();
     const enteredAt = Number(a.enteredAt) || Date.now();
     if (!a.enteredAt) writeAttr({ enteredAt });
-    const due = enteredAt + SHARE_MS;
-    const wait = Math.max(0, due - Date.now());
+    const wait = Math.max(0, enteredAt + SHARE_MS - Date.now());
 
     const reveal = async () => {
       const latest = readAttr();
-      if (!latest?.campaignId || latest.shareDismissedSession) return;
+      if (!latest?.campaignId || shareInviteDone()) return;
       if (!latest.shareEligibleAt) {
         writeAttr({ shareEligibleAt: new Date().toISOString() });
         await postEvent(EVENT.SHARE_ELIGIBLE);
       }
+      // FAB only — never auto-open the modal
       showFab(true);
     };
 
@@ -228,10 +291,12 @@ const WorldChoirQrAttribution = (() => {
   }
 
   function trackIllSing() {
+    if (!isQrFirstTouch()) return;
     void postEvent(EVENT.ILL_SING);
   }
 
   function trackPageEngagement() {
+    if (!hasAttribution()) return;
     const path = (window.location.pathname || '').toLowerCase();
     if (path.includes('map')) void postEvent(EVENT.OPENED_MAP);
     if (path.includes('world-chain')) void postEvent(EVENT.WORLD_CHAIN);
@@ -239,6 +304,7 @@ const WorldChoirQrAttribution = (() => {
   }
 
   function onCustomEngagement(e) {
+    if (!hasAttribution()) return;
     const type = e?.detail?.type;
     if (type === 'practiced_song') void postEvent(EVENT.PRACTICED_SONG);
     if (type === 'daily_act') void postEvent(EVENT.DAILY_ACT);
@@ -268,7 +334,6 @@ const WorldChoirQrAttribution = (() => {
   function checkReturns() {
     if (!hasAttribution()) return;
     const a = readAttr();
-    if (!a?.campaignId && !a?.referredByToken) return;
     const created = ensureVoiceCreatedAt();
     if (!created) return;
     const age = Date.now() - Number(created);
@@ -303,13 +368,12 @@ const WorldChoirQrAttribution = (() => {
     window.addEventListener('wc-pledge-added', (e) => {
       const created = Date.parse(e?.detail?.created_at || e?.detail?.createdAt || '') || Date.now();
       writeAttr({ voiceCreatedAt: created });
-      // Server attributes on /api/join; client only stores local retention clock.
       checkReturns();
     });
 
     document.addEventListener('click', (e) => {
       if (e.target?.closest?.('#practice-song-btn, [data-practice-song], .btn-practice')) {
-        void postEvent(EVENT.PRACTICED_SONG);
+        if (hasAttribution()) void postEvent(EVENT.PRACTICED_SONG);
       }
     }, true);
   }
@@ -317,6 +381,8 @@ const WorldChoirQrAttribution = (() => {
   async function bootstrap() {
     if (bootstrapped) return;
     bootstrapped = true;
+
+    await flushPending();
     if (!hasAttribution()) return;
 
     const a = readAttr();
@@ -330,6 +396,7 @@ const WorldChoirQrAttribution = (() => {
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
+        void flushPending();
         checkReturns();
         scheduleShareEligibility();
       }

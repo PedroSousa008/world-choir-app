@@ -25,22 +25,28 @@
 </head>
 <body>
   <p class="boot" id="boot">Opening World Choir…</p>
-  <script src="/js/world-choir-db.js?v=20261006qr1"></script>
   <script>
   (async function () {
     const boot = document.getElementById('boot');
     const params = new URLSearchParams(window.location.search);
     const pathParts = window.location.pathname.split('/').filter(Boolean);
-    // /join/{campaignId} or /join?ref=token
+    // /join/{campaignId} or /join.html?c=… or /join?ref=token
     let campaignId = null;
-    if (pathParts[0] === 'join' && pathParts[1]) campaignId = decodeURIComponent(pathParts[1]);
-    const ref = params.get('ref') || params.get('share') || '';
+    if (pathParts[0] === 'join' && pathParts[1] && pathParts[1] !== 'join.html') {
+      campaignId = decodeURIComponent(pathParts[1]);
+    }
+    if (!campaignId) {
+      campaignId = params.get('c') || params.get('campaign') || params.get('id') || '';
+    }
+    campaignId = String(campaignId || '').trim();
+    const ref = String(params.get('ref') || params.get('share') || '').trim();
 
     function anonId() {
       try {
         let id = localStorage.getItem('wc_qr_anon');
         if (!id) {
-          id = (crypto.randomUUID && crypto.randomUUID()) || `a_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+          id = (crypto.randomUUID && crypto.randomUUID())
+            || `a_${Date.now()}_${Math.random().toString(36).slice(2)}`;
           localStorage.setItem('wc_qr_anon', id);
         }
         return id;
@@ -51,77 +57,105 @@
 
     function deviceId() {
       try {
-        if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getDeviceId) {
-          return WorldChoirDB.getDeviceId() || '';
+        let id = localStorage.getItem('wc_anonymous_device_id');
+        if (!id) {
+          id = (crypto.randomUUID && crypto.randomUUID())
+            || `wc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
+          localStorage.setItem('wc_anonymous_device_id', id);
         }
-      } catch { /* ignore */ }
-      return '';
+        return id;
+      } catch {
+        return '';
+      }
     }
 
     function persistAttribution(payload) {
       try {
-        const existing = JSON.parse(localStorage.getItem('wc_qr_attr') || 'null');
+        const existing = JSON.parse(localStorage.getItem('wc_qr_attr') || 'null') || {};
         // First-touch: keep existing campaign attribution if present
         const next = {
-          visitorKey: payload.visitorKey || existing?.visitorKey || null,
-          campaignId: existing?.campaignId || payload.campaignId || null,
-          referredByToken: existing?.referredByToken || payload.referredByToken || null,
-          firstTouchAt: existing?.firstTouchAt || new Date().toISOString(),
-          enteredAt: existing?.enteredAt || Date.now(),
-          shareEligibleAt: existing?.shareEligibleAt || null,
-          shareDismissedSession: existing?.shareDismissedSession || false,
+          visitorKey: payload.visitorKey || existing.visitorKey || null,
+          campaignId: existing.campaignId || payload.campaignId || null,
+          referredByToken: existing.referredByToken || payload.referredByToken || null,
+          firstTouchAt: existing.firstTouchAt || new Date().toISOString(),
+          enteredAt: existing.enteredAt || Date.now(),
+          shareEligibleAt: existing.shareEligibleAt || null,
+          shareInviteDone: existing.shareInviteDone === true,
+          shareDismissedSession: existing.shareDismissedSession === true,
         };
         localStorage.setItem('wc_qr_attr', JSON.stringify(next));
         sessionStorage.setItem('wc_qr_session', '1');
       } catch { /* ignore */ }
     }
 
-    try {
-      await WorldChoirDB?.ready?.();
-    } catch { /* continue */ }
+    function queuePending(kind, payload) {
+      try {
+        localStorage.setItem('wc_qr_pending', JSON.stringify({
+          kind,
+          payload,
+          at: Date.now(),
+        }));
+      } catch { /* ignore */ }
+    }
+
+    async function postJson(url, body) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        keepalive: true,
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, data };
+    }
 
     const anon = anonId();
     const device = deviceId();
 
     try {
       if (ref) {
-        const res = await fetch('/api/qr?action=referral-open', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: ref, deviceId: device, anonId: anon }),
+        queuePending('referral-open', { token: ref, deviceId: device, anonId: anon });
+        // Optimistic first-touch for share invite / attribution continuity
+        persistAttribution({ referredByToken: ref });
+        const { ok, data } = await postJson('/api/qr?action=referral-open', {
+          token: ref,
+          deviceId: device,
+          anonId: anon,
         });
-        const body = await res.json().catch(() => ({}));
-        if (res.ok) {
+        if (ok) {
           persistAttribution({
-            visitorKey: body.visitorKey,
-            campaignId: body.campaignId,
+            visitorKey: data.visitorKey,
+            campaignId: data.campaignId,
             referredByToken: ref,
           });
+          localStorage.removeItem('wc_qr_pending');
         }
       } else if (campaignId) {
-        const res = await fetch('/api/qr?action=scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ campaignId, deviceId: device, anonId: anon }),
+        queuePending('scan', { campaignId, deviceId: device, anonId: anon });
+        // Optimistic first-touch so Home can attribute even if this request is flaky
+        persistAttribution({ campaignId });
+        const { ok, data, status } = await postJson('/api/qr?action=scan', {
+          campaignId,
+          deviceId: device,
+          anonId: anon,
         });
-        const body = await res.json().catch(() => ({}));
-        if (res.ok) {
+        if (ok) {
           persistAttribution({
-            visitorKey: body.visitorKey,
-            campaignId: body.campaignId || campaignId,
+            visitorKey: data.visitorKey,
+            campaignId: data.campaignId || campaignId,
           });
-        } else if (boot) {
-          boot.textContent = body.error || 'This QR link is no longer available.';
+          localStorage.removeItem('wc_qr_pending');
+        } else if (status === 404) {
+          if (boot) boot.textContent = data.error || 'This QR link is no longer available.';
           return;
         }
+        // Non-404: continue into app; Home will retry pending scan
       }
     } catch (err) {
       console.warn('QR join tracking failed', err);
     }
 
-    // Enter the main app experience (Home).
-    const dest = '/index.html';
-    window.location.replace(dest);
+    window.location.replace('/index.html');
   })();
   </script>
 </body>

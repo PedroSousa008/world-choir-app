@@ -15,7 +15,15 @@ const {
 const { assertBlobConfigured } = require('./_lib/store');
 
 function readBody(req) {
-  return req.body && typeof req.body === 'object' ? req.body : {};
+  if (req.body && typeof req.body === 'object') return req.body;
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  return {};
 }
 
 module.exports = async function handler(req, res) {
@@ -26,11 +34,14 @@ module.exports = async function handler(req, res) {
 
   try {
     assertBlobConfigured();
-    const action = String(req.query?.action || readBody(req).action || '').trim();
+    const body = readBody(req);
+    const action = String(req.query?.action || body.action || '').trim();
 
     if (action === 'scan' && req.method === 'POST') {
-      const body = readBody(req);
       const campaignId = String(body.campaignId || '').trim();
+      if (!campaignId) {
+        return res.status(400).json({ error: 'campaignId required' });
+      }
       const result = await recordScan({
         campaignId,
         deviceId: body.deviceId || null,
@@ -41,7 +52,6 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'event' && req.method === 'POST') {
-      const body = readBody(req);
       const type = String(body.type || '').trim();
       if (!Object.values(EVENT_TYPES).includes(type)) {
         return res.status(400).json({ error: 'Unknown event type' });
@@ -60,8 +70,10 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'referral-open' && req.method === 'POST') {
-      const body = readBody(req);
       const token = String(body.token || body.ref || '').trim();
+      if (!token) {
+        return res.status(400).json({ error: 'token required' });
+      }
       const result = await openReferral(token, {
         deviceId: body.deviceId || null,
         anonId: body.anonId || null,
@@ -70,7 +82,6 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'share-link' && req.method === 'POST') {
-      const body = readBody(req);
       const result = await ensureReferralToken(
         body.visitorKey || null,
         body.deviceId || null,
@@ -103,7 +114,6 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'visitor-key' && req.method === 'POST') {
-      const body = readBody(req);
       return res.status(200).json({
         visitorKey: makeVisitorKey(body.deviceId, body.anonId),
       });

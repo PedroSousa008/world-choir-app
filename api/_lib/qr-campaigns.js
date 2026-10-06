@@ -638,29 +638,47 @@ function rangeStartDay(rangeKey) {
 
 async function loadDayRows(fromDay, toDay) {
   const out = [];
-  // Prefer index listing via listBlobs when wide range
+  const seen = new Set();
+
+  const pushRow = (row) => {
+    if (!row?.day || seen.has(row.day)) return;
+    seen.add(row.day);
+    out.push(row);
+  };
+
+  // listBlobs(prefix: string) → Blob[] (not { blobs })
   try {
-    const blobs = await listBlobs({ prefix: `${ROOT}/days/`, limit: 500 });
-    for (const b of blobs.blobs || []) {
-      if (!b.pathname.endsWith('.json')) continue;
-      const day = b.pathname.split('/').pop().replace('.json', '');
+    const blobs = await listBlobs(`${ROOT}/days/`);
+    for (const b of blobs || []) {
+      const pathname = b?.pathname || '';
+      if (!pathname.endsWith('.json')) continue;
+      const day = pathname.split('/').pop().replace(/\.json$/, '');
       if (fromDay && day < fromDay) continue;
       if (toDay && day > toDay) continue;
       try {
-        out.push(await readBlobJson(b.pathname));
-      } catch { /* skip */ }
+        pushRow(await readBlobJson(pathname));
+      } catch { /* skip corrupt/missing */ }
     }
-  } catch {
-    // Fallback: walk last 400 days max from toDay
-    const end = toDay ? new Date(`${toDay}T00:00:00.000Z`) : new Date();
-    const start = fromDay ? new Date(`${fromDay}T00:00:00.000Z`) : new Date(end.getTime() - 400 * 86400000);
-    for (let t = start.getTime(); t <= end.getTime(); t += 86400000) {
-      const day = utcDayKey(new Date(t));
-      try {
-        out.push(await readBlobJson(dayPath(day)));
-      } catch { /* none */ }
-    }
+  } catch (err) {
+    console.warn('qr loadDayRows list failed, walking days:', err?.message || err);
   }
+
+  // Always include today (list can lag behind a fresh write) + walk gaps for limited ranges.
+  const end = toDay ? new Date(`${toDay}T00:00:00.000Z`) : new Date();
+  const start = fromDay
+    ? new Date(`${fromDay}T00:00:00.000Z`)
+    : new Date(end.getTime() - Math.min(120, 400) * 86400000);
+
+  for (let t = start.getTime(); t <= end.getTime(); t += 86400000) {
+    const day = utcDayKey(new Date(t));
+    if (seen.has(day)) continue;
+    if (fromDay && day < fromDay) continue;
+    if (toDay && day > toDay) continue;
+    try {
+      pushRow(await readBlobJson(dayPath(day)));
+    } catch { /* none for that day */ }
+  }
+
   return out.sort((a, b) => String(a.day).localeCompare(String(b.day)));
 }
 
