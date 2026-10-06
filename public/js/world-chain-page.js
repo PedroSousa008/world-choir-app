@@ -1939,6 +1939,9 @@ const WorldChainPage = (() => {
           const body = await res.json();
           if (body.chain) {
             mergeChainIntoState(body.chain);
+            state.turnSheetOpen = true;
+            state.feedback = null;
+            state.connectDraft = '';
           }
         } catch {
           /* keep UI */
@@ -1997,6 +2000,32 @@ const WorldChainPage = (() => {
         try {
           let { res, body } = await postConnect();
 
+          const notStartedYet = (payload) => {
+            const msg = String(payload?.error || payload?.message || '');
+            return /not been started/i.test(msg);
+          };
+
+          // Blob lag after START: heal by accepting start again, then reconnect.
+          // Never leave the user stuck needing a full page refresh.
+          if ((!res.ok || (body && !body.ok)) && notStartedYet(body)) {
+            try {
+              await fetch('/api/world-chain', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'accept-start',
+                  deviceId: deviceId(),
+                  eventId: eventId(),
+                  chainId,
+                }),
+              });
+            } catch {
+              /* continue to retry connect */
+            }
+            await new Promise((r) => setTimeout(r, 280));
+            ({ res, body } = await postConnect());
+          }
+
           // One automatic retry when the first reply is the false "not found"
           // (blob lag / twin submit) — matches what a manual refresh was doing.
           if (
@@ -2010,10 +2039,14 @@ const WorldChainPage = (() => {
           }
 
           if (!res.ok) {
+            const raw = body?.error || body?.message || '';
+            // Never surface the false "not started" dead-end — offer a soft retry.
             state.feedback = {
               ok: false,
               title: 'CONNECTION FAILED',
-              message: body?.error || body?.message || 'Could not reach World Chain. Please try again.',
+              message: notStartedYet(body)
+                ? 'Could not confirm the chain start. Tap Connect Voice again.'
+                : (raw || 'Could not reach World Chain. Please try again.'),
             };
             state.busy = false;
             state.connectLock = false;
@@ -2030,7 +2063,12 @@ const WorldChainPage = (() => {
               openPhotoBookContribute(body.photoBookOffer);
               return;
             }
-            state.turnSheetOpen = false;
+            // Stay on the turn sheet if this Voice still has the next hop.
+            const stillTurn = !!(
+              body.chain.viewer?.isActiveTurn
+              || body.chain.viewer?.needsStart
+            );
+            if (!stillTurn) state.turnSheetOpen = false;
             render();
             return;
           }

@@ -652,16 +652,16 @@ function publicChain(chain, nowMs = Date.now(), viewer = null) {
     )
   );
 
+  // isActiveTurn = connect form only (never conflate with needsStart / START button).
   const viewerIsTheirTurn = !!(
-    viewerNeedsStart
-    || viewerIsCurrentActor
+    viewerIsCurrentActor
     || (viewerIsActive && chain.starterAccepted)
   );
 
   let cta = 'WATCH LIVE';
   if (liveStatus === Status.COMPLETED) {
     cta = 'VIEW COMPLETED CHAIN';
-  } else if (viewerIsTheirTurn) {
+  } else if (viewerIsTheirTurn || viewerNeedsStart) {
     cta = 'KEEP THE CHAIN ALIVE';
   } else if (viewerIsNamed) {
     cta = 'YOUR CHAIN';
@@ -1330,7 +1330,7 @@ async function acceptStart(deviceId, chainId, eventId = DEFAULT_EVENT_ID) {
     err.statusCode = 403;
     throw err;
   }
-  const chain = await readChain(eventId, day, chainId);
+  let chain = await readChain(eventId, day, chainId);
   if (!chain) {
     const err = new Error('Chain not found');
     err.statusCode = 404;
@@ -1346,19 +1346,73 @@ async function acceptStart(deviceId, chainId, eventId = DEFAULT_EVENT_ID) {
     err.statusCode = 409;
     throw err;
   }
+
+  // Idempotent — already started is success (never error the client into a dead end).
+  if (!chain.starterAccepted) {
+    applyStarterAccepted(chain, viewer, now);
+    await writeChain(eventId, day, chain);
+  } else {
+    // Heal a partial write where accepted flipped but destination never activated.
+    const dest = chain.route?.[1];
+    if (dest && dest.status === 'future') {
+      applyStarterAccepted(chain, viewer, now);
+      await writeChain(eventId, day, chain);
+    }
+  }
+
+  return { ok: true, chain: publicChain(chain, now.getTime(), viewer) };
+}
+
+/** Mutate chain in-place: starter accepted + first destination active. */
+function applyStarterAccepted(chain, viewer, now = new Date()) {
   chain.starterAccepted = true;
   chain.lastProgressAt = now.toISOString();
-  chain.currentStep = 1;
-  // First destination becomes active only after the starter accepts.
-  const dest = chain.route[1];
+  chain.currentStep = Math.max(1, Number(chain.currentStep) || 1);
+  const dest = chain.route?.[1];
   if (dest && dest.status !== 'connected') {
     dest.status = 'active';
     dest.assignedVoiceId = viewer.userId;
     dest.assignedVoiceNumber = viewer.voiceNumber;
-    dest.activatedAt = now.toISOString();
+    dest.activatedAt = dest.activatedAt || now.toISOString();
   }
-  await writeChain(eventId, day, chain);
-  return { ok: true, chain: publicChain(chain, now.getTime(), viewer) };
+  return chain;
+}
+
+/**
+ * Blob reads can lag behind acceptStart. If this viewer is the starter, finish
+ * starting here so CONNECT never falsely says "not started yet".
+ */
+async function ensureStartedForConnect(chain, viewer, eventId, day, now) {
+  if (chain.starterAccepted) {
+    const active = (chain.route || []).find((s) => s.status === 'active');
+    if (active) return chain;
+    // Accepted but no active hop — heal destination 1.
+    if (chain.startingVoiceId === viewer.userId && chain.route?.[1]) {
+      applyStarterAccepted(chain, viewer, now);
+      await writeChain(eventId, day, chain);
+      return chain;
+    }
+    return chain;
+  }
+
+  // Not marked started: if this is the starter, start now (covers client race
+  // where UI already moved to CONNECT after a prior acceptStart response).
+  if (chain.startingVoiceId === viewer.userId) {
+    applyStarterAccepted(chain, viewer, now);
+    await writeChain(eventId, day, chain);
+    // Confirm read — if still stale, keep the in-memory started chain.
+    for (let i = 0; i < 3; i += 1) {
+      await new Promise((r) => setTimeout(r, 120 * (i + 1)));
+      const again = await readChain(eventId, day, chain.id);
+      if (again?.starterAccepted) {
+        const active = (again.route || []).find((s) => s.status === 'active');
+        if (active) return again;
+      }
+    }
+    return chain;
+  }
+
+  return chain;
 }
 
 async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = DEFAULT_EVENT_ID) {
@@ -1390,13 +1444,21 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     err.statusCode = 409;
     throw err;
   }
+
+  chain = await ensureStartedForConnect(chain, viewer, eventId, day, now);
+
   if (!chain.starterAccepted) {
     const err = new Error('This chain has not been started yet');
     err.statusCode = 409;
     throw err;
   }
 
-  let active = chain.route.find((s) => s.status === 'active');
+  let active = (chain.route || []).find((s) => s.status === 'active');
+  if (!active && chain.route?.[1]) {
+    applyStarterAccepted(chain, viewer, now);
+    await writeChain(eventId, day, chain);
+    active = chain.route.find((s) => s.status === 'active');
+  }
   if (!active) {
     const err = new Error('No active destination on this chain');
     err.statusCode = 409;
