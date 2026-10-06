@@ -273,8 +273,12 @@ const WorldChainPage = (() => {
     };
   }
 
-  function finishPhotoBookStep() {
+  async function finishPhotoBookStep() {
     const returnToBook = state.photoBookContributeFrom === 'photo-book';
+    const chainId = state.activeChainId
+      || state.photoBookOffer?.chainId
+      || readPendingPhotoBook()?.chainId
+      || null;
     clearPendingPhotoBook();
     state.photoBookOffer = null;
     state.photoBookContributeFrom = null;
@@ -283,10 +287,25 @@ const WorldChainPage = (() => {
     state.turnSheetOpen = false;
     state.view = returnToBook ? 'photo-book' : 'detail';
     syncUrl({ replace: true });
+    // Progress was already saved on CONNECT — re-sync so detail shows it live.
+    if (chainId) {
+      try {
+        await load({ soft: true });
+      } catch {
+        /* keep */
+      }
+      try {
+        await refreshChain(chainId);
+      } catch {
+        /* keep */
+      }
+      state.activeChainId = chainId;
+      if (!returnToBook) state.view = 'detail';
+    }
     render();
     window.scrollTo(0, 0);
-    if (returnToBook && state.activeChainId) {
-      loadPhotoBook(state.activeChainId);
+    if (returnToBook && chainId) {
+      loadPhotoBook(chainId);
     }
   }
 
@@ -457,9 +476,34 @@ const WorldChainPage = (() => {
     });
   }
 
+  function clientProgressScore(chain) {
+    if (!chain) return -1;
+    const route = chain.route || [];
+    const connected = route.filter((s) => s.status === 'connected').length;
+    const activePos = route.find((s) => s.status === 'active')?.position ?? -1;
+    const started = chain.viewer?.needsStart ? 0 : (connected > 0 || activePos >= 0 || route.some((s) => s.status === 'active') ? 1 : 0);
+    const completed = chain.status === 'COMPLETED' ? 1 : 0;
+    const step = Number(chain.currentStep) || 0;
+    // Public chains don't always include starterAccepted — infer from route.
+    const inferredStarted = started || route.some((s) => s.status === 'active' || s.status === 'connected') ? 1 : 0;
+    return (
+      completed * 1_000_000
+      + connected * 10_000
+      + inferredStarted * 1_000
+      + Math.max(activePos, 0) * 100
+      + step * 10
+    );
+  }
+
   function mergeChainIntoState(chain) {
     if (!chain?.id) return;
     refreshChainTimerFields(chain);
+    const existing = findChain(chain.id);
+    // Never let a stale fetch wipe a fresher successful connect in local state.
+    if (existing && clientProgressScore(existing) > clientProgressScore(chain)) {
+      cacheChain(existing);
+      return;
+    }
     cacheChain(chain);
     if (!state.data) {
       state.data = { chains: [chain], overview: {}, limited: false };
@@ -1613,9 +1657,10 @@ const WorldChainPage = (() => {
     }
   }
 
-  async function load() {
+  async function load(opts = {}) {
+    const soft = !!opts.soft;
     const hadCache = !!state.data;
-    if (!hadCache) {
+    if (!hadCache && !soft) {
       state.loading = true;
       render();
     }
@@ -1630,24 +1675,35 @@ const WorldChainPage = (() => {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || 'Could not load World Chain');
       }
-      state.data = await res.json();
-      applyServerNow(state.data.serverNow);
-      (state.data.chains || []).forEach((c) => refreshChainTimerFields(c));
+      const payload = await res.json();
+      applyServerNow(payload.serverNow);
+      // Progress-safe merge so a soft reload can't wipe a just-completed connect.
+      if (soft && state.data?.chains?.length) {
+        (payload.chains || []).forEach((c) => mergeChainIntoState(c));
+        state.data.overview = payload.overview || state.data.overview;
+        state.data.serverNow = payload.serverNow;
+        state.data.dayKey = payload.dayKey || state.data.dayKey;
+      } else {
+        state.data = payload;
+        (state.data.chains || []).forEach((c) => refreshChainTimerFields(c));
+        (state.data.chains || []).forEach(cacheChain);
+      }
       cacheTodayPayload(state.data);
-      (state.data.chains || []).forEach(cacheChain);
       state.loading = false;
       state.error = null;
-      applyUrlState();
-      if (state.activeChainId) {
-        const single = readCachedChain(state.activeChainId);
-        if (single) mergeChainIntoState(single);
+      if (!soft) {
+        applyUrlState();
+        if (state.activeChainId) {
+          const single = readCachedChain(state.activeChainId);
+          if (single) mergeChainIntoState(single);
+        }
+        render();
       }
-      render();
     } catch (err) {
       state.loading = false;
       if (!state.data) {
         state.error = err.message || 'Could not load World Chain';
-        render();
+        if (!soft) render();
       }
     }
   }
@@ -2054,17 +2110,15 @@ const WorldChainPage = (() => {
             return;
           }
           if (body?.ok && body.chain) {
+            // CONNECT already persisted server-side — keep that progress in UI.
             mergeChainIntoState(body.chain);
             state.busy = false;
             state.connectLock = false;
             state.feedback = null;
             state.connectDraft = '';
-            // Re-fetch from server so UI matches durable progress (not a stale race).
-            try {
-              await refreshChain(chainId);
-            } catch {
-              /* keep connect response */
-            }
+            state.activeChainId = chainId;
+            // Do NOT refreshChain here: a stale read was wiping the just-saved
+            // connect before Photo Book. Progress is durable after CONNECT.
             if (body.photoBookOffer) {
               openPhotoBookContribute(body.photoBookOffer);
               return;
@@ -2181,7 +2235,9 @@ const WorldChainPage = (() => {
     });
 
     document.querySelectorAll('[data-skip-photo-book]').forEach((btn) => {
-      btn.addEventListener('click', () => finishPhotoBookStep());
+      btn.addEventListener('click', () => {
+        void finishPhotoBookStep();
+      });
     });
 
     document.querySelector('[data-submit-photo-book]')?.addEventListener('click', async () => {
@@ -2226,7 +2282,7 @@ const WorldChainPage = (() => {
         if (isEdit && state.photoBook) {
           state.photoBook.viewerEditOffer = null;
         }
-        finishPhotoBookStep();
+        await finishPhotoBookStep();
       } catch (err) {
         state.photoBookDraft = {
           ...state.photoBookDraft,

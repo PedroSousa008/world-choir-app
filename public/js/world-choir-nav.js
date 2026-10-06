@@ -677,7 +677,7 @@ const WorldChoirNav = (() => {
       'world-chain.html',
       'css/world-chain.css?v=20260911photoBookText',
       'js/world-choir-flags.js?v=20260905s',
-      'js/world-chain-page.js?v=20261006progressSafe',
+      'js/world-chain-page.js?v=20261006progressPersist',
       '/api/world-chain',
       'images/chain-header.png?v=20260905h',
       'images/chain-light.png?v=20260911chainLight',

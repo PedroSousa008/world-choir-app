@@ -98,6 +98,10 @@ function chainPath(eventId, day, chainId) {
   return `${rootPath(eventId, day)}/chains/${chainId}.json`;
 }
 
+function followersPath(eventId, day, chainId) {
+  return `${rootPath(eventId, day)}/chains/${chainId}.followers.json`;
+}
+
 function attemptsPath(eventId, day, chainId, voiceNumber) {
   return `${rootPath(eventId, day)}/attempts/${chainId}/v${voiceNumber}.json`;
 }
@@ -841,20 +845,43 @@ async function writeChainSafe(eventId, day, chain, { reason = 'update' } = {}) {
   return chain;
 }
 
-/** Patch followers on the latest blob only — never rewrite route/progress from a stale read. */
-async function addChainFollower(eventId, day, chainId, userId) {
-  if (!userId || !chainId) return null;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const latest = await readChain(eventId, day, chainId);
-    if (!latest) return null;
-    const ids = Array.isArray(latest.followerIds) ? latest.followerIds : [];
-    if (ids.includes(userId)) return latest;
-    latest.followerIds = [...ids, userId].slice(-5000);
-    latest.followersCount = latest.followerIds.length;
-    const written = await writeChainSafe(eventId, day, latest, { reason: 'follower' });
-    if ((written.followerIds || []).includes(userId)) return written;
+/**
+ * Followers live in a SIDE FILE — never rewrite the chain document just to
+ * count viewers. Stale full-chain follower writes were wiping connect progress.
+ */
+async function readFollowerIds(eventId, day, chainId) {
+  try {
+    const row = await readBlobJson(followersPath(eventId, day, chainId));
+    if (Array.isArray(row?.ids)) return row.ids.filter(Boolean);
+  } catch {
+    /* none yet */
   }
-  return readChain(eventId, day, chainId);
+  return [];
+}
+
+async function addChainFollower(eventId, day, chainId, userId) {
+  if (!userId || !chainId) return [];
+  let ids = await readFollowerIds(eventId, day, chainId);
+  if (ids.includes(userId)) return ids;
+  ids = [...ids, userId].slice(-5000);
+  await writeJson(followersPath(eventId, day, chainId), {
+    chainId,
+    ids,
+    updatedAt: new Date().toISOString(),
+  }, { overwrite: true });
+  return ids;
+}
+
+/** Attach follower count in memory only (does not mutate durable chain progress). */
+async function withFollowerCount(chain, eventId, day) {
+  if (!chain?.id) return chain;
+  const sideIds = await readFollowerIds(eventId, day, chain.id);
+  const merged = mergeFollowerIds(chain.followerIds, sideIds);
+  return {
+    ...chain,
+    followerIds: merged,
+    followersCount: merged.length,
+  };
 }
 
 async function readArchiveIndex(eventId) {
@@ -1362,15 +1389,20 @@ async function getChainPayload(chainId, deviceId, eventId = DEFAULT_EVENT_ID) {
     throw err;
   }
 
-  // Soft-count followers when someone opens this chain (viewer detail).
-  // Must never rewrite route/progress from a stale in-memory snapshot.
+  // Soft-count followers in a side file — NEVER rewrite the chain JSON here.
   if (viewer?.userId && !fromArchive) {
     try {
-      const updated = await addChainFollower(eventId, day, chain.id, viewer.userId);
-      if (updated) chain = updated;
+      const ids = await addChainFollower(eventId, day, chain.id, viewer.userId);
+      chain = {
+        ...chain,
+        followerIds: ids,
+        followersCount: ids.length,
+      };
     } catch {
-      /* follower count is best-effort */
+      chain = await withFollowerCount(chain, eventId, day);
     }
+  } else if (!fromArchive) {
+    chain = await withFollowerCount(chain, eventId, day);
   }
 
   let photoBookOffer = null;
@@ -1716,16 +1748,19 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
 
   chain.lastProgressAt = now.toISOString();
   chain.starterAccepted = true;
+  const targetScore = chainProgressScore(chain);
   chain = await writeChainSafe(eventId, day, chain, { reason: 'connect' });
-  // If a concurrent stale writer raced us, re-read and prefer the advanced blob.
-  {
+
+  // Confirm the durable blob actually advanced — blob reads can lag; never
+  // return success against a wiped/stale document.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await new Promise((r) => setTimeout(r, 80 * (attempt + 1)));
     const confirmed = await readChain(eventId, day, chain.id);
-    if (confirmed && chainProgressScore(confirmed) >= chainProgressScore(chain)) {
+    if (confirmed && chainProgressScore(confirmed) >= targetScore) {
       chain = confirmed;
-    } else if (confirmed && chainProgressScore(chain) > chainProgressScore(confirmed)) {
-      // Our progress didn't stick — write once more.
-      chain = await writeChainSafe(eventId, day, chain, { reason: 'connect-confirm' });
+      break;
     }
+    chain = await writeChainSafe(eventId, day, chain, { reason: `connect-confirm-${attempt}` });
   }
 
   const completed = chain.status === Status.COMPLETED;
