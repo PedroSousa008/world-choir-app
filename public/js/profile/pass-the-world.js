@@ -308,17 +308,32 @@ const PassTheWorld = (() => {
     return lines;
   }
 
-  function formatEstFlightTime(journey) {
-    const start = journey?.departureAt ? new Date(journey.departureAt).getTime() : NaN;
+  function formatDurationRemaining(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) return 'Landing…';
+    const totalSec = Math.ceil(ms / 1000);
+    const totalMin = Math.floor(totalSec / 60);
+    if (totalMin < 1) return `${totalSec}s`;
+    const days = Math.floor(totalMin / (60 * 24));
+    const hours = Math.floor((totalMin % (60 * 24)) / 60);
+    const mins = totalMin % 60;
+    if (days > 0) {
+      if (hours <= 0) return `${days}d`;
+      return `${days}d ${hours}h`;
+    }
+    if (hours <= 0) return `${mins}m`;
+    if (mins <= 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
+  }
+
+  /** Live time left until the plane lands (not total flight length). */
+  function formatLandingCountdown(journey, nowMs = null) {
     const end = journey?.arrivalAt ? new Date(journey.arrivalAt).getTime() : NaN;
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
-    const mins = Math.round((end - start) / 60000);
-    if (mins < 1) return '< 1m';
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    if (h <= 0) return `${m}m`;
-    if (m <= 0) return `${h}h`;
-    return `${h}h ${m}m`;
+    if (!Number.isFinite(end)) return null;
+    const skew = journey?.serverNow
+      ? Date.now() - new Date(journey.serverNow).getTime()
+      : 0;
+    const now = nowMs != null ? nowMs : (Date.now() - skew);
+    return formatDurationRemaining(end - now);
   }
 
   function renderTravellingStatus(journey) {
@@ -334,7 +349,7 @@ const PassTheWorld = (() => {
         ? `<span class="ptw-stats-row__value" data-ptw-progress-km>${formatKm(travelled)}</span>
            <span class="ptw-stats-row__sub">of ${formatKm(total)}</span>`
         : '<span class="ptw-stats-row__value">—</span>';
-      const eta = formatEstFlightTime(journey);
+      const eta = formatLandingCountdown(journey);
       return `
         <div class="ptw-stats-row" role="group" aria-label="Journey progress">
           <div class="ptw-stats-row__cell">
@@ -346,9 +361,9 @@ const PassTheWorld = (() => {
             ${distanceHtml}
           </div>
           <div class="ptw-stats-row__cell">
-            <span class="ptw-stats-row__label">Est. Flight Time</span>
+            <span class="ptw-stats-row__label">Lands In</span>
             <span class="ptw-stats-row__value ptw-stats-row__value--eta">
-              ${eta ? esc(eta) : '—'}
+              <span data-ptw-landing-countdown>${eta ? esc(eta) : '—'}</span>
               <button type="button" class="ptw-status-info" data-ptw-status-info aria-label="Show arrival and invitation times" aria-expanded="false" aria-controls="ptw-status-modal"><span aria-hidden="true">!</span></button>
             </span>
           </div>
@@ -358,6 +373,10 @@ const PassTheWorld = (() => {
     let line = `Next Stop: ${esc(journey.destination.city)}`;
     if (total != null) {
       line += ` · <span data-ptw-progress-km>${formatKm(travelled)} of ${formatKm(total)}</span>`;
+    }
+    const eta = formatLandingCountdown(journey);
+    if (eta) {
+      line += ` · Lands in <span data-ptw-landing-countdown>${esc(eta)}</span>`;
     }
     return `
       <p class="ptw-status__travel">
@@ -1315,6 +1334,25 @@ const PassTheWorld = (() => {
       if (!journey?.serverNow) return 0;
       return Date.now() - new Date(journey.serverNow).getTime();
     })();
+
+    const landingEl = root?.querySelector('[data-ptw-landing-countdown]');
+    if (journey?.status === 'TRAVELLING' && landingEl && journey.arrivalAt) {
+      const arrivalMs = new Date(journey.arrivalAt).getTime();
+      const tickLanding = () => {
+        const now = mockNow
+          ? new Date(mockNow).getTime()
+          : Date.now() - serverSkew;
+        landingEl.textContent = formatDurationRemaining(arrivalMs - now);
+        if (arrivalMs - now <= 0) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+          setTimeout(() => { void refresh(); }, 600);
+        }
+      };
+      tickLanding();
+      countdownTimer = setInterval(tickLanding, 1000);
+      return;
+    }
 
     const el = root?.querySelector('[data-ptw-countdown]');
     const ring = root?.querySelector('.ptw-visit-ring');
