@@ -392,6 +392,41 @@ function todayInvitationOpenAt(now = new Date()) {
   ));
 }
 
+function todayInvitationCloseAt(now = new Date()) {
+  return new Date(todayInvitationOpenAt(now).getTime() + INVITATION_WINDOW_MS);
+}
+
+/** True during the daily competitive invite slice [16:00, 16:02) UTC. */
+function isInsideCompetitiveWindow(now = new Date()) {
+  const t = now.getTime();
+  return t >= todayInvitationOpenAt(now).getTime() && t < todayInvitationCloseAt(now).getTime();
+}
+
+/**
+ * While the World is parked, the public invite UI must open on the clock —
+ * not after a slow blob flip. Persist still happens in advanceStateMachine.
+ */
+function projectCompetitiveWindow(state, now = new Date()) {
+  if (!state) return null;
+  if (!isInsideCompetitiveWindow(now)) return null;
+  const parked = (
+    state.status === STATUS.ARRIVED
+    || state.status === STATUS.INITIAL
+    || state.status === STATUS.WAITING_FOR_FIRST_CALL
+    || state.status === STATUS.INVITATION_OPEN
+  );
+  if (!parked) return null;
+  const openAt = todayInvitationOpenAt(now);
+  const closeAt = todayInvitationCloseAt(now);
+  const roundId = `round-${openAt.toISOString()}`;
+  return {
+    status: STATUS.INVITATION_OPEN,
+    activeRoundId: state.activeRoundId === roundId ? state.activeRoundId : roundId,
+    invitationOpenAt: state.invitationOpenAt || openAt.toISOString(),
+    invitationCloseAt: state.invitationCloseAt || closeAt.toISOString(),
+  };
+}
+
 /** Pre-ritual first-call round — used when nobody has invited yet before 16:00 UTC. */
 function earlyFirstCallRoundId(todayOpen) {
   const open = todayOpen instanceof Date ? todayOpen : todayInvitationOpenAt(todayOpen);
@@ -1768,14 +1803,18 @@ async function advanceStateMachine(nowInput) {
   }
 
   // Active invitation ritual window — exactly [open, open + window)
+  // Always flip parked Worlds to INVITATION_OPEN immediately so every client
+  // can invite for the full 120s (do not wait on a late poll / winner quirk).
   if (now.getTime() >= todayOpen.getTime() && now.getTime() < todayClose.getTime()) {
-    const invitations = await readRoundInvites(todayRoundId);
-    const winner = await readWinner(todayRoundId);
     const roundAlreadyOpen = state.status === STATUS.INVITATION_OPEN
       && state.activeRoundId === todayRoundId;
-    const staleWinnerOnly = Boolean(winner?.invitationId && !invitations.length);
-
-    if (!roundAlreadyOpen && (!winner?.invitationId || staleWinnerOnly)) {
+    const parked = (
+      state.status === STATUS.ARRIVED
+      || state.status === STATUS.INITIAL
+      || state.status === STATUS.WAITING_FOR_FIRST_CALL
+      || state.status === STATUS.INVITATION_OPEN
+    );
+    if (parked && !roundAlreadyOpen) {
       state = await openInvitationRound(state, now);
     }
     return { state, itinerary, now };
@@ -1956,7 +1995,13 @@ function clientStatusLabel(state, progress, itinerary) {
 
 function buildPublicState(state, itinerary, now, viewer = {}) {
   const progress = journeyProgress(state, now);
-  const nextInvite = state.status === STATUS.INVITATION_OPEN
+  const projected = projectCompetitiveWindow(state, now);
+  const publicStatus = projected?.status || state.status;
+  const invitationOpenAt = projected?.invitationOpenAt || state.invitationOpenAt;
+  const invitationCloseAt = projected?.invitationCloseAt || state.invitationCloseAt;
+  const activeRoundId = projected?.activeRoundId || state.activeRoundId;
+
+  const nextInvite = publicStatus === STATUS.INVITATION_OPEN
     ? null
     : nextInvitationOpenAt(
       state.status === STATUS.TRAVELLING && state.arrivalAt
@@ -1980,13 +2025,18 @@ function buildPublicState(state, itinerary, now, viewer = {}) {
     && !missingCoords
     && !sameCountry
   );
-  const windowOpen = state.status === STATUS.INVITATION_OPEN
-    || state.status === STATUS.WAITING_FOR_FIRST_CALL;
+  const windowOpen = publicStatus === STATUS.INVITATION_OPEN
+    || publicStatus === STATUS.WAITING_FOR_FIRST_CALL;
   const canInviteNow = Boolean(countryEligible && windowOpen && !viewer.hasInvited);
+
+  // Prefer projected ritual fields so UI labels match the live invite clock.
+  const labelState = projected
+    ? { ...state, status: publicStatus }
+    : state;
 
   return {
     serverNow: now.toISOString(),
-    status: state.status,
+    status: publicStatus,
     current: {
       city: state.currentCity,
       country: state.currentCountry,
@@ -1998,18 +2048,18 @@ function buildPublicState(state, itinerary, now, viewer = {}) {
     destination: state.destination,
     departureAt: state.departureAt,
     arrivalAt: state.arrivalAt,
-    invitationOpenAt: state.invitationOpenAt,
-    invitationCloseAt: state.invitationCloseAt,
+    invitationOpenAt,
+    invitationCloseAt,
     revealStartAt: state.revealStartAt || null,
     revealEndAt: state.revealEndAt || null,
-    activeRoundId: state.activeRoundId,
+    activeRoundId,
     invitationCount: Number(state.invitationCount) || 0,
     invitedCities: state.invitedCities || [],
     progress,
-    nextInvitationAt: state.status === STATUS.WAITING_FOR_FIRST_CALL
+    nextInvitationAt: publicStatus === STATUS.WAITING_FOR_FIRST_CALL
       ? null
-      : (state.status === STATUS.INVITATION_OPEN ? state.invitationCloseAt : nextInvite),
-    label: clientStatusLabel(state, progress, itinerary),
+      : (publicStatus === STATUS.INVITATION_OPEN ? invitationCloseAt : nextInvite),
+    label: clientStatusLabel(labelState, progress, itinerary),
     lastReveal: state.lastReveal || null,
     viewer: {
       countryLoaded,
@@ -2150,10 +2200,12 @@ async function getPassTheWorld({ deviceId, eventId = 'world-choir-2027', now } =
   let { state, itinerary } = advanced;
   state = await syncOpenRoundInvites(state);
   const viewer = await getViewerContext(deviceId, eventId);
+  const projected = projectCompetitiveWindow(state, advanced.now);
+  const roundIdForViewer = projected?.activeRoundId || state.activeRoundId;
   let hasInvited = false;
-  if (viewer.userId && state.activeRoundId) {
+  if (viewer.userId && roundIdForViewer) {
     try {
-      await readBlobJson(roundInvitationPath(state.activeRoundId, viewer.userId));
+      await readBlobJson(roundInvitationPath(roundIdForViewer, viewer.userId));
       hasInvited = true;
     } catch { hasInvited = false; }
   }
@@ -2219,13 +2271,17 @@ async function submitInvitation({ deviceId, eventId = 'world-choir-2027', now } 
   // Defense in depth: if advance left ARRIVED/INITIAL after today's window (or
   // before it with nobody inviting yet), open first-call here so the invite is
   // accepted in this same request — no client refresh/retry round-trip.
+  // During the competitive window, force INVITATION_OPEN even if the blob lag.
   if (state.status !== STATUS.INVITATION_OPEN && state.status !== STATUS.WAITING_FOR_FIRST_CALL) {
     const todayOpen = todayInvitationOpenAt(clock);
-    const todayClose = new Date(todayOpen.getTime() + INVITATION_WINDOW_MS);
+    const todayClose = todayInvitationCloseAt(clock);
     const afterWindow = clock.getTime() >= todayClose.getTime();
     const beforeWindow = clock.getTime() < todayOpen.getTime();
+    const insideWindow = clock.getTime() >= todayOpen.getTime() && clock.getTime() < todayClose.getTime();
     const parked = state.status === STATUS.ARRIVED || state.status === STATUS.INITIAL;
-    if (parked && (afterWindow || beforeWindow)) {
+    if (parked && insideWindow) {
+      state = await openInvitationRound(state, clock);
+    } else if (parked && (afterWindow || beforeWindow)) {
       const roundId = beforeWindow
         ? earlyFirstCallRoundId(todayOpen)
         : `round-${todayOpen.toISOString()}`;

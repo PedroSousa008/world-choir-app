@@ -29,6 +29,7 @@ const PassTheWorld = (() => {
   let arrivalRefreshScheduled = false;
   let revealRefreshTimer = null;
   let inviteOpenRefreshTimer = null;
+  let localInvitePaintTimer = null;
   let itineraryPage = 0;
   let itineraryPanelHome = null;
   let itineraryScrollLockHandler = null;
@@ -439,7 +440,55 @@ const PassTheWorld = (() => {
   }
 
   function isVisitButtonActive(journey) {
-    return journey?.viewer?.canInviteNow === true;
+    if (journey?.viewer?.canInviteNow === true) return true;
+    // Local clock fallback: show active as soon as 16:00 UTC hits, even if
+    // the last poll still says ARRIVED for a moment.
+    return isEligibleForCompetitiveInvite(journey);
+  }
+
+  function serverSkewMs(journey) {
+    if (!journey?.serverNow) return 0;
+    return Date.now() - new Date(journey.serverNow).getTime();
+  }
+
+  function competitiveWindowBounds(journey, atMs = Date.now()) {
+    const c = journey?.constants || {};
+    const hour = Number.isFinite(c.invitationHourUtc) ? c.invitationHourUtc : 16;
+    const minute = Number.isFinite(c.invitationMinuteUtc) ? c.invitationMinuteUtc : 0;
+    const windowMs = Number(c.invitationWindowMs) || 120000;
+    const skewed = atMs - serverSkewMs(journey);
+    const d = new Date(skewed);
+    const openMs = Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate(),
+      hour,
+      minute,
+      0,
+      0
+    );
+    return { openMs, closeMs: openMs + windowMs, nowMs: skewed };
+  }
+
+  function isInsideCompetitiveWindowLocal(journey) {
+    if (!journey) return false;
+    const { openMs, closeMs, nowMs } = competitiveWindowBounds(journey);
+    return nowMs >= openMs && nowMs < closeMs;
+  }
+
+  function isEligibleForCompetitiveInvite(journey) {
+    const viewer = journey?.viewer || {};
+    if (!viewer.countryEligible || viewer.hasInvited === true) return false;
+    if (viewer.sameCountry && viewer.countryLoaded) return false;
+    const status = journey?.status;
+    if (status === 'TRAVELLING' || status === 'REVEAL_PENDING') return false;
+    if (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL') {
+      return viewer.canInviteNow === true || isInsideCompetitiveWindowLocal(journey);
+    }
+    if (status === 'ARRIVED' || status === 'INITIAL') {
+      return isInsideCompetitiveWindowLocal(journey);
+    }
+    return false;
   }
 
   function formatNextInvitationNote(journey) {
@@ -474,8 +523,10 @@ const PassTheWorld = (() => {
     if (status === 'INVITATION_OPEN' || status === 'WAITING_FOR_FIRST_CALL') {
       return isVisitButtonActive(journey) || viewer.hasInvited !== true;
     }
-    // ARRIVED / INITIAL: only show when inviting is actually open (never a dead muted button).
-    if (status === 'ARRIVED' || status === 'INITIAL') return isVisitButtonActive(journey);
+    // ARRIVED / INITIAL: show at 16:00 UTC by local/server clock, not only after blob flip.
+    if (status === 'ARRIVED' || status === 'INITIAL') {
+      return isVisitButtonActive(journey);
+    }
     return false;
   }
 
@@ -498,7 +549,9 @@ const PassTheWorld = (() => {
     const status = journey.status;
     const active = isVisitButtonActive(journey);
     const showVisit = shouldShowVisitButton(journey);
-    const showRing = status === 'INVITATION_OPEN' && showVisit && active;
+    const showRing = (status === 'INVITATION_OPEN' || isInsideCompetitiveWindowLocal(journey))
+      && showVisit
+      && active;
     const hasInvited = viewer.hasInvited === true;
 
     let lead = '';
@@ -511,7 +564,7 @@ const PassTheWorld = (() => {
     } else if (hasInvited && status === 'REVEAL_PENDING') {
       lead = 'YOU HAVE COMPLETED YOUR INVITATION';
       note = 'The World is choosing where to go next.';
-    } else if (status === 'INVITATION_OPEN' && active) {
+    } else if ((status === 'INVITATION_OPEN' || isInsideCompetitiveWindowLocal(journey)) && active) {
       lead = 'WHERE SHOULD THE WORLD GO NEXT?';
       note = 'Invite it to your city.';
     } else if (status === 'WAITING_FOR_FIRST_CALL' && active) {
@@ -1166,6 +1219,33 @@ const PassTheWorld = (() => {
     updateCountdown(journey);
     scheduleRevealRefresh(journey);
     scheduleInviteOpenRefresh(journey);
+    scheduleLocalInvitePaint(journey);
+  }
+
+  function scheduleLocalInvitePaint(journey) {
+    if (localInvitePaintTimer) {
+      clearTimeout(localInvitePaintTimer);
+      localInvitePaintTimer = null;
+    }
+    if (!journey) return;
+    if (journey.status !== 'ARRIVED' && journey.status !== 'INITIAL') return;
+    if (!journey.viewer?.countryEligible || journey.viewer?.hasInvited) return;
+    const { openMs, closeMs, nowMs } = competitiveWindowBounds(journey);
+    if (nowMs >= openMs && nowMs < closeMs) {
+      // Already inside the window — ensure Visit My City is painted now.
+      return;
+    }
+    const delay = openMs - nowMs;
+    if (delay > 0 && delay < 6 * 60 * 60 * 1000) {
+      localInvitePaintTimer = setTimeout(() => {
+        localInvitePaintTimer = null;
+        if (!lastPayload?.journey) return;
+        // Re-paint from cached payload so the button appears on the clock,
+        // then refresh to sync durable INVITATION_OPEN.
+        paintBody(lastPayload);
+        void refresh();
+      }, delay + 40);
+    }
   }
 
   function scheduleInviteOpenRefresh(journey) {
@@ -1179,12 +1259,32 @@ const PassTheWorld = (() => {
       ? Date.now() - new Date(journey.serverNow).getTime()
       : 0;
     const openMs = new Date(journey.nextInvitationAt).getTime();
-    const delay = openMs - (Date.now() - serverSkew) + 120;
-    if (delay > 0 && delay < 6 * 60 * 60 * 1000) {
-      inviteOpenRefreshTimer = setTimeout(async () => {
-        inviteOpenRefreshTimer = null;
+    const delay = openMs - (Date.now() - serverSkew);
+    // Burst refreshes at open so every client flips Visit My City for the full window.
+    const offsets = [0, 200, 500, 1000, 2000, 4000];
+    const runBurst = () => {
+      let i = 0;
+      const step = async () => {
         try { await refresh(); } catch { /* keep */ }
-      }, delay);
+        i += 1;
+        if (i < offsets.length) {
+          inviteOpenRefreshTimer = setTimeout(step, Math.max(50, offsets[i] - offsets[i - 1]));
+        } else {
+          inviteOpenRefreshTimer = null;
+        }
+      };
+      void step();
+    };
+    if (delay <= 0) {
+      // Already inside / past open — refresh immediately if still ARRIVED.
+      if (isInsideCompetitiveWindowLocal(journey)) runBurst();
+      return;
+    }
+    if (delay < 6 * 60 * 60 * 1000) {
+      inviteOpenRefreshTimer = setTimeout(() => {
+        inviteOpenRefreshTimer = null;
+        runBurst();
+      }, delay + 50);
     }
   }
 
@@ -1581,7 +1681,11 @@ const PassTheWorld = (() => {
           ? Date.now() - new Date(journey.serverNow).getTime()
           : 0;
         const untilOpen = new Date(journey.nextInvitationAt).getTime() - (Date.now() - serverSkew);
-        if (untilOpen > 0 && untilOpen < 90 * 1000) ms = 1500;
+        // Poll hard approaching / inside the 16:00 window so the button appears for everyone.
+        if (untilOpen <= 3 * 60 * 1000) ms = 1000;
+        else if (untilOpen > 0 && untilOpen < 15 * 60 * 1000) ms = 2000;
+      } else if (isInsideCompetitiveWindowLocal(journey)) {
+        ms = 1000;
       }
       pollTimer = setTimeout(tick, ms);
     };
@@ -1597,6 +1701,8 @@ const PassTheWorld = (() => {
     revealRefreshTimer = null;
     if (inviteOpenRefreshTimer) clearTimeout(inviteOpenRefreshTimer);
     inviteOpenRefreshTimer = null;
+    if (localInvitePaintTimer) clearTimeout(localInvitePaintTimer);
+    localInvitePaintTimer = null;
   }
 
   function bindDev() {
