@@ -903,6 +903,9 @@ const DailyActsPage = (() => {
       justCompletedDate = assignmentDate;
       view = { mode: 'complete-moment', item: data };
       paint();
+      try {
+        window.dispatchEvent(new CustomEvent('wc-qr-engagement', { detail: { type: 'daily_act' } }));
+      } catch { /* ignore */ }
       loadJourney().catch(() => {});
     } catch (err) {
       if (btn) {

@@ -20,6 +20,7 @@ const OwnerControl = (() => {
     { id: 'daily-acts', label: 'Daily Acts' },
     { id: 'pass-the-world', label: 'Pass the World' },
     { id: 'growth', label: 'Growth' },
+    { id: 'qr-analytics', label: 'QR Code Analytics' },
     { id: 'promise-memory', label: 'Post Event Promise Memory' },
     { id: 'operations', label: 'Operations' },
     { id: 'reports', label: 'Reports' },
@@ -48,6 +49,18 @@ const OwnerControl = (() => {
     growthRange: '30d',
     growthCustomFrom: '',
     growthCustomTo: '',
+    qrAnalytics: null,
+    qrLoading: false,
+    qrRange: 'all',
+    qrCampaignFilter: '',
+    qrChartMetric: 'scans',
+    qrView: 'dashboard',
+    qrDetailId: null,
+    qrDetail: null,
+    qrModalOpen: false,
+    qrForm: null,
+    qrBusy: false,
+    qrShowAllCampaigns: false,
     growthRangeOpen: false,
     citySort: 'voices',
     countrySort: 'voices',
@@ -540,6 +553,10 @@ const OwnerControl = (() => {
       }
       if (state.section === 'world-chain-photo-book') {
         ensureWcpbLoaded(false).then(() => render());
+        return;
+      }
+      if (state.section === 'qr-analytics') {
+        ensureQrAnalyticsLoaded(false).then(() => render());
         return;
       }
       loadCenter();
@@ -3066,6 +3083,39 @@ const OwnerControl = (() => {
     return OwnerWorldChainPhotoBook.render(state, { esc, money, num, when });
   }
 
+  async function ensureQrAnalyticsLoaded(silent = false) {
+    if (state.qrLoading && !silent) return;
+    state.qrLoading = true;
+    if (!silent) render();
+    try {
+      const campaignQ = state.qrCampaignFilter
+        ? `&campaignId=${encodeURIComponent(state.qrCampaignFilter)}`
+        : '';
+      const rangeQ = `&range=${encodeURIComponent(state.qrRange || 'all')}`;
+      state.qrAnalytics = await api('qr-analytics', { query: `${campaignQ}${rangeQ}` });
+      if (state.qrView === 'detail' && state.qrDetailId) {
+        state.qrDetail = await api('qr-campaign', {
+          query: `&id=${encodeURIComponent(state.qrDetailId)}&range=${encodeURIComponent(state.qrRange || 'all')}`,
+        });
+      }
+    } catch (err) {
+      if (!silent) setFlash(err.message || 'Could not load QR Code Analytics.', 'err');
+    } finally {
+      state.qrLoading = false;
+    }
+  }
+
+  function renderQrAnalytics() {
+    if (!state.qrAnalytics && !state.qrLoading) {
+      ensureQrAnalyticsLoaded().then(() => render());
+      return `<section class="owner-section"><p class="owner-muted">Loading QR Code Analytics…</p></section>`;
+    }
+    if (typeof OwnerQrAnalytics === 'undefined') {
+      return `<section class="owner-section"><p class="owner-muted">QR Code Analytics module not loaded.</p></section>`;
+    }
+    return OwnerQrAnalytics.render(state, { esc, money, num, when });
+  }
+
   async function ensurePromiseMemoryLoaded(silent = false) {
     if (state.pmBusy) return;
     state.pmBusy = true;
@@ -3818,8 +3868,9 @@ const OwnerControl = (() => {
       case 'world-chain-photo-book': return renderWorldChainPhotoBook();
       case 'daily-acts': return renderDailyActs();
       case 'pass-the-world': return renderPassTheWorld();
-      case 'promise-memory': return renderPromiseMemory();
       case 'growth': return renderGrowth();
+      case 'qr-analytics': return renderQrAnalytics();
+      case 'promise-memory': return renderPromiseMemory();
       case 'operations': return renderOperations();
       case 'reports': return renderReports();
       case 'admin': return renderAdmin();
@@ -4528,6 +4579,17 @@ const OwnerControl = (() => {
         loadData: async (silent) => {
           await ensureWcpbLoaded(silent);
           render();
+        },
+      });
+    }
+
+    if (typeof OwnerQrAnalytics !== 'undefined' && state.section === 'qr-analytics') {
+      OwnerQrAnalytics.bind(root(), state, { esc, money, num, when }, {
+        api,
+        onRender: () => render(),
+        setFlash,
+        loadData: async (silent) => {
+          await ensureQrAnalyticsLoaded(silent);
         },
       });
     }

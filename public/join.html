@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <title>World Choir</title>
+  <link rel="icon" type="image/png" href="/images/world-choir-logo.png?v=20270706">
+  <style>
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: #000;
+      color: #f2efe8;
+      font-family: Inter, system-ui, sans-serif;
+      display: grid;
+      place-items: center;
+    }
+    .boot {
+      opacity: 0.7;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+    }
+  </style>
+</head>
+<body>
+  <p class="boot" id="boot">Opening World Choir…</p>
+  <script src="/js/world-choir-db.js?v=20261006qr1"></script>
+  <script>
+  (async function () {
+    const boot = document.getElementById('boot');
+    const params = new URLSearchParams(window.location.search);
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    // /join/{campaignId} or /join?ref=token
+    let campaignId = null;
+    if (pathParts[0] === 'join' && pathParts[1]) campaignId = decodeURIComponent(pathParts[1]);
+    const ref = params.get('ref') || params.get('share') || '';
+
+    function anonId() {
+      try {
+        let id = localStorage.getItem('wc_qr_anon');
+        if (!id) {
+          id = (crypto.randomUUID && crypto.randomUUID()) || `a_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+          localStorage.setItem('wc_qr_anon', id);
+        }
+        return id;
+      } catch {
+        return `a_${Date.now()}`;
+      }
+    }
+
+    function deviceId() {
+      try {
+        if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.getDeviceId) {
+          return WorldChoirDB.getDeviceId() || '';
+        }
+      } catch { /* ignore */ }
+      return '';
+    }
+
+    function persistAttribution(payload) {
+      try {
+        const existing = JSON.parse(localStorage.getItem('wc_qr_attr') || 'null');
+        // First-touch: keep existing campaign attribution if present
+        const next = {
+          visitorKey: payload.visitorKey || existing?.visitorKey || null,
+          campaignId: existing?.campaignId || payload.campaignId || null,
+          referredByToken: existing?.referredByToken || payload.referredByToken || null,
+          firstTouchAt: existing?.firstTouchAt || new Date().toISOString(),
+          enteredAt: existing?.enteredAt || Date.now(),
+          shareEligibleAt: existing?.shareEligibleAt || null,
+          shareDismissedSession: existing?.shareDismissedSession || false,
+        };
+        localStorage.setItem('wc_qr_attr', JSON.stringify(next));
+        sessionStorage.setItem('wc_qr_session', '1');
+      } catch { /* ignore */ }
+    }
+
+    try {
+      await WorldChoirDB?.ready?.();
+    } catch { /* continue */ }
+
+    const anon = anonId();
+    const device = deviceId();
+
+    try {
+      if (ref) {
+        const res = await fetch('/api/qr?action=referral-open', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: ref, deviceId: device, anonId: anon }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok) {
+          persistAttribution({
+            visitorKey: body.visitorKey,
+            campaignId: body.campaignId,
+            referredByToken: ref,
+          });
+        }
+      } else if (campaignId) {
+        const res = await fetch('/api/qr?action=scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaignId, deviceId: device, anonId: anon }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok) {
+          persistAttribution({
+            visitorKey: body.visitorKey,
+            campaignId: body.campaignId || campaignId,
+          });
+        } else if (boot) {
+          boot.textContent = body.error || 'This QR link is no longer available.';
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('QR join tracking failed', err);
+    }
+
+    // Enter the main app experience (Home).
+    const dest = '/index.html';
+    window.location.replace(dest);
+  })();
+  </script>
+</body>
+</html>

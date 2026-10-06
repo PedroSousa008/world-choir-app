@@ -24,6 +24,17 @@ const {
 } = require('./_lib/foundation-demo-seed');
 const { buildDailyPeaceOwnerIntel, purgeIncompleteArchivedAssignments } = require('./_lib/daily-peace');
 const {
+  createCampaign,
+  updateCampaign,
+  setCampaignStatus,
+  listCampaigns,
+  buildAnalytics,
+  getCampaignDetail,
+  getQrSvg,
+  publicOrigin,
+  CAMPAIGN_TYPES,
+} = require('./_lib/qr-campaigns');
+const {
   buildVoiceActivityPage,
   getVoiceActivityDetail,
   listAvailableActivityDates,
@@ -893,6 +904,60 @@ module.exports = async function handler(req, res) {
       if (!requireOwner(req, res)) return;
       const store = await deleteAttentionNote(req.body?.id);
       return res.status(200).json({ ok: true, notes: store.notes });
+    }
+
+    if (action === 'qr-analytics' && req.method === 'GET') {
+      if (!requireOwner(req, res)) return;
+      const origin = publicOrigin(req);
+      const campaignId = String(req.query.campaignId || '').trim() || null;
+      const range = String(req.query.range || 'all').trim() || 'all';
+      const analytics = await buildAnalytics({ campaignId, range, origin });
+      const campaigns = await listCampaigns({ includeArchived: true });
+      return res.status(200).json({
+        ok: true,
+        analytics,
+        campaigns,
+        campaignTypes: CAMPAIGN_TYPES,
+      });
+    }
+
+    if (action === 'qr-campaign' && req.method === 'GET') {
+      if (!requireOwner(req, res)) return;
+      const id = String(req.query.id || '').trim();
+      const range = String(req.query.range || 'all').trim() || 'all';
+      const detail = await getCampaignDetail(id, { range, origin: publicOrigin(req) });
+      return res.status(200).json({ ok: true, ...detail, campaignTypes: CAMPAIGN_TYPES });
+    }
+
+    if (action === 'qr-campaign-create' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const created = await createCampaign(req.body || {}, { origin: publicOrigin(req) });
+      return res.status(200).json({ ok: true, ...created });
+    }
+
+    if (action === 'qr-campaign-update' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const id = String(req.body?.id || '').trim();
+      const campaign = await updateCampaign(id, req.body || {});
+      return res.status(200).json({ ok: true, campaign });
+    }
+
+    if (action === 'qr-campaign-status' && req.method === 'POST') {
+      if (!requireOwner(req, res)) return;
+      const id = String(req.body?.id || '').trim();
+      const status = String(req.body?.status || '').trim();
+      const campaign = await setCampaignStatus(id, status);
+      return res.status(200).json({ ok: true, campaign });
+    }
+
+    if (action === 'qr-campaign-svg' && req.method === 'GET') {
+      if (!requireOwner(req, res)) return;
+      const id = String(req.query.id || '').trim();
+      const data = await getQrSvg(id, { origin: publicOrigin(req) });
+      res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Disposition', `inline; filename="${id}.svg"`);
+      return res.status(200).send(data.svg);
     }
 
     return res.status(404).json({ error: 'Unknown admin action' });

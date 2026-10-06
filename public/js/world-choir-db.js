@@ -831,6 +831,13 @@ const WorldChoirDB = (() => {
     // Do not geocode in the browser — Nominatim returns 403 from the app origin.
     // /api/join and /api/update-location resolve coordinates server-side.
     const hadPledge = !!hasPledged();
+    let qrVisitorKey = null;
+    let qrAnonId = null;
+    try {
+      const attr = JSON.parse(localStorage.getItem('wc_qr_attr') || 'null');
+      qrVisitorKey = attr?.visitorKey || null;
+      qrAnonId = localStorage.getItem('wc_qr_anon') || null;
+    } catch { /* ignore */ }
     const data = hadPledge
       ? await apiFetch('/api/update-location', {
         method: 'POST',
@@ -848,6 +855,8 @@ const WorldChoirDB = (() => {
           eventId: WorldChoirConfig.CURRENT_EVENT.id,
           city,
           country,
+          qrVisitorKey,
+          qrAnonId,
         }),
       });
 
