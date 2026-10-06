@@ -1757,17 +1757,21 @@
   display: none !important;
 }
 
-/* Partnership map watermark — only present when ON */
+/* Partnership map watermark — only present when ON.
+   Logos may be transparent PNGs; never paint a solid backing behind them. */
 .ptw-partner-map-logo {
   position: absolute;
   right: 10px;
   bottom: 25px;
   z-index: 450;
-  width: min(46px, 14%);
-  height: 18px;
+  width: min(72px, 22%);
+  height: 28px;
   display: grid;
-  place-items: center;
+  place-items: end;
   pointer-events: none;
+  background: transparent !important;
+  box-shadow: none;
+  border: 0;
 }
 
 .ptw-partner-map-logo img {
@@ -1778,12 +1782,14 @@
   object-fit: contain;
   object-position: right bottom;
   display: block;
+  background: transparent !important;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.45));
 }
 
 /* Partnership link banner — above Itinerary, only when ON.
-   Recommended asset: 1200×630. Image must fill the box edge-to-edge (no letterbox). */
+   Image defines the box and must paint edge-to-edge (no letterbox gaps). */
 .ptw-partner-link {
+  position: relative;
   display: block;
   margin: 12px 9px 0;
   border-radius: 12px;
@@ -1793,7 +1799,6 @@
   width: calc(100% - 18px);
   max-width: none;
   box-sizing: border-box;
-  aspect-ratio: 1200 / 630;
   height: auto;
   max-height: none;
   background: transparent;
@@ -1803,7 +1808,7 @@
 .ptw-partner-link__anchor {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
   color: inherit;
   text-decoration: none;
   background: transparent;
@@ -1812,10 +1817,8 @@
 
 .ptw-partner-link img {
   width: 100%;
-  height: 100%;
-  max-width: none;
-  object-fit: cover;
-  object-position: center;
+  height: auto;
+  max-width: 100%;
   display: block;
   background: transparent;
   border: 0;
@@ -1956,8 +1959,8 @@
   }
 
   .ptw-partner-map-logo {
-    width: min(36px, 12%);
-    height: 14px;
+    width: min(56px, 18%);
+    height: 22px;
   }
 
   .ptw-stats-row__value {

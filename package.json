@@ -36,6 +36,8 @@
     "expo-status-bar": "~57.0.1",
     "hasown": "^2.0.4",
     "heic-convert": "^2.1.0",
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^6.0.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",

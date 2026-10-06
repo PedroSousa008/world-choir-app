@@ -412,14 +412,30 @@ async function uploadPartnershipImage({ field, dataUrl, fileName = '', actor = n
     contentType: parsed.contentType,
     fileName: parsed.fileName || fileName,
   });
-  const ext = normalized.ext || parsed.ext || 'jpg';
-  const contentType = normalized.contentType;
+  // Link Image: strip baked-in black bars. Map/Tab logos: key out solid
+  // backgrounds (green screen etc.) so the map shows through transparency.
+  let buffer = normalized.buffer;
+  let contentType = normalized.contentType;
+  let ext = normalized.ext || parsed.ext || 'jpg';
+  try {
+    const { processPartnershipImage } = require('./partnership-image-process');
+    const processed = await processPartnershipImage(buffer, {
+      field,
+      contentType,
+      fileName: parsed.fileName || fileName,
+    });
+    buffer = processed.buffer;
+    contentType = processed.contentType || contentType;
+    ext = processed.ext || ext;
+  } catch (err) {
+    console.warn('partnership image process skipped:', err?.message || err);
+  }
   const pathname = `${MEDIA_ROOT}/${field}-${randomUUID().slice(0, 12)}.${ext}`;
-  await putPrivateBinary(pathname, normalized.buffer, contentType, { overwrite: false });
+  await putPrivateBinary(pathname, buffer, contentType, { overwrite: false });
   const image = {
     url: mediaProxyUrl(pathname),
     pathname,
-    fileName: (parsed.fileName || `${field}.${ext}`).replace(/\.(heic|heif)$/i, '.jpg'),
+    fileName: (parsed.fileName || `${field}.${ext}`).replace(/\.(heic|heif)$/i, `.${ext}`),
     contentType,
     uploadedAt: nowIso(),
   };
