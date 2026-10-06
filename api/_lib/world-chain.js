@@ -774,6 +774,10 @@ function chainProgressScore(chain) {
   );
 }
 
+function chainResetEpoch(chain) {
+  return Date.parse(chain?.rewrittenAt || '') || 0;
+}
+
 function mergeFollowerIds(primary, secondary) {
   const set = new Set([
     ...(Array.isArray(primary) ? primary : []),
@@ -784,8 +788,8 @@ function mergeFollowerIds(primary, secondary) {
 
 /**
  * Never clobber newer chain progress with a stale full-document write.
- * Blob storage is last-write-wins — follower increments and start-heals were
- * wiping successful connects when they raced.
+ * Also never let pre-reset progress overwrite a newer intentional reset
+ * (rewrittenAt / admin restart).
  */
 async function writeChainSafe(eventId, day, chain, { reason = 'update' } = {}) {
   if (!chain?.id) return chain;
@@ -793,7 +797,23 @@ async function writeChainSafe(eventId, day, chain, { reason = 'update' } = {}) {
   if (latest) {
     const latestScore = chainProgressScore(latest);
     const nextScore = chainProgressScore(chain);
-    if (latestScore > nextScore) {
+    const latestEpoch = chainResetEpoch(latest);
+    const nextEpoch = chainResetEpoch(chain);
+
+    // A newer admin/script reset must win over stale in-flight progress writes.
+    if (latestEpoch > nextEpoch && nextScore > latestScore) {
+      console.warn('world-chain writeChainSafe refused stale progress over reset', {
+        chainId: chain.id,
+        reason,
+        latestEpoch,
+        nextEpoch,
+        latestScore,
+        nextScore,
+      });
+      return latest;
+    }
+
+    if (latestScore > nextScore && latestEpoch >= nextEpoch) {
       // Stale writer — keep progress; optionally fold in newer follower ids only.
       const followers = mergeFollowerIds(latest.followerIds, chain.followerIds);
       if (followers.length !== (latest.followerIds || []).length) {
@@ -812,6 +832,10 @@ async function writeChainSafe(eventId, day, chain, { reason = 'update' } = {}) {
     // Preserve followers collected on the latest blob.
     chain.followerIds = mergeFollowerIds(chain.followerIds, latest.followerIds);
     chain.followersCount = (chain.followerIds || []).length;
+    // Carry forward the newest reset epoch so later writes stay coherent.
+    if (latestEpoch > nextEpoch) {
+      chain.rewrittenAt = latest.rewrittenAt;
+    }
   }
   await writeChain(eventId, day, chain);
   return chain;

@@ -271,13 +271,45 @@ async function main() {
     startsAt: bounds.startsAt,
     expiresAt: bounds.expiresAt,
     totalDistanceKm: null,
+    followerIds: [],
+    followersCount: 0,
     route,
     forcedVoice1Big: true,
     rewrittenAt: now.toISOString(),
   };
 
   const outPath = `wc-data/world-chain/${CHAIN_STORAGE_VERSION}/${encodeURIComponent(eventId)}/${day}/chains/${target.id}.json`;
-  await writeJson(outPath, rewritten, { overwrite: true });
+
+  // Hard put + verify — stale in-flight API writes can otherwise restore progress.
+  let verified = null;
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    rewritten.rewrittenAt = new Date().toISOString();
+    rewritten.resetToken = `voice1-${Date.now()}-${attempt}`;
+    await writeJson(outPath, rewritten, { overwrite: true });
+    await new Promise((r) => setTimeout(r, 200 * attempt));
+    const again = await readBlobJson(outPath);
+    if (
+      again
+      && again.starterAccepted === false
+      && Number(again.startingVoiceNumber) === 1
+      && Number(again.currentStep || 0) === 0
+      && !(again.route || []).some((s) => s.status === 'connected' || s.status === 'active')
+      && (again.route || [])[0]?.status === 'selected'
+      && (again.route || [])[1]?.status === 'future'
+    ) {
+      verified = again;
+      break;
+    }
+    console.warn(`reset verify miss attempt ${attempt}`, {
+      accepted: again?.starterAccepted,
+      start: again?.startingVoiceNumber,
+      token: again?.resetToken,
+      connected: (again?.route || []).filter((s) => s.status === 'connected').length,
+    });
+  }
+  if (!verified) {
+    throw new Error('Failed to verify Chain reset after writes');
+  }
 
   // Clear connect attempt locks for this chain (best-effort).
   try {
@@ -295,13 +327,16 @@ async function main() {
   console.log(JSON.stringify({
     ok: true,
     day,
-    chainId: target.id,
-    dailyChainNumber: rewritten.dailyChainNumber,
+    chainId: verified.id,
+    dailyChainNumber: verified.dailyChainNumber,
     startingVoiceNumber: 1,
     startingCountry: startCountry,
-    countries: route.length,
-    firstDestination: route[1]?.country || null,
-    eligibleOnFirstDest: route[1]?.eligibleVoiceCount || 0,
+    countries: verified.route.length,
+    firstDestination: verified.route[1]?.country || null,
+    eligibleOnFirstDest: verified.route[1]?.eligibleVoiceCount || 0,
+    starterAccepted: verified.starterAccepted,
+    resetToken: verified.resetToken,
+    rewrittenAt: verified.rewrittenAt,
   }, null, 2));
 }
 
