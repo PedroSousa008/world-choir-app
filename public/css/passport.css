@@ -1787,7 +1787,8 @@
 }
 
 /* Partnership link banner — above Itinerary, only when ON.
-   Image defines the box and must paint edge-to-edge (no letterbox gaps). */
+   Image defines the box and must paint edge-to-edge (no letterbox gaps).
+   White board matches the Pass the World card — never a black letterbox plate. */
 .ptw-partner-link {
   position: relative;
   display: block;
@@ -1801,7 +1802,7 @@
   box-sizing: border-box;
   height: auto;
   max-height: none;
-  background: transparent;
+  background: #ffffff;
   line-height: 0;
 }
 
@@ -1811,7 +1812,7 @@
   height: auto;
   color: inherit;
   text-decoration: none;
-  background: transparent;
+  background: #ffffff;
   line-height: 0;
 }
 
@@ -1820,7 +1821,7 @@
   height: auto;
   max-width: 100%;
   display: block;
-  background: transparent;
+  background: #ffffff;
   border: 0;
   vertical-align: top;
 }
