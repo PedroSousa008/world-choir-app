@@ -21,6 +21,7 @@ const WorldChainPage = (() => {
     busy: false,
     feedback: null,
     connectDraft: '',
+    connectLock: false,
     turnSheetOpen: false,
     photoBookOffer: null,
     photoBookDraft: {
@@ -1951,17 +1952,30 @@ const WorldChainPage = (() => {
     document.querySelectorAll('[data-connect-form]').forEach((form) => {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        e.stopPropagation();
         const chainId = form.getAttribute('data-connect-form');
-        if (state.busy) return;
+        // Lock synchronously before any await so Enter/double-tap cannot twin-submit.
+        if (state.busy || state.connectLock) return;
+        state.connectLock = true;
+        state.busy = true;
         const input = form.querySelector('input[name="voiceNumber"]');
         const voiceNumber = String(input?.value || state.connectDraft || '').trim();
-        if (!voiceNumber) return;
-        // Keep the typed number across re-renders so a slow reply never looks empty.
+        if (!voiceNumber) {
+          state.busy = false;
+          state.connectLock = false;
+          return;
+        }
         state.connectDraft = voiceNumber;
-        state.busy = true;
         state.feedback = null;
-        render();
-        try {
+        // Soft busy UI only — do NOT re-render (that was racing twin submits).
+        const btn = form.querySelector('button[type="submit"]');
+        if (input) input.disabled = true;
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'CONNECTING…';
+        }
+
+        const postConnect = async () => {
           const res = await fetch('/api/world-chain', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1979,6 +1993,24 @@ const WorldChainPage = (() => {
           } catch {
             body = null;
           }
+          return { res, body };
+        };
+
+        try {
+          let { res, body } = await postConnect();
+
+          // One automatic retry when the first reply is the false "not found"
+          // (blob lag / twin submit) — matches what a manual refresh was doing.
+          if (
+            res.ok
+            && body
+            && !body.ok
+            && (body.code === 'VOICE_NOT_FOUND' || body.title === 'VOICE NOT FOUND')
+          ) {
+            await new Promise((r) => setTimeout(r, 350));
+            ({ res, body } = await postConnect());
+          }
+
           if (!res.ok) {
             state.feedback = {
               ok: false,
@@ -1986,15 +2018,16 @@ const WorldChainPage = (() => {
               message: body?.error || body?.message || 'Could not reach World Chain. Please try again.',
             };
             state.busy = false;
+            state.connectLock = false;
             render();
             return;
           }
           if (body?.ok && body.chain) {
             mergeChainIntoState(body.chain);
             state.busy = false;
+            state.connectLock = false;
             state.feedback = null;
             state.connectDraft = '';
-            // Connection already persisted — optional Photo Book step next.
             if (body.photoBookOffer) {
               openPhotoBookContribute(body.photoBookOffer);
               return;
@@ -2012,8 +2045,6 @@ const WorldChainPage = (() => {
           } else if (body) {
             applyConnectCooldownToChain(chainId, body);
           }
-          // Only show VOICE NOT FOUND for a real wrong-number response — never
-          // for transport/server errors (those used to look identical and forced a refresh).
           if (body?.code === 'VOICE_NOT_FOUND' || body?.title === 'VOICE NOT FOUND') {
             state.feedback = {
               ok: false,
@@ -2045,6 +2076,7 @@ const WorldChainPage = (() => {
           };
         }
         state.busy = false;
+        state.connectLock = false;
         render();
       });
     });

@@ -1321,14 +1321,22 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     throw err;
   }
 
-  const chain = await readChain(eventId, day, chainId);
+  let chain = await readChain(eventId, day, chainId);
   if (!chain) {
     const err = new Error('Chain not found');
     err.statusCode = 404;
     throw err;
   }
 
-  const liveStatus = deriveStatus(chain, nowMs);
+  // Blob reads can briefly lag right after START / a prior connect. Re-read once
+  // before treating the chain as not ready — this is the refresh-then-works case.
+  const refreshChain = async () => {
+    await new Promise((r) => setTimeout(r, 200));
+    const again = await readChain(eventId, day, chainId);
+    if (again) chain = again;
+  };
+
+  let liveStatus = deriveStatus(chain, nowMs);
   if (liveStatus === Status.COMPLETED) {
     const err = new Error('This chain is already complete');
     err.statusCode = 409;
@@ -1341,18 +1349,29 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   }
 
   if (!chain.starterAccepted) {
+    await refreshChain();
+  }
+  if (!chain.starterAccepted) {
     const err = new Error('This chain has not been started yet');
     err.statusCode = 409;
     throw err;
   }
 
-  const active = chain.route.find((s) => s.status === 'active');
+  let active = chain.route.find((s) => s.status === 'active');
+  if (!active) {
+    await refreshChain();
+    active = chain.route.find((s) => s.status === 'active');
+  }
   if (!active) {
     const err = new Error('No active destination on this chain');
     err.statusCode = 409;
     throw err;
   }
 
+  if (active.assignedVoiceId !== viewer.userId) {
+    await refreshChain();
+    active = chain.route.find((s) => s.status === 'active') || active;
+  }
   if (active.assignedVoiceId !== viewer.userId) {
     const err = new Error('It is not your turn on this chain');
     err.statusCode = 403;
@@ -1366,7 +1385,6 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
 
   const voiceNum = Number(String(submittedVoiceNumber || '').replace(/[^\d]/g, ''));
   if (!Number.isFinite(voiceNum) || voiceNum <= 0) {
-    // Empty / garbage still counts as a miss (and respects existing cooldown messaging).
     if (onCooldown) {
       const waitMs = new Date(attempts.cooldownUntil).getTime() - nowMs;
       const public = publicChain(chain, nowMs, viewer);
@@ -1383,35 +1401,53 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
   }
 
-  // Fast path: pledges index only. Do NOT list every user on connect — that
-  // cold path was slow/flaky and made correct Voices look like "not found".
-  let pledges = await listPledges(eventId);
-  let { byVoice } = buildPledgeIndexes(pledges, new Map(), nowMs);
-  let target = byVoice.get(voiceNum);
-
-  // Index can lag a fresh join — reconcile once before rejecting.
-  if (!target) {
-    try {
-      pledges = await reconcilePledges(eventId);
-      ({ byVoice } = buildPledgeIndexes(pledges, new Map(), nowMs));
-      target = byVoice.get(voiceNum);
-    } catch {
-      /* keep miss */
-    }
+  // Idempotent: if this Voice already completed the active destination (double-submit
+  // / retry after a success the UI missed), return success instead of "not found".
+  const alreadyConnected = chain.route.find((s) => (
+    s.status === 'connected'
+    && Number(s.assignedVoiceNumber) === voiceNum
+    && s.selectedByVoiceId === viewer.userId
+  ));
+  if (alreadyConnected) {
+    return {
+      ok: true,
+      code: chain.status === Status.COMPLETED ? 'CHAIN_COMPLETE' : 'CONNECTION_MADE',
+      title: chain.status === Status.COMPLETED ? 'CONNECTION COMPLETE' : 'CONNECTION MADE',
+      chain: publicChain(chain, nowMs, viewer),
+      photoBookOffer: null,
+      alreadyConnected: true,
+    };
   }
 
-  // Privacy-preserving: all failure reasons collapse to the same message.
-  // Always evaluate the number first — a correct Voice must never be blocked by
-  // cooldown from a previous wrong guess.
-  let valid = true;
-  if (!target) valid = false;
-  else if (target.user_id === viewer.userId) valid = false;
-  else if (!countriesEqual(target.country, active.country)) valid = false;
-  else if (active.requiredCity && !citiesEqual(target.city, active.requiredCity)) valid = false;
-  else if (!isConnectTargetEligible(null, target, active, nowMs)) valid = false;
-  // Already used in this chain?
-  if (valid && chain.route.some((s) => s.assignedVoiceId === target.user_id)) {
-    valid = false;
+  const loadTarget = async (forceReconcile = false) => {
+    let pledges = forceReconcile
+      ? await reconcilePledges(eventId)
+      : await listPledges(eventId);
+    const { byVoice } = buildPledgeIndexes(pledges, new Map(), nowMs);
+    return byVoice.get(voiceNum) || null;
+  };
+
+  const evaluate = (target, activeStep) => {
+    if (!target) return false;
+    if (target.user_id === viewer.userId) return false;
+    if (!countriesEqual(target.country, activeStep.country)) return false;
+    if (activeStep.requiredCity && !citiesEqual(target.city, activeStep.requiredCity)) return false;
+    if (!isConnectTargetEligible(null, target, activeStep, nowMs)) return false;
+    if (chain.route.some((s) => s.assignedVoiceId === target.user_id)) return false;
+    return true;
+  };
+
+  let target = await loadTarget(false);
+  let valid = evaluate(target, active);
+
+  // One heal pass for index lag / stale active step (the refresh-then-works case).
+  if (!valid) {
+    await refreshChain();
+    active = chain.route.find((s) => s.status === 'active') || active;
+    if (active.assignedVoiceId === viewer.userId) {
+      target = await loadTarget(true);
+      valid = evaluate(target, active);
+    }
   }
 
   if (!valid) {
@@ -1431,13 +1467,38 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
   }
 
-  // Success — advance chain.
+  // Success — advance chain. Re-read once more so a twin in-flight connect cannot
+  // duplicate the destination.
+  await refreshChain();
+  active = chain.route.find((s) => s.status === 'active');
+  if (!active || active.assignedVoiceId !== viewer.userId) {
+    const twin = chain.route.find((s) => (
+      s.status === 'connected'
+      && Number(s.assignedVoiceNumber) === voiceNum
+    ));
+    if (twin) {
+      return {
+        ok: true,
+        code: chain.status === Status.COMPLETED ? 'CHAIN_COMPLETE' : 'CONNECTION_MADE',
+        title: chain.status === Status.COMPLETED ? 'CONNECTION COMPLETE' : 'CONNECTION MADE',
+        chain: publicChain(chain, nowMs, viewer),
+        photoBookOffer: null,
+        alreadyConnected: true,
+      };
+    }
+    const err = new Error('It is not your turn on this chain');
+    err.statusCode = 403;
+    throw err;
+  }
+  if (!evaluate(target, active)) {
+    return failAttempt(eventId, day, chainId, viewer, attempts, nowMs, chain);
+  }
+
   attempts.incorrectStreak = 0;
   attempts.cooldownUntil = null;
   attempts.history = [...(attempts.history || []), { at: now.toISOString(), ok: true }].slice(-20);
   await writeAttempts(eventId, day, chainId, viewer.voiceNumber, attempts);
 
-  // Mark the starter (or previous selected) node as connected on first real link.
   chain.route.forEach((step) => {
     if (step.status === 'selected') {
       step.status = 'connected';
@@ -1459,7 +1520,7 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
   const next = chain.route[nextIndex];
   if (next) {
     next.status = 'active';
-    next.assignedVoiceId = target.user_id; // next actor is the voice just connected
+    next.assignedVoiceId = target.user_id;
     next.assignedVoiceNumber = Number(target.voice_number);
     next.assignedCity = target.city || null;
     next.activatedAt = now.toISOString();
@@ -1482,8 +1543,6 @@ async function connectVoice(deviceId, chainId, submittedVoiceNumber, eventId = D
     });
   }
 
-  // Optional Photo Book offer — chain connection is already persisted above.
-  // Final Voices receive their offer when they next load the chain / Photo Book.
   const { buildPhotoBookOfferAfterConnect } = require('./world-chain-photo-book');
   const photoBookOffer = buildPhotoBookOfferAfterConnect(chain, viewer, active);
 
