@@ -845,21 +845,21 @@ async function getPartnershipHistoryMonth({ year, month } = {}) {
       continue;
     }
 
-    const logos = [];
-    const seen = new Set();
-    for (const p of activeOnDay) {
-      const cfg = configs.get(p.configurationId);
-      // Calendar thumbnails use Map Logo (not Tab Logo).
-      const url = cfg?.mapLogo?.url || null;
-      if (url && !seen.has(url)) {
-        seen.add(url);
-        logos.push({
-          url,
-          configurationId: p.configurationId,
-          periodId: p.id,
-        });
-      }
-    }
+    // Calendar thumb: only the Map Logo from the latest period that day
+    // (the one that was updated / activated last). Older logos that still
+    // overlapped earlier in the day are kept in day detail, not stacked here.
+    const latestPeriod = [...activeOnDay].sort((a, b) => (
+      new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+    ))[0];
+    const cfg = configs.get(latestPeriod.configurationId);
+    const url = cfg?.mapLogo?.url || null;
+    const logos = url
+      ? [{
+        url,
+        configurationId: latestPeriod.configurationId,
+        periodId: latestPeriod.id,
+      }]
+      : [];
 
     days.push({
       date: key,

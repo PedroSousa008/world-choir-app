@@ -759,7 +759,7 @@ const OwnerPtwPartnership = (() => {
         const key = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const info = byDate.get(key) || { status: 'off', logos: [] };
         const isToday = cal.today === key;
-        const logos = (info.logos || []).slice(0, 3);
+        const logos = (info.logos || []).slice(0, 1);
         const logosHtml = logos.map((l) => (
           `<img src="${esc(l.url)}" alt="" class="owner-ptw-p-cal__logo">`
         )).join('');
