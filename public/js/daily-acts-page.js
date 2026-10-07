@@ -778,14 +778,30 @@ const DailyActsPage = (() => {
     });
   }
 
+  /** Sheets must live on document.body so position:fixed centers on the viewport
+   *  (inside soft-tab panels, fixed is trapped and the dialog looks stuck at the bottom). */
+  function clearBodySheet() {
+    document.querySelectorAll('body > .dap-sheet').forEach((node) => node.remove());
+  }
+
+  function mountSheetOnBody(html) {
+    clearBodySheet();
+    const holder = document.createElement('div');
+    holder.innerHTML = String(html || '').trim();
+    const sheet = holder.firstElementChild;
+    if (sheet) document.body.appendChild(sheet);
+  }
+
   function paint() {
     const el = root();
     if (!el) return;
     const catsScrollLeft = readCatsScrollLeft();
     syncDailyActsRoute();
+    clearBodySheet();
 
     if (view.mode === 'complete-moment') {
-      el.innerHTML = renderMain() + renderCompleteMoment();
+      el.innerHTML = renderMain();
+      mountSheetOnBody(renderCompleteMoment());
       bindGrid();
       restoreCatsScrollLeft(catsScrollLeft);
       if (typeof WorldChoirBoot !== 'undefined') WorldChoirBoot.ready();
@@ -799,7 +815,8 @@ const DailyActsPage = (() => {
     }
 
     if (view.mode === 'reflect' && view.item) {
-      el.innerHTML = renderMain() + renderReflect(view.item);
+      el.innerHTML = renderMain();
+      mountSheetOnBody(renderReflect(view.item));
       bindGrid();
       bindReflect();
       restoreCatsScrollLeft(catsScrollLeft);
@@ -808,7 +825,8 @@ const DailyActsPage = (() => {
     }
 
     if (view.mode === 'detail' && view.item) {
-      el.innerHTML = renderMain() + renderActDetail(view.item, { editingReflection: !!view.editingReflection });
+      el.innerHTML = renderMain();
+      mountSheetOnBody(renderActDetail(view.item, { editingReflection: !!view.editingReflection }));
       bindGrid();
       bindDetail();
       restoreCatsScrollLeft(catsScrollLeft);
@@ -817,7 +835,8 @@ const DailyActsPage = (() => {
     }
 
     if (view.mode === 'future') {
-      el.innerHTML = renderMain() + renderFutureSheet();
+      el.innerHTML = renderMain();
+      mountSheetOnBody(renderFutureSheet());
       bindGrid();
       bindSheetClose();
       restoreCatsScrollLeft(catsScrollLeft);

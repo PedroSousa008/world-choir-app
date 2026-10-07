@@ -567,14 +567,17 @@
 .dap-sheet {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 220;
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Center in the usable viewport (above bottom nav), not the tall scrollable page. */
   padding:
-    max(20px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-top, 0px))
     16px
-    max(20px, env(safe-area-inset-bottom));
+    calc(var(--nav-height, 84px) + max(16px, env(safe-area-inset-bottom, 0px)));
+  box-sizing: border-box;
+  pointer-events: auto;
   animation: dapSheetIn 0.32s ease;
 }
 
@@ -595,12 +598,19 @@
 .dap-sheet__panel {
   position: relative;
   z-index: 1;
-  width: 100%;
+  width: min(520px, 100%);
   max-width: 520px;
   max-height: min(
-    calc(100dvh - 40px - env(safe-area-inset-top) - env(safe-area-inset-bottom)),
+    calc(
+      100dvh
+      - var(--nav-height, 84px)
+      - 48px
+      - env(safe-area-inset-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+    ),
     680px
   );
+  margin: 0 auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 28px 22px;
@@ -1048,11 +1058,17 @@
 
 @media (min-width: 640px) {
   .dap-sheet {
-    padding: 24px;
+    padding:
+      24px
+      24px
+      calc(var(--nav-height, 84px) + 24px);
   }
 
   .dap-sheet__panel {
-    max-height: min(calc(100dvh - 48px), 680px);
+    max-height: min(
+      calc(100dvh - var(--nav-height, 84px) - 56px),
+      680px
+    );
   }
 
   .dap-square {
