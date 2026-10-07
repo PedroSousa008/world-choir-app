@@ -100,6 +100,7 @@ const OwnerControl = (() => {
     dapView: 'library',
     dapLibrary: null,
     dapLibraryBusy: false,
+    dapAnalyticsBusy: false,
     dapQuery: '',
     dapFilter: 'all',
     dapPartnershipId: null,
@@ -452,7 +453,51 @@ const OwnerControl = (() => {
       if (state.communityView === 'voice-activity' && typeof OwnerVoiceActivity !== 'undefined') {
         OwnerVoiceActivity.load({ state, api, render });
       }
+      // Warm heavy Owner tabs in the background so sidebar switches feel instant.
+      if (state.authenticated) {
+        const warm = () => {
+          ensureDapLibraryLoaded().catch(() => {});
+          ensureSponsorsLoaded().catch(() => {});
+          ensureNotifLoaded(true).catch(() => {});
+          ensureQrAnalyticsLoaded(true).catch(() => {});
+          ensurePromiseMemoryLoaded(true).catch(() => {});
+          ensurePtwLoaded(true).catch(() => {});
+        };
+        if (typeof requestIdleCallback === 'function') requestIdleCallback(warm, { timeout: 1200 });
+        else setTimeout(warm, 250);
+      }
     }
+  }
+
+  function ownerTabSkeleton({ label = 'Loading', rows = 6 } = {}) {
+    return `
+      <section class="owner-section owner-section--skel" aria-busy="true">
+        <p class="owner-section__label">${esc(label)}</p>
+        <div class="owner-skel owner-skel--title"></div>
+        <div class="owner-skel owner-skel--line"></div>
+        <div class="owner-skel-groups" aria-hidden="true">
+          <span class="owner-skel owner-skel--metric"></span>
+          <span class="owner-skel owner-skel--metric"></span>
+          <span class="owner-skel owner-skel--metric"></span>
+          <span class="owner-skel owner-skel--metric"></span>
+        </div>
+        <div class="owner-table-wrap" aria-hidden="true">
+          <table class="owner-table">
+            <thead><tr><th></th><th></th><th></th><th></th></tr></thead>
+            <tbody>
+              ${Array.from({ length: rows }).map(() => `
+                <tr>
+                  <td><div class="owner-skel owner-skel--cell"></div></td>
+                  <td><div class="owner-skel owner-skel--cell"></div></td>
+                  <td><div class="owner-skel owner-skel--cell owner-skel--cell-short"></div></td>
+                  <td><div class="owner-skel owner-skel--cell owner-skel--cell-short"></div></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
   }
 
   /* ─── Shell ─── */
@@ -2962,11 +3007,26 @@ const OwnerControl = (() => {
     if (state.dapLibrary && !force) return;
     state.dapLibraryBusy = true;
     try {
+      // Fast path: catalog + partnerships only (no assignment-blob analytics scan).
       state.dapLibrary = await api('daily-peace-partnerships');
     } catch (err) {
       state.dapLibrary = { catalogCount: 0, acts: [], partnerships: [], error: err.message };
     } finally {
       state.dapLibraryBusy = false;
+    }
+  }
+
+  async function ensureDapPartnershipAnalyticsLoaded(force = false) {
+    if (state.dapAnalyticsBusy) return;
+    if (!force && state.dapLibrary?.analyticsIncluded) return;
+    state.dapAnalyticsBusy = true;
+    try {
+      const data = await api('daily-peace-partnerships', { query: '&includeAnalytics=1' });
+      state.dapLibrary = data;
+    } catch (err) {
+      if (state.dapLibrary) state.dapLibrary.analyticsError = err.message || 'Analytics unavailable';
+    } finally {
+      state.dapAnalyticsBusy = false;
     }
   }
 
@@ -2978,10 +3038,8 @@ const OwnerControl = (() => {
     const gen = (state.ptwLoadGen = (state.ptwLoadGen || 0) + 1);
     state.ptwBusy = true;
     state.ptwError = null;
-    if (!silent) {
-      state.ptwData = null;
-      render();
-    }
+    // Keep prior data visible while refreshing — never blank the tab.
+    if (!silent && !state.ptwData) render();
     try {
       const q = new URLSearchParams({ range: state.ptwRange || 'all' });
       if (state.ptwRoundId) q.set('roundId', state.ptwRoundId);
@@ -3004,7 +3062,7 @@ const OwnerControl = (() => {
       return OwnerPtwPartnership.render({ state, api, render });
     }
     if (state.ptwBusy && !state.ptwData) {
-      return `<section class="owner-section"><p class="owner-muted">Loading Pass the World…</p></section>`;
+      return ownerTabSkeleton({ label: 'Pass the World', rows: 7 });
     }
     if (!state.ptwData && state.ptwError) {
       return `
@@ -3015,7 +3073,7 @@ const OwnerControl = (() => {
     }
     if (!state.ptwData) {
       ensurePtwLoaded().then(() => render());
-      return `<section class="owner-section"><p class="owner-muted">Loading Pass the World…</p></section>`;
+      return ownerTabSkeleton({ label: 'Pass the World', rows: 7 });
     }
     if (typeof OwnerPassTheWorld === 'undefined') {
       return `<section class="owner-section"><p class="owner-muted">Pass the World module not loaded.</p></section>`;
@@ -3062,7 +3120,10 @@ const OwnerControl = (() => {
   function renderNotifications() {
     if (!state.notifData && !state.notifBusy) {
       ensureNotifLoaded().then(() => render());
-      return `<section class="owner-section"><p class="owner-muted">Loading Notifications…</p></section>`;
+      return ownerTabSkeleton({ label: 'Notifications', rows: 5 });
+    }
+    if (state.notifBusy && !state.notifData) {
+      return ownerTabSkeleton({ label: 'Notifications', rows: 5 });
     }
     if (typeof OwnerNotifications === 'undefined') {
       return `<section class="owner-section"><p class="owner-muted">Notifications module not loaded.</p></section>`;
@@ -3107,7 +3168,10 @@ const OwnerControl = (() => {
   function renderWorldChainPhotoBook() {
     if (!state.wcpbOverview && !state.wcpbBusy) {
       ensureWcpbLoaded().then(() => render());
-      return `<section class="owner-section"><p class="owner-muted">Loading World Chain Photo Book…</p></section>`;
+      return ownerTabSkeleton({ label: 'World Chain Photo Book', rows: 6 });
+    }
+    if (state.wcpbBusy && !state.wcpbOverview) {
+      return ownerTabSkeleton({ label: 'World Chain Photo Book', rows: 6 });
     }
     if (typeof OwnerWorldChainPhotoBook === 'undefined') {
       return `<section class="owner-section"><p class="owner-muted">World Chain Photo Book module not loaded.</p></section>`;
@@ -3145,7 +3209,10 @@ const OwnerControl = (() => {
   function renderQrAnalytics() {
     if (!state.qrAnalytics && !state.qrLoading) {
       ensureQrAnalyticsLoaded().then(() => render());
-      return `<section class="owner-section"><p class="owner-muted">Loading QR Code Analytics…</p></section>`;
+      return ownerTabSkeleton({ label: 'QR Code Analytics', rows: 6 });
+    }
+    if (state.qrLoading && !state.qrAnalytics) {
+      return ownerTabSkeleton({ label: 'QR Code Analytics', rows: 6 });
     }
     if (typeof OwnerQrAnalytics === 'undefined') {
       return `<section class="owner-section"><p class="owner-muted">QR Code Analytics module not loaded.</p></section>`;
@@ -3182,7 +3249,10 @@ const OwnerControl = (() => {
   function renderPromiseMemory() {
     if (!state.pmData && !state.pmBusy) {
       ensurePromiseMemoryLoaded().then(() => render());
-      return `<section class="owner-section"><p class="owner-muted">Loading Promise Memory…</p></section>`;
+      return ownerTabSkeleton({ label: 'Promise Memory', rows: 6 });
+    }
+    if (state.pmBusy && !state.pmData) {
+      return ownerTabSkeleton({ label: 'Promise Memory', rows: 6 });
     }
     if (typeof OwnerPromiseMemory === 'undefined') {
       return `<section class="owner-section"><p class="owner-muted">Promise Memory module not loaded.</p></section>`;
@@ -3213,7 +3283,10 @@ const OwnerControl = (() => {
   function renderSponsors() {
     if (!state.sponsorsData && !state.sponsorsBusy) {
       ensureSponsorsLoaded().then(() => render());
-      return `<section class="owner-section"><p class="owner-muted">Loading sponsors…</p></section>`;
+      return ownerTabSkeleton({ label: 'Map Sponsors', rows: 5 });
+    }
+    if (state.sponsorsBusy && !state.sponsorsData) {
+      return ownerTabSkeleton({ label: 'Map Sponsors', rows: 5 });
     }
     if (typeof OwnerMapSponsors === 'undefined') {
       return `<section class="owner-section"><p class="owner-muted">Sponsors module not loaded.</p></section>`;
@@ -3507,26 +3580,33 @@ const OwnerControl = (() => {
       || state.dapFormMode
       || state.dapPartnershipId;
 
-    if (needsLibrary && !state.dapLibrary && !state.dapLibraryBusy) {
-      ensureDapLibraryLoaded().then(() => {
-        if (state.dapPartnershipId && !state.dapPartnershipDetail) {
-          loadPartnershipDetail(state.dapPartnershipId).then(() => render()).catch(() => render());
-        } else {
-          render();
-        }
-      });
-      return `
-        <section class="owner-section">
-          <p class="owner-section__label">Daily Acts</p>
-          <p class="owner-muted">Loading Daily Acts library…</p>
-        </section>
-      `;
+    if (needsLibrary && !state.dapLibrary) {
+      if (!state.dapLibraryBusy) {
+        ensureDapLibraryLoaded().then(() => {
+          if (state.dapPartnershipId && !state.dapPartnershipDetail) {
+            loadPartnershipDetail(state.dapPartnershipId).then(() => render()).catch(() => render());
+          } else {
+            render();
+          }
+        });
+      }
+      return ownerTabSkeleton({ label: 'Daily Acts', rows: 8 });
+    }
+
+    // Partnership reach/views are heavy — load after the fast library shell paints.
+    if (
+      state.dapView === 'partnerships'
+      && state.dapLibrary
+      && !state.dapLibrary.analyticsIncluded
+      && !state.dapAnalyticsBusy
+    ) {
+      ensureDapPartnershipAnalyticsLoaded().then(() => render());
     }
 
     if (state.dapView === 'engagement') {
       if (!state.dailyPeace && !state.dailyPeaceError) {
         if (!state.dailyPeaceBusy) ensureDailyPeaceLoaded().then(() => render());
-        return `<section class="owner-section"><p class="owner-muted">Loading engagement data…</p></section>`;
+        return ownerTabSkeleton({ label: 'Daily Acts · Engagement', rows: 7 });
       }
     }
 
@@ -3540,7 +3620,7 @@ const OwnerControl = (() => {
 
     if (!state.dailyPeace && !state.dailyPeaceError) {
       if (!state.dailyPeaceBusy) ensureDailyPeaceLoaded().then(() => render());
-      return `<section class="owner-section"><p class="owner-muted">Loading…</p></section>`;
+      return ownerTabSkeleton({ label: 'Daily Acts', rows: 7 });
     }
     return renderDailyActsEngagement();
   }
@@ -4178,8 +4258,13 @@ const OwnerControl = (() => {
     });
     root().querySelectorAll('[data-dap-refresh-library]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        state.dapLibrary = null;
+        const keepShell = state.dapLibrary;
+        state.dapLibraryBusy = false;
         await ensureDapLibraryLoaded(true);
+        if (state.dapView === 'partnerships') {
+          await ensureDapPartnershipAnalyticsLoaded(true);
+        }
+        if (!state.dapLibrary && keepShell) state.dapLibrary = keepShell;
         render();
       });
     });

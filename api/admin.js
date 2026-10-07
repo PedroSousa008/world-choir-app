@@ -580,7 +580,11 @@ module.exports = async function handler(req, res) {
     if (action === 'daily-peace-partnerships' && req.method === 'GET') {
       res.setHeader('Cache-Control', 'no-store');
       if (!requireOwner(req, res)) return;
-      const data = await buildOwnerPartnershipsLibrary();
+      const includeAnalytics =
+        req.query.includeAnalytics === '1'
+        || req.query.includeAnalytics === 'true'
+        || req.query.includeAnalytics === 'yes';
+      const data = await buildOwnerPartnershipsLibrary({ includeAnalytics });
       return res.status(200).json(data);
     }
 

@@ -889,15 +889,31 @@ async function collectAssignmentAnalyticsForPartnerships(partnerships) {
     return { country, city };
   };
 
-  for (const blob of blobs) {
-    if (!blob.pathname.endsWith('.json')) continue;
-    let row;
-    try {
-      row = await readBlobJson(blob.pathname);
-    } catch {
-      continue;
+  const jsonBlobs = blobs.filter((blob) => blob.pathname.endsWith('.json'));
+  const CONCURRENCY = 24;
+  const loaded = new Array(jsonBlobs.length);
+  let readCursor = 0;
+
+  async function readWorker() {
+    while (readCursor < jsonBlobs.length) {
+      const idx = readCursor;
+      readCursor += 1;
+      const blob = jsonBlobs[idx];
+      try {
+        loaded[idx] = { blob, row: await readBlobJson(blob.pathname) };
+      } catch {
+        loaded[idx] = null;
+      }
     }
-    if (!row) continue;
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, Math.max(1, jsonBlobs.length)) }, () => readWorker())
+  );
+
+  for (const item of loaded) {
+    if (!item?.row) continue;
+    const { blob, row } = item;
     const pathDate = String(blob.pathname).match(/(\d{4}-\d{2}-\d{2})\.json$/);
     const date = pathDate ? pathDate[1] : row.date;
     if (!date) continue;
@@ -1234,13 +1250,14 @@ async function uploadPartnershipLogo(partnershipId, dataUrl, fileName = '') {
   return updated;
 }
 
-async function buildOwnerPartnershipsLibrary() {
-  // Ensure catalog-trim purge progresses whenever Owner opens Daily Acts.
+async function buildOwnerPartnershipsLibrary({ includeAnalytics = false } = {}) {
+  // Never block the Owner Daily Acts tab on purge/analytics scans.
+  // Purge continues in the background; partnership reach/views load on demand.
   try {
-    const { purgeIncompleteArchivedAssignments } = require('./daily-peace');
-    await purgeIncompleteArchivedAssignments({ maxPages: 20 });
+    const { kickArchivedAssignmentPurge } = require('./daily-peace');
+    kickArchivedAssignmentPurge();
   } catch (err) {
-    console.error('owner library purge:', err);
+    console.error('owner library purge kickoff:', err);
   }
 
   const catalog = loadCatalogActs();
@@ -1278,11 +1295,15 @@ async function buildOwnerPartnershipsLibrary() {
     });
   }
 
-  const assignmentStats = await collectAssignmentAnalyticsForPartnerships(partnerships).catch(() => new Map());
+  let assignmentStats = new Map();
+  if (includeAnalytics) {
+    assignmentStats = await collectAssignmentAnalyticsForPartnerships(partnerships).catch(() => new Map());
+  }
 
   return {
     catalogCount: catalog.length,
     totalActs: acts.length,
+    analyticsIncluded: !!includeAnalytics,
     partnerships: partnerships.map((p) => {
       const summary = summarizePartnership(p);
       const stats = assignmentStats.get(p.id);

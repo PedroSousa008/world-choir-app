@@ -175,6 +175,13 @@ const OwnerDailyPeacePartnerships = (() => {
               ${partnerships.length ? partnerships.map((p) => {
                 const act = (state.dapLibrary?.acts || []).find((a) => a.actId === p.actId);
                 const a = p.analytics || {};
+                const analyticsPending = !state.dapLibrary?.analyticsIncluded && state.dapAnalyticsBusy;
+                const reachCell = analyticsPending && !p.analytics
+                  ? '<span class="owner-skel owner-skel--cell-inline" aria-hidden="true"></span>'
+                  : Number(a.reach || 0).toLocaleString();
+                const viewsCell = analyticsPending && !p.analytics
+                  ? '<span class="owner-skel owner-skel--cell-inline" aria-hidden="true"></span>'
+                  : Number(a.views || 0).toLocaleString();
                 return `
                   <tr>
                     <td class="owner-dap-company">${p.companyLogoUrl
@@ -184,8 +191,8 @@ const OwnerDailyPeacePartnerships = (() => {
                     <td>${p.partnershipType === 'company_created' ? 'Company-Created' : 'Sponsored Standard'}</td>
                     <td>${esc(formatDayMonthYear(p.startDate))} → ${esc(formatDayMonthYear(p.endDate))}</td>
                     <td>${esc(statusLabel(p.status))}</td>
-                    <td>${Number(a.reach || 0).toLocaleString()}</td>
-                    <td>${Number(a.views || 0).toLocaleString()}</td>
+                    <td>${reachCell}</td>
+                    <td>${viewsCell}</td>
                     <td>${money(p.contractedAmount, p.currency)}</td>
                     <td><button type="button" class="owner-btn-ghost" data-dap-open-partnership="${esc(p.id)}">Details</button></td>
                   </tr>

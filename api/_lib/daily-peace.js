@@ -1412,7 +1412,15 @@ async function getJourney(deviceId, todayInput) {
 }
 
 /** Owner analytics — scans assignment blobs (real data only). */
-async function buildDailyPeaceOwnerIntel() {
+let ownerIntelCache = null;
+let ownerIntelCacheAt = 0;
+
+async function buildDailyPeaceOwnerIntel({ force = false } = {}) {
+  const now = Date.now();
+  if (!force && ownerIntelCache && now - ownerIntelCacheAt < 45 * 1000) {
+    return ownerIntelCache;
+  }
+
   assertBlobConfigured();
   const { list } = require('@vercel/blob');
   const { buildOwnerDatabaseRows } = require('./store');
@@ -1431,15 +1439,29 @@ async function buildDailyPeaceOwnerIntel() {
 
   const byUser = new Map();
   const actStats = new Map();
+  const jsonBlobs = (blobs || []).filter((blob) => blob.pathname.endsWith('.json'));
+  const CONCURRENCY = 24;
+  const loadedRows = new Array(jsonBlobs.length);
+  let readCursor = 0;
 
-  for (const blob of blobs) {
-    if (!blob.pathname.endsWith('.json')) continue;
-    let row;
-    try {
-      row = normalizeRow(await readBlobJson(blob.pathname));
-    } catch {
-      continue;
+  async function readWorker() {
+    while (readCursor < jsonBlobs.length) {
+      const idx = readCursor;
+      readCursor += 1;
+      try {
+        loadedRows[idx] = normalizeRow(await readBlobJson(jsonBlobs[idx].pathname));
+      } catch {
+        loadedRows[idx] = null;
+      }
     }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(CONCURRENCY, Math.max(1, jsonBlobs.length)) }, () => readWorker())
+  );
+
+  for (const row of loadedRows) {
+    if (!row) continue;
     const userId = row.user_id;
     if (!userId) continue;
 
@@ -1534,7 +1556,7 @@ async function buildDailyPeaceOwnerIntel() {
     completionRate: a.assigned ? Math.round((a.completed / a.assigned) * 1000) / 10 : 0,
   })).sort((a, b) => b.assigned - a.assigned);
 
-  return {
+  const intel = {
     totals: {
       usersEngaged: users.length,
       totalCompletions: users.reduce((s, u) => s + u.totalCompleted, 0),
@@ -1545,6 +1567,9 @@ async function buildDailyPeaceOwnerIntel() {
     users,
     acts,
   };
+  ownerIntelCache = intel;
+  ownerIntelCacheAt = Date.now();
+  return intel;
 }
 
 async function readDailyActsAggregates() {
@@ -1603,6 +1628,7 @@ module.exports = {
   loadArchivedCatalog,
   resolveActDefinition,
   purgeIncompleteArchivedAssignments,
+  kickArchivedAssignmentPurge,
   buildDailyPeaceOwnerIntel,
   localDateFromIso,
   resolveTheme,
