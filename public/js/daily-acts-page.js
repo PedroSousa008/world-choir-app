@@ -364,31 +364,122 @@ const DailyActsPage = (() => {
     `;
   }
 
+  function categoryIcon(categoryId) {
+    const icons = {
+      kindness: '♥',
+      connection: '◎',
+      courage: '✦',
+      compassion: '❀',
+      understanding: '◈',
+      generosity: '✧',
+      presence: '○',
+      community: '◉',
+    };
+    return icons[categoryId] || '·';
+  }
+
+  function renderProgressPanel() {
+    const summary = journeyData?.summary || {};
+    const streak = Number(summary.currentStreak) || 0;
+    const acts = Number(summary.momentsOfPeace) || 0;
+    const week = Array.isArray(summary.week) ? summary.week : [];
+
+    const weekHtml = week.length
+      ? week.map((d) => {
+        const cls = [
+          'dap-progress__day',
+          d.completed ? 'is-completed' : '',
+          d.isToday ? 'is-today' : '',
+          d.isFuture ? 'is-future' : '',
+        ].filter(Boolean).join(' ');
+        return `
+          <div class="${cls}" title="${esc(d.date || '')}">
+            <span class="dap-progress__day-label">${esc(d.label || '')}</span>
+            <span class="dap-progress__day-dot" aria-hidden="true">${d.completed ? '✓' : ''}</span>
+          </div>`;
+      }).join('')
+      : ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((label) => `
+          <div class="dap-progress__day">
+            <span class="dap-progress__day-label">${label}</span>
+            <span class="dap-progress__day-dot" aria-hidden="true"></span>
+          </div>`).join('');
+
+    return `
+      <section class="dap-progress" aria-label="Your Daily Acts progress">
+        <div class="dap-progress__stat dap-progress__stat--streak">
+          <span class="dap-progress__emoji" aria-hidden="true">🔥</span>
+          <span class="dap-progress__value">${esc(String(streak))}</span>
+          <span class="dap-progress__label">Day streak</span>
+        </div>
+        <div class="dap-progress__week" role="list" aria-label="This week">
+          ${weekHtml}
+        </div>
+        <div class="dap-progress__stat dap-progress__stat--acts">
+          <span class="dap-progress__emoji" aria-hidden="true">🌱</span>
+          <span class="dap-progress__value">${esc(String(acts))}</span>
+          <span class="dap-progress__label">Acts completed</span>
+        </div>
+      </section>
+    `;
+  }
+
   function renderSquare(item) {
     const isJustCompleted = itemIsJustCompleted(item);
     const isCompleted = item.status === 'completed' || isJustCompleted;
+    const isFuture = item.status === 'future';
     const displayStatus = isCompleted ? 'completed' : item.status;
     const stateClass =
       isCompleted ? 'is-completed'
-        : item.status === 'future' ? 'is-future'
+        : isFuture ? 'is-future'
           : 'is-available';
+    const cat = item.category || item.act?.category || '';
+    const catLabel = item.categoryLabel || item.act?.categoryLabel || '';
+    const text = item.act?.text || '';
+    const imageUrl = item.act?.imageUrl || '';
 
-    const inner = isCompleted
-      ? '<span class="dap-square__mark" aria-hidden="true">✓</span>'
-      : '<span class="dap-square__mystery" aria-hidden="true">?</span>';
+    let inner;
+    if (isFuture) {
+      inner = `
+        <span class="dap-square__lock" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="dap-square__mystery" aria-hidden="true">?</span>
+        <span class="dap-square__tease">Not yet revealed</span>
+      `;
+    } else {
+      const media = imageUrl
+        ? `<span class="dap-square__media" style="background-image:url('${esc(imageUrl)}')" aria-hidden="true"></span>`
+        : `<span class="dap-square__media dap-square__media--fallback" aria-hidden="true"></span>`;
+      inner = `
+        ${media}
+        <span class="dap-square__shade" aria-hidden="true"></span>
+        ${isCompleted ? '<span class="dap-square__mark" aria-hidden="true">✓</span>' : ''}
+        <span class="dap-square__body">
+          <span class="dap-square__cat dap-cat--${esc(cat)}">
+            <span class="dap-square__cat-icon" aria-hidden="true">${categoryIcon(cat)}</span>
+            ${esc(catLabel)}
+          </span>
+          <span class="dap-square__text">${esc(text)}</span>
+        </span>
+      `;
+    }
 
     const aria =
-      isCompleted ? 'Completed act of peace'
-        : item.status === 'future' ? 'Act not yet revealed'
-          : 'Act available to complete';
+      isCompleted ? `Completed: ${text || 'Act of peace'}`
+        : isFuture ? 'Act not yet revealed'
+          : text || 'Act available to complete';
 
     return `
       <button
         type="button"
-        class="dap-square ${stateClass} ${isJustCompleted ? 'is-just-completed' : ''} ${item.isToday ? 'is-today' : ''}"
+        class="dap-square ${stateClass} ${isJustCompleted ? 'is-just-completed' : ''} ${item.isToday ? 'is-today' : ''} ${imageUrl && !isFuture ? 'has-image' : ''}"
         data-open-date="${esc(item.date || '')}"
         data-item-key="${esc(item.key || item.actId || '')}"
         data-status="${esc(displayStatus)}"
+        data-category="${esc(cat)}"
         aria-label="${esc(aria)}"
       >
         ${inner}
@@ -421,6 +512,7 @@ const DailyActsPage = (() => {
     return `
       ${renderHeader()}
       ${renderCategoryNav()}
+      ${renderProgressPanel()}
       ${renderThemeIntro()}
       ${renderGrid()}
     `;
@@ -464,10 +556,15 @@ const DailyActsPage = (() => {
         </div>
       `;
 
+    const hero = act.imageUrl
+      ? `<div class="dap-sheet__hero" style="background-image:url('${esc(act.imageUrl)}')" role="img" aria-hidden="true"></div>`
+      : '';
+
     return renderSheet(`
       <button type="button" class="dap-sheet__close" id="dap-sheet-close-btn" aria-label="Close">×</button>
+      ${hero}
       <p class="dap-sheet__kicker">Daily Act of Peace</p>
-      ${act.categoryLabel ? `<p class="dap-sheet__category">${esc(act.categoryLabel)}</p>` : ''}
+      ${act.categoryLabel ? `<p class="dap-sheet__category dap-cat--${esc(act.category || '')}"><span aria-hidden="true">${categoryIcon(act.category || '')}</span> ${esc(act.categoryLabel)}</p>` : ''}
       <h2 class="dap-sheet__title">${esc(act.text)}</h2>
       ${act.explanation ? `<p class="dap-sheet__body">${esc(act.explanation)}</p>` : ''}
 
@@ -778,6 +875,7 @@ const DailyActsPage = (() => {
     const gridOrEmpty = el?.querySelector('.dap-grid, .dap-empty-state');
 
     // Keep the category track DOM intact so horizontal scroll never jumps.
+    // Progress panel stays mounted (real streak/acts data unchanged by category).
     if (track && intro && gridOrEmpty) {
       syncDailyActsRoute();
       track.querySelectorAll('[data-dap-cat]').forEach((btn) => {
@@ -786,7 +884,10 @@ const DailyActsPage = (() => {
         btn.setAttribute('aria-selected', active ? 'true' : 'false');
       });
       intro.outerHTML = renderThemeIntro();
-      gridOrEmpty.outerHTML = renderGrid();
+      const nextIntro = el.querySelector('.dap-theme-intro');
+      const nextGridHost = el.querySelector('.dap-grid, .dap-empty-state');
+      if (nextGridHost) nextGridHost.outerHTML = renderGrid();
+      else if (nextIntro) nextIntro.insertAdjacentHTML('afterend', renderGrid());
       bindSquareClicks();
       return true;
     }
@@ -1111,14 +1212,14 @@ const DailyActsPage = (() => {
           <span class="wc-skel" style="width:5.5rem;height:2rem;border-radius:999px"></span>
           <span class="wc-skel" style="width:4.8rem;height:2rem;border-radius:999px"></span>
         </div>
-        ${[0, 1, 2].map(() => `
-          <div class="wc-skel-card" aria-hidden="true">
-            <span class="wc-skel wc-skel--media" style="aspect-ratio:2.4/1;margin-bottom:12px"></span>
-            <span class="wc-skel wc-skel--line wc-skel--line-mid"></span>
-            <span class="wc-skel wc-skel--line"></span>
-            <span class="wc-skel wc-skel--line wc-skel--line-short"></span>
-          </div>
-        `).join('')}
+        <div class="wc-skel-card" aria-hidden="true" style="height:88px;border-radius:18px;margin-bottom:16px"></div>
+        <div class="dap-grid" aria-hidden="true">
+          ${[0, 1, 2, 3].map(() => `
+            <div class="dap-grid__cell">
+              <div class="wc-skel" style="width:100%;height:100%;border-radius:16px"></div>
+            </div>
+          `).join('')}
+        </div>
       </div>
     `;
   }

@@ -76,12 +76,37 @@ const CATALOG_TO_THEME = {
 
 let catalogCache = null;
 let archiveCache = null;
+let imageMapCache = null;
 
 function loadCatalog() {
   if (!catalogCache) {
     catalogCache = require(path.join(__dirname, '../data/daily-acts-of-peace.json'));
   }
   return catalogCache.acts.filter((act) => act.active !== false);
+}
+
+/** Stable canonical image per Act ID (same for every user). */
+function loadActImageMap() {
+  if (!imageMapCache) {
+    try {
+      imageMapCache = require(path.join(__dirname, '../data/daily-act-images.json'));
+    } catch {
+      imageMapCache = { images: {} };
+    }
+  }
+  return imageMapCache.images && typeof imageMapCache.images === 'object'
+    ? imageMapCache.images
+    : {};
+}
+
+function resolveActImage(actId) {
+  if (!actId) return null;
+  const row = loadActImageMap()[actId];
+  if (!row || typeof row.imageUrl !== 'string' || !row.imageUrl) return null;
+  return {
+    imageUrl: row.imageUrl,
+    imageBucket: row.imageBucket || null,
+  };
 }
 
 /** Removed acts kept only so completed history can still resolve text/theme. */
@@ -367,6 +392,7 @@ function addDays(dateStr, delta) {
 function mapAct(act) {
   if (!act) return null;
   const theme = resolveTheme(act.category);
+  const image = resolveActImage(act.id);
   const mapped = {
     id: act.id,
     text: act.text,
@@ -374,6 +400,8 @@ function mapAct(act) {
     category: theme.category,
     categoryLabel: theme.categoryLabel,
     reflectionPrompt: act.reflectionPrompt || 'What would you like to remember about this act?',
+    imageUrl: image?.imageUrl || null,
+    imageBucket: image?.imageBucket || null,
   };
   if (act.nav && typeof act.nav === 'object') {
     mapped.nav = {
@@ -383,6 +411,31 @@ function mapAct(act) {
     };
   }
   return mapped;
+}
+
+/** Build Mon–Sun week row from real completion dates (local calendar days). */
+function buildWeekProgress(completedDates, todayDate) {
+  const set = new Set(completedDates || []);
+  const today = new Date(`${todayDate}T12:00:00`);
+  const day = today.getDay(); // 0=Sun
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  const labels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  const days = [];
+  for (let i = 0; i < 7; i += 1) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    days.push({
+      label: labels[i],
+      date: iso,
+      completed: set.has(iso),
+      isToday: iso === todayDate,
+      isFuture: iso > todayDate,
+    });
+  }
+  return days;
 }
 
 function normalizeRow(row) {
@@ -1307,11 +1360,28 @@ async function getJourney(deviceId, todayInput) {
     if (themeCounts[theme.category] != null) themeCounts[theme.category] += 1;
   }
 
+  // Real streak from on-time completions (same definition as Impact / Passport).
+  const onTimeDates = [];
+  const anyCompletedDates = [];
+  for (const raw of rows) {
+    const row = normalizeRow(raw);
+    if (!row.completed || !row.date) continue;
+    anyCompletedDates.push(row.date);
+    if (row.completed_on_assigned_day) onTimeDates.push(row.date);
+  }
+  const streakDates = onTimeDates.length ? onTimeDates : anyCompletedDates;
+  const currentStreak = computeCurrentStreakFromToday(streakDates, todayDate);
+  const { longestStreak } = computeStreaks(streakDates);
+  const week = buildWeekProgress(streakDates, todayDate);
+
   return {
     summary: {
       momentsOfPeace,
       todayDate,
       totalActs: journey.length,
+      currentStreak,
+      longestStreak,
+      week,
     },
     themes: THEMES.map((t) => ({
       ...t,
