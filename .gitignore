@@ -43,3 +43,6 @@ public/video/pre-event-source.mp4
 
 # Pre-compression image originals (local backup only)
 assets/originals-pre-perf-phase2a/
+
+# Local image-pool cache from semantic Daily Act image builder
+scripts/.cache-daily-act-image-pools.json
