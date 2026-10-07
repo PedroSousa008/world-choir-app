@@ -959,7 +959,7 @@ const OwnerControl = (() => {
             const filtersActive = hasActiveMapFilters();
             return `
               <p class="owner-muted" style="margin-top:10px">
-                ${esc(num(filtered.stats.voices))} geolocated Voices · ${esc(num(filtered.stats.cities))} cities · ${esc(num(filtered.stats.countries))} countries
+                ${esc(num(filtered.stats.voices))} Voices · ${esc(num(filtered.stats.cities))} cities · ${esc(num(filtered.stats.countries))} countries
                 ${filtersActive ? ' · matching Map filters' : ''}
               </p>
               ${filtered.note ? `<p class="owner-muted">${esc(filtered.note)}</p>` : ''}
@@ -1292,6 +1292,16 @@ const OwnerControl = (() => {
     return { from: now - days * 86400000, to: now };
   }
 
+  /** Same Voices KPI as Overview / Community / public Map. */
+  function choirVoiceCountFromPoints(points) {
+    let maxVoice = 0;
+    for (const p of points || []) {
+      const n = Number(p.voiceNumber ?? p.voice_number);
+      if (Number.isFinite(n) && n > maxVoice) maxVoice = n;
+    }
+    return Math.max((points || []).length, maxVoice);
+  }
+
   function getFilteredMapCities() {
     const f = state.mapFilters;
     const points = state.data?.map?.points || [];
@@ -1428,10 +1438,19 @@ const OwnerControl = (() => {
 
     const cities = Array.from(byCity.values());
     const countries = new Set(cities.map((c) => c.country));
+    let voices = choirVoiceCountFromPoints(filtered);
+    // Unfiltered map must match Overview / Community Voices (choir numbering).
+    if (!hasActiveMapFilters()) {
+      const total = Number(state.data?.overview?.totalVoices)
+        || Number(state.data?.map?.voiceCount)
+        || Number(state.data?.community?.voicesPledged)
+        || 0;
+      if (total > voices) voices = total;
+    }
     return {
       cities,
       stats: {
-        voices: filtered.length,
+        voices,
         cities: cities.length,
         countries: countries.size,
       },
@@ -2454,7 +2473,7 @@ const OwnerControl = (() => {
         ${renderOwnerLeafletMap({ compact: true })}
         ${(() => {
           const filtered = getFilteredMapCities();
-          return `<p class="owner-muted" style="margin-top:10px">${esc(num(filtered.stats.voices))} mapped Voices · same live map as Overview &amp; Global Map${hasActiveMapFilters() ? ' · matching Map filters' : ''}</p>`;
+          return `<p class="owner-muted" style="margin-top:10px">${esc(num(filtered.stats.voices))} Voices · same live map as Overview &amp; Global Map${hasActiveMapFilters() ? ' · matching Map filters' : ''}</p>`;
         })()}
       </section>
     `;

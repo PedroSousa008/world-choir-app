@@ -1375,6 +1375,7 @@ async function getWorldChoirStats(eventId) {
 
 module.exports = {
   mapPledgeRow,
+  choirVoiceCount,
   ensureUser,
   setUserOnboardingCompleted,
   setSongWeSangLetterFlags,

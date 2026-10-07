@@ -7,6 +7,7 @@ const {
   listAllPledges,
   listAllPromises,
   assembleOwnerDatabaseRows,
+  choirVoiceCount,
   assertBlobConfigured,
   readBlobJson,
   isBlobUnavailable,
@@ -292,19 +293,50 @@ function buildCountryIntelligence(pledges, cities, influencers, donations) {
 }
 
 function buildMapPoints(pledges, donations = []) {
-  const voicePoints = pledges
-    .filter((p) => Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude)))
-    .map((p) => ({
+  // City-level fallback coords so Voices with city/country but missing lat/lng
+  // still appear on the Owner map (same city light as peers).
+  const cityCoords = new Map();
+  (pledges || []).forEach((p) => {
+    const lat = Number(p.latitude);
+    const lng = Number(p.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (!p.city || !p.country) return;
+    const key = `${String(p.city).trim().toLowerCase()}|${String(p.country).trim().toLowerCase()}`;
+    if (!cityCoords.has(key)) cityCoords.set(key, { latitude: lat, longitude: lng });
+  });
+
+  const seenUsers = new Set();
+  const voicePoints = [];
+  (pledges || []).forEach((p) => {
+    if (!p?.user_id || seenUsers.has(p.user_id)) return;
+    seenUsers.add(p.user_id);
+
+    let lat = Number(p.latitude);
+    let lng = Number(p.longitude);
+    let coordSource = 'pledge';
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      if (!p.city || !p.country) return;
+      const key = `${String(p.city).trim().toLowerCase()}|${String(p.country).trim().toLowerCase()}`;
+      const fallback = cityCoords.get(key);
+      if (!fallback) return;
+      lat = fallback.latitude;
+      lng = fallback.longitude;
+      coordSource = 'city_peer';
+    }
+
+    voicePoints.push({
       id: p.id,
-      latitude: Number(p.latitude),
-      longitude: Number(p.longitude),
+      latitude: lat,
+      longitude: lng,
       city: p.city || null,
       country: p.country || null,
-      voiceNumber: p.voice_number || null,
+      voiceNumber: p.voice_number ?? p.voiceNumber ?? null,
       voiceName: p.voice_name || null,
       pledgedAt: p.pledged_at || null,
       type: 'voice',
-    }));
+      coordSource,
+    });
+  });
 
   const donationPoints = [];
   const byCity = new Map();
@@ -341,7 +373,12 @@ function buildMapPoints(pledges, donations = []) {
     });
   });
 
-  return { voicePoints, donationPoints };
+  return {
+    voicePoints,
+    donationPoints,
+    // Same Voices KPI as Overview / Community / public Map (not raw geolocated rows).
+    voiceCount: choirVoiceCount(pledges),
+  };
 }
 
 function buildActivity({ users, pledges, promises, influencers, donations }) {
@@ -458,6 +495,9 @@ async function buildOwnerControlCenter() {
   const countries = buildCountryIntelligence(pledges, cities, influencers, verifiedDonations);
   const mapBundles = buildMapPoints(pledges, verifiedDonations);
   const mapPoints = mapBundles.voicePoints;
+  const mapVoiceCount = Number.isFinite(mapBundles.voiceCount)
+    ? mapBundles.voiceCount
+    : choirDb.totals.participants;
   const donationMapPoints = mapBundles.donationPoints;
   const activity = buildActivity({ users, pledges, promises, influencers, donations });
   const growth = buildGrowthSeries({ users, pledges, donations, influencers });
@@ -544,7 +584,7 @@ async function buildOwnerControlCenter() {
       donationsToday,
       activeFoundations: activeFoundations.length,
       foundationsTotal: influencers.length,
-      mapPoints: mapPoints.length,
+      mapPoints: mapVoiceCount,
       systemHealth: systemHealth.overall,
       operationsShare: operations.operationsShare,
       operationsNote: operations.note,
@@ -596,6 +636,7 @@ async function buildOwnerControlCenter() {
     map: {
       modes: donationMapPoints.length ? ['voices', 'donations', 'combined'] : ['voices'],
       points: mapPoints,
+      voiceCount: mapVoiceCount,
       donationPoints: donationMapPoints,
       note: mapPoints.length || donationMapPoints.length
         ? null
