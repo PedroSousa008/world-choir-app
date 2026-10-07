@@ -754,6 +754,9 @@ const WorldChoirTabs = (() => {
     if (activeId === id && panels[id]?.ready) {
       if (reset) await runTabReset(id);
       if (updateHistory) syncHistoryToTabRoot(id, { replace: true });
+      try {
+        window.dispatchEvent(new CustomEvent('wc-tab-show', { detail: { tab: id, retap: true } }));
+      } catch { /* ignore */ }
       return true;
     }
 
@@ -784,6 +787,9 @@ const WorldChoirTabs = (() => {
 
     // Never re-arm black boot on soft tab switches.
     document.documentElement.classList.remove('wc-booting', 'wc-boot-skeletons', 'wc-nav-handoff');
+    try {
+      window.dispatchEvent(new CustomEvent('wc-tab-show', { detail: { tab: id, retap: false } }));
+    } catch { /* ignore */ }
     return true;
   }
 

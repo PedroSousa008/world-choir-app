@@ -163,6 +163,39 @@ const DailyActsPeace = (() => {
     }
   }
 
+  function localDayFromMs(ms) {
+    const n = Number(ms);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    const d = new Date(n);
+    if (Number.isNaN(d.getTime())) return null;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  /** QR Day-1: centered Home presentation replaces the top Daily Act banner. */
+  function shouldSuppressQrDay1Banner() {
+    try {
+      if (typeof WorldChoirQrFirstDailyAct !== 'undefined'
+        && WorldChoirQrFirstDailyAct.isQrOnboardingDay1?.()) {
+        return true;
+      }
+      const attr = JSON.parse(localStorage.getItem('wc_qr_attr') || 'null');
+      if (!attr?.campaignId) return false;
+      const today = localDateString();
+      if (attr.voiceCreatedLocalDate === today) return true;
+      const fromTs = localDayFromMs(attr.voiceCreatedAt);
+      if (fromTs === today) return true;
+      if (attr.qrFirstDailyActPending && !attr.firstDailyActPresentedAt) return true;
+    } catch { /* ignore */ }
+    return false;
+  }
+
+  function forceHideBannerForQrDay1() {
+    if (!shouldSuppressQrDay1Banner()) return;
+    persistBannerDismissed(localDateString());
+    applyLocalDismissToState(localDateString());
+    setBannerVisible(false);
+  }
+
   function shouldShowBanner() {
     const onboardingOpen = typeof WorldChoirOnboarding !== 'undefined'
       && typeof WorldChoirOnboarding.isOpen === 'function'
@@ -170,18 +203,7 @@ const DailyActsPeace = (() => {
     const onDailyActsPage = /daily-acts\.html/i.test(window.location.pathname || '');
     if (onboardingOpen || onDailyActsPage) return false;
     if (isBannerDismissedLocally()) return false;
-    // QR Day-1: today's Act is presented centered after Voice creation — no top banner.
-    try {
-      if (typeof WorldChoirQrFirstDailyAct !== 'undefined'
-        && WorldChoirQrFirstDailyAct.isQrOnboardingDay1?.()) {
-        return false;
-      }
-      // Fallback if module not loaded yet: check attr directly
-      const attr = JSON.parse(localStorage.getItem('wc_qr_attr') || 'null');
-      if (attr?.campaignId && attr?.voiceCreatedLocalDate === localDateString()) {
-        return false;
-      }
-    } catch { /* ignore */ }
+    if (shouldSuppressQrDay1Banner()) return false;
     return !!state?.showNotification;
   }
 
@@ -269,8 +291,21 @@ const DailyActsPeace = (() => {
     ensureBanner();
     pruneOldBannerDismissKeys();
 
+    // Hide immediately on Voice creation — before any async banner fetch can re-show it.
+    window.addEventListener('wc-pledge-added', () => {
+      forceHideBannerForQrDay1();
+      syncBannerFromState();
+    });
+    window.addEventListener('wc-tab-show', () => {
+      if (shouldSuppressQrDay1Banner()) {
+        forceHideBannerForQrDay1();
+        syncBannerFromState();
+      }
+    });
+
     try {
       await WorldChoirDB.readyIdentity();
+      forceHideBannerForQrDay1();
       await refreshBanner();
     } catch (err) {
       console.warn('Daily Acts of Peace init skipped:', err);
@@ -282,7 +317,7 @@ const DailyActsPeace = (() => {
     start();
   }
 
-  return { init, open, close, start, refreshBanner, shareInvite };
+  return { init, open, close, start, refreshBanner, shareInvite, forceHideBannerForQrDay1 };
 })();
 
 if (typeof document !== 'undefined') {

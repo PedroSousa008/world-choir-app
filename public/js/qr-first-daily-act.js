@@ -1,9 +1,11 @@
 /**
- * QR Day-1 Daily Act — after Voice creation, present today's existing Daily Act
- * centered once. Uses the normal Daily Acts completion API. Share timer is independent.
+ * QR Day-1 Daily Act — after Voice creation (Map), present today's Daily Act
+ * once the user returns to Home (+1s). Uses the normal Daily Acts completion API.
+ * Share timer is independent.
  */
 const WorldChoirQrFirstDailyAct = (() => {
   const ATTR_KEY = 'wc_qr_attr';
+  const HOME_DELAY_MS = 1000;
   const EVENT = {
     PRESENTED: 'qr_first_daily_act_presented',
     COMPLETED: 'qr_first_daily_act_completed',
@@ -13,6 +15,7 @@ const WorldChoirQrFirstDailyAct = (() => {
   let presenting = false;
   let open = false;
   let pendingAfterConsent = false;
+  let homePresentTimer = null;
 
   function localDateString() {
     const d = new Date();
@@ -56,6 +59,50 @@ const WorldChoirQrFirstDailyAct = (() => {
   function alreadyHandledPresentation() {
     const a = readAttr();
     return !!(a && (a.firstDailyActPresentedAt || a.firstDailyActDismissedAt || a.firstDailyActCompletedAt));
+  }
+
+  function isHomeContext(detail) {
+    if (detail?.tab) return detail.tab === 'home';
+    try {
+      if (typeof WorldChoirTabs !== 'undefined' && WorldChoirTabs.isHosted?.()) {
+        return WorldChoirTabs.getActive?.() === 'home';
+      }
+    } catch { /* ignore */ }
+    const path = (window.location.pathname || '').toLowerCase();
+    const file = path.split('/').pop() || '';
+    return file === '' || file === 'index.html' || file === 'index';
+  }
+
+  function clearHomePresentTimer() {
+    if (homePresentTimer != null) {
+      window.clearTimeout(homePresentTimer);
+      homePresentTimer = null;
+    }
+  }
+
+  function suppressTopBannerNow() {
+    try {
+      localStorage.setItem(`wc_daily_peace_banner_dismiss_${localDateString()}`, '1');
+    } catch { /* ignore */ }
+    try {
+      if (typeof DailyActsPeace !== 'undefined') {
+        DailyActsPeace.forceHideBannerForQrDay1?.();
+        DailyActsPeace.refreshBanner?.();
+      }
+    } catch { /* ignore */ }
+  }
+
+  function schedulePresentOnHome() {
+    if (!isQrFirstTouch() || !isQrOnboardingDay1() || alreadyHandledPresentation()) return;
+    const a = readAttr();
+    if (!a?.qrFirstDailyActPending && !a?.voiceCreatedLocalDate) return;
+
+    clearHomePresentTimer();
+    homePresentTimer = window.setTimeout(() => {
+      homePresentTimer = null;
+      if (!isHomeContext()) return;
+      void presentIfEligible();
+    }, HOME_DELAY_MS);
   }
 
   function consentBlocking() {
@@ -389,9 +436,11 @@ const WorldChoirQrFirstDailyAct = (() => {
           firstDailyActCompletedAt: uda.completedAt || new Date().toISOString(),
           firstDailyActId: act.id || null,
           firstDailyActDate: uda.date || localDateString(),
+          qrFirstDailyActPending: false,
         });
         await postQrEvent(EVENT.PRESENTED, { actId: act.id || null, actDate: uda.date || localDateString(), alreadyCompleted: true });
         await postQrEvent(EVENT.COMPLETED, { actId: act.id || null, actDate: uda.date || localDateString(), alreadyCompleted: true });
+        suppressTopBannerNow();
         presenting = false;
         return;
       }
@@ -400,20 +449,14 @@ const WorldChoirQrFirstDailyAct = (() => {
         firstDailyActPresentedAt: new Date().toISOString(),
         firstDailyActId: act.id || null,
         firstDailyActDate: uda.date || localDateString(),
+        qrFirstDailyActPending: false,
       });
       await postQrEvent(EVENT.PRESENTED, {
         actId: act.id || null,
         actDate: uda.date || localDateString(),
       });
 
-      // Suppress top banner for Day 1 (also dismiss server-side if shown)
-      try {
-        if (typeof DailyActsPeace !== 'undefined') {
-          localStorage.setItem(`wc_daily_peace_banner_dismiss_${localDateString()}`, '1');
-          DailyActsPeace.refreshBanner?.();
-        }
-      } catch { /* ignore */ }
-
+      suppressTopBannerNow();
       paintOverlay(data);
     } catch (err) {
       console.warn('QR first Daily Act presentation skipped:', err?.message || err);
@@ -425,25 +468,55 @@ const WorldChoirQrFirstDailyAct = (() => {
   function onVoiceCreated() {
     if (!isQrFirstTouch()) return;
     const a = readAttr();
-    if (!a?.voiceCreatedLocalDate) {
-      writeAttr({
-        voiceCreatedAt: a?.voiceCreatedAt || Date.now(),
-        voiceCreatedLocalDate: localDateString(),
-      });
+    writeAttr({
+      voiceCreatedAt: a?.voiceCreatedAt || Date.now(),
+      voiceCreatedLocalDate: a?.voiceCreatedLocalDate || localDateString(),
+      // Present on Home — not on Map after Voice creation.
+      qrFirstDailyActPending: alreadyHandledPresentation() ? false : true,
+    });
+    clearHomePresentTimer();
+    suppressTopBannerNow();
+  }
+
+  function onTabShow(e) {
+    const tab = e?.detail?.tab;
+    if (tab && tab !== 'home') {
+      clearHomePresentTimer();
+      return;
     }
-    // Slight delay so Voice success UI / navigation can settle; never blocks voice.
-    window.setTimeout(() => void presentIfEligible(), 700);
+    if (!isHomeContext(e?.detail)) {
+      clearHomePresentTimer();
+      return;
+    }
+    suppressTopBannerNow();
+    if (pendingAfterConsent) return;
+    schedulePresentOnHome();
   }
 
   function init() {
     window.addEventListener('wc-pledge-added', onVoiceCreated);
+    window.addEventListener('wc-tab-show', onTabShow);
     window.addEventListener('wc-privacy-consent', () => {
       if (pendingAfterConsent) {
         pendingAfterConsent = false;
-        window.setTimeout(() => void presentIfEligible(), 400);
+        if (isHomeContext()) schedulePresentOnHome();
       }
     });
-    // Soft-tab navigations: do not re-open; only suppress banner via DailyActsPeace
+
+    // Full-page Home load (no soft-tab event yet).
+    const bootHome = () => {
+      if (!isHomeContext()) return;
+      suppressTopBannerNow();
+      const a = readAttr();
+      if (a?.qrFirstDailyActPending || (isQrOnboardingDay1() && !alreadyHandledPresentation())) {
+        schedulePresentOnHome();
+      }
+    };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => window.setTimeout(bootHome, 0), { once: true });
+    } else {
+      window.setTimeout(bootHome, 0);
+    }
   }
 
   return {
