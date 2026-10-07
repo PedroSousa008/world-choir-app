@@ -1,0 +1,351 @@
+# Daily Acts → Unsplash photo assignments
+# Fill the Unsplash column with either:
+#   - full URL: https://unsplash.com/photos/AbCdEfGhIjK
+#   - photo id: AbCdEfGhIjK
+#   - photo-... id: photo-1529156069898-49953e39b3ac
+# One unique photo per act. Prefer tall/portrait photos.
+# You can send completed rows in batches — no need to finish all 341 first.
+
+actId | unsplashUrlOrId | actText
+----- | --------------- | -------
+dap-001 |  | Send a message to someone you have been meaning to check on.
+dap-002 |  | Tell someone one thing you genuinely appreciate about them.
+dap-005 |  | Give a sincere compliment to a stranger.
+dap-006 |  | Thank someone whose work often goes unnoticed.
+dap-008 |  | Send a voice message instead of a quick text.
+dap-009 |  | Ask someone how they are — and really listen.
+dap-010 |  | Leave a kind comment on someone’s work.
+dap-011 |  | Help someone without telling anyone about it.
+dap-013 |  | Tell a family member you love them.
+dap-014 |  | Send an old photo to someone who would appreciate the memory.
+dap-019 |  | Call someone you normally only text.
+dap-020 |  | Remember someone’s name and use it.
+dap-021 |  | Send encouragement to someone going through a difficult time.
+dap-022 |  | Tell someone you are proud of them.
+dap-024 |  | Leave a positive review for a small business you love.
+dap-025 |  | Thank a teacher who helped you.
+dap-026 |  | Thank someone from your past who made a difference.
+dap-027 |  | Ask someone about something they care deeply about.
+dap-032 |  | Ask an older person to tell you a story from their life.
+dap-034 |  | Tell a friend what makes them special.
+dap-035 |  | Send someone a song that reminds you of them.
+dap-044 |  | Ask someone what they need today.
+dap-045 |  | Give a genuine apology if you owe one.
+dap-048 |  | Tell someone about a positive impact they had on you.
+dap-050 |  | Do one small thing that makes someone’s day easier.
+dap-051 |  | Call a family member just to talk.
+dap-052 |  | Eat a meal with someone without looking at your phone.
+dap-053 |  | Ask a parent or grandparent about their childhood.
+dap-054 |  | Help with a household task without being asked.
+dap-056 |  | Tell a sibling or close friend a favorite memory you have with them.
+dap-058 |  | Ask someone, “How can I support you today?”
+dap-060 |  | Send a “good morning” message to someone who matters to you.
+dap-061 |  | End the day by thanking someone you live with.
+dap-062 |  | Ask someone about a dream they still have.
+dap-063 |  | Recreate a happy memory with someone.
+dap-064 |  | Tell someone why you are grateful they are in your life.
+dap-065 |  | Give someone a long, real hug.
+dap-073 |  | Look through old photos with someone.
+dap-074 |  | Ask someone how they are feeling today.
+dap-075 |  | Surprise someone with their favorite small thing.
+dap-078 |  | Write down five things you love about someone.
+dap-081 |  | Reach out to someone you lost touch with.
+dap-082 |  | Send a message to an old friend.
+dap-083 |  | Ask someone you miss how life has been.
+dap-084 |  | Thank someone from your past.
+dap-085 |  | Reconnect with someone you once cared about.
+dap-086 |  | Apologize to someone if you know you hurt them.
+dap-088 |  | Write a message you have been afraid to send.
+dap-089 |  | Check on someone you have not spoken to in over a year.
+dap-090 |  | Invite someone for a coffee or a walk.
+dap-091 |  | Tell someone you miss them.
+dap-092 |  | Send someone an unexpected memory.
+dap-093 |  | Ask an old friend to catch up.
+dap-094 |  | Thank someone for a lesson they taught you.
+dap-095 |  | Reconnect without expecting anything in return.
+dap-096 |  | Make peace with someone over a small disagreement.
+dap-099 |  | Tell someone from your past that you hope they are doing well.
+dap-100 |  | Reach out to someone who might be feeling alone.
+dap-103 |  | Donate something you no longer use.
+dap-104 |  | Give food or useful items to someone in need.
+dap-105 |  | Support a local small business.
+dap-106 |  | Leave a generous review for a good local business.
+dap-107 |  | Learn the name of someone who works in your building or neighborhood.
+dap-108 |  | Help a neighbor with something small.
+dap-111 |  | Leave a place cleaner than you found it.
+dap-112 |  | Donate clothes you no longer wear.
+dap-113 |  | Bring food to someone who needs support.
+dap-114 |  | Give away something useful instead of throwing it away.
+dap-117 |  | Support a local cause.
+dap-120 |  | Donate books you no longer read.
+dap-125 |  | Give blood if you are able and eligible.
+dap-126 |  | Donate to a cause you genuinely trust, if you can.
+dap-127 |  | Help someone carry their shopping.
+dap-128 |  | Check whether an elderly neighbor needs anything.
+dap-129 |  | Let someone know about an opportunity they might benefit from.
+dap-130 |  | Give useful items directly to someone who needs them.
+dap-132 |  | Leave a kind note for someone to find.
+dap-133 |  | Support someone’s small project.
+dap-134 |  | Recommend someone’s work.
+dap-135 |  | Share a job or opportunity with someone who could benefit.
+dap-136 |  | Thank a cleaner, delivery worker, or service worker.
+dap-141 |  | Take a walk and pick up litter along the way.
+dap-143 |  | Walk somewhere instead of driving, if possible.
+dap-145 |  | Take a shorter shower.
+dap-148 |  | Recycle properly today.
+dap-149 |  | Plant something.
+dap-150 |  | Water a plant.
+dap-153 |  | Take your own bag when shopping.
+dap-157 |  | Give an unwanted item a second life.
+dap-159 |  | Spend time in nature without your phone.
+dap-161 |  | Feed birds safely and responsibly.
+dap-162 |  | Support a project that protects nature.
+dap-172 |  | Go for a walk without listening to anything.
+dap-173 |  | Write down three things that went well today.
+dap-176 |  | Get enough sleep tonight.
+dap-179 |  | Write down one thing you are grateful for.
+dap-180 |  | Spend time alone without distracting yourself.
+dap-185 |  | Stop comparing yourself to someone today.
+dap-186 |  | Write down something you are proud of.
+dap-188 |  | Do something you have been putting off that will make you feel better.
+dap-189 |  | Clean a space that has been bothering you.
+dap-193 |  | Watch the sunrise or sunset.
+dap-194 |  | Write a letter to your future self.
+dap-195 |  | Remember a moment you overcame something difficult.
+dap-208 |  | Avoid gossip for one day.
+dap-243 |  | Introduce two people who could help each other.
+dap-244 |  | Recommend someone for an opportunity.
+dap-246 |  | Help someone feel more confident.
+dap-249 |  | Help someone without expecting credit.
+dap-250 |  | Do something kind anonymously.
+dap-259 |  | Start a conversation with someone you normally would not approach.
+dap-263 |  | Tell someone you love them.
+dap-268 |  | Give someone another chance.
+dap-269 |  | Stand beside someone who is alone.
+dap-271 |  | Reach out to someone you had an argument with.
+dap-275 |  | Start repairing a relationship that matters to you.
+dap-276 |  | Send someone a funny video you know they will love.
+dap-277 |  | Bring someone their favorite snack.
+dap-278 |  | Play a song that makes someone smile.
+dap-280 |  | Share a happy memory.
+dap-281 |  | Surprise someone with a small gesture.
+dap-282 |  | Give someone flowers — picked, bought, or homemade.
+dap-283 |  | Make a playlist for someone.
+dap-284 |  | Send someone a photo that will make them smile.
+dap-285 |  | Tell someone your favorite thing about them.
+dap-286 |  | Invite someone to do something fun.
+dap-287 |  | Share good news with someone who will celebrate it with you.
+dap-288 |  | Celebrate a small achievement.
+dap-289 |  | Write a note that makes someone smile.
+dap-291 |  | Ask someone to join you instead of doing something alone.
+dap-292 |  | Bring energy to a room instead of negativity.
+dap-295 |  | Surprise someone with coffee, tea, or something they enjoy.
+dap-296 |  | Create a small moment worth remembering.
+dap-297 |  | Dance or sing with someone.
+dap-298 |  | Tell someone a happy memory you share.
+dap-299 |  | Make someone feel seen.
+dap-300 |  | Give someone a reason to smile today.
+dap-301 |  | Learn something about another culture.
+dap-302 |  | Listen to music from a country you know little about.
+dap-303 |  | Learn how to say “thank you” in a new language.
+dap-304 |  | Try food from a different culture.
+dap-305 |  | Read about a place you have never visited.
+dap-306 |  | Have a conversation with someone whose life experience differs from yours.
+dap-307 |  | Ask someone about a tradition that matters to them.
+dap-308 |  | Learn one fact that changes how you see another part of the world.
+dap-309 |  | Follow a creator who teaches you something outside your usual perspective.
+dap-310 |  | Listen to a story from someone older or younger than you.
+dap-311 |  | Learn about a community you know little about.
+dap-312 |  | Find something you have in common with someone different from you.
+dap-314 |  | Read an article from a country outside your own.
+dap-316 |  | Learn the history behind a place near you.
+dap-317 |  | Ask someone where they feel most at home.
+dap-318 |  | Share something positive from your culture with someone.
+dap-319 |  | Celebrate a tradition that is not your own by learning about it respectfully.
+dap-321 |  | Volunteer your time for a cause.
+dap-322 |  | Organize a small act of kindness with friends.
+dap-323 |  | Donate something meaningful.
+dap-324 |  | Spend an afternoon helping someone.
+dap-325 |  | Clean up a public area.
+dap-326 |  | Visit someone who may be lonely.
+dap-327 |  | Help someone prepare for a job or interview.
+dap-328 |  | Mentor someone younger than you.
+dap-329 |  | Support someone going through a difficult period.
+dap-330 |  | Organize a small gathering that brings people together.
+dap-331 |  | Help someone solve a problem they have been avoiding.
+dap-332 |  | Share a useful opportunity with multiple people.
+dap-333 |  | Donate your skills to a community project.
+dap-334 |  | Organize a collection of clothes, food, or books.
+dap-337 |  | Support a friend’s dream in a practical way.
+dap-338 |  | Introduce people who could create something good together.
+dap-340 |  | Do one thing today that makes your community stronger.
+dap-341 |  | Sing a song with someone.
+dap-342 |  | Teach someone a song you love.
+dap-343 |  | Ask someone what song reminds them of home.
+dap-344 |  | Share a song that helped you through a difficult time.
+dap-345 |  | Listen to a song from another country.
+dap-347 |  | Make a playlist called “Peace.”
+dap-348 |  | Invite someone to sing with you.
+dap-349 |  | Take one minute today to imagine the entire world singing together.
+dap-350 |  | Do one thing today that brings two people closer together.
+dap-351 |  | Practice the song.
+dap-352 |  | Sing the song without looking at the lyrics.
+dap-353 |  | Learn the meaning behind one line of the song.
+dap-354 |  | Sing the song with someone else.
+dap-355 |  | Invite someone to practice the song with you.
+dap-356 |  | Record yourself singing a small part of the song.
+dap-357 |  | Practice the song somewhere you feel completely free.
+dap-358 |  | Imagine where you will be when the world sings as one.
+dap-359 |  | Discover a Foundation created by someone you admire.
+dap-360 |  | Read the story behind a Foundation.
+dap-361 |  | Learn about a cause you knew little about.
+dap-362 |  | Explore a Foundation working to fight hunger.
+dap-363 |  | Discover a project helping improve access to healthcare.
+dap-364 |  | Learn about a Foundation supporting education.
+dap-365 |  | Read about a project working to protect the environment.
+dap-366 |  | Explore a cause dedicated to helping children.
+dap-367 |  | Find a Foundation whose mission genuinely moves you.
+dap-368 |  | Read how one community is being helped through a Foundation.
+dap-369 |  | Discover one real problem a Foundation is working to solve.
+dap-370 |  | Learn how a small donation can create real change.
+dap-371 |  | Read an update from a Foundation you support.
+dap-372 |  | Discover a new creator who is using their influence to help others.
+dap-373 |  | Find one project you would like to see succeed.
+dap-374 |  | Spend time learning about a cause before deciding whether to support it.
+dap-375 |  | Compare two causes and discover which one speaks to you most.
+dap-376 |  | Read about the people behind a project.
+dap-377 |  | Learn exactly how support is being used in one Foundation.
+dap-378 |  | Discover a project outside the cause you usually care about.
+dap-379 |  | Support a Foundation with your time, voice, skills, or donation.
+dap-380 |  | Donate to an Influencer Foundation you genuinely believe in, if you can.
+dap-381 |  | Share a Foundation's mission with someone who might care about it.
+dap-382 |  | Follow the journey of one project you want to see succeed.
+dap-383 |  | Choose one cause you would stand behind.
+dap-384 |  | Make your first contribution to a cause that matters to you, if you can.
+dap-385 |  | Support a project helping people in a part of the world you have never visited.
+dap-386 |  | Help spread awareness about a cause you believe deserves more attention.
+dap-387 |  | Return to a Foundation you previously discovered and see what has changed.
+dap-388 |  | Find out how many people are already supporting a project you care about.
+dap-389 |  | Read about the real-world impact created by a Foundation.
+dap-390 |  | Choose a cause and learn one practical way you could help beyond donating.
+dap-391 |  | Explore the map and see where voices are joining from today.
+dap-392 |  | Find a country where you would love to have a new World Choir friend.
+dap-393 |  | Discover how many voices have joined the world so far.
+dap-394 |  | Look at the map and find a part of the world farthest from you.
+dap-395 |  | Think about the fact that every Voice Number represents a real person.
+dap-396 |  | Find three countries you hope will be represented in World Choir.
+dap-397 |  | Explore the map and discover a country you know little about.
+dap-398 |  | See how far World Choir has grown since you joined.
+dap-399 |  | Share World Choir with one person who would understand its mission.
+dap-400 |  | Invite one person to add their voice to the world.
+dap-401 |  | Read why another person decided to join World Choir.
+dap-402 |  | Take a moment to imagine thousands of voices preparing together.
+dap-403 |  | Find your Voice Number and remember that nobody else in the world has it.
+dap-404 |  | Share a meal with someone today.
+dap-405 |  | Get a few people together to play a sport.
+dap-406 |  | Invite someone to join something you already have planned.
+dap-407 |  | Spend time with someone you haven’t seen in a while.
+dap-408 |  | Cook something together with someone.
+dap-409 |  | Get your family together for some quality time.
+dap-410 |  | Invite someone outside your usual circle to join your group.
+dap-411 |  | Do something fun with someone you care about.
+dap-412 |  | Ask someone to teach you something they enjoy doing.
+dap-413 |  | Play a game together.
+dap-414 |  | Go outside with someone and spend time together.
+dap-415 |  | Ask someone you usually only message to meet in person.
+dap-416 |  | Spend time with an older person in your life.
+dap-417 |  | Spend time with someone younger than you.
+dap-418 |  | Make room for one more person in today’s plans.
+dap-419 |  | Do something you loved as a child with someone else.
+dap-420 |  | Start a simple tradition that gives people a reason to meet again.
+dap-421 |  | When you wake up, choose one person you will make time for today.
+dap-422 |  | Make the first person you speak to today feel noticed.
+dap-423 |  | If you see someone eating alone today, and it feels appropriate, ask if they'd like some company.
+dap-424 |  | Find someone who has recently moved to your school, workplace, building, or neighbourhood and help them feel more at home.
+dap-425 |  | Offer to carry something heavy for someone who seems to need help.
+dap-426 |  | Help someone improve their CV or job application.
+dap-427 |  | Ask someone in your community, “Is there anything I can help you with today?”
+dap-428 |  | Buy something someone genuinely needs, if you can.
+dap-429 |  | Before checking social media this morning, send someone a message that will make them smile.
+dap-430 |  | Make the first words you say to someone today kind ones.
+dap-431 |  | Before leaving home today, do one thing that makes someone else's morning easier.
+dap-432 |  | Choose someone this morning whose day you will quietly make easier. Don't tell them.
+dap-433 |  | Find one person doing an essential job today and make their shift noticeably easier somehow.
+dap-434 |  | Ask someone to give you one small task from their to-do list, and complete it for them today.
+dap-435 |  | Take a different route today and find one opportunity to help along the way.
+dap-436 |  | Give a meal to someone who is hungry.
+dap-437 |  | Offer food or water to someone experiencing homelessness.
+dap-438 |  | Help serve or distribute food to people who need it.
+dap-439 |  | Volunteer to help older people in your community.
+dap-440 |  | Pay for a meal for someone who needs one, if you can.
+dap-441 |  | Before breakfast, decide on one person you will help today, then find a way to do it.
+dap-442 |  | Find someone working today and bring them a bottle of water.
+dap-443 |  | Leave home with one extra snack or drink and give it to someone who needs it before you return.
+dap-444 |  | Sit somewhere public for 10 minutes without your phone. If someone needs a hand, be the person who notices.
+dap-445 |  | Buy an essential item for someone who cannot afford it, if you can.
+dap-446 |  | Collect useful items from friends or family and donate them together.
+dap-447 |  | Give directly to a food bank or food-support organisation, if one exists near you.
+dap-448 |  | Contribute to someone's education or learning, if you can.
+dap-449 |  | Help fund someone's essential need, if you can.
+dap-450 |  | Support a local organisation doing meaningful work, if you can.
+dap-451 |  | Give yourself a budget and use it only to improve someone else's day.
+dap-452 |  | Find something you were going to spend money on today that you don't actually need. Use part of that money to help someone instead.
+dap-453 |  | Register as a blood donor, if possible where you live.
+dap-454 |  | Learn basic first aid or CPR.
+dap-455 |  | Encourage someone eligible to donate blood with you.
+dap-456 |  | Pray to God today for someone you are struggling to forgive.
+dap-457 |  | Pray for someone you don't get along with, and genuinely wish them well.
+dap-458 |  | Volunteer for a cause in your community, if you can.
+dap-459 |  | Sign up for a future volunteering opportunity.
+dap-460 |  | Help at a local community organisation.
+dap-461 |  | Join a cleanup of a shared or public space.
+dap-462 |  | Offer to help at a community event.
+dap-463 |  | Pick up litter in a public place.
+dap-464 |  | Clean up a shared space with other people.
+dap-465 |  | Support a community project with your time.
+dap-466 |  | Ask a friend to volunteer with you.
+dap-467 |  | Get your friends together to help someone who needs it.
+dap-468 |  | Get your family together to help someone in your community.
+dap-469 |  | Invite your friends to clean up a shared public space together.
+dap-470 |  | Choose one local problem and get a few people together to do something about it.
+dap-471 |  | Ask someone you know to join you in today's Act of Peace.
+dap-472 |  | Share the App with 3 Friends.
+dap-473 |  | Share the App in your Family Group Chat.
+dap-474 |  | Pray today for peace somewhere in the world where people are suffering.
+dap-475 |  | Do one helpful thing for someone today and ask them to pass a good deed forward to someone else.
+dap-476 |  | Gather three people and complete one Act of Peace together before the day ends.
+dap-477 |  | Send a message to a group chat with one purpose: organise one good thing you can actually complete together this week.
+dap-478 |  | Ask three people, “What is one small problem around here we could fix?” Pick one answer and act on it.
+dap-479 |  | Find one good deed someone else is already doing and join them instead of starting your own.
+dap-480 |  | Ask a local organisation what kind of help they actually need — then help if you can.
+dap-481 |  | Ask someone much older or younger than you for one piece of advice, then actually try it today.
+dap-482 |  | Ask someone what task they've been avoiding, and offer to do it together.
+dap-483 |  | Turn your next gathering with friends into an opportunity to help someone.
+dap-484 |  | When you first see someone this morning, give them your full attention.
+dap-485 |  | Take one quiet minute this morning to thank God for the people in your life.
+dap-486 |  | Before going to sleep tonight, pray for every person you met today.
+dap-487 |  | Choose one thing you're afraid to do because you might fail. Take the first real step today.
+dap-488 |  | Do one workout today that challenges you more than your usual one.
+dap-489 |  | Ask someone you trust to tell you one thing they genuinely think you could improve. Don't defend yourself. Just listen.
+dap-490 |  | Record a one-minute video talking to yourself one year from now. Tell that person what you're working toward. Don't post it.
+dap-491 |  | Spend 30 minutes learning something you've wanted to understand for a long time. At the end, write down what you learned.
+dap-492 |  | Write down the three things taking up the most space in your mind right now. Decide what you can actually do about each one.
+dap-493 |  | Choose one skill you want to have a year from now. Practice it until you master it.
+dap-494 |  | Write down where you spent your time yesterday. Circle everything that actually moved your life forward.
+dap-495 |  | Go have lunch by yourself today. Use your phone as little as possible. Be present with yourself and your surroundings. Afterwards, write down how it made you feel.
+dap-496 |  | Choose one bad habit you normally do automatically. Catch yourself once today and deliberately choose differently.
+dap-497 |  | Put your phone in another room for one full hour. Use that hour to do something you've been saying you don't have time for.
+dap-498 |  | Go for a run or walk today without music. Use the time to think about where you want your life to be one year from now.
+dap-499 |  | Ask a nursing home whether you can bring a board game or cards and spend an afternoon playing with residents.
+dap-500 |  | Do something today that the younger version of you would have been excited to do.
+dap-501 |  | Learn the name of someone you regularly see but have never spoken to. Introduce yourself today.
+dap-502 |  | Take your pet somewhere they love but don't get to visit often. Make today their day.
+dap-503 |  | Give your pet an extra adventure today, a new walking route, a safe new place, or extra time exploring outside.
+dap-504 |  | Go get yourself a small treat today. You've been trying, working, and showing up. Celebrate that.
+dap-505 |  | Visit a nursing home or senior living community and spend time talking with someone who would enjoy the company. Call ahead if visits need to be arranged.
+dap-506 |  | Ask a nursing home if there's a resident who rarely receives visitors. If appropriate, arrange a visit and spend some time with them.
+dap-507 |  | Contact a children's hospital or family-support organisation and ask what small approved item would brighten a child's day. Provide one if you can.
+dap-508 |  | Ask a local shelter whether they accept volunteers to walk dogs or spend time socialising animals. If they do, give them an hour of your day.
+dap-509 |  | Cook or prepare something today and make an extra portion. Find someone to give it to.
+dap-510 |  | Choose someone who has helped you many times. Today, find a practical way to return one of those favours.
+dap-511 |  | Contact an animal shelter and ask which item they currently need most. Bring it there yourself if you can.
