@@ -639,7 +639,7 @@ const WorldChoirNav = (() => {
       'profile.html',
       'css/profile.css?v=20260924safeTop1',
       'js/profile/profile-page.js?v=20260912tabRoot',
-      'js/profile/daily-acts-peace.js?v=20261007fda2',
+      'js/profile/daily-acts-peace.js?v=20261007fda3',
       'js/profile/daily-acts-button.js?v=20260912dapFast',
       'js/world-choir-onboarding.js?v=20260816a',
       'js/world-choir-db.js?v=20260924voices46',

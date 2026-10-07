@@ -28,7 +28,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-post-event-join.js?v=20260907tabs',
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
-        'js/profile/daily-acts-peace.js?v=20260912dapFast',
+        'js/profile/daily-acts-peace.js?v=20261007fda3',
         'js/world-choir-home.js?v=20260921geocode3',
       ],
       selectors: [
@@ -128,7 +128,7 @@ const WorldChoirTabs = (() => {
         'js/profile/practice-mode.js?v=20260904c',
         'js/profile/world-choir-history.js',
         'js/profile/invite-button.js?v=20260813p',
-        'js/profile/daily-acts-peace.js?v=20260912dapFast',
+        'js/profile/daily-acts-peace.js?v=20261007fda3',
         'js/profile/daily-acts-button.js?v=20260912dapFast',
         'js/profile/profile-page.js?v=20260912tabRoot',
       ],
@@ -159,7 +159,7 @@ const WorldChoirTabs = (() => {
       ],
       scripts: [
         'js/world-choir-participation.js?v=20260921geocode2',
-        'js/profile/daily-acts-peace.js?v=20260912dapFast',
+        'js/profile/daily-acts-peace.js?v=20261007fda3',
         'js/profile/passport-stamps.js?v=20260902a',
         'js/profile/world-choir-passport.js?v=20260912passportCover',
         'js/world-choir-flags.js?v=20260902n',
@@ -185,7 +185,7 @@ const WorldChoirTabs = (() => {
         'css/live-event.css?v=20260911theme',
       ],
       scripts: [
-        'js/profile/daily-acts-peace.js?v=20260912dapFast',
+        'js/profile/daily-acts-peace.js?v=20261007fda3',
         'js/daily-acts-walkthrough.js?v=20260904d',
         'js/daily-acts-page.js?v=20260912dapFast',
       ],
