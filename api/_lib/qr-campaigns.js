@@ -71,6 +71,9 @@ function dayPath(day) {
 function scanEventPath(day, eventId) {
   return `${ROOT}/scan-events/${day}/${encodeURIComponent(eventId)}.json`;
 }
+function engagementEventPath(day, eventId) {
+  return `${ROOT}/engagement-events/${day}/${encodeURIComponent(eventId)}.json`;
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -481,6 +484,131 @@ function aggregateScanEvents(events, scopeIds) {
   };
 }
 
+async function appendEngagementEvent({
+  type,
+  campaignId,
+  visitorKey,
+  deviceId = null,
+  anonId = null,
+  meta = null,
+}) {
+  const day = utcDayKey();
+  const eventId = `${type}_${Date.now()}_${randomBytes(4).toString('hex')}`;
+  const row = {
+    id: eventId,
+    type,
+    campaignId,
+    visitorKey: visitorKey || null,
+    deviceId: deviceId || null,
+    anonId: anonId || null,
+    meta: meta && typeof meta === 'object' ? meta : null,
+    at: new Date().toISOString(),
+    day,
+  };
+  await writeJson(engagementEventPath(day, eventId), row, { overwrite: false });
+  return row;
+}
+
+async function loadEngagementEvents(fromDay, toDay) {
+  const out = [];
+  const seen = new Set();
+  const push = (row) => {
+    if (!row?.id || seen.has(row.id)) return;
+    seen.add(row.id);
+    out.push(row);
+  };
+
+  try {
+    const blobs = await listBlobs(`${ROOT}/engagement-events/`);
+    for (const b of blobs || []) {
+      const pathname = b?.pathname || '';
+      if (!pathname.endsWith('.json')) continue;
+      const parts = pathname.split('/');
+      const day = parts[parts.length - 2];
+      if (fromDay && day < fromDay) continue;
+      if (toDay && day > toDay) continue;
+      try {
+        push(await readBlobJson(pathname));
+      } catch { /* skip */ }
+    }
+  } catch (err) {
+    console.warn('qr loadEngagementEvents list failed:', err?.message || err);
+  }
+
+  const probeDays = [utcDayKey()];
+  const y = new Date();
+  y.setUTCDate(y.getUTCDate() - 1);
+  probeDays.push(utcDayKey(y));
+  for (const day of probeDays) {
+    if (fromDay && day < fromDay) continue;
+    if (toDay && day > toDay) continue;
+    try {
+      const blobs = await listBlobs(`${ROOT}/engagement-events/${day}/`);
+      for (const b of blobs || []) {
+        if (!b?.pathname?.endsWith('.json')) continue;
+        try {
+          push(await readBlobJson(b.pathname));
+        } catch { /* skip */ }
+      }
+    } catch { /* none */ }
+  }
+
+  return out;
+}
+
+/** Unique visitor counts for first Daily Act presented/completed (immutable log). */
+function aggregateFirstDailyActEvents(events, scopeIds) {
+  const scope = new Set(scopeIds);
+  const presented = new Set();
+  const completed = new Set();
+  const byCampaign = new Map();
+  const byDay = new Map();
+
+  const ensure = (map, id, factory) => {
+    if (!map.has(id)) map.set(id, factory());
+    return map.get(id);
+  };
+
+  for (const e of events || []) {
+    if (!e?.campaignId || !scope.has(e.campaignId)) continue;
+    if (
+      e.type !== EVENT_TYPES.FIRST_DAILY_ACT_PRESENTED
+      && e.type !== EVENT_TYPES.FIRST_DAILY_ACT_COMPLETED
+    ) continue;
+
+    const key = e.visitorKey || `${e.campaignId}:${e.deviceId || ''}:${e.anonId || ''}:${e.id}`;
+    const day = e.day || String(e.at || '').slice(0, 10);
+    const cBag = ensure(byCampaign, e.campaignId, () => ({
+      presented: new Set(),
+      completed: new Set(),
+    }));
+    const dBag = day
+      ? ensure(byDay, day, () => ({ presented: new Set(), completed: new Set() }))
+      : null;
+
+    if (e.type === EVENT_TYPES.FIRST_DAILY_ACT_PRESENTED) {
+      presented.add(key);
+      cBag.presented.add(key);
+      if (dBag) dBag.presented.add(key);
+    } else if (e.type === EVENT_TYPES.FIRST_DAILY_ACT_COMPLETED) {
+      completed.add(key);
+      cBag.completed.add(key);
+      if (dBag) dBag.completed.add(key);
+      // Completing implies presentation for KPI denominator safety.
+      presented.add(key);
+      cBag.presented.add(key);
+      if (dBag) dBag.presented.add(key);
+    }
+  }
+
+  return {
+    presented: presented.size,
+    completed: completed.size,
+    byCampaign,
+    byDay,
+  };
+}
+
 async function recordScan({ campaignId, deviceId, anonId, userAgent = null }) {
   assertBlobConfigured();
   const campaign = await readCampaign(campaignId);
@@ -695,9 +823,11 @@ async function recordEvent({
       if (visitor.firstDailyActCompletedAt) bumped = false;
       else {
         visitor.firstDailyActCompletedAt = now;
-        if (!visitor.firstDailyActPresentedAt) visitor.firstDailyActPresentedAt = now;
         visitor.firstDailyActId = meta?.actId || visitor.firstDailyActId || null;
         visitor.firstDailyActDate = meta?.actDate || visitor.firstDailyActDate || null;
+        if (!visitor.firstDailyActPresentedAt) {
+          visitor.firstDailyActPresentedAt = now;
+        }
       }
       break;
     case EVENT_TYPES.FIRST_DAILY_ACT_DISMISSED:
@@ -715,8 +845,58 @@ async function recordEvent({
   if (deviceId && !visitor.deviceId) visitor.deviceId = deviceId;
   if (anonId && !visitor.anonId) visitor.anonId = anonId;
   if (userId && !visitor.voiceUserId) visitor.voiceUserId = userId;
+
+  const wasFirstPresented = type === EVENT_TYPES.FIRST_DAILY_ACT_PRESENTED && bumped;
+  const wasFirstCompleted = type === EVENT_TYPES.FIRST_DAILY_ACT_COMPLETED && bumped;
+  const wasFirstDismissed = type === EVENT_TYPES.FIRST_DAILY_ACT_DISMISSED
+    && visitor.firstDailyActDismissedAt === now;
+  // If completion is first but presentation was never counted separately, heal denominator.
+  const healPresentedWithCompletion = wasFirstCompleted
+    && visitor.firstDailyActPresentedAt === now;
+
   await writeVisitor(visitor);
-  if (bumped) await bumpDay(campaignId, type, { visitorKey: key });
+
+  if (wasFirstPresented || wasFirstCompleted || wasFirstDismissed || healPresentedWithCompletion) {
+    try {
+      if (healPresentedWithCompletion && !wasFirstPresented) {
+        await appendEngagementEvent({
+          type: EVENT_TYPES.FIRST_DAILY_ACT_PRESENTED,
+          campaignId,
+          visitorKey: key,
+          deviceId,
+          anonId,
+          meta,
+        });
+      }
+      if (wasFirstPresented || wasFirstCompleted || wasFirstDismissed) {
+        await appendEngagementEvent({
+          type,
+          campaignId,
+          visitorKey: key,
+          deviceId,
+          anonId,
+          meta,
+        });
+      }
+    } catch (err) {
+      console.warn('qr appendEngagementEvent failed:', err?.message || err);
+    }
+  }
+
+  if (healPresentedWithCompletion) {
+    try {
+      await bumpDay(campaignId, EVENT_TYPES.FIRST_DAILY_ACT_PRESENTED, { visitorKey: key });
+    } catch (err) {
+      console.warn('qr bumpDay firstDailyAct presented heal failed:', err?.message || err);
+    }
+  }
+  if (bumped) {
+    try {
+      await bumpDay(campaignId, type, { visitorKey: key });
+    } catch (err) {
+      console.warn('qr bumpDay failed:', err?.message || err);
+    }
+  }
   return { ok: true, campaignId, visitorKey: key, visitor };
 }
 
@@ -1010,6 +1190,42 @@ async function buildAnalytics({ campaignId = null, range = 'all', origin = '' } 
     const series = seriesMap.get(dayKey);
     series.scans = Math.max(Number(series.scans) || 0, es.scans);
     series.uniqueScans = Math.max(Number(series.uniqueScans) || 0, es.unique.size);
+  }
+
+  // Authoritative First Daily Act KPIs from immutable engagement-event log.
+  const engEvents = await loadEngagementEvents(fromDay, toDay);
+  const fdaStats = aggregateFirstDailyActEvents(engEvents, scopeIds);
+  totals.firstDailyActPresented = Math.max(
+    Number(totals.firstDailyActPresented) || 0,
+    fdaStats.presented
+  );
+  totals.firstDailyActCompleted = Math.max(
+    Number(totals.firstDailyActCompleted) || 0,
+    fdaStats.completed
+  );
+  for (const [id, es] of fdaStats.byCampaign.entries()) {
+    if (!byCampaign.has(id)) byCampaign.set(id, emptyTotals());
+    const m = byCampaign.get(id);
+    m.firstDailyActPresented = Math.max(
+      Number(m.firstDailyActPresented) || 0,
+      es.presented.size
+    );
+    m.firstDailyActCompleted = Math.max(
+      Number(m.firstDailyActCompleted) || 0,
+      es.completed.size
+    );
+  }
+  for (const [dayKey, es] of fdaStats.byDay.entries()) {
+    if (!seriesMap.has(dayKey)) seriesMap.set(dayKey, emptyTotals());
+    const series = seriesMap.get(dayKey);
+    series.firstDailyActPresented = Math.max(
+      Number(series.firstDailyActPresented) || 0,
+      es.presented.size
+    );
+    series.firstDailyActCompleted = Math.max(
+      Number(series.firstDailyActCompleted) || 0,
+      es.completed.size
+    );
   }
 
   // Funnel invariant: every completed Voice required an I'll Sing click.

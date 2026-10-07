@@ -143,26 +143,65 @@ const WorldChoirQrFirstDailyAct = (() => {
   }
 
   async function postQrEvent(type, meta = {}) {
-    if (typeof WorldChoirQrAttribution !== 'undefined' && WorldChoirQrAttribution.postEvent) {
-      await WorldChoirQrAttribution.postEvent(type, { meta });
-      return;
-    }
     const a = readAttr() || {};
+    if (!a.campaignId && !a.visitorKey) return false;
+    const payload = {
+      type,
+      visitorKey: a.visitorKey || null,
+      deviceId: deviceId(),
+      anonId: anonId(),
+      campaignId: a.campaignId || null,
+      meta,
+    };
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch('/api/qr?action=event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok && body?.ok !== false) return true;
+      } catch { /* retry */ }
+      await new Promise((r) => window.setTimeout(r, 120 * (attempt + 1)));
+    }
+    // Also try the shared attribution helper as a final pass.
     try {
-      await fetch('/api/qr?action=event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type,
-          visitorKey: a.visitorKey || null,
-          deviceId: deviceId(),
-          anonId: anonId(),
-          campaignId: a.campaignId || null,
-          meta,
-        }),
-        keepalive: true,
+      if (typeof WorldChoirQrAttribution !== 'undefined' && WorldChoirQrAttribution.postEvent) {
+        await WorldChoirQrAttribution.postEvent(type, { meta });
+        return true;
+      }
+    } catch { /* ignore */ }
+    return false;
+  }
+
+  async function trackPresented(meta = {}) {
+    const ok = await postQrEvent(EVENT.PRESENTED, meta);
+    if (ok) writeAttr({ firstDailyActPresentedTracked: true });
+    return ok;
+  }
+
+  async function trackCompleted(meta = {}) {
+    const a = readAttr();
+    if (!a?.campaignId) return false;
+    if (a.firstDailyActCompletedTracked) return true;
+    // Eligible only after the first-day Act was presented (or already-completed path).
+    if (!a.firstDailyActPresentedAt && !meta.alreadyCompleted) return false;
+    const ok = await postQrEvent(EVENT.COMPLETED, {
+      actId: meta.actId || a.firstDailyActId || null,
+      actDate: meta.actDate || a.firstDailyActDate || localDateString(),
+      alreadyCompleted: !!meta.alreadyCompleted,
+    });
+    if (ok) {
+      writeAttr({
+        firstDailyActCompletedAt: a.firstDailyActCompletedAt || new Date().toISOString(),
+        firstDailyActCompletedTracked: true,
+        firstDailyActId: meta.actId || a.firstDailyActId || null,
+        firstDailyActDate: meta.actDate || a.firstDailyActDate || localDateString(),
       });
-    } catch { /* best-effort */ }
+    }
+    return ok;
   }
 
   async function fetchTodayAct() {
@@ -198,7 +237,7 @@ const WorldChoirQrFirstDailyAct = (() => {
         padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
         background: rgba(0, 0, 0, 0.62);
         opacity: 0;
-        transition: opacity 0.45s ease;
+        transition: opacity 2s ease;
         pointer-events: none;
       }
       .wc-qr-fda-overlay.is-visible {
@@ -216,9 +255,9 @@ const WorldChoirQrFirstDailyAct = (() => {
         padding: 22px 20px 18px;
         color: #f2efe8;
         box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
-        transform: translateY(10px) scale(0.985);
+        transform: translateY(8px) scale(0.99);
         opacity: 0;
-        transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.5s ease;
+        transition: transform 2s cubic-bezier(0.22, 1, 0.36, 1), opacity 2s ease;
       }
       .wc-qr-fda-overlay.is-visible .wc-qr-fda-card {
         transform: translateY(0) scale(1);
@@ -296,7 +335,7 @@ const WorldChoirQrFirstDailyAct = (() => {
   async function dismiss(reason) {
     if (!open && reason !== 'already') return;
     const a = readAttr();
-    if (!a?.firstDailyActDismissedAt && !a?.firstDailyActCompletedAt) {
+    if (!a?.firstDailyActDismissedAt && !a?.firstDailyActCompletedAt && !a?.firstDailyActCompletedTracked) {
       writeAttr({ firstDailyActDismissedAt: new Date().toISOString() });
       await postQrEvent(EVENT.DISMISSED, {
         actId: a?.firstDailyActId || null,
@@ -331,13 +370,16 @@ const WorldChoirQrFirstDailyAct = (() => {
         firstDailyActId: actId || readAttr()?.firstDailyActId || null,
         firstDailyActDate: assignmentDate || localDateString(),
       });
-      await postQrEvent(EVENT.COMPLETED, {
+      // Authoritative QR first-act completion KPI (retries until accepted).
+      await trackCompleted({
         actId: actId || null,
         actDate: assignmentDate || localDateString(),
       });
 
       try {
-        window.dispatchEvent(new CustomEvent('wc-qr-engagement', { detail: { type: 'daily_act' } }));
+        window.dispatchEvent(new CustomEvent('wc-qr-engagement', {
+          detail: { type: 'daily_act', source: 'qr_first_daily_act' },
+        }));
       } catch { /* ignore */ }
 
       if (typeof DailyActsPeace !== 'undefined') {
@@ -394,8 +436,11 @@ const WorldChoirQrFirstDailyAct = (() => {
     document.body.appendChild(overlay);
     open = true;
 
+    // Double rAF so the browser paints opacity:0 before starting the 2s fade-in.
     requestAnimationFrame(() => {
-      overlay.classList.add('is-visible');
+      requestAnimationFrame(() => {
+        overlay.classList.add('is-visible');
+      });
     });
 
     overlay.addEventListener('click', (e) => {
@@ -438,8 +483,16 @@ const WorldChoirQrFirstDailyAct = (() => {
           firstDailyActDate: uda.date || localDateString(),
           qrFirstDailyActPending: false,
         });
-        await postQrEvent(EVENT.PRESENTED, { actId: act.id || null, actDate: uda.date || localDateString(), alreadyCompleted: true });
-        await postQrEvent(EVENT.COMPLETED, { actId: act.id || null, actDate: uda.date || localDateString(), alreadyCompleted: true });
+        await trackPresented({
+          actId: act.id || null,
+          actDate: uda.date || localDateString(),
+          alreadyCompleted: true,
+        });
+        await trackCompleted({
+          actId: act.id || null,
+          actDate: uda.date || localDateString(),
+          alreadyCompleted: true,
+        });
         suppressTopBannerNow();
         presenting = false;
         return;
@@ -451,7 +504,7 @@ const WorldChoirQrFirstDailyAct = (() => {
         firstDailyActDate: uda.date || localDateString(),
         qrFirstDailyActPending: false,
       });
-      await postQrEvent(EVENT.PRESENTED, {
+      await trackPresented({
         actId: act.id || null,
         actDate: uda.date || localDateString(),
       });
@@ -493,18 +546,55 @@ const WorldChoirQrFirstDailyAct = (() => {
     schedulePresentOnHome();
   }
 
+  function flushPendingTracking() {
+    const a = readAttr();
+    if (!a?.campaignId) return;
+    if (a.firstDailyActPresentedAt && !a.firstDailyActPresentedTracked) {
+      void trackPresented({
+        actId: a.firstDailyActId || null,
+        actDate: a.firstDailyActDate || localDateString(),
+      });
+    }
+    if (
+      (a.firstDailyActCompletedAt || a.firstDailyActCompletedTracked === false)
+      && a.firstDailyActPresentedAt
+      && !a.firstDailyActCompletedTracked
+    ) {
+      void trackCompleted({
+        actId: a.firstDailyActId || null,
+        actDate: a.firstDailyActDate || localDateString(),
+      });
+    }
+  }
+
+  function onDailyActEngagement(e) {
+    if (e?.detail?.type !== 'daily_act') return;
+    const a = readAttr();
+    if (!a?.campaignId || !a.firstDailyActPresentedAt) return;
+    if (a.firstDailyActCompletedTracked) return;
+    // Completing the presented first Act anywhere (overlay or normal Daily Acts) counts once.
+    void trackCompleted({
+      actId: a.firstDailyActId || null,
+      actDate: a.firstDailyActDate || localDateString(),
+      source: e?.detail?.source || 'daily_act',
+    });
+  }
+
   function init() {
     window.addEventListener('wc-pledge-added', onVoiceCreated);
     window.addEventListener('wc-tab-show', onTabShow);
+    window.addEventListener('wc-qr-engagement', onDailyActEngagement);
     window.addEventListener('wc-privacy-consent', () => {
       if (pendingAfterConsent) {
         pendingAfterConsent = false;
         if (isHomeContext()) schedulePresentOnHome();
       }
+      flushPendingTracking();
     });
 
     // Full-page Home load (no soft-tab event yet).
     const bootHome = () => {
+      flushPendingTracking();
       if (!isHomeContext()) return;
       suppressTopBannerNow();
       const a = readAttr();
