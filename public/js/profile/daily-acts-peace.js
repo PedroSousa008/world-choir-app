@@ -170,6 +170,18 @@ const DailyActsPeace = (() => {
     const onDailyActsPage = /daily-acts\.html/i.test(window.location.pathname || '');
     if (onboardingOpen || onDailyActsPage) return false;
     if (isBannerDismissedLocally()) return false;
+    // QR Day-1: today's Act is presented centered after Voice creation — no top banner.
+    try {
+      if (typeof WorldChoirQrFirstDailyAct !== 'undefined'
+        && WorldChoirQrFirstDailyAct.isQrOnboardingDay1?.()) {
+        return false;
+      }
+      // Fallback if module not loaded yet: check attr directly
+      const attr = JSON.parse(localStorage.getItem('wc_qr_attr') || 'null');
+      if (attr?.campaignId && attr?.voiceCreatedLocalDate === localDateString()) {
+        return false;
+      }
+    } catch { /* ignore */ }
     return !!state?.showNotification;
   }
 

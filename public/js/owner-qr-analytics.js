@@ -230,6 +230,7 @@ const OwnerQrAnalytics = (() => {
           ${kpiCard(ic.cal, 'Day 30 Retention', k.day30Retention == null ? '—' : `${k.day30Retention}%`, `${num(k.day30Retained || 0)} of ${num(k.day30Eligible || 0)}`, esc, num)}
           ${kpiCard(ic.share, 'Shares', k.shares || 0, `${pctLabel(k.sharesPctOfVoices)} of joined users`, esc, num)}
           ${kpiCard(ic.people, 'Voices from Shares', k.voicesFromShares || 0, `${pctLabel(k.shareConversion)} of shares`, esc, num)}
+          ${kpiCard('◈', 'First Daily Act Completion', k.firstDailyActCompletion == null ? '—' : `${k.firstDailyActCompletion}%`, `${num(k.firstDailyActCompleted || 0)} of ${num(k.firstDailyActPresented || 0)}`, esc, num)}
         </div>
 
         <div class="owner-qr-grid-2">
@@ -347,6 +348,9 @@ const OwnerQrAnalytics = (() => {
             <div><dt>Units</dt><dd>${esc(c.units == null ? '—' : num(c.units))}</dd></div>
             <div><dt>Cost</dt><dd>${esc(moneyEur(c.cost, c.currency))}</dd></div>
             <div><dt>Cost / Voice</dt><dd>${esc(k.voices ? moneyEur((Number(c.cost) || 0) / k.voices, c.currency) : '—')}</dd></div>
+            <div><dt>First Daily Act Presented</dt><dd>${esc(num(k.firstDailyActPresented || 0))}</dd></div>
+            <div><dt>First Daily Act Completed</dt><dd>${esc(num(k.firstDailyActCompleted || 0))}</dd></div>
+            <div><dt>First Daily Act Rate</dt><dd>${esc(k.firstDailyActCompletion == null ? '—' : `${k.firstDailyActCompletion}%`)}</dd></div>
             <div><dt>Created</dt><dd>${esc((c.createdAt || '').slice(0, 10) || '—')}</dd></div>
             <div><dt>Notes</dt><dd>${esc(c.notes || '—')}</dd></div>
           </dl>

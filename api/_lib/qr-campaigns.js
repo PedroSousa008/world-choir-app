@@ -51,6 +51,9 @@ const EVENT_TYPES = Object.freeze({
   RETURN_D1: 'returned_day_1',
   RETURN_D7: 'returned_day_7',
   RETURN_D30: 'returned_day_30',
+  FIRST_DAILY_ACT_PRESENTED: 'qr_first_daily_act_presented',
+  FIRST_DAILY_ACT_COMPLETED: 'qr_first_daily_act_completed',
+  FIRST_DAILY_ACT_DISMISSED: 'qr_first_daily_act_dismissed',
 });
 
 function campaignPath(id) {
@@ -275,6 +278,8 @@ async function bumpDay(campaignId, eventType, { unique = false, visitorKey = nul
           openedMap: 0,
           practicedSong: 0,
           dailyAct: 0,
+          firstDailyActPresented: 0,
+          firstDailyActCompleted: 0,
           worldChain: 0,
           returnD1: 0,
           returnD7: 0,
@@ -327,6 +332,12 @@ async function bumpDay(campaignId, eventType, { unique = false, visitorKey = nul
           break;
         case EVENT_TYPES.DAILY_ACT:
           c.dailyAct = (Number(c.dailyAct) || 0) + 1;
+          break;
+        case EVENT_TYPES.FIRST_DAILY_ACT_PRESENTED:
+          c.firstDailyActPresented = (Number(c.firstDailyActPresented) || 0) + 1;
+          break;
+        case EVENT_TYPES.FIRST_DAILY_ACT_COMPLETED:
+          c.firstDailyActCompleted = (Number(c.firstDailyActCompleted) || 0) + 1;
           break;
         case EVENT_TYPES.WORLD_CHAIN:
           c.worldChain = (Number(c.worldChain) || 0) + 1;
@@ -672,6 +683,31 @@ async function recordEvent({
       visitor.returns = ret;
       break;
     }
+    case EVENT_TYPES.FIRST_DAILY_ACT_PRESENTED:
+      if (visitor.firstDailyActPresentedAt) bumped = false;
+      else {
+        visitor.firstDailyActPresentedAt = now;
+        visitor.firstDailyActId = meta?.actId || visitor.firstDailyActId || null;
+        visitor.firstDailyActDate = meta?.actDate || visitor.firstDailyActDate || null;
+      }
+      break;
+    case EVENT_TYPES.FIRST_DAILY_ACT_COMPLETED:
+      if (visitor.firstDailyActCompletedAt) bumped = false;
+      else {
+        visitor.firstDailyActCompletedAt = now;
+        if (!visitor.firstDailyActPresentedAt) visitor.firstDailyActPresentedAt = now;
+        visitor.firstDailyActId = meta?.actId || visitor.firstDailyActId || null;
+        visitor.firstDailyActDate = meta?.actDate || visitor.firstDailyActDate || null;
+      }
+      break;
+    case EVENT_TYPES.FIRST_DAILY_ACT_DISMISSED:
+      if (visitor.firstDailyActDismissedAt) bumped = false;
+      else {
+        visitor.firstDailyActDismissedAt = now;
+        // Dismissal is not a day-aggregate counter — presentation already counted.
+        bumped = false;
+      }
+      break;
     default:
       break;
   }
@@ -885,6 +921,8 @@ function emptyTotals() {
     openedMap: 0,
     practicedSong: 0,
     dailyAct: 0,
+    firstDailyActPresented: 0,
+    firstDailyActCompleted: 0,
     worldChain: 0,
     returnD1: 0,
     returnD7: 0,
@@ -904,6 +942,8 @@ function mergeCampaignDay(into, src) {
   into.openedMap += Number(src.openedMap) || 0;
   into.practicedSong += Number(src.practicedSong) || 0;
   into.dailyAct += Number(src.dailyAct) || 0;
+  into.firstDailyActPresented += Number(src.firstDailyActPresented) || 0;
+  into.firstDailyActCompleted += Number(src.firstDailyActCompleted) || 0;
   into.worldChain += Number(src.worldChain) || 0;
   into.returnD1 += Number(src.returnD1) || 0;
   into.returnD7 += Number(src.returnD7) || 0;
@@ -1026,6 +1066,9 @@ async function buildAnalytics({ campaignId = null, range = 'all', origin = '' } 
       voices: m.voices,
       conversion: pct(m.voices, m.scans),
       costPerVoice: costPerVoice(c.cost, m.voices),
+      firstDailyActPresented: m.firstDailyActPresented,
+      firstDailyActCompleted: m.firstDailyActCompleted,
+      firstDailyActCompletion: pct(m.firstDailyActCompleted, m.firstDailyActPresented),
       link: joinUrlForCampaign(origin, c.id),
     };
   });
@@ -1033,6 +1076,7 @@ async function buildAnalytics({ campaignId = null, range = 'all', origin = '' } 
   const journey = [
     { action: 'Opened Map', users: t.openedMap, pctOfVoices: pct(t.openedMap, t.voices) },
     { action: 'Practiced the Song', users: t.practicedSong, pctOfVoices: pct(t.practicedSong, t.voices) },
+    { action: 'Completed First Daily Act', users: t.firstDailyActCompleted, pctOfVoices: pct(t.firstDailyActCompleted, t.voices) },
     { action: 'Completed a Daily Act of Peace', users: t.dailyAct, pctOfVoices: pct(t.dailyAct, t.voices) },
     { action: 'Used World Chain', users: t.worldChain, pctOfVoices: pct(t.worldChain, t.voices) },
     { action: 'Returned after 1 day', users: t.returnD1, pctOfVoices: pct(t.returnD1, t.voices) },
@@ -1067,6 +1111,11 @@ async function buildAnalytics({ campaignId = null, range = 'all', origin = '' } 
       sharesPctOfVoices: pct(t.shares, t.voices),
       voicesFromShares: t.voicesFromShares,
       shareConversion: pct(t.voicesFromShares, t.shares),
+      firstDailyActPresented: t.firstDailyActPresented,
+      firstDailyActCompleted: t.firstDailyActCompleted,
+      firstDailyActCompletion: t.firstDailyActPresented > 0
+        ? pct(t.firstDailyActCompleted, t.firstDailyActPresented)
+        : null,
     },
     funnel,
     series,

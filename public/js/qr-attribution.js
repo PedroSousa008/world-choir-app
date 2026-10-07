@@ -371,7 +371,12 @@ const WorldChoirQrAttribution = (() => {
     window.addEventListener('wc-qr-engagement', onCustomEngagement);
     window.addEventListener('wc-pledge-added', (e) => {
       const created = Date.parse(e?.detail?.created_at || e?.detail?.createdAt || '') || Date.now();
-      writeAttr({ voiceCreatedAt: created });
+      const d = new Date();
+      const localDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      writeAttr({
+        voiceCreatedAt: created,
+        voiceCreatedLocalDate: localDate,
+      });
       // Guarantee I'll Sing is recorded even if the opening click was missed
       trackIllSing();
       checkReturns();
