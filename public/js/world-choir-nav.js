@@ -604,7 +604,7 @@ const WorldChoirNav = (() => {
     home: [
       'index.html',
       'css/home.css?v=20260924safeTop1',
-      'js/world-choir-home.js?v=20260921geocode3',
+      'js/world-choir-home.js?v=20261007illSing1',
       'js/world-choir-db.js?v=20260924voices46',
     ],
     map: [
