@@ -553,8 +553,24 @@ async function recordEvent({
   meta = null,
 }) {
   assertBlobConfigured();
-  const key = visitorKey || makeVisitorKey(deviceId, anonId);
-  let visitor = await readVisitor(key);
+  const candidateKeys = [];
+  if (visitorKey) candidateKeys.push(String(visitorKey));
+  if (deviceId) candidateKeys.push(makeVisitorKey(deviceId, null));
+  if (anonId) candidateKeys.push(makeVisitorKey(null, anonId));
+  if (deviceId && anonId) candidateKeys.push(makeVisitorKey(deviceId, anonId));
+
+  let key = null;
+  let visitor = null;
+  for (const k of [...new Set(candidateKeys.filter(Boolean))]) {
+    const row = await readVisitor(k);
+    if (row) {
+      key = row.visitorKey || k;
+      visitor = row;
+      break;
+    }
+  }
+  if (!key) key = visitorKey || makeVisitorKey(deviceId, anonId);
+
   if (!visitor && !overrideCampaignId) {
     return { ok: false, reason: 'no_attribution' };
   }
@@ -599,11 +615,31 @@ async function recordEvent({
       else visitor.illSingAt = now;
       break;
     case EVENT_TYPES.VOICE_CREATED:
-      if (visitor.voiceCreatedAt) bumped = false;
-      else {
+      if (visitor.voiceCreatedAt) {
+        bumped = false;
+        // Historical heal: Voice exists but I'll Sing click was never recorded.
+        if (!visitor.illSingAt) {
+          visitor.illSingAt = visitor.voiceCreatedAt || now;
+          try {
+            await bumpDay(campaignId, EVENT_TYPES.ILL_SING, { visitorKey: key });
+          } catch (err) {
+            console.warn('qr illSing backfill failed:', err?.message || err);
+          }
+        }
+      } else {
         visitor.voiceCreatedAt = now;
         visitor.voiceUserId = userId || visitor.voiceUserId;
         visitor.voiceNumber = voiceNumber ?? visitor.voiceNumber;
+        // Completing join always means I'll Sing was used — backfill if the
+        // client click event was missed (common with Home #pledge-btn / soft tabs).
+        if (!visitor.illSingAt) {
+          visitor.illSingAt = now;
+          try {
+            await bumpDay(campaignId, EVENT_TYPES.ILL_SING, { visitorKey: key });
+          } catch (err) {
+            console.warn('qr illSing backfill failed:', err?.message || err);
+          }
+        }
       }
       break;
     case EVENT_TYPES.SHARE_ELIGIBLE:
@@ -641,6 +677,7 @@ async function recordEvent({
   }
   visitor.updatedAt = now;
   if (deviceId && !visitor.deviceId) visitor.deviceId = deviceId;
+  if (anonId && !visitor.anonId) visitor.anonId = anonId;
   if (userId && !visitor.voiceUserId) visitor.voiceUserId = userId;
   await writeVisitor(visitor);
   if (bumped) await bumpDay(campaignId, type, { visitorKey: key });
@@ -934,6 +971,16 @@ async function buildAnalytics({ campaignId = null, range = 'all', origin = '' } 
     series.scans = Math.max(Number(series.scans) || 0, es.scans);
     series.uniqueScans = Math.max(Number(series.uniqueScans) || 0, es.unique.size);
   }
+
+  // Funnel invariant: every completed Voice required an I'll Sing click.
+  // Heals Owner KPIs when client click tracking missed the Home pledge button.
+  const applyIllSingFloor = (bag) => {
+    if (!bag) return;
+    bag.illSing = Math.max(Number(bag.illSing) || 0, Number(bag.voices) || 0);
+  };
+  applyIllSingFloor(totals);
+  for (const m of byCampaign.values()) applyIllSingFloor(m);
+  for (const m of seriesMap.values()) applyIllSingFloor(m);
 
   const t = totals;
   // Retention denominators: only Voices old enough for each window.

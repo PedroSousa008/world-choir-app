@@ -354,20 +354,26 @@ const WorldChoirQrAttribution = (() => {
   function bindIllSingHooks() {
     document.addEventListener('click', (e) => {
       const t = e.target?.closest?.(
-        '#ill-sing-btn, [data-ill-sing], .ill-sing-btn, .btn-hero, #map-empty-btn, [data-action="ill-sing"]'
+        '#pledge-btn, #ill-sing-btn, [data-ill-sing], .ill-sing-btn, .btn-hero, #map-empty-btn, [data-action="ill-sing"]'
       );
       if (!t) return;
       const label = `${t.textContent || ''} ${t.getAttribute('aria-label') || ''}`.toLowerCase();
-      if (t.id === 'ill-sing-btn' || t.hasAttribute('data-ill-sing') || t.classList.contains('ill-sing-btn')
-        || t.id === 'map-empty-btn' || /i.?ll sing|ill sing/.test(label) || t.classList.contains('btn-hero')) {
-        trackIllSing();
-      }
+      const isIllSing = t.id === 'pledge-btn'
+        || t.id === 'ill-sing-btn'
+        || t.hasAttribute('data-ill-sing')
+        || t.classList.contains('ill-sing-btn')
+        || t.id === 'map-empty-btn'
+        || t.classList.contains('btn-hero')
+        || /i.?ll sing|ill sing/.test(label);
+      if (isIllSing) trackIllSing();
     }, true);
     window.addEventListener('wc-ill-sing-clicked', trackIllSing);
     window.addEventListener('wc-qr-engagement', onCustomEngagement);
     window.addEventListener('wc-pledge-added', (e) => {
       const created = Date.parse(e?.detail?.created_at || e?.detail?.createdAt || '') || Date.now();
       writeAttr({ voiceCreatedAt: created });
+      // Guarantee I'll Sing is recorded even if the opening click was missed
+      trackIllSing();
       checkReturns();
     });
 

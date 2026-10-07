@@ -253,6 +253,9 @@ const WorldChoirHome = (() => {
   }
 
   function openParticipationModal() {
+    try {
+      window.dispatchEvent(new CustomEvent('wc-ill-sing-clicked', { detail: { source: 'home-pledge-btn' } }));
+    } catch { /* ignore */ }
     WorldChoirParticipation.open({
       onSuccess: afterPledgeJoinSuccess,
     });

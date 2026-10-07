@@ -98,6 +98,11 @@ const WorldChoirParticipation = (() => {
     const overlay = document.getElementById('participation-overlay');
     overlay?.classList.add('active');
     WorldChoirA11y?.syncOverlayState?.(overlay, true);
+
+    // QR analytics: opening the join modal = I'll Sing intent
+    try {
+      window.dispatchEvent(new CustomEvent('wc-ill-sing-clicked', { detail: { source: 'participation-open' } }));
+    } catch { /* ignore */ }
   }
 
   function close(options = {}) {
