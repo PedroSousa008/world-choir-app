@@ -99,13 +99,33 @@ function loadActImageMap() {
     : {};
 }
 
+function hashActId(input) {
+  let hash = 2166136261;
+  const s = String(input || '');
+  for (let i = 0; i < s.length; i++) {
+    hash ^= s.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 function resolveActImage(actId) {
   if (!actId) return null;
   const row = loadActImageMap()[actId];
-  if (!row || typeof row.imageUrl !== 'string' || !row.imageUrl) return null;
+  if (row && typeof row.imageUrl === 'string' && row.imageUrl) {
+    return {
+      imageUrl: row.imageUrl,
+      imageBucket: row.imageBucket || null,
+      picsumId: row.picsumId || null,
+    };
+  }
+  // Emergency fallback so a revealed act never ships without an image.
+  // Uses a high Picsum id band reserved for missing-map recovery.
+  const picsumId = String(1000 + (hashActId(actId) % 80));
   return {
-    imageUrl: row.imageUrl,
-    imageBucket: row.imageBucket || null,
+    imageUrl: `https://picsum.photos/id/${picsumId}/900/1200`,
+    imageBucket: null,
+    picsumId,
   };
 }
 

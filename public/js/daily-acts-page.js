@@ -2,7 +2,7 @@
  * Daily Acts of Peace — minimalist act grid
  */
 const DailyActsPage = (() => {
-  const JOURNEY_CACHE_KEY = 'wc_dap_journey_v1';
+  const JOURNEY_CACHE_KEY = 'wc_dap_journey_v2';
   let journeyData = null;
   let selectedCategory = 'all';
   let view = { mode: 'grid' };
@@ -451,7 +451,7 @@ const DailyActsPage = (() => {
       `;
     } else {
       const media = imageUrl
-        ? `<span class="dap-square__media" style="background-image:url('${esc(imageUrl)}')" aria-hidden="true"></span>`
+        ? `<img class="dap-square__media" src="${esc(imageUrl)}" alt="" loading="lazy" decoding="async" data-dap-img="${esc(item.actId || item.key || '')}">`
         : `<span class="dap-square__media dap-square__media--fallback" aria-hidden="true"></span>`;
       inner = `
         ${media}
@@ -557,7 +557,7 @@ const DailyActsPage = (() => {
       `;
 
     const hero = act.imageUrl
-      ? `<div class="dap-sheet__hero" style="background-image:url('${esc(act.imageUrl)}')" role="img" aria-hidden="true"></div>`
+      ? `<div class="dap-sheet__hero" aria-hidden="true"><img src="${esc(act.imageUrl)}" alt="" loading="lazy" decoding="async"></div>`
       : '';
 
     return renderSheet(`
@@ -896,7 +896,25 @@ const DailyActsPage = (() => {
     return true;
   }
 
+  function bindSquareImageFallbacks() {
+    document.querySelectorAll('img.dap-square__media[data-dap-img]').forEach((img) => {
+      img.addEventListener('error', () => {
+        if (img.dataset.fallbackApplied === '1') return;
+        img.dataset.fallbackApplied = '1';
+        const seed = String(img.getAttribute('data-dap-img') || 'act');
+        let h = 2166136261;
+        for (let i = 0; i < seed.length; i++) {
+          h ^= seed.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        const picsumId = 1000 + ((h >>> 0) % 80);
+        img.src = `https://picsum.photos/id/${picsumId}/900/1200`;
+      }, { once: true });
+    });
+  }
+
   function bindSquareClicks() {
+    bindSquareImageFallbacks();
     document.querySelectorAll('[data-open-date], [data-item-key]').forEach((btn) => {
       if (!btn.classList.contains('dap-square')) return;
       btn.addEventListener('click', () => {
