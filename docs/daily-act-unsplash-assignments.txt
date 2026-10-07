@@ -8,18 +8,18 @@
 
 actId | unsplashUrlOrId | actText
 ----- | --------------- | -------
-dap-001 |  | Send a message to someone you have been meaning to check on.
-dap-002 |  | Tell someone one thing you genuinely appreciate about them.
-dap-005 |  | Give a sincere compliment to a stranger.
-dap-006 |  | Thank someone whose work often goes unnoticed.
-dap-008 |  | Send a voice message instead of a quick text.
-dap-009 |  | Ask someone how they are — and really listen.
-dap-010 |  | Leave a kind comment on someone’s work.
-dap-011 |  | Help someone without telling anyone about it.
-dap-013 |  | Tell a family member you love them.
-dap-014 |  | Send an old photo to someone who would appreciate the memory.
-dap-019 |  | Call someone you normally only text.
-dap-020 |  | Remember someone’s name and use it.
+dap-001 | https://unsplash.com/photos/front-view-of-happy-couple-in-love-sitting-indoors-at-home-using-laptop-nltOFGxu9ZU | Send a message to someone you have been meaning to check on.
+dap-002 | https://unsplash.com/photos/man-and-woman-facing-6rKkr2fh2-I | Tell someone one thing you genuinely appreciate about them.
+dap-005 | https://unsplash.com/photos/friends-are-walking-and-smiling-together-outdoors-2VkUdNANwdA | Give a sincere compliment to a stranger.
+dap-006 | https://unsplash.com/photos/man-in-white-polo-shirt-wearing-black-framed-eyeglasses-JPcO061-UL0 | Thank someone whose work often goes unnoticed.
+dap-008 | https://unsplash.com/photos/woman-talking-on-phone-at-desk-with-laptop-lc4f-fDx6zE | Send a voice message instead of a quick text.
+dap-009 | https://unsplash.com/photos/a-couple-of-men-standing-next-to-each-other-ecM7npYpFpk | Ask someone how they are — and really listen.
+dap-010 | https://unsplash.com/photos/a-couple-of-men-sitting-at-a-table-in-front-of-a-laptop-0e5EGrNj-ss | Leave a kind comment on someone’s work.
+dap-011 | https://unsplash.com/photos/a-couple-holding-hands-while-standing-next-to-each-other-rf5U-IXqxzg | Help someone without telling anyone about it.
+dap-013 | https://unsplash.com/photos/photo-of-mother-and-child-beside-body-of-water-ry_sD0P1ZL0 | Tell a family member you love them.
+dap-014 | https://unsplash.com/photos/a-person-holding-a-phone-pI6ebvwMlbI | Send an old photo to someone who would appreciate the memory.
+dap-019 | https://unsplash.com/photos/a-woman-talking-on-a-cell-phone-while-using-a-laptop-tZ92DLD3Q-c | Call someone you normally only text.
+dap-020 | https://unsplash.com/photos/two-women-converse-at-a-cafe-DVoh8VY4NTQ | Remember someone’s name and use it.
 dap-021 |  | Send encouragement to someone going through a difficult time.
 dap-022 |  | Tell someone you are proud of them.
 dap-024 |  | Leave a positive review for a small business you love.
@@ -35,7 +35,7 @@ dap-048 |  | Tell someone about a positive impact they had on you.
 dap-050 |  | Do one small thing that makes someone’s day easier.
 dap-051 |  | Call a family member just to talk.
 dap-052 |  | Eat a meal with someone without looking at your phone.
-dap-053 |  | Ask a parent or grandparent about their childhood.
+dap-053 | https://unsplash.com/photos/mens-white-button-up-shirt-lK0l9pzxLps | Ask a parent or grandparent about their childhood.
 dap-054 |  | Help with a household task without being asked.
 dap-056 |  | Tell a sibling or close friend a favorite memory you have with them.
 dap-058 |  | Ask someone, “How can I support you today?”

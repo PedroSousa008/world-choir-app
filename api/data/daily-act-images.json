@@ -1,7 +1,7 @@
 {
-  "version": 5,
-  "source": "Openverse + Wikimedia Commons (semantic match per act text)",
-  "generatedAt": "2026-10-07T16:16:23.470Z",
+  "version": 6,
+  "source": "Mixed: owner-curated Unsplash + Openverse/Wikimedia fallbacks",
+  "generatedAt": "2026-10-07T17:54:40.507Z",
   "count": 341,
   "uniqueUrls": 341,
   "images": {
@@ -51,13 +51,15 @@
       "foreignLandingUrl": "https://www.flickr.com/photos/19741842@N05/53510775716"
     },
     "dap-010": {
-      "imageUrl": "https://live.staticflickr.com/7418/8935686163_23b926edd9_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1714974528348-de4b304b5011?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "work-career",
-      "source": "flickr",
-      "author": "US Army Africa",
-      "title": "Motorcycle safety ride cruises to Brescia, offers operation basics",
-      "query": "mentorship conversation work",
-      "foreignLandingUrl": "https://www.flickr.com/photos/36281822@N08/8935686163"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/a-couple-of-men-sitting-at-a-table-in-front-of-a-laptop-0e5EGrNj-ss",
+      "unsplashPhotoId": "0e5EGrNj-ss",
+      "curated": true
     },
     "dap-189": {
       "imageUrl": "https://live.staticflickr.com/177/476780331_32f2f3b71b_b.jpg",
@@ -303,13 +305,15 @@
       "foreignLandingUrl": "https://commons.wikimedia.org/wiki/File%3ASAKIKO%20plays%20on%20the%20swings.%20(50022505586).jpg"
     },
     "dap-013": {
-      "imageUrl": "https://live.staticflickr.com/73/215370699_5142c0e193_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1531983412531-1f49a365ffed?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "family",
-      "source": "flickr",
-      "author": "dbking",
-      "title": "Dean Acheson",
-      "query": "family together at home",
-      "foreignLandingUrl": "https://www.flickr.com/photos/65193799@N00/215370699"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/photo-of-mother-and-child-beside-body-of-water-ry_sD0P1ZL0",
+      "unsplashPhotoId": "ry_sD0P1ZL0",
+      "curated": true
     },
     "dap-054": {
       "imageUrl": "https://live.staticflickr.com/8436/7778361560_aea9ec37b6_b.jpg",
@@ -375,13 +379,15 @@
       "foreignLandingUrl": ""
     },
     "dap-053": {
-      "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/10/Smiling_girl_in_the_rice_fields_with_her_grandmother_in_Laos.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1572567981653-ce74f7356946?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "nursing-elderly",
-      "source": "wikimedia",
+      "source": "unsplash",
       "author": "",
-      "title": "Girl with grandmother in Laos",
-      "query": "seed-intergenerational",
-      "foreignLandingUrl": ""
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/mens-white-button-up-shirt-lK0l9pzxLps",
+      "unsplashPhotoId": "lK0l9pzxLps",
+      "curated": true
     },
     "dap-128": {
       "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/59/Grandfather_and_child_4.jpg",
@@ -438,31 +444,37 @@
       "foreignLandingUrl": ""
     },
     "dap-002": {
-      "imageUrl": "https://live.staticflickr.com/3266/3680476664_edcacd1c5c_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1571771826307-98d0d0999028?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "thank-gratitude",
-      "source": "flickr",
-      "author": "~Brenda-Starr~",
-      "title": "Flower 5 _ Rose & Petals",
-      "query": "thank you flowers gift",
-      "foreignLandingUrl": "https://www.flickr.com/photos/37753256@N08/3680476664"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/man-and-woman-facing-6rKkr2fh2-I",
+      "unsplashPhotoId": "6rKkr2fh2-I",
+      "curated": true
     },
     "dap-006": {
-      "imageUrl": "https://live.staticflickr.com/7111/6947314730_547ecefa9a_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1587532771889-c9f59344b104?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "thank-gratitude",
-      "source": "flickr",
-      "author": "Bhavna Sayana",
-      "title": "Spring Gift :)",
-      "query": "thank you flowers gift",
-      "foreignLandingUrl": "https://www.flickr.com/photos/25123998@N07/6947314730"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/man-in-white-polo-shirt-wearing-black-framed-eyeglasses-JPcO061-UL0",
+      "unsplashPhotoId": "JPcO061-UL0",
+      "curated": true
     },
     "dap-014": {
-      "imageUrl": "https://live.staticflickr.com/7105/6874275776_2a312ef63c_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1651919706265-8bb1c3b51e25?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "thank-gratitude",
-      "source": "flickr",
-      "author": "Puzzler4879",
-      "title": "'Ruby's Lips' by My Lovely Wife",
-      "query": "thank you flowers gift",
-      "foreignLandingUrl": "https://www.flickr.com/photos/24882165@N07/6874275776"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/a-person-holding-a-phone-pI6ebvwMlbI",
+      "unsplashPhotoId": "pI6ebvwMlbI",
+      "curated": true
     },
     "dap-026": {
       "imageUrl": "https://live.staticflickr.com/8450/7890892980_e73c8921b1_b.jpg",
@@ -519,13 +531,15 @@
       "foreignLandingUrl": "https://www.flickr.com/photos/11805179@N04/3338288700"
     },
     "dap-009": {
-      "imageUrl": "https://live.staticflickr.com/2659/4046877122_39aeb692c8_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1631885627891-19651751251f?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "listening-story",
-      "source": "flickr",
-      "author": "North West Air Ambulance",
-      "title": "Sir Alex Ferguson meets NWAA",
-      "query": "two people talking closely",
-      "foreignLandingUrl": "https://www.flickr.com/photos/42171350@N04/4046877122"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/a-couple-of-men-standing-next-to-each-other-ecM7npYpFpk",
+      "unsplashPhotoId": "ecM7npYpFpk",
+      "curated": true
     },
     "dap-078": {
       "imageUrl": "https://live.staticflickr.com/28/50257782_cb0c9a4bee_b.jpg",
@@ -816,31 +830,37 @@
       "foreignLandingUrl": "https://www.flickr.com/photos/76283671@N00/157834643"
     },
     "dap-001": {
-      "imageUrl": "https://live.staticflickr.com/6055/6305483153_6db475602a_b.jpg",
+      "imageUrl": "https://plus.unsplash.com/premium_photo-1663090748332-40d20287a53a?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "phone-message",
-      "source": "flickr",
-      "author": "herlitz_pbs",
-      "title": "businesswoman walking",
-      "query": "person smiling with phone",
-      "foreignLandingUrl": "https://www.flickr.com/photos/41177682@N04/6305483153"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/front-view-of-happy-couple-in-love-sitting-indoors-at-home-using-laptop-nltOFGxu9ZU",
+      "unsplashPhotoId": "nltOFGxu9ZU",
+      "curated": true
     },
     "dap-008": {
-      "imageUrl": "https://live.staticflickr.com/8765/17123936239_c76d7ede68_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1758598306765-10156411ffc4?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "phone-message",
-      "source": "flickr",
-      "author": "brungilda.golden",
-      "title": "businesswoman walking isolated",
-      "query": "person smiling with phone",
-      "foreignLandingUrl": "https://www.flickr.com/photos/126236344@N08/17123936239"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/woman-talking-on-phone-at-desk-with-laptop-lc4f-fDx6zE",
+      "unsplashPhotoId": "lc4f-fDx6zE",
+      "curated": true
     },
     "dap-019": {
-      "imageUrl": "https://live.staticflickr.com/1545/24350816446_80952db4bf_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1714974529379-a270a836d886?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "phone-message",
-      "source": "flickr",
-      "author": "kennethkonica",
-      "title": "Don't people talk while they walk anymore?",
-      "query": "person smiling with phone",
-      "foreignLandingUrl": "https://www.flickr.com/photos/38912465@N00/24350816446"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/a-woman-talking-on-a-cell-phone-while-using-a-laptop-tZ92DLD3Q-c",
+      "unsplashPhotoId": "tZ92DLD3Q-c",
+      "curated": true
     },
     "dap-051": {
       "imageUrl": "https://live.staticflickr.com/8494/8303412360_f27fdb320d_b.jpg",
@@ -1464,13 +1484,15 @@
       "foreignLandingUrl": "https://www.flickr.com/photos/23408922@N07/8647356671"
     },
     "dap-011": {
-      "imageUrl": "https://live.staticflickr.com/4488/37336675774_c0ea7d1756_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1574740637579-9ca0a610e491?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "volunteer-help",
-      "source": "flickr",
-      "author": "COD Newsroom",
-      "title": "Hundreds of College of DuPage Volunteers Help Community During Serve-a-Thon 2017 2",
-      "query": "volunteers helping community",
-      "foreignLandingUrl": "https://www.flickr.com/photos/41431665@N07/37336675774"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/a-couple-holding-hands-while-standing-next-to-each-other-rf5U-IXqxzg",
+      "unsplashPhotoId": "rf5U-IXqxzg",
+      "curated": true
     },
     "dap-243": {
       "imageUrl": "https://live.staticflickr.com/4499/37336643284_d0d965bacf_b.jpg",
@@ -2148,13 +2170,15 @@
       "foreignLandingUrl": "http://www.flickr.com/photos/43005015@N06/48665900182"
     },
     "dap-020": {
-      "imageUrl": "https://live.staticflickr.com/4005/4679225728_4c2bd25c11_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1753351058013-995eed991252?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "kindness-gesture",
-      "source": "flickr",
-      "author": "spratmackrel",
-      "title": "I Love People",
-      "query": "act of kindness people",
-      "foreignLandingUrl": "https://www.flickr.com/photos/30591976@N05/4679225728"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/two-women-converse-at-a-cafe-DVoh8VY4NTQ",
+      "unsplashPhotoId": "DVoh8VY4NTQ",
+      "curated": true
     },
     "dap-021": {
       "imageUrl": "https://live.staticflickr.com/1191/589759829_997d9d44e6_b.jpg",
@@ -2418,13 +2442,15 @@
       "foreignLandingUrl": "https://www.flickr.com/photos/30081763@N02/4787549961"
     },
     "dap-005": {
-      "imageUrl": "https://live.staticflickr.com/5217/5387588575_a5b64d5bd0_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1752650143267-57c2491f5ba2?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "donate-give",
-      "source": "flickr",
-      "author": "Alan Stanton",
-      "title": "Little Treasures Children's Trust",
-      "query": "donating clothes charity",
-      "foreignLandingUrl": "https://www.flickr.com/photos/53921762@N00/5387588575"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/friends-are-walking-and-smiling-together-outdoors-2VkUdNANwdA",
+      "unsplashPhotoId": "2VkUdNANwdA",
+      "curated": true
     },
     "dap-045": {
       "imageUrl": "https://live.staticflickr.com/5300/5510791952_18ca61b650_b.jpg",
