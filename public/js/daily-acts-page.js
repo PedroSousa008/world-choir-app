@@ -563,6 +563,7 @@ const DailyActsPage = (() => {
       <p class="dap-sheet__kicker">Daily Act of Peace</p>
       ${act.categoryLabel ? `<p class="dap-sheet__category dap-cat--${esc(act.category || '')}"><span aria-hidden="true">${categoryIcon(act.category || '')}</span> ${esc(act.categoryLabel)}</p>` : ''}
       <h2 class="dap-sheet__title">${esc(act.text)}</h2>
+      ${act.explanation ? `<p class="dap-sheet__body dap-sheet__body--explanation">${esc(act.explanation)}</p>` : ''}
 
       ${completed ? `
         <div class="dap-sheet__meta-block">

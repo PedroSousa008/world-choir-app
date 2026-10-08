@@ -718,6 +718,16 @@
   color: var(--text-secondary);
 }
 
+/* Grey act explanation — copy is sized for exactly two lines; clamp is a safety net. */
+.dap-sheet__body--explanation {
+  max-width: 42ch;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
 .dap-sheet__body--soft {
   color: var(--text-muted);
   font-style: italic;

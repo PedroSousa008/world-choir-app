@@ -1,11 +1,11 @@
 {
-  "version": 8,
+  "version": 11,
   "total": 341,
   "acts": [
     {
       "id": "dap-001",
       "text": "Send a message to someone you have been meaning to check on.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Send a message to someone you have been meaning to check on.",
+      "explanation": "Kindness begins with one quiet, intentional reach. A simple check-in can reopen a quiet door.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "How did reaching out feel?"
@@ -13,7 +13,7 @@
     {
       "id": "dap-002",
       "text": "Tell someone one thing you genuinely appreciate about them.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Tell someone one thing you genuinely appreciate about them.",
+      "explanation": "Kindness begins with one intentional reach. Say the good thing before the moment passes.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -21,7 +21,7 @@
     {
       "id": "dap-005",
       "text": "Give a sincere compliment to a stranger.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Give a sincere compliment to a stranger.",
+      "explanation": "Kindness begins with one intentional reach. A small courtesy can change the tone of a day.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -29,7 +29,7 @@
     {
       "id": "dap-006",
       "text": "Thank someone whose work often goes unnoticed.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Thank someone whose work often goes unnoticed.",
+      "explanation": "Kindness begins with one intentional reach. Say the good thing before the moment passes.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What are you grateful for after this act?"
@@ -37,7 +37,7 @@
     {
       "id": "dap-008",
       "text": "Send a voice message instead of a quick text.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Send a voice message instead of a quick text.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Reach out while the thought is still warm.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -45,7 +45,7 @@
     {
       "id": "dap-009",
       "text": "Ask someone how they are — and really listen.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone how they are — and really listen.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Make room for someone else’s truth today.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -53,7 +53,7 @@
     {
       "id": "dap-010",
       "text": "Leave a kind comment on someone’s work.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Leave a kind comment on someone’s work.",
+      "explanation": "Kindness begins with one intentional reach. A few affirming words can steady someone’s day.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -61,7 +61,7 @@
     {
       "id": "dap-011",
       "text": "Help someone without telling anyone about it.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Help someone without telling anyone about it.",
+      "explanation": "Kindness begins with one intentional reach. Lift one small weight from someone else’s day.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -69,7 +69,7 @@
     {
       "id": "dap-013",
       "text": "Tell a family member you love them.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Tell a family member you love them.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Let affection be simple, clear, and near.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "How did connecting with someone you love feel?"
@@ -77,7 +77,7 @@
     {
       "id": "dap-014",
       "text": "Send an old photo to someone who would appreciate the memory.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Send an old photo to someone who would appreciate the memory.",
+      "explanation": "Kindness begins with one intentional reach. Say the good thing before the moment passes.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -85,7 +85,7 @@
     {
       "id": "dap-019",
       "text": "Call someone you normally only text.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Call someone you normally only text.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Reach out while the thought is still warm.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -93,7 +93,7 @@
     {
       "id": "dap-020",
       "text": "Remember someone’s name and use it.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Remember someone’s name and use it.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Be the soft landing someone did not expect.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -101,7 +101,7 @@
     {
       "id": "dap-021",
       "text": "Send encouragement to someone going through a difficult time.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Send encouragement to someone going through a difficult time.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Let one kind action be enough for today.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What took courage for you today?"
@@ -109,7 +109,7 @@
     {
       "id": "dap-022",
       "text": "Tell someone you are proud of them.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Tell someone you are proud of them.",
+      "explanation": "Kindness begins with one intentional reach. Say the good thing before the moment passes.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -117,7 +117,7 @@
     {
       "id": "dap-024",
       "text": "Leave a positive review for a small business you love.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Leave a positive review for a small business you love.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Choose care over convenience once today.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -125,7 +125,7 @@
     {
       "id": "dap-025",
       "text": "Thank a teacher who helped you.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Thank a teacher who helped you.",
+      "explanation": "Kindness begins with one intentional reach. Say the good thing before the moment passes.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -133,7 +133,7 @@
     {
       "id": "dap-026",
       "text": "Thank someone from your past who made a difference.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Thank someone from your past who made a difference.",
+      "explanation": "Kindness begins with one intentional reach. Say the good thing before the moment passes.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What are you grateful for after this act?"
@@ -141,7 +141,7 @@
     {
       "id": "dap-027",
       "text": "Ask someone about something they care deeply about.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone about something they care deeply about.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Offer warmth without waiting to be asked.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -149,7 +149,7 @@
     {
       "id": "dap-032",
       "text": "Ask an older person to tell you a story from their life.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Ask an older person to tell you a story from their life.",
+      "explanation": "Kindness begins with one intentional reach. A gentle gesture can shift someone’s afternoon.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -157,7 +157,7 @@
     {
       "id": "dap-034",
       "text": "Tell a friend what makes them special.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Tell a friend what makes them special.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Be the soft landing someone did not expect.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -165,7 +165,7 @@
     {
       "id": "dap-035",
       "text": "Send someone a song that reminds you of them.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Send someone a song that reminds you of them.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Let one kind action be enough for today.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -173,7 +173,7 @@
     {
       "id": "dap-044",
       "text": "Ask someone what they need today.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone what they need today.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Let one kind action be enough for today.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -181,7 +181,7 @@
     {
       "id": "dap-045",
       "text": "Give a genuine apology if you owe one.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Give a genuine apology if you owe one.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Choose repair over the comfort of distance.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What took courage for you today?"
@@ -189,7 +189,7 @@
     {
       "id": "dap-048",
       "text": "Tell someone about a positive impact they had on you.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Tell someone about a positive impact they had on you.",
+      "explanation": "Kindness begins with one quiet, intentional reach. Be the soft landing someone did not expect.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -197,7 +197,7 @@
     {
       "id": "dap-050",
       "text": "Do one small thing that makes someone’s day easier.",
-      "explanation": "A small opportunity to make the world around you better today. One gentle action can shift someone’s whole afternoon.",
+      "explanation": "Kindness begins with one intentional reach. A gentle gesture can shift someone’s afternoon.",
       "category": "connection-kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -205,7 +205,7 @@
     {
       "id": "dap-051",
       "text": "Call a family member just to talk.",
-      "explanation": "Family bonds deepen in ordinary moments. Call just to talk — no agenda needed.",
+      "explanation": "Peace often begins with those closest to you. Be fully there for the people under your roof.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -213,7 +213,7 @@
     {
       "id": "dap-052",
       "text": "Eat a meal with someone without looking at your phone.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Eat a meal with someone without looking at your phone.",
+      "explanation": "Peace often begins with those closest to you. Make belonging felt in a simple shared hour.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -221,7 +221,7 @@
     {
       "id": "dap-053",
       "text": "Ask a parent or grandparent about their childhood.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Ask a parent or grandparent about their childhood.",
+      "explanation": "Peace often begins with those closest to you. Choose presence with the people you live beside.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "How did connecting with someone you love feel?"
@@ -229,7 +229,7 @@
     {
       "id": "dap-054",
       "text": "Help with a household task without being asked.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Help with a household task without being asked.",
+      "explanation": "Peace often begins with those closest to you. Give the people nearest you your full attention.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -237,7 +237,7 @@
     {
       "id": "dap-056",
       "text": "Tell a sibling or close friend a favorite memory you have with them.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Tell a sibling or close friend a favorite memory you have with them.",
+      "explanation": "Peace often begins with those closest to you. Give the people nearest you your full attention.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "How did connecting with someone you love feel?"
@@ -245,7 +245,7 @@
     {
       "id": "dap-058",
       "text": "Ask someone, “How can I support you today?”",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Ask someone, “How can I support you today?”.",
+      "explanation": "Peace often begins with those closest to you. Choose presence with the people you live beside.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -253,7 +253,7 @@
     {
       "id": "dap-060",
       "text": "Send a “good morning” message to someone who matters to you.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Send a “good morning” message to someone who matters to you.",
+      "explanation": "Peace often begins with those closest to you. Be fully there for the people under your roof.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -261,7 +261,7 @@
     {
       "id": "dap-061",
       "text": "End the day by thanking someone you live with.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: End the day by thanking someone you live with.",
+      "explanation": "Peace often begins with those closest to you. Say the good thing before the moment passes.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What are you grateful for after this act?"
@@ -269,7 +269,7 @@
     {
       "id": "dap-062",
       "text": "Ask someone about a dream they still have.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Ask someone about a dream they still have.",
+      "explanation": "Peace often begins with those closest to you. Choose presence with the people you live beside.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -277,7 +277,7 @@
     {
       "id": "dap-063",
       "text": "Recreate a happy memory with someone.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Recreate a happy memory with someone.",
+      "explanation": "Peace often begins with those closest to you. Give home your attention, not only your time.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -285,7 +285,7 @@
     {
       "id": "dap-064",
       "text": "Tell someone why you are grateful they are in your life.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Tell someone why you are grateful they are in your life.",
+      "explanation": "Peace often begins with those closest to you. Say the good thing before the moment passes.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What are you grateful for after this act?"
@@ -293,7 +293,7 @@
     {
       "id": "dap-065",
       "text": "Give someone a long, real hug.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Give someone a long, real hug.",
+      "explanation": "Peace often begins with the people closest to you. Let affection be simple, clear, and near.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "How did connecting with someone you love feel?"
@@ -301,7 +301,7 @@
     {
       "id": "dap-073",
       "text": "Look through old photos with someone.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Look through old photos with someone.",
+      "explanation": "Peace often begins with those closest to you. Return to a moment that still softens the heart.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -309,7 +309,7 @@
     {
       "id": "dap-074",
       "text": "Ask someone how they are feeling today.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Ask someone how they are feeling today.",
+      "explanation": "Peace often begins with those closest to you. Be fully there for the people under your roof.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -317,7 +317,7 @@
     {
       "id": "dap-075",
       "text": "Surprise someone with their favorite small thing.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Surprise someone with their favorite small thing.",
+      "explanation": "Peace often begins with those closest to you. Make belonging felt in a simple shared hour.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What joy did you create or receive?"
@@ -325,7 +325,7 @@
     {
       "id": "dap-078",
       "text": "Write down five things you love about someone.",
-      "explanation": "The people closest to you feel peace through presence. Today, try this: Write down five things you love about someone.",
+      "explanation": "Peace often begins with the people closest to you. Put the feeling into words you can keep.",
       "category": "family",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -333,7 +333,7 @@
     {
       "id": "dap-081",
       "text": "Reach out to someone you lost touch with.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Reach out to someone you lost touch with.",
+      "explanation": "Old bonds still hold a quiet warmth. Reopen a door you left closed for too long Begin with that.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -341,7 +341,7 @@
     {
       "id": "dap-082",
       "text": "Send a message to an old friend.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Send a message to an old friend.",
+      "explanation": "Old bonds still hold a quiet warmth. Reopen a door you left closed for too long Make it personal.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -349,7 +349,7 @@
     {
       "id": "dap-083",
       "text": "Ask someone you miss how life has been.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Ask someone you miss how life has been.",
+      "explanation": "Old bonds still hold a quiet warmth. Warmth can return with one brave hello Do it with care.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -357,7 +357,7 @@
     {
       "id": "dap-084",
       "text": "Thank someone from your past.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Thank someone from your past.",
+      "explanation": "Old bonds still hold a quiet warmth. Say the good thing before the moment passes Let that be enough.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What are you grateful for after this act?"
@@ -365,7 +365,7 @@
     {
       "id": "dap-085",
       "text": "Reconnect with someone you once cared about.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Reconnect with someone you once cared about.",
+      "explanation": "Old bonds still hold a quiet warmth. Reopen a door you left closed for too long Keep it sincere.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -373,7 +373,7 @@
     {
       "id": "dap-086",
       "text": "Apologize to someone if you know you hurt them.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Apologize to someone if you know you hurt them.",
+      "explanation": "Old bonds still hold a quiet warmth. Choose repair over the comfort of distance Begin with that.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -381,7 +381,7 @@
     {
       "id": "dap-088",
       "text": "Write a message you have been afraid to send.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Write a message you have been afraid to send.",
+      "explanation": "Old bonds still hold a quiet warmth. Put the feeling into words you can keep Do it with care.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -389,7 +389,7 @@
     {
       "id": "dap-089",
       "text": "Check on someone you have not spoken to in over a year.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Check on someone you have not spoken to in over a year.",
+      "explanation": "Old bonds still hold a quiet warmth. A simple check-in can reopen a quiet door Let that be enough.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -397,7 +397,7 @@
     {
       "id": "dap-090",
       "text": "Invite someone for a coffee or a walk.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Invite someone for a coffee or a walk.",
+      "explanation": "Old bonds still hold a quiet warmth. Reach across the silence with no agenda Begin with that.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -405,7 +405,7 @@
     {
       "id": "dap-091",
       "text": "Tell someone you miss them.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Tell someone you miss them.",
+      "explanation": "Old bonds still hold a quiet warmth. Let an old bond know it still matters Make it personal.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -413,7 +413,7 @@
     {
       "id": "dap-092",
       "text": "Send someone an unexpected memory.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Send someone an unexpected memory.",
+      "explanation": "Old bonds still hold a quiet warmth. Warmth can return with one brave hello Do it with care.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -421,7 +421,7 @@
     {
       "id": "dap-093",
       "text": "Ask an old friend to catch up.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Ask an old friend to catch up.",
+      "explanation": "Old bonds still hold a quiet warmth. Reopen a door you left closed for too long Let that be enough.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -429,7 +429,7 @@
     {
       "id": "dap-094",
       "text": "Thank someone for a lesson they taught you.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Thank someone for a lesson they taught you.",
+      "explanation": "Old bonds still hold a quiet warmth. Say the good thing before the moment passes Keep it sincere.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What are you grateful for after this act?"
@@ -437,7 +437,7 @@
     {
       "id": "dap-095",
       "text": "Reconnect without expecting anything in return.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Reconnect without expecting anything in return.",
+      "explanation": "Old bonds still hold a quiet warmth. Reopen a door you left closed for too long Begin with that.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -445,7 +445,7 @@
     {
       "id": "dap-096",
       "text": "Make peace with someone over a small disagreement.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Make peace with someone over a small disagreement.",
+      "explanation": "Old bonds still hold a quiet warmth. Choose repair over the comfort of distance Make it personal.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -453,7 +453,7 @@
     {
       "id": "dap-099",
       "text": "Tell someone from your past that you hope they are doing well.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Tell someone from your past that you hope they are doing well.",
+      "explanation": "Old bonds still hold a quiet warmth. Reopen a door you left closed for too long Keep it sincere.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -461,7 +461,7 @@
     {
       "id": "dap-100",
       "text": "Reach out to someone who might be feeling alone.",
-      "explanation": "Reaching out can reopen a door that still matters. Today, try this: Reach out to someone who might be feeling alone.",
+      "explanation": "Old bonds still hold a quiet warmth. Reach out while the thought is still warm Do it with care.",
       "category": "reconnecting",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -469,7 +469,7 @@
     {
       "id": "dap-103",
       "text": "Donate something you no longer use.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Donate something you no longer use.",
+      "explanation": "Community grows when someone chooses to show up. Turn care into something someone else can feel.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What stayed with you after exploring this?"
@@ -477,7 +477,7 @@
     {
       "id": "dap-104",
       "text": "Give food or useful items to someone in need.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Give food or useful items to someone in need.",
+      "explanation": "Community grows when someone chooses to show up. Meet a real need with quiet dignity Today.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -485,7 +485,7 @@
     {
       "id": "dap-105",
       "text": "Support a local small business.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Support a local small business.",
+      "explanation": "Community grows when someone chooses to show up. Contribute one useful hour to the common good.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -493,7 +493,7 @@
     {
       "id": "dap-106",
       "text": "Leave a generous review for a good local business.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Leave a generous review for a good local business.",
+      "explanation": "Community grows when someone chooses to show up. Help the place you live feel more human.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -501,7 +501,7 @@
     {
       "id": "dap-107",
       "text": "Learn the name of someone who works in your building or neighborhood.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Learn the name of someone who works in your building or neighborhood.",
+      "explanation": "Community grows when someone chooses to show up. Make the place you live feel more human.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What did you learn?"
@@ -509,7 +509,7 @@
     {
       "id": "dap-108",
       "text": "Help a neighbor with something small.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Help a neighbor with something small.",
+      "explanation": "Community grows when someone chooses to show up. Make the place you live feel more human.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -517,7 +517,7 @@
     {
       "id": "dap-111",
       "text": "Leave a place cleaner than you found it.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Leave a place cleaner than you found it.",
+      "explanation": "Community grows when someone chooses to show up. Leave your community stronger than you found it.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -525,7 +525,7 @@
     {
       "id": "dap-112",
       "text": "Donate clothes you no longer wear.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Donate clothes you no longer wear.",
+      "explanation": "Community grows when someone chooses to show up. Turn care into something someone else can feel.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What stayed with you after exploring this?"
@@ -533,7 +533,7 @@
     {
       "id": "dap-113",
       "text": "Bring food to someone who needs support.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Bring food to someone who needs support.",
+      "explanation": "Community grows when someone shows up. Nourish someone — including, sometimes, yourself.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -541,7 +541,7 @@
     {
       "id": "dap-114",
       "text": "Give away something useful instead of throwing it away.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Give away something useful instead of throwing it away.",
+      "explanation": "Community grows when someone chooses to show up. Contribute one useful hour to the common good.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -549,7 +549,7 @@
     {
       "id": "dap-117",
       "text": "Support a local cause.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Support a local cause.",
+      "explanation": "Community grows when someone chooses to show up. Show up where local care is still needed.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What stayed with you after exploring this?"
@@ -557,7 +557,7 @@
     {
       "id": "dap-120",
       "text": "Donate books you no longer read.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Donate books you no longer read.",
+      "explanation": "Community grows when someone chooses to show up. Turn care into something someone else can feel.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What did you learn?"
@@ -565,7 +565,7 @@
     {
       "id": "dap-125",
       "text": "Give blood if you are able and eligible.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Give blood if you are able and eligible.",
+      "explanation": "Community grows when someone chooses to show up. Leave your community stronger than you found it.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -573,7 +573,7 @@
     {
       "id": "dap-126",
       "text": "Donate to a cause you genuinely trust, if you can.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Donate to a cause you genuinely trust, if you can.",
+      "explanation": "Community grows when someone chooses to show up. Turn care into something someone else can feel.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What stayed with you after exploring this?"
@@ -581,7 +581,7 @@
     {
       "id": "dap-127",
       "text": "Help someone carry their shopping.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Help someone carry their shopping.",
+      "explanation": "Community grows when someone chooses to show up. Be a neighbor in action, not only in name.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -589,7 +589,7 @@
     {
       "id": "dap-128",
       "text": "Check whether an elderly neighbor needs anything.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Check whether an elderly neighbor needs anything.",
+      "explanation": "Community grows when someone chooses to show up. Offer time to someone who may feel forgotten.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -597,7 +597,7 @@
     {
       "id": "dap-129",
       "text": "Let someone know about an opportunity they might benefit from.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Let someone know about an opportunity they might benefit from.",
+      "explanation": "Community grows when someone chooses to show up. Help the place you live feel more human.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -605,7 +605,7 @@
     {
       "id": "dap-130",
       "text": "Give useful items directly to someone who needs them.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Give useful items directly to someone who needs them.",
+      "explanation": "Community grows when someone chooses to show up. Show up where local care is still needed.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -613,7 +613,7 @@
     {
       "id": "dap-132",
       "text": "Leave a kind note for someone to find.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Leave a kind note for someone to find.",
+      "explanation": "Community grows when someone chooses to show up. Contribute one useful hour to the common good.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -621,7 +621,7 @@
     {
       "id": "dap-133",
       "text": "Support someone’s small project.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Support someone’s small project.",
+      "explanation": "Community grows when someone chooses to show up. Help the place you live feel more human.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -629,7 +629,7 @@
     {
       "id": "dap-134",
       "text": "Recommend someone’s work.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Recommend someone’s work.",
+      "explanation": "Community grows when someone chooses to show up. Leave your community stronger than you found it.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -637,7 +637,7 @@
     {
       "id": "dap-135",
       "text": "Share a job or opportunity with someone who could benefit.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Share a job or opportunity with someone who could benefit.",
+      "explanation": "Community grows when someone chooses to show up. Show up where local care is still needed.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -645,7 +645,7 @@
     {
       "id": "dap-136",
       "text": "Thank a cleaner, delivery worker, or service worker.",
-      "explanation": "Your neighborhood becomes gentler when someone cares enough to act. Today, try this: Thank a cleaner, delivery worker, or service worker.",
+      "explanation": "Community grows when someone chooses to show up. Say the good thing before the moment passes.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "What are you grateful for after this act?"
@@ -653,7 +653,7 @@
     {
       "id": "dap-141",
       "text": "Take a walk and pick up litter along the way.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take a walk and pick up litter along the way.",
+      "explanation": "Care for the earth is care for us all. Move your body and clear a little space inside.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "How did caring for the planet feel?"
@@ -661,7 +661,7 @@
     {
       "id": "dap-143",
       "text": "Walk somewhere instead of driving, if possible.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Walk somewhere instead of driving, if possible.",
+      "explanation": "Care for the earth is care for everyone who shares it. Treat the planet as a shared home today.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -669,7 +669,7 @@
     {
       "id": "dap-145",
       "text": "Take a shorter shower.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take a shorter shower.",
+      "explanation": "Care for the earth is care for us all. Leave the living world a little lighter behind you.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -677,7 +677,7 @@
     {
       "id": "dap-148",
       "text": "Recycle properly today.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Recycle properly today.",
+      "explanation": "Care for the earth is care for us all. Leave the living world a little lighter behind you.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "How did caring for the planet feel?"
@@ -685,7 +685,7 @@
     {
       "id": "dap-149",
       "text": "Plant something.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Plant something.",
+      "explanation": "Care for the earth is care for us all. Leave the living world a little lighter behind you.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "How did caring for the planet feel?"
@@ -693,7 +693,7 @@
     {
       "id": "dap-150",
       "text": "Water a plant.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Water a plant.",
+      "explanation": "Care for the earth is care for everyone who shares it. Protect the living world in one concrete way.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "How did caring for the planet feel?"
@@ -701,7 +701,7 @@
     {
       "id": "dap-153",
       "text": "Take your own bag when shopping.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Take your own bag when shopping.",
+      "explanation": "Care for the earth is care for everyone who shares it. Leave less harm behind than you arrived with.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -709,7 +709,7 @@
     {
       "id": "dap-157",
       "text": "Give an unwanted item a second life.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Give an unwanted item a second life.",
+      "explanation": "Care for the earth is care for everyone who shares it. Treat the planet as a shared home today.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -717,7 +717,7 @@
     {
       "id": "dap-159",
       "text": "Spend time in nature without your phone.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Spend time in nature without your phone.",
+      "explanation": "Care for the earth is care for us all. Meet yourself without distraction for a while Today.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "How did caring for the planet feel?"
@@ -725,7 +725,7 @@
     {
       "id": "dap-161",
       "text": "Feed birds safely and responsibly.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Feed birds safely and responsibly.",
+      "explanation": "Care for the earth is care for everyone who shares it. Treat the planet as a shared home today.",
       "category": "planet",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -733,7 +733,7 @@
     {
       "id": "dap-162",
       "text": "Support a project that protects nature.",
-      "explanation": "Caring for the earth is a quiet form of peace. Today, try this: Support a project that protects nature.",
+      "explanation": "Care for the earth is care for everyone who shares it. Leave less harm behind than you arrived with.",
       "category": "planet",
       "active": true,
       "nav": {
@@ -746,7 +746,7 @@
     {
       "id": "dap-172",
       "text": "Go for a walk without listening to anything.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Go for a walk without listening to anything.",
+      "explanation": "Clarity begins when you give yourself real presence. Move your body and clear a little space inside.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -754,7 +754,7 @@
     {
       "id": "dap-173",
       "text": "Write down three things that went well today.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Write down three things that went well today.",
+      "explanation": "Clarity begins when you give yourself real presence. Put the feeling into words you can keep.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -762,7 +762,7 @@
     {
       "id": "dap-176",
       "text": "Get enough sleep tonight.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Get enough sleep tonight.",
+      "explanation": "Clarity begins when you give yourself real presence. Rest is part of how peace becomes possible.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -770,7 +770,7 @@
     {
       "id": "dap-179",
       "text": "Write down one thing you are grateful for.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Write down one thing you are grateful for.",
+      "explanation": "Clarity begins when you give yourself real presence. Say the good thing before the moment passes.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What are you grateful for after this act?"
@@ -778,7 +778,7 @@
     {
       "id": "dap-180",
       "text": "Spend time alone without distracting yourself.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Spend time alone without distracting yourself.",
+      "explanation": "Clarity begins when you give yourself real presence. Give yourself the honesty this moment asks for.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -786,7 +786,7 @@
     {
       "id": "dap-185",
       "text": "Stop comparing yourself to someone today.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Stop comparing yourself to someone today.",
+      "explanation": "Clarity begins with presence. Step back from the noise and return to yourself Begin with that.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -794,7 +794,7 @@
     {
       "id": "dap-186",
       "text": "Write down something you are proud of.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Write down something you are proud of.",
+      "explanation": "Clarity begins when you give yourself real presence. Say the good thing before the moment passes.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -802,7 +802,7 @@
     {
       "id": "dap-188",
       "text": "Do something you have been putting off that will make you feel better.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Do something you have been putting off that will make you feel better.",
+      "explanation": "Clarity begins with presence. Strengthen the quiet foundation under your days Let that be enough.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -810,7 +810,7 @@
     {
       "id": "dap-189",
       "text": "Clean a space that has been bothering you.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Clean a space that has been bothering you.",
+      "explanation": "Clarity begins when you give yourself real presence. Give yourself the honesty this moment asks for.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -818,7 +818,7 @@
     {
       "id": "dap-193",
       "text": "Watch the sunrise or sunset.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Watch the sunrise or sunset.",
+      "explanation": "Clarity begins when you give yourself real presence. Move your body and clear a little space inside.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -826,7 +826,7 @@
     {
       "id": "dap-194",
       "text": "Write a letter to your future self.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Write a letter to your future self.",
+      "explanation": "Clarity begins when you give yourself real presence. Speak honestly to the person you are becoming.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -834,7 +834,7 @@
     {
       "id": "dap-195",
       "text": "Remember a moment you overcame something difficult.",
-      "explanation": "Inner peace makes every other act of kindness possible. Today, try this: Remember a moment you overcame something difficult.",
+      "explanation": "Clarity begins with presence. Choose a choice that future-you will thank you for Make it personal.",
       "category": "self",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -842,7 +842,7 @@
     {
       "id": "dap-208",
       "text": "Avoid gossip for one day.",
-      "explanation": "How we speak can either harden or heal a moment. Today, try this: Avoid gossip for one day.",
+      "explanation": "Honest words, spoken gently, can soften a hard day. Choosing silence over gossip protects trust.",
       "category": "communication",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -850,7 +850,7 @@
     {
       "id": "dap-243",
       "text": "Introduce two people who could help each other.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Introduce two people who could help each other.",
+      "explanation": "Help becomes peace when it asks nothing back. Offer help that arrives before it is requested.",
       "category": "helping",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -858,7 +858,7 @@
     {
       "id": "dap-244",
       "text": "Recommend someone for an opportunity.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Recommend someone for an opportunity.",
+      "explanation": "Help becomes peace when it asks for nothing back. Help once, fully, and without display.",
       "category": "helping",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -866,7 +866,7 @@
     {
       "id": "dap-246",
       "text": "Help someone feel more confident.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone feel more confident.",
+      "explanation": "Help becomes peace when it asks nothing back. Make someone’s path a little easier today.",
       "category": "helping",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -874,7 +874,7 @@
     {
       "id": "dap-249",
       "text": "Help someone without expecting credit.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Help someone without expecting credit.",
+      "explanation": "Help becomes peace when it asks nothing back. Lift one small weight from someone else’s day.",
       "category": "helping",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -882,7 +882,7 @@
     {
       "id": "dap-250",
       "text": "Do something kind anonymously.",
-      "explanation": "Offering help turns ordinary hours into shared strength. Today, try this: Do something kind anonymously.",
+      "explanation": "Help becomes peace when it asks nothing back. Offer help that arrives before it is requested.",
       "category": "helping",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -890,7 +890,7 @@
     {
       "id": "dap-259",
       "text": "Start a conversation with someone you normally would not approach.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Start a conversation with someone you normally would not approach.",
+      "explanation": "Courage starts when you take one honest step. Growth waits on the other side of one risk.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -898,7 +898,7 @@
     {
       "id": "dap-263",
       "text": "Tell someone you love them.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Tell someone you love them.",
+      "explanation": "Courage starts when you take one honest step. Let affection be simple, clear, and near.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -906,7 +906,7 @@
     {
       "id": "dap-268",
       "text": "Give someone another chance.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Give someone another chance.",
+      "explanation": "Courage starts when you take one honest step. Growth waits on the other side of one risk.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -914,7 +914,7 @@
     {
       "id": "dap-269",
       "text": "Stand beside someone who is alone.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Stand beside someone who is alone.",
+      "explanation": "Courage starts when you take one honest step. Do the brave small thing you have been avoiding.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -922,7 +922,7 @@
     {
       "id": "dap-271",
       "text": "Reach out to someone you had an argument with.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Reach out to someone you had an argument with.",
+      "explanation": "Courage starts when you take one honest step. Reach out while the thought is still warm.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -930,7 +930,7 @@
     {
       "id": "dap-275",
       "text": "Start repairing a relationship that matters to you.",
-      "explanation": "Peace sometimes asks for bravery in small, honest ways. Today, try this: Start repairing a relationship that matters to you.",
+      "explanation": "Courage starts when you take one honest step. Choose repair over the comfort of distance.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -938,7 +938,7 @@
     {
       "id": "dap-276",
       "text": "Send someone a funny video you know they will love.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Send someone a funny video you know they will love.",
+      "explanation": "Joy multiplies the moment it is shared. Share a spark of delight without overthinking it.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -946,7 +946,7 @@
     {
       "id": "dap-277",
       "text": "Bring someone their favorite snack.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Bring someone their favorite snack.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -954,7 +954,7 @@
     {
       "id": "dap-278",
       "text": "Play a song that makes someone smile.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Play a song that makes someone smile.",
+      "explanation": "Joy multiplies the moment it is shared. Invite lightness into a shared hour Let that be enough.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What joy did you create or receive?"
@@ -962,7 +962,7 @@
     {
       "id": "dap-280",
       "text": "Share a happy memory.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Share a happy memory.",
+      "explanation": "Joy multiplies the moment it is shared. Share a spark of delight without overthinking it.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -970,7 +970,7 @@
     {
       "id": "dap-281",
       "text": "Surprise someone with a small gesture.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Surprise someone with a small gesture.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What joy did you create or receive?"
@@ -978,7 +978,7 @@
     {
       "id": "dap-282",
       "text": "Give someone flowers — picked, bought, or homemade.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Give someone flowers — picked, bought, or homemade.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "How did connecting with someone you love feel?"
@@ -986,7 +986,7 @@
     {
       "id": "dap-283",
       "text": "Make a playlist for someone.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Make a playlist for someone.",
+      "explanation": "Joy multiplies the moment it is shared. Let music carry what words alone cannot say Keep it sincere.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "How did it feel to practice or share music today?"
@@ -994,7 +994,7 @@
     {
       "id": "dap-284",
       "text": "Send someone a photo that will make them smile.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Send someone a photo that will make them smile.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What joy did you create or receive?"
@@ -1002,7 +1002,7 @@
     {
       "id": "dap-285",
       "text": "Tell someone your favorite thing about them.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Tell someone your favorite thing about them.",
+      "explanation": "Joy multiplies the moment it is shared. Share a spark of delight without overthinking it.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1010,7 +1010,7 @@
     {
       "id": "dap-286",
       "text": "Invite someone to do something fun.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Invite someone to do something fun.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1018,7 +1018,7 @@
     {
       "id": "dap-287",
       "text": "Share good news with someone who will celebrate it with you.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Share good news with someone who will celebrate it with you.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1026,7 +1026,7 @@
     {
       "id": "dap-288",
       "text": "Celebrate a small achievement.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Celebrate a small achievement.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1034,7 +1034,7 @@
     {
       "id": "dap-289",
       "text": "Write a note that makes someone smile.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Write a note that makes someone smile.",
+      "explanation": "Joy multiplies the moment it is shared. Put the feeling into words you can keep Begin with that.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What joy did you create or receive?"
@@ -1042,7 +1042,7 @@
     {
       "id": "dap-291",
       "text": "Ask someone to join you instead of doing something alone.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Ask someone to join you instead of doing something alone.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1050,7 +1050,7 @@
     {
       "id": "dap-292",
       "text": "Bring energy to a room instead of negativity.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Bring energy to a room instead of negativity.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1058,7 +1058,7 @@
     {
       "id": "dap-295",
       "text": "Surprise someone with coffee, tea, or something they enjoy.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Surprise someone with coffee, tea, or something they enjoy.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What joy did you create or receive?"
@@ -1066,7 +1066,7 @@
     {
       "id": "dap-296",
       "text": "Create a small moment worth remembering.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Create a small moment worth remembering.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1074,7 +1074,7 @@
     {
       "id": "dap-297",
       "text": "Dance or sing with someone.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Dance or sing with someone.",
+      "explanation": "Joy multiplies the moment it is shared. Let music carry what words alone cannot say Keep it sincere.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1082,7 +1082,7 @@
     {
       "id": "dap-298",
       "text": "Tell someone a happy memory you share.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Tell someone a happy memory you share.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1090,7 +1090,7 @@
     {
       "id": "dap-299",
       "text": "Make someone feel seen.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Make someone feel seen.",
+      "explanation": "Joy multiplies the moment it is shared. Share a spark of delight without overthinking it.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1098,7 +1098,7 @@
     {
       "id": "dap-300",
       "text": "Give someone a reason to smile today.",
-      "explanation": "Joy shared freely is one of the simplest forms of peace. Today, try this: Give someone a reason to smile today.",
+      "explanation": "Joy multiplies the moment it is shared. Create one moment someone will smile about later.",
       "category": "joy",
       "active": true,
       "reflectionPrompt": "What joy did you create or receive?"
@@ -1106,7 +1106,7 @@
     {
       "id": "dap-301",
       "text": "Learn something about another culture.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Learn something about another culture.",
+      "explanation": "Wonder expands the borders of an ordinary day. Widen what you know of the world today.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you learn?"
@@ -1114,7 +1114,7 @@
     {
       "id": "dap-302",
       "text": "Listen to music from a country you know little about.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Listen to music from a country you know little about.",
+      "explanation": "Wonder expands the borders of an ordinary day. Make room for someone else’s truth today.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you notice about the world today?"
@@ -1122,7 +1122,7 @@
     {
       "id": "dap-303",
       "text": "Learn how to say “thank you” in a new language.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Learn how to say “thank you” in a new language.",
+      "explanation": "Wonder expands the borders of an ordinary day. Say the good thing before the moment passes.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you learn?"
@@ -1130,7 +1130,7 @@
     {
       "id": "dap-304",
       "text": "Try food from a different culture.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Try food from a different culture.",
+      "explanation": "Wonder expands the borders of an ordinary day. Step outside your routine with open eyes.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1138,7 +1138,7 @@
     {
       "id": "dap-305",
       "text": "Read about a place you have never visited.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Read about a place you have never visited.",
+      "explanation": "Wonder expands the borders of an ordinary day. Widen what you know of the world today.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you learn?"
@@ -1146,7 +1146,7 @@
     {
       "id": "dap-306",
       "text": "Have a conversation with someone whose life experience differs from yours.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Have a conversation with someone whose life experience differs from yours.",
+      "explanation": "Wonder expands the borders of an ordinary day. Stretch your world beyond its usual borders.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -1154,7 +1154,7 @@
     {
       "id": "dap-307",
       "text": "Ask someone about a tradition that matters to them.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Ask someone about a tradition that matters to them.",
+      "explanation": "Wonder expands the borders of an ordinary day. Look past the familiar and meet something new.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1162,7 +1162,7 @@
     {
       "id": "dap-308",
       "text": "Learn one fact that changes how you see another part of the world.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Learn one fact that changes how you see another part of the world.",
+      "explanation": "Wonder expands the borders of an ordinary day. Widen what you know of the world today.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you learn?"
@@ -1170,7 +1170,7 @@
     {
       "id": "dap-309",
       "text": "Follow a creator who teaches you something outside your usual perspective.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Follow a creator who teaches you something outside your usual perspective.",
+      "explanation": "Wonder expands the borders of an ordinary day. Step outside your routine with open eyes.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -1178,7 +1178,7 @@
     {
       "id": "dap-310",
       "text": "Listen to a story from someone older or younger than you.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Listen to a story from someone older or younger than you.",
+      "explanation": "Wonder expands the borders of an ordinary day. Make room for someone else’s truth today.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1186,7 +1186,7 @@
     {
       "id": "dap-311",
       "text": "Learn about a community you know little about.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Learn about a community you know little about.",
+      "explanation": "Wonder expands the borders of an ordinary day. Widen what you know of the world today.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you learn?"
@@ -1194,7 +1194,7 @@
     {
       "id": "dap-312",
       "text": "Find something you have in common with someone different from you.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Find something you have in common with someone different from you.",
+      "explanation": "Wonder expands the borders of an ordinary day. Let difference teach you something useful.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1202,7 +1202,7 @@
     {
       "id": "dap-314",
       "text": "Read an article from a country outside your own.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Read an article from a country outside your own.",
+      "explanation": "Wonder expands the borders of an ordinary day. Look past the familiar and meet something new.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you learn?"
@@ -1210,7 +1210,7 @@
     {
       "id": "dap-316",
       "text": "Learn the history behind a place near you.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Learn the history behind a place near you.",
+      "explanation": "Wonder expands the borders of an ordinary day. Widen what you know of the world today.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you learn?"
@@ -1218,7 +1218,7 @@
     {
       "id": "dap-317",
       "text": "Ask someone where they feel most at home.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Ask someone where they feel most at home.",
+      "explanation": "Wonder expands the borders of an ordinary day. Let difference teach you something useful.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "How did connecting with someone you love feel?"
@@ -1226,7 +1226,7 @@
     {
       "id": "dap-318",
       "text": "Share something positive from your culture with someone.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Share something positive from your culture with someone.",
+      "explanation": "Wonder expands the borders of an ordinary day. Step outside your routine with open eyes.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1234,7 +1234,7 @@
     {
       "id": "dap-319",
       "text": "Celebrate a tradition that is not your own by learning about it respectfully.",
-      "explanation": "Understanding someone outside your usual world widens your heart. Today, try this: Celebrate a tradition that is not your own by learning about it respectfully.",
+      "explanation": "Wonder expands the borders of an ordinary day. Look past the familiar and meet something new.",
       "category": "beyond",
       "active": true,
       "reflectionPrompt": "What did you learn?"
@@ -1242,7 +1242,7 @@
     {
       "id": "dap-321",
       "text": "Volunteer your time for a cause.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Volunteer your time for a cause.",
+      "explanation": "Bigger change begins with one deliberate act. Meet a real need with quiet dignity Do it with care.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -1250,7 +1250,7 @@
     {
       "id": "dap-322",
       "text": "Organize a small act of kindness with friends.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Organize a small act of kindness with friends.",
+      "explanation": "Bigger change begins with one clear act. Plant a seed that others can still water later.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1258,7 +1258,7 @@
     {
       "id": "dap-323",
       "text": "Donate something meaningful.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Donate something meaningful.",
+      "explanation": "Bigger change begins with one clear act. Turn care into something someone else can feel.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What stayed with you after exploring this?"
@@ -1266,7 +1266,7 @@
     {
       "id": "dap-324",
       "text": "Spend an afternoon helping someone.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Spend an afternoon helping someone.",
+      "explanation": "Bigger change begins with one deliberate act. Aim your effort where it can outlast today.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -1274,7 +1274,7 @@
     {
       "id": "dap-325",
       "text": "Clean up a public area.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Clean up a public area.",
+      "explanation": "Bigger change begins with one clear act. Leave the living world a little lighter behind you.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1282,7 +1282,7 @@
     {
       "id": "dap-326",
       "text": "Visit someone who may be lonely.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Visit someone who may be lonely.",
+      "explanation": "Bigger change begins with one clear act. Shared time is often the peace people need most.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1290,7 +1290,7 @@
     {
       "id": "dap-327",
       "text": "Help someone prepare for a job or interview.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Help someone prepare for a job or interview.",
+      "explanation": "Bigger change begins with one clear act. Offer practical support that builds someone’s path.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -1298,7 +1298,7 @@
     {
       "id": "dap-328",
       "text": "Mentor someone younger than you.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Mentor someone younger than you.",
+      "explanation": "Bigger change begins with one clear act. Offer practical support that builds someone’s path.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -1306,7 +1306,7 @@
     {
       "id": "dap-329",
       "text": "Support someone going through a difficult period.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Support someone going through a difficult period.",
+      "explanation": "Bigger change begins with one deliberate act. Aim your effort where it can outlast today.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -1314,7 +1314,7 @@
     {
       "id": "dap-330",
       "text": "Organize a small gathering that brings people together.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Organize a small gathering that brings people together.",
+      "explanation": "Bigger change begins with one deliberate act. Aim your effort where it can outlast today.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1322,7 +1322,7 @@
     {
       "id": "dap-331",
       "text": "Help someone solve a problem they have been avoiding.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Help someone solve a problem they have been avoiding.",
+      "explanation": "Bigger change begins with one deliberate act. Invest in the person you are becoming Today.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -1330,7 +1330,7 @@
     {
       "id": "dap-332",
       "text": "Share a useful opportunity with multiple people.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Share a useful opportunity with multiple people.",
+      "explanation": "Bigger change begins with one deliberate act. Aim your effort where it can outlast today.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1338,7 +1338,7 @@
     {
       "id": "dap-333",
       "text": "Donate your skills to a community project.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Donate your skills to a community project.",
+      "explanation": "Bigger change begins with one clear act. Turn care into something someone else can feel.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What stayed with you after exploring this?"
@@ -1346,7 +1346,7 @@
     {
       "id": "dap-334",
       "text": "Organize a collection of clothes, food, or books.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Organize a collection of clothes, food, or books.",
+      "explanation": "Bigger change begins with one deliberate act. Aim your effort where it can outlast today.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1354,7 +1354,7 @@
     {
       "id": "dap-337",
       "text": "Support a friend’s dream in a practical way.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Support a friend’s dream in a practical way.",
+      "explanation": "Bigger change begins with one deliberate act. Aim your effort where it can outlast today.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1362,7 +1362,7 @@
     {
       "id": "dap-338",
       "text": "Introduce people who could create something good together.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Introduce people who could create something good together.",
+      "explanation": "Bigger change begins with one deliberate act. Aim your effort where it can outlast today.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1370,7 +1370,7 @@
     {
       "id": "dap-340",
       "text": "Do one thing today that makes your community stronger.",
-      "explanation": "Larger acts of care can change the texture of a whole day. Today, try this: Do one thing today that makes your community stronger.",
+      "explanation": "Bigger change begins with one clear act. Plant a seed that others can still water later.",
       "category": "bigger",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1378,7 +1378,7 @@
     {
       "id": "dap-341",
       "text": "Sing a song with someone.",
-      "explanation": "Music has always been a language of togetherness. Today, try this: Sing a song with someone.",
+      "explanation": "The song grows stronger with more voices. Let belonging to the choir shape today’s care.",
       "category": "special-choir",
       "active": true,
       "nav": {
@@ -1390,7 +1390,7 @@
     {
       "id": "dap-342",
       "text": "Teach someone a song you love.",
-      "explanation": "Music has always been a language of togetherness. Today, try this: Teach someone a song you love.",
+      "explanation": "The song grows stronger when more voices join. Carry the shared song into one real action.",
       "category": "special-choir",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -1398,7 +1398,7 @@
     {
       "id": "dap-343",
       "text": "Ask someone what song reminds them of home.",
-      "explanation": "Music has always been a language of togetherness. Today, try this: Ask someone what song reminds them of home.",
+      "explanation": "The song grows stronger with more voices. Bring your voice a little nearer to the whole.",
       "category": "special-choir",
       "active": true,
       "reflectionPrompt": "How did connecting with someone you love feel?"
@@ -1406,7 +1406,7 @@
     {
       "id": "dap-344",
       "text": "Share a song that helped you through a difficult time.",
-      "explanation": "Music has always been a language of togetherness. Today, try this: Share a song that helped you through a difficult time.",
+      "explanation": "The song grows stronger when more voices join. Remember you are part of a living chorus.",
       "category": "special-choir",
       "active": true,
       "reflectionPrompt": "How did you help?"
@@ -1414,7 +1414,7 @@
     {
       "id": "dap-345",
       "text": "Listen to a song from another country.",
-      "explanation": "Music has always been a language of togetherness. Today, try this: Listen to a song from another country.",
+      "explanation": "The song grows stronger when more voices join. Make room for someone else’s truth today.",
       "category": "special-choir",
       "active": true,
       "reflectionPrompt": "What did you notice about the world today?"
@@ -1422,7 +1422,7 @@
     {
       "id": "dap-347",
       "text": "Make a playlist called “Peace.”",
-      "explanation": "Music has always been a language of togetherness. Today, try this: Make a playlist called “Peace.”.",
+      "explanation": "The song grows stronger when more voices join. Let music carry what words alone cannot say.",
       "category": "special-choir",
       "active": true,
       "reflectionPrompt": "How did that conversation make you feel?"
@@ -1430,7 +1430,7 @@
     {
       "id": "dap-348",
       "text": "Invite someone to sing with you.",
-      "explanation": "Music has always been a language of togetherness. Today, try this: Invite someone to sing with you.",
+      "explanation": "The song grows stronger when more voices join. Let music carry what words alone cannot say.",
       "category": "special-choir",
       "active": true,
       "nav": {
@@ -1442,7 +1442,7 @@
     {
       "id": "dap-349",
       "text": "Take one minute today to imagine the entire world singing together.",
-      "explanation": "Music has always been a language of togetherness. Today, try this: Take one minute today to imagine the entire world singing together.",
+      "explanation": "The song grows stronger with more voices. Let belonging to the choir shape today’s care.",
       "category": "special-choir",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1450,7 +1450,7 @@
     {
       "id": "dap-350",
       "text": "Do one thing today that brings two people closer together.",
-      "explanation": "Music has always been a language of togetherness. Today, try this: Do one thing today that brings two people closer together.",
+      "explanation": "The song grows stronger with more voices. Bring your voice a little nearer to the whole.",
       "category": "special-choir",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -1458,7 +1458,7 @@
     {
       "id": "dap-351",
       "text": "Practice the song.",
-      "explanation": "Every voice matters. Take a moment today to prepare yours for the moment we sing together.",
+      "explanation": "Practice turns intention into something you can feel. Let the music settle deeper in you.",
       "category": "practice",
       "active": true,
       "nav": {
@@ -1470,7 +1470,7 @@
     {
       "id": "dap-352",
       "text": "Sing the song without looking at the lyrics.",
-      "explanation": "Singing from memory deepens the song. Let the words live in you for a moment.",
+      "explanation": "Practice turns intention into something you can feel. Give the music another honest hour.",
       "category": "practice",
       "active": true,
       "nav": {
@@ -1482,7 +1482,7 @@
     {
       "id": "dap-353",
       "text": "Learn the meaning behind one line of the song.",
-      "explanation": "Understanding a single line can change how the whole song feels when you sing it.",
+      "explanation": "Practice turns intention into something you can feel. Widen what you know of the world today.",
       "category": "practice",
       "active": true,
       "nav": {
@@ -1494,7 +1494,7 @@
     {
       "id": "dap-354",
       "text": "Sing the song with someone else.",
-      "explanation": "Harmony begins when two voices meet. Invite someone into the song with you.",
+      "explanation": "Practice turns intention into something real. Return to the song with patience and heart.",
       "category": "practice",
       "active": true,
       "nav": {
@@ -1506,7 +1506,7 @@
     {
       "id": "dap-355",
       "text": "Invite someone to practice the song with you.",
-      "explanation": "Sharing practice multiplies courage. Ask someone to prepare beside you.",
+      "explanation": "Practice turns intention into something you can feel. Let the music settle deeper in you.",
       "category": "practice",
       "active": true,
       "nav": {
@@ -1518,7 +1518,7 @@
     {
       "id": "dap-356",
       "text": "Record yourself singing a small part of the song.",
-      "explanation": "Hearing your own voice can be surprisingly grounding. Capture a small moment of honesty.",
+      "explanation": "Practice turns intention into something you can feel. Give the music another honest hour.",
       "category": "practice",
       "active": true,
       "nav": {
@@ -1530,7 +1530,7 @@
     {
       "id": "dap-357",
       "text": "Practice the song somewhere you feel completely free.",
-      "explanation": "Find a place where your voice feels free — even a quiet corner is enough.",
+      "explanation": "Practice turns intention into something you can feel. Let the music settle deeper in you.",
       "category": "practice",
       "active": true,
       "nav": {
@@ -1542,7 +1542,7 @@
     {
       "id": "dap-358",
       "text": "Imagine where you will be when the world sings as one.",
-      "explanation": "Picture the day ahead. Imagine yourself among millions, singing as one.",
+      "explanation": "Practice turns intention into something real. Return to the song with patience and heart.",
       "category": "practice",
       "active": true,
       "nav": {
@@ -1554,7 +1554,7 @@
     {
       "id": "dap-359",
       "text": "Discover a Foundation created by someone you admire.",
-      "explanation": "Someone you admire may already be turning influence into care. Discover their Foundation.",
+      "explanation": "Every foundation is a story of people helping people. See who is already doing the hard good work.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1566,7 +1566,7 @@
     {
       "id": "dap-360",
       "text": "Read the story behind a Foundation.",
-      "explanation": "Behind every Foundation is a story. Take a few minutes to read one with an open heart.",
+      "explanation": "Every foundation is a story of people helping people. Widen what you know of the world today.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1578,7 +1578,7 @@
     {
       "id": "dap-361",
       "text": "Learn about a cause you knew little about.",
-      "explanation": "Curiosity is peaceful. Learn about a cause you have never paused to understand.",
+      "explanation": "Every foundation is people helping people. Learn who carries the work, then stand near it.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1590,7 +1590,7 @@
     {
       "id": "dap-362",
       "text": "Explore a Foundation working to fight hunger.",
-      "explanation": "Hunger is a problem real people are working on. Explore Foundations fighting it today.",
+      "explanation": "Every foundation is a story of people helping people. Discovery is the first step toward support.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1603,7 +1603,7 @@
     {
       "id": "dap-363",
       "text": "Discover a project helping improve access to healthcare.",
-      "explanation": "Healthcare access changes lives. Discover a project working to make care more reachable.",
+      "explanation": "Every foundation is a story of people helping people. See who is already doing the hard good work.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1616,7 +1616,7 @@
     {
       "id": "dap-364",
       "text": "Learn about a Foundation supporting education.",
-      "explanation": "Education unlocks possibility. Learn how a Foundation is supporting learning.",
+      "explanation": "Every foundation is people helping people. Learn who carries the work, then stand near it.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1629,7 +1629,7 @@
     {
       "id": "dap-365",
       "text": "Read about a project working to protect the environment.",
-      "explanation": "Protecting the environment is protecting our shared home. Read about a project that cares for it.",
+      "explanation": "Every foundation is a story of people helping people. Widen what you know of the world today.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1642,7 +1642,7 @@
     {
       "id": "dap-366",
       "text": "Explore a cause dedicated to helping children.",
-      "explanation": "Children deserve safety, care, and hope. Explore Foundations working where that need is real.",
+      "explanation": "Every foundation is a story of people helping people. Find a cause whose values match your own.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1654,7 +1654,7 @@
     {
       "id": "dap-367",
       "text": "Find a Foundation whose mission genuinely moves you.",
-      "explanation": "Let your values lead. Find a Foundation whose mission genuinely moves you.",
+      "explanation": "Every foundation is people helping people. Learn who carries the work, then stand near it.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1666,7 +1666,7 @@
     {
       "id": "dap-368",
       "text": "Read how one community is being helped through a Foundation.",
-      "explanation": "Impact becomes real when you see a community being helped. Read one story today.",
+      "explanation": "Every foundation is a story of people helping people. See who is already doing the hard good work.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1678,7 +1678,7 @@
     {
       "id": "dap-369",
       "text": "Discover one real problem a Foundation is working to solve.",
-      "explanation": "Every Foundation is answering a real problem. Discover one clearly and carefully.",
+      "explanation": "Every foundation is people helping people. Look closely at a mission that could move you.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1690,7 +1690,7 @@
     {
       "id": "dap-370",
       "text": "Learn how a small donation can create real change.",
-      "explanation": "Even small support can matter — first understand how change happens through a Foundation.",
+      "explanation": "Every foundation is people helping people. Turn care into something someone else can feel.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1702,7 +1702,7 @@
     {
       "id": "dap-371",
       "text": "Read an update from a Foundation you support.",
-      "explanation": "Stay close to the work. Read an update and notice what has changed.",
+      "explanation": "Every foundation is a story of people helping people. Discovery is the first step toward support.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1714,7 +1714,7 @@
     {
       "id": "dap-372",
       "text": "Discover a new creator who is using their influence to help others.",
-      "explanation": "Influence can become service. Discover a creator using their platform to help others.",
+      "explanation": "Every foundation is a story of people helping people. See who is already doing the hard good work.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1726,7 +1726,7 @@
     {
       "id": "dap-373",
       "text": "Find one project you would like to see succeed.",
-      "explanation": "Hope needs witnesses. Find one project you would love to see succeed.",
+      "explanation": "Every foundation is people helping people. Learn who carries the work, then stand near it.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1738,7 +1738,7 @@
     {
       "id": "dap-374",
       "text": "Spend time learning about a cause before deciding whether to support it.",
-      "explanation": "Wisdom before action. Learn about a cause before deciding whether to support it.",
+      "explanation": "Every foundation is a story of people helping people. Learn the human story behind the work.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1750,7 +1750,7 @@
     {
       "id": "dap-375",
       "text": "Compare two causes and discover which one speaks to you most.",
-      "explanation": "Your heart knows what resonates. Compare two causes and notice which one speaks to you.",
+      "explanation": "Every foundation is a story of people helping people. Find a cause whose values match your own.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1762,7 +1762,7 @@
     {
       "id": "dap-376",
       "text": "Read about the people behind a project.",
-      "explanation": "Projects are people. Read about those carrying the work forward.",
+      "explanation": "Every foundation is a story of people helping people. Widen what you know of the world today.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1774,7 +1774,7 @@
     {
       "id": "dap-377",
       "text": "Learn exactly how support is being used in one Foundation.",
-      "explanation": "Transparency builds trust. Learn exactly how support is being used in one Foundation.",
+      "explanation": "Every foundation is a story of people helping people. See who is already doing the hard good work.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1786,7 +1786,7 @@
     {
       "id": "dap-378",
       "text": "Discover a project outside the cause you usually care about.",
-      "explanation": "Stretch your compassion. Discover a project outside the cause you usually care about.",
+      "explanation": "Every foundation is people helping people. Look closely at a mission that could move you.",
       "category": "foundation-discovery",
       "active": true,
       "nav": {
@@ -1798,7 +1798,7 @@
     {
       "id": "dap-379",
       "text": "Support a Foundation with your time, voice, skills, or donation.",
-      "explanation": "Support can mean time, voice, skills, or a gift — choose what feels right for you.",
+      "explanation": "Support matters when it finds real need. Turn care into something someone else can feel.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1810,7 +1810,7 @@
     {
       "id": "dap-380",
       "text": "Donate to an Influencer Foundation you genuinely believe in, if you can.",
-      "explanation": "If you can and want to, support a Foundation you genuinely believe in. Exploring first is enough.",
+      "explanation": "Support matters when it finds real need. Turn care into something someone else can feel.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1822,7 +1822,7 @@
     {
       "id": "dap-381",
       "text": "Share a Foundation's mission with someone who might care about it.",
-      "explanation": "Awareness is a form of care. Share a Foundation’s mission with someone who might care too.",
+      "explanation": "Support becomes meaningful when it finds real need. Convert concern into concrete backing.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1834,7 +1834,7 @@
     {
       "id": "dap-382",
       "text": "Follow the journey of one project you want to see succeed.",
-      "explanation": "Stay with one journey. Follow a project you want to see succeed.",
+      "explanation": "Support becomes meaningful when it finds real need. Put your support where it can become change.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1846,7 +1846,7 @@
     {
       "id": "dap-383",
       "text": "Choose one cause you would stand behind.",
-      "explanation": "Clarity creates commitment. Choose one cause you would stand behind.",
+      "explanation": "Support becomes meaningful when it finds real need. Put your support where it can become change.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1858,7 +1858,7 @@
     {
       "id": "dap-384",
       "text": "Make your first contribution to a cause that matters to you, if you can.",
-      "explanation": "If you are ready, make a first contribution to a cause that matters — only if it feels right.",
+      "explanation": "Support becomes meaningful when it finds real need. Stand beside work that is already underway.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1870,7 +1870,7 @@
     {
       "id": "dap-385",
       "text": "Support a project helping people in a part of the world you have never visited.",
-      "explanation": "Compassion has no borders. Support a project helping people somewhere new to you.",
+      "explanation": "Support becomes meaningful when it finds real need. Convert concern into concrete backing.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1882,7 +1882,7 @@
     {
       "id": "dap-386",
       "text": "Help spread awareness about a cause you believe deserves more attention.",
-      "explanation": "Some causes need more eyes. Help spread awareness about one you believe deserves attention.",
+      "explanation": "Support becomes meaningful when it finds real need. Put your support where it can become change.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1894,7 +1894,7 @@
     {
       "id": "dap-387",
       "text": "Return to a Foundation you previously discovered and see what has changed.",
-      "explanation": "Return with curiosity. See how a Foundation you discovered before has grown.",
+      "explanation": "Support becomes meaningful when it finds real need. Put your support where it can become change.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1906,7 +1906,7 @@
     {
       "id": "dap-388",
       "text": "Find out how many people are already supporting a project you care about.",
-      "explanation": "Community is already gathering. Learn how many people are supporting a project you care about.",
+      "explanation": "Support becomes meaningful when it finds real need. Stand beside work that is already underway.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1918,7 +1918,7 @@
     {
       "id": "dap-389",
       "text": "Read about the real-world impact created by a Foundation.",
-      "explanation": "Real impact deserves attention. Read about the change a Foundation has already created.",
+      "explanation": "Support becomes meaningful when it finds real need. Widen what you know of the world today.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1930,7 +1930,7 @@
     {
       "id": "dap-390",
       "text": "Choose a cause and learn one practical way you could help beyond donating.",
-      "explanation": "Giving is only one path. Learn one practical way you could help beyond donating.",
+      "explanation": "Support becomes meaningful when it finds real need. Widen what you know of the world today.",
       "category": "supporting-change",
       "active": true,
       "nav": {
@@ -1942,7 +1942,7 @@
     {
       "id": "dap-391",
       "text": "Explore the map and see where voices are joining from today.",
-      "explanation": "The map is alive with voices. Explore where people are joining from today.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Notice how wide this choir already is.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -1954,7 +1954,7 @@
     {
       "id": "dap-392",
       "text": "Find a country where you would love to have a new World Choir friend.",
-      "explanation": "Friendship can begin with curiosity. Find a country where you would love a new choir friend.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Let the map remind you why you joined.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -1966,7 +1966,7 @@
     {
       "id": "dap-393",
       "text": "Discover how many voices have joined the world so far.",
-      "explanation": "Each voice is a person. Discover how many have already joined the world.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Remember every pin is a real person joining in.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -1978,7 +1978,7 @@
     {
       "id": "dap-394",
       "text": "Look at the map and find a part of the world farthest from you.",
-      "explanation": "Distance reminds us how large the choir can be. Find the farthest place from you on the map.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Remember every pin is a real person joining in.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -1990,7 +1990,7 @@
     {
       "id": "dap-395",
       "text": "Think about the fact that every Voice Number represents a real person.",
-      "explanation": "A Voice Number is not a statistic — it belongs to a real human being.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Remember every pin is a real person joining in.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -2002,7 +2002,7 @@
     {
       "id": "dap-396",
       "text": "Find three countries you hope will be represented in World Choir.",
-      "explanation": "Hold hope for the world. Find three countries you hope will be represented in World Choir.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Let the map remind you why you joined.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -2014,7 +2014,7 @@
     {
       "id": "dap-397",
       "text": "Explore the map and discover a country you know little about.",
-      "explanation": "Wonder is peaceful. Discover a country on the map you know little about.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Belonging grows when you look at the whole.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -2026,7 +2026,7 @@
     {
       "id": "dap-398",
       "text": "See how far World Choir has grown since you joined.",
-      "explanation": "Growth is a shared story. See how far World Choir has come since you joined.",
+      "explanation": "The map reminds you: this choir is truly worldwide. See yourself as one voice among many.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -2038,7 +2038,7 @@
     {
       "id": "dap-399",
       "text": "Share World Choir with one person who would understand its mission.",
-      "explanation": "Some missions are meant to be shared. Tell one person who would understand World Choir.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Notice how wide this choir already is.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -2050,7 +2050,7 @@
     {
       "id": "dap-400",
       "text": "Invite one person to add their voice to the world.",
-      "explanation": "One invitation can change everything. Invite someone to add their voice to the world.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Open the door so another voice can join.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -2062,7 +2062,7 @@
     {
       "id": "dap-401",
       "text": "Read why another person decided to join World Choir.",
-      "explanation": "Stories bring us closer. Read why another person decided to join World Choir.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Belonging grows when you look at the whole.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -2074,7 +2074,7 @@
     {
       "id": "dap-402",
       "text": "Take a moment to imagine thousands of voices preparing together.",
-      "explanation": "Pause and feel it: thousands of voices preparing to sing as one.",
+      "explanation": "The map reminds you: this choir is truly worldwide. See yourself as one voice among many.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -2086,7 +2086,7 @@
     {
       "id": "dap-403",
       "text": "Find your Voice Number and remember that nobody else in the world has it.",
-      "explanation": "Your Voice Number is uniquely yours. Hold that for a moment — nobody else in the world has it.",
+      "explanation": "The map reminds you: this choir is truly worldwide. Remember every pin is a real person joining in.",
       "category": "in-app-discovery",
       "active": true,
       "nav": {
@@ -2098,7 +2098,7 @@
     {
       "id": "dap-404",
       "text": "Share a meal with someone today.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Share a meal with someone today.",
+      "explanation": "Connection grows in the space between people. Nourish someone — including, sometimes, yourself.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2106,7 +2106,7 @@
     {
       "id": "dap-405",
       "text": "Get a few people together to play a sport.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Get a few people together to play a sport.",
+      "explanation": "Connection grows in the space between people. Invite lightness into a shared hour Begin with that.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2114,7 +2114,7 @@
     {
       "id": "dap-406",
       "text": "Invite someone to join something you already have planned.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Invite someone to join something you already have planned.",
+      "explanation": "Connection grows in the space between people. Presence is the bridge between two people.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2122,7 +2122,7 @@
     {
       "id": "dap-407",
       "text": "Spend time with someone you haven’t seen in a while.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Spend time with someone you haven’t seen in a while.",
+      "explanation": "Connection grows in the space between people. Shared time is often the peace people need most.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2130,7 +2130,7 @@
     {
       "id": "dap-408",
       "text": "Cook something together with someone.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Cook something together with someone.",
+      "explanation": "Connection grows in the space between people. Nourish someone — including, sometimes, yourself.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2138,7 +2138,7 @@
     {
       "id": "dap-409",
       "text": "Get your family together for some quality time.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Get your family together for some quality time.",
+      "explanation": "Connection grows in the space between people. Take one step closer to someone who matters.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2146,7 +2146,7 @@
     {
       "id": "dap-410",
       "text": "Invite someone outside your usual circle to join your group.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Invite someone outside your usual circle to join your group.",
+      "explanation": "Connection grows in the space between people. Presence is the bridge between two people.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2154,7 +2154,7 @@
     {
       "id": "dap-411",
       "text": "Do something fun with someone you care about.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Do something fun with someone you care about.",
+      "explanation": "Connection grows in the space between people. Take one step closer to someone who matters.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2162,7 +2162,7 @@
     {
       "id": "dap-412",
       "text": "Ask someone to teach you something they enjoy doing.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone to teach you something they enjoy doing.",
+      "explanation": "Connection grows in the space between people. Let someone feel they are not alone in this.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2170,7 +2170,7 @@
     {
       "id": "dap-413",
       "text": "Play a game together.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Play a game together.",
+      "explanation": "Connection grows in the space between people. Invite lightness into a shared hour Keep it sincere.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2178,7 +2178,7 @@
     {
       "id": "dap-414",
       "text": "Go outside with someone and spend time together.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Go outside with someone and spend time together.",
+      "explanation": "Connection grows in the space between people. Take one step closer to someone who matters.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2186,7 +2186,7 @@
     {
       "id": "dap-415",
       "text": "Ask someone you usually only message to meet in person.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Ask someone you usually only message to meet in person.",
+      "explanation": "Connection grows in the space between people. Presence is the bridge between two people.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2194,7 +2194,7 @@
     {
       "id": "dap-416",
       "text": "Spend time with an older person in your life.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Spend time with an older person in your life.",
+      "explanation": "Connection grows in the space between people. Shared time is often the peace people need most.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2202,7 +2202,7 @@
     {
       "id": "dap-417",
       "text": "Spend time with someone younger than you.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Spend time with someone younger than you.",
+      "explanation": "Connection grows in the space between people. Shared time is often the peace people need most.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2210,7 +2210,7 @@
     {
       "id": "dap-418",
       "text": "Make room for one more person in today’s plans.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Make room for one more person in today’s plans.",
+      "explanation": "Connection grows in the space between people. Take one step closer to someone who matters.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2218,7 +2218,7 @@
     {
       "id": "dap-419",
       "text": "Do something you loved as a child with someone else.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Do something you loved as a child with someone else.",
+      "explanation": "Connection grows in the space between people. Give the people nearest you your full attention.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2226,7 +2226,7 @@
     {
       "id": "dap-420",
       "text": "Start a simple tradition that gives people a reason to meet again.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Start a simple tradition that gives people a reason to meet again.",
+      "explanation": "Connection grows in the space between people. Take one step closer to someone who matters.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2234,7 +2234,7 @@
     {
       "id": "dap-421",
       "text": "When you wake up, choose one person you will make time for today.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: When you wake up, choose one person you will make time for today.",
+      "explanation": "Connection grows in the space between people. Let someone feel they are not alone in this.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2242,7 +2242,7 @@
     {
       "id": "dap-422",
       "text": "Make the first person you speak to today feel noticed.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Make the first person you speak to today feel noticed.",
+      "explanation": "Connection grows in the space between people. Take one step closer to someone who matters.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2250,7 +2250,7 @@
     {
       "id": "dap-423",
       "text": "If you see someone eating alone today, and it feels appropriate, ask if they'd like some company.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: If you see someone eating alone today, and it feels appropriate, ask if they'd like some company.",
+      "explanation": "Connection grows in the space between people. Take one step closer to someone who matters.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2258,7 +2258,7 @@
     {
       "id": "dap-424",
       "text": "Find someone who has recently moved to your school, workplace, building, or neighbourhood and help them feel more at home.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Find someone who has recently moved to your school, workplace, building, or neighbourhood and help them feel more at home.",
+      "explanation": "Connection grows in the space between people. Presence is the bridge between two people.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2266,7 +2266,7 @@
     {
       "id": "dap-425",
       "text": "Offer to carry something heavy for someone who seems to need help.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Offer to carry something heavy for someone who seems to need help.",
+      "explanation": "Kindness is a quiet form of everyday courage. Leave someone’s day lighter than you found it.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2274,7 +2274,7 @@
     {
       "id": "dap-426",
       "text": "Help someone improve their CV or job application.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Help someone improve their CV or job application.",
+      "explanation": "Kindness is a quiet form of courage. Offer practical support that builds someone’s path.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2282,7 +2282,7 @@
     {
       "id": "dap-427",
       "text": "Ask someone in your community, “Is there anything I can help you with today?”",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Ask someone in your community, “Is there anything I can help you with today?”",
+      "explanation": "Kindness is a quiet form of everyday courage. Lift one small weight from someone else’s day.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2290,7 +2290,7 @@
     {
       "id": "dap-428",
       "text": "Buy something someone genuinely needs, if you can.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Buy something someone genuinely needs, if you can.",
+      "explanation": "Kindness is a quiet form of everyday courage. Do the gentle thing without announcing it.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2298,7 +2298,7 @@
     {
       "id": "dap-429",
       "text": "Before checking social media this morning, send someone a message that will make them smile.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Before checking social media this morning, send someone a message that will make them smile.",
+      "explanation": "Kindness is a quiet form of everyday courage. Step back from the noise and return to yourself.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2306,7 +2306,7 @@
     {
       "id": "dap-430",
       "text": "Make the first words you say to someone today kind ones.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Make the first words you say to someone today kind ones.",
+      "explanation": "Kindness is a quiet form of everyday courage. Offer a kindness that asks for nothing back.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2314,7 +2314,7 @@
     {
       "id": "dap-431",
       "text": "Before leaving home today, do one thing that makes someone else's morning easier.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Before leaving home today, do one thing that makes someone else's morning easier.",
+      "explanation": "Kindness is a quiet form of everyday courage. Offer a kindness that asks for nothing back.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2322,7 +2322,7 @@
     {
       "id": "dap-432",
       "text": "Choose someone this morning whose day you will quietly make easier. Don't tell them.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Choose someone this morning whose day you will quietly make easier. Don't tell them.",
+      "explanation": "Kindness is a quiet form of everyday courage. Do the gentle thing without announcing it.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2330,7 +2330,7 @@
     {
       "id": "dap-433",
       "text": "Find one person doing an essential job today and make their shift noticeably easier somehow.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Find one person doing an essential job today and make their shift noticeably easier somehow.",
+      "explanation": "Kindness is a quiet form of everyday courage. Lift one small weight from someone else’s day.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2338,7 +2338,7 @@
     {
       "id": "dap-434",
       "text": "Ask someone to give you one small task from their to-do list, and complete it for them today.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Ask someone to give you one small task from their to-do list, and complete it for them today.",
+      "explanation": "Kindness is a quiet form of everyday courage. Leave someone’s day lighter than you found it.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2346,7 +2346,7 @@
     {
       "id": "dap-435",
       "text": "Take a different route today and find one opportunity to help along the way.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Take a different route today and find one opportunity to help along the way.",
+      "explanation": "Kindness is a quiet form of everyday courage. Offer a kindness that asks for nothing back.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2354,7 +2354,7 @@
     {
       "id": "dap-436",
       "text": "Give a meal to someone who is hungry.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Give a meal to someone who is hungry.",
+      "explanation": "Compassion is attention offered without hurry. Meet a real need with quiet dignity Keep it sincere.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2362,7 +2362,7 @@
     {
       "id": "dap-437",
       "text": "Offer food or water to someone experiencing homelessness.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Offer food or water to someone experiencing homelessness.",
+      "explanation": "Compassion is attention offered without hurry. Meet a real need with quiet dignity Begin with that.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2370,7 +2370,7 @@
     {
       "id": "dap-438",
       "text": "Help serve or distribute food to people who need it.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Help serve or distribute food to people who need it.",
+      "explanation": "Compassion is attention offered without hurry. Offer comfort that does not rush the person.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2378,7 +2378,7 @@
     {
       "id": "dap-439",
       "text": "Volunteer to help older people in your community.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Volunteer to help older people in your community.",
+      "explanation": "Compassion is attention offered without hurry. Meet a real need with quiet dignity Do it with care.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2386,7 +2386,7 @@
     {
       "id": "dap-440",
       "text": "Pay for a meal for someone who needs one, if you can.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Pay for a meal for someone who needs one, if you can.",
+      "explanation": "Compassion is attention offered without hurry. Offer comfort that does not rush the person.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2394,7 +2394,7 @@
     {
       "id": "dap-441",
       "text": "Before breakfast, decide on one person you will help today, then find a way to do it.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Before breakfast, decide on one person you will help today, then find a way to do it.",
+      "explanation": "Compassion is attention offered without hurry. Offer comfort that does not rush the person.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2402,7 +2402,7 @@
     {
       "id": "dap-442",
       "text": "Find someone working today and bring them a bottle of water.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Find someone working today and bring them a bottle of water.",
+      "explanation": "Compassion is attention offered without hurry. Offer comfort that does not rush the person.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2410,7 +2410,7 @@
     {
       "id": "dap-443",
       "text": "Leave home with one extra snack or drink and give it to someone who needs it before you return.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Leave home with one extra snack or drink and give it to someone who needs it before you return.",
+      "explanation": "Compassion is attention offered without hurry. Offer comfort that does not rush the person.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2418,7 +2418,7 @@
     {
       "id": "dap-444",
       "text": "Sit somewhere public for 10 minutes without your phone. If someone needs a hand, be the person who notices.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Sit somewhere public for 10 minutes without your phone. If someone needs a hand, be the person who notices.",
+      "explanation": "Compassion is attention offered without hurry. Meet yourself without distraction for a while.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2426,7 +2426,7 @@
     {
       "id": "dap-445",
       "text": "Buy an essential item for someone who cannot afford it, if you can.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Buy an essential item for someone who cannot afford it, if you can.",
+      "explanation": "Generosity is giving from what you can spare. Meet a real need with quiet dignity Keep it sincere.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
@@ -2434,7 +2434,7 @@
     {
       "id": "dap-446",
       "text": "Collect useful items from friends or family and donate them together.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Collect useful items from friends or family and donate them together.",
+      "explanation": "Generosity gives from what you can spare. Turn care into something someone else can feel.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
@@ -2442,7 +2442,7 @@
     {
       "id": "dap-447",
       "text": "Give directly to a food bank or food-support organisation, if one exists near you.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Give directly to a food bank or food-support organisation, if one exists near you.",
+      "explanation": "Generosity is giving from what you can spare. Meet a real need with quiet dignity Make it personal.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
@@ -2450,7 +2450,7 @@
     {
       "id": "dap-448",
       "text": "Contribute to someone's education or learning, if you can.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Contribute to someone's education or learning, if you can.",
+      "explanation": "Generosity is giving from what you can spare. Give something useful while you still can.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
@@ -2458,7 +2458,7 @@
     {
       "id": "dap-449",
       "text": "Help fund someone's essential need, if you can.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Help fund someone's essential need, if you can.",
+      "explanation": "Generosity is giving from what you can spare. Give something useful while you still can.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
@@ -2466,7 +2466,7 @@
     {
       "id": "dap-450",
       "text": "Support a local organisation doing meaningful work, if you can.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Support a local organisation doing meaningful work, if you can.",
+      "explanation": "Generosity gives from what you can spare. Share from what you have without keeping score.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
@@ -2474,7 +2474,7 @@
     {
       "id": "dap-451",
       "text": "Give yourself a budget and use it only to improve someone else's day.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Give yourself a budget and use it only to improve someone else's day.",
+      "explanation": "Generosity is giving from what you can spare. Give something useful while you still can.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
@@ -2482,7 +2482,7 @@
     {
       "id": "dap-452",
       "text": "Find something you were going to spend money on today that you don't actually need. Use part of that money to help someone instead.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Find something you were going to spend money on today that you don't actually need. Use part of that money to help someone instead.",
+      "explanation": "Generosity is giving from what you can spare. Give something useful while you still can.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
@@ -2490,7 +2490,7 @@
     {
       "id": "dap-453",
       "text": "Register as a blood donor, if possible where you live.",
-      "explanation": "Courage begins with one intentional moment. Today, try this: Register as a blood donor, if possible where you live.",
+      "explanation": "Courage starts when you take one honest step. Prepare yourself to protect someone else’s life.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What felt brave about this moment?"
@@ -2498,7 +2498,7 @@
     {
       "id": "dap-454",
       "text": "Learn basic first aid or CPR.",
-      "explanation": "Courage begins with one intentional moment. Today, try this: Learn basic first aid or CPR.",
+      "explanation": "Courage starts when you take one honest step. Prepare yourself to protect someone else’s life.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What felt brave about this moment?"
@@ -2506,7 +2506,7 @@
     {
       "id": "dap-455",
       "text": "Encourage someone eligible to donate blood with you.",
-      "explanation": "Courage begins with one intentional moment. Today, try this: Encourage someone eligible to donate blood with you.",
+      "explanation": "Courage starts when you take one honest step. Prepare yourself to protect someone else’s life.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What felt brave about this moment?"
@@ -2514,7 +2514,7 @@
     {
       "id": "dap-456",
       "text": "Pray to God today for someone you are struggling to forgive.",
-      "explanation": "Courage begins with one intentional moment. Today, try this: Pray to God today for someone you are struggling to forgive.",
+      "explanation": "Courage starts when you take one honest step. Let your heart send peace where words cannot.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What felt brave about this moment?"
@@ -2522,7 +2522,7 @@
     {
       "id": "dap-457",
       "text": "Pray for someone you don't get along with, and genuinely wish them well.",
-      "explanation": "Courage begins with one intentional moment. Today, try this: Pray for someone you don't get along with, and genuinely wish them well.",
+      "explanation": "Courage starts when you take one honest step. Let your heart send peace where words cannot.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What felt brave about this moment?"
@@ -2530,7 +2530,7 @@
     {
       "id": "dap-458",
       "text": "Volunteer for a cause in your community, if you can.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Volunteer for a cause in your community, if you can.",
+      "explanation": "Community grows when someone chooses to show up. Meet a real need with quiet dignity Today.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2538,7 +2538,7 @@
     {
       "id": "dap-459",
       "text": "Sign up for a future volunteering opportunity.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Sign up for a future volunteering opportunity.",
+      "explanation": "Community grows when someone chooses to show up. Meet a real need with quiet dignity Today.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2546,7 +2546,7 @@
     {
       "id": "dap-460",
       "text": "Help at a local community organisation.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Help at a local community organisation.",
+      "explanation": "Community grows when someone chooses to show up. Be a neighbor in action, not only in name.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2554,7 +2554,7 @@
     {
       "id": "dap-461",
       "text": "Join a cleanup of a shared or public space.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Join a cleanup of a shared or public space.",
+      "explanation": "Community grows when someone shows up. Leave the living world a little lighter behind you.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2562,7 +2562,7 @@
     {
       "id": "dap-462",
       "text": "Offer to help at a community event.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Offer to help at a community event.",
+      "explanation": "Community grows when someone chooses to show up. Lift one small weight from someone else’s day.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2570,7 +2570,7 @@
     {
       "id": "dap-463",
       "text": "Pick up litter in a public place.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Pick up litter in a public place.",
+      "explanation": "Community grows when someone shows up. Leave the living world a little lighter behind you.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2578,7 +2578,7 @@
     {
       "id": "dap-464",
       "text": "Clean up a shared space with other people.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Clean up a shared space with other people.",
+      "explanation": "Community grows when someone shows up. Leave the living world a little lighter behind you.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2586,7 +2586,7 @@
     {
       "id": "dap-465",
       "text": "Support a community project with your time.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Support a community project with your time.",
+      "explanation": "Community grows when someone chooses to show up. Be a neighbor in action, not only in name.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2594,7 +2594,7 @@
     {
       "id": "dap-466",
       "text": "Ask a friend to volunteer with you.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Ask a friend to volunteer with you.",
+      "explanation": "Community grows when someone chooses to show up. Meet a real need with quiet dignity Today.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2602,7 +2602,7 @@
     {
       "id": "dap-467",
       "text": "Get your friends together to help someone who needs it.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Get your friends together to help someone who needs it.",
+      "explanation": "Community grows when someone chooses to show up. Help the place you live feel more human.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2610,7 +2610,7 @@
     {
       "id": "dap-468",
       "text": "Get your family together to help someone in your community.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Get your family together to help someone in your community.",
+      "explanation": "Community grows when someone chooses to show up. Leave your community stronger than you found it.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2618,7 +2618,7 @@
     {
       "id": "dap-469",
       "text": "Invite your friends to clean up a shared public space together.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Invite your friends to clean up a shared public space together.",
+      "explanation": "Community grows when someone shows up. Leave the living world a little lighter behind you.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2626,7 +2626,7 @@
     {
       "id": "dap-470",
       "text": "Choose one local problem and get a few people together to do something about it.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Choose one local problem and get a few people together to do something about it.",
+      "explanation": "Community grows when someone chooses to show up. Contribute one useful hour to the common good.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2634,7 +2634,7 @@
     {
       "id": "dap-471",
       "text": "Ask someone you know to join you in today's Act of Peace.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Ask someone you know to join you in today's Act of Peace.",
+      "explanation": "Community grows when someone chooses to show up. Help the place you live feel more human.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2642,7 +2642,7 @@
     {
       "id": "dap-472",
       "text": "Share the App with 3 Friends.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Share the App with 3 Friends.",
+      "explanation": "Community grows when someone chooses to show up. Open the door so another voice can join.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2650,7 +2650,7 @@
     {
       "id": "dap-473",
       "text": "Share the App in your Family Group Chat.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Share the App in your Family Group Chat.",
+      "explanation": "Community grows when someone chooses to show up. Open the door so another voice can join.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2658,7 +2658,7 @@
     {
       "id": "dap-474",
       "text": "Pray today for peace somewhere in the world where people are suffering.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Pray today for peace somewhere in the world where people are suffering.",
+      "explanation": "Community grows when someone chooses to show up. Let your heart send peace where words cannot.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2666,7 +2666,7 @@
     {
       "id": "dap-475",
       "text": "Do one helpful thing for someone today and ask them to pass a good deed forward to someone else.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Do one helpful thing for someone today and ask them to pass a good deed forward to someone else.",
+      "explanation": "Community grows when someone chooses to show up. Contribute one useful hour to the common good.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2674,7 +2674,7 @@
     {
       "id": "dap-476",
       "text": "Gather three people and complete one Act of Peace together before the day ends.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Gather three people and complete one Act of Peace together before the day ends.",
+      "explanation": "Community grows when someone chooses to show up. Help the place you live feel more human.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2682,7 +2682,7 @@
     {
       "id": "dap-477",
       "text": "Send a message to a group chat with one purpose: organise one good thing you can actually complete together this week.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Send a message to a group chat with one purpose: organise one good thing you can actually complete together this week.",
+      "explanation": "Community grows when someone chooses to show up. Reach out while the thought is still warm.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2690,7 +2690,7 @@
     {
       "id": "dap-478",
       "text": "Ask three people, “What is one small problem around here we could fix?” Pick one answer and act on it.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Ask three people, “What is one small problem around here we could fix?” Pick one answer and act on it.",
+      "explanation": "Community grows when someone chooses to show up. Show up where local care is still needed.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2698,7 +2698,7 @@
     {
       "id": "dap-479",
       "text": "Find one good deed someone else is already doing and join them instead of starting your own.",
-      "explanation": "Community begins with one intentional moment. Today, try this: Find one good deed someone else is already doing and join them instead of starting your own.",
+      "explanation": "Community grows when someone chooses to show up. Be a neighbor in action, not only in name.",
       "category": "community",
       "active": true,
       "reflectionPrompt": "How did this strengthen your community?"
@@ -2706,7 +2706,7 @@
     {
       "id": "dap-480",
       "text": "Ask a local organisation what kind of help they actually need — then help if you can.",
-      "explanation": "Understanding begins with one intentional moment. Today, try this: Ask a local organisation what kind of help they actually need — then help if you can.",
+      "explanation": "Understanding opens when you listen past yourself. Listen until the other person feels heard.",
       "category": "understanding",
       "active": true,
       "reflectionPrompt": "What did you learn from this act?"
@@ -2714,7 +2714,7 @@
     {
       "id": "dap-481",
       "text": "Ask someone much older or younger than you for one piece of advice, then actually try it today.",
-      "explanation": "Understanding begins with one intentional moment. Today, try this: Ask someone much older or younger than you for one piece of advice, then actually try it today.",
+      "explanation": "Understanding opens when you listen well. Seek to understand before you try to be right.",
       "category": "understanding",
       "active": true,
       "reflectionPrompt": "What did you learn from this act?"
@@ -2722,7 +2722,7 @@
     {
       "id": "dap-482",
       "text": "Ask someone what task they've been avoiding, and offer to do it together.",
-      "explanation": "Understanding begins with one intentional moment. Today, try this: Ask someone what task they've been avoiding, and offer to do it together.",
+      "explanation": "Understanding opens when you listen past yourself. Invest in the person you are becoming.",
       "category": "understanding",
       "active": true,
       "reflectionPrompt": "What did you learn from this act?"
@@ -2730,7 +2730,7 @@
     {
       "id": "dap-483",
       "text": "Turn your next gathering with friends into an opportunity to help someone.",
-      "explanation": "Presence begins with one intentional moment. Today, try this: Turn your next gathering with friends into an opportunity to help someone.",
+      "explanation": "Presence is the gift of being fully here. Be here fully for the next small stretch of time.",
       "category": "presence",
       "active": true,
       "reflectionPrompt": "What stayed with you after this moment?"
@@ -2738,7 +2738,7 @@
     {
       "id": "dap-484",
       "text": "When you first see someone this morning, give them your full attention.",
-      "explanation": "Presence begins with one intentional moment. Today, try this: When you first see someone this morning, give them your full attention.",
+      "explanation": "Presence is the gift of being fully here. Be here fully for the next small stretch of time.",
       "category": "presence",
       "active": true,
       "reflectionPrompt": "What stayed with you after this moment?"
@@ -2746,7 +2746,7 @@
     {
       "id": "dap-485",
       "text": "Take one quiet minute this morning to thank God for the people in your life.",
-      "explanation": "Presence begins with one intentional moment. Today, try this: Take one quiet minute this morning to thank God for the people in your life.",
+      "explanation": "Presence is the gift of being fully here. Say the good thing before the moment passes.",
       "category": "presence",
       "active": true,
       "reflectionPrompt": "What stayed with you after this moment?"
@@ -2754,7 +2754,7 @@
     {
       "id": "dap-486",
       "text": "Before going to sleep tonight, pray for every person you met today.",
-      "explanation": "Presence begins with one intentional moment. Today, try this: Before going to sleep tonight, pray for every person you met today.",
+      "explanation": "Presence is the gift of being fully here. Let your heart send peace where words cannot.",
       "category": "presence",
       "active": true,
       "reflectionPrompt": "What stayed with you after this moment?"
@@ -2762,7 +2762,7 @@
     {
       "id": "dap-487",
       "text": "Choose one thing you're afraid to do because you might fail. Take the first real step today.",
-      "explanation": "Courage begins with one intentional moment. Today, try this: Choose one thing you're afraid to do because you might fail. Take the first real step today.",
+      "explanation": "Courage starts when you take one honest step. Do the brave small thing you have been avoiding.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What felt brave about this moment?"
@@ -2770,7 +2770,7 @@
     {
       "id": "dap-488",
       "text": "Do one workout today that challenges you more than your usual one.",
-      "explanation": "Courage begins with one intentional moment. Today, try this: Do one workout today that challenges you more than your usual one.",
+      "explanation": "Courage starts when you take one honest step. Move your body and clear a little space inside.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What felt brave about this moment?"
@@ -2778,7 +2778,7 @@
     {
       "id": "dap-489",
       "text": "Ask someone you trust to tell you one thing they genuinely think you could improve. Don't defend yourself. Just listen.",
-      "explanation": "Courage begins with one intentional moment. Today, try this: Ask someone you trust to tell you one thing they genuinely think you could improve. Don't defend yourself. Just listen.",
+      "explanation": "Courage starts when you take one honest step. Growth waits on the other side of one risk.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What felt brave about this moment?"
@@ -2786,7 +2786,7 @@
     {
       "id": "dap-490",
       "text": "Record a one-minute video talking to yourself one year from now. Tell that person what you're working toward. Don't post it.",
-      "explanation": "Courage begins with one intentional moment. Today, try this: Record a one-minute video talking to yourself one year from now. Tell that person what you're working toward. Don't post it.",
+      "explanation": "Courage starts when you take one honest step. Speak honestly to the person you are becoming.",
       "category": "courage",
       "active": true,
       "reflectionPrompt": "What felt brave about this moment?"
@@ -2794,7 +2794,7 @@
     {
       "id": "dap-491",
       "text": "Spend 30 minutes learning something you've wanted to understand for a long time. At the end, write down what you learned.",
-      "explanation": "Understanding begins with one intentional moment. Today, try this: Spend 30 minutes learning something you've wanted to understand for a long time. At the end, write down what you learned.",
+      "explanation": "Understanding opens when you listen past yourself. Put the feeling into words you can keep.",
       "category": "understanding",
       "active": true,
       "reflectionPrompt": "What did you learn from this act?"
@@ -2802,7 +2802,7 @@
     {
       "id": "dap-492",
       "text": "Write down the three things taking up the most space in your mind right now. Decide what you can actually do about each one.",
-      "explanation": "Understanding begins with one intentional moment. Today, try this: Write down the three things taking up the most space in your mind right now. Decide what you can actually do about each one.",
+      "explanation": "Understanding opens when you listen past yourself. Put the feeling into words you can keep.",
       "category": "understanding",
       "active": true,
       "reflectionPrompt": "What did you learn from this act?"
@@ -2810,7 +2810,7 @@
     {
       "id": "dap-493",
       "text": "Choose one skill you want to have a year from now. Practice it until you master it.",
-      "explanation": "Understanding begins with one intentional moment. Today, try this: Choose one skill you want to have a year from now. Practice it until you master it.",
+      "explanation": "Understanding opens when you listen well. Seek to understand before you try to be right.",
       "category": "understanding",
       "active": true,
       "reflectionPrompt": "What did you learn from this act?"
@@ -2818,7 +2818,7 @@
     {
       "id": "dap-494",
       "text": "Write down where you spent your time yesterday. Circle everything that actually moved your life forward.",
-      "explanation": "Understanding begins with one intentional moment. Today, try this: Write down where you spent your time yesterday. Circle everything that actually moved your life forward.",
+      "explanation": "Understanding opens when you listen past yourself. Put the feeling into words you can keep.",
       "category": "understanding",
       "active": true,
       "reflectionPrompt": "What did you learn from this act?"
@@ -2826,7 +2826,7 @@
     {
       "id": "dap-495",
       "text": "Go have lunch by yourself today. Use your phone as little as possible. Be present with yourself and your surroundings. Afterwards, write down how it made you feel.",
-      "explanation": "Presence begins with one intentional moment. Today, try this: Go have lunch by yourself today. Use your phone as little as possible. Be present with yourself and your surroundings. Afterwards, write down how it made you feel.",
+      "explanation": "Presence is the gift of being fully here. Meet yourself without distraction for a while.",
       "category": "presence",
       "active": true,
       "reflectionPrompt": "What stayed with you after this moment?"
@@ -2834,7 +2834,7 @@
     {
       "id": "dap-496",
       "text": "Choose one bad habit you normally do automatically. Catch yourself once today and deliberately choose differently.",
-      "explanation": "Presence begins with one intentional moment. Today, try this: Choose one bad habit you normally do automatically. Catch yourself once today and deliberately choose differently.",
+      "explanation": "Presence is the gift of being fully here. Presence is a gift you can give yourself first.",
       "category": "presence",
       "active": true,
       "reflectionPrompt": "What stayed with you after this moment?"
@@ -2842,7 +2842,7 @@
     {
       "id": "dap-497",
       "text": "Put your phone in another room for one full hour. Use that hour to do something you've been saying you don't have time for.",
-      "explanation": "Presence begins with one intentional moment. Today, try this: Put your phone in another room for one full hour. Use that hour to do something you've been saying you don't have time for.",
+      "explanation": "Presence is the gift of being fully here. Be here fully for the next small stretch of time.",
       "category": "presence",
       "active": true,
       "reflectionPrompt": "What stayed with you after this moment?"
@@ -2850,7 +2850,7 @@
     {
       "id": "dap-498",
       "text": "Go for a run or walk today without music. Use the time to think about where you want your life to be one year from now.",
-      "explanation": "Presence begins with one intentional moment. Today, try this: Go for a run or walk today without music. Use the time to think about where you want your life to be one year from now.",
+      "explanation": "Presence is the gift of being fully here. Speak honestly to the person you are becoming.",
       "category": "presence",
       "active": true,
       "reflectionPrompt": "What stayed with you after this moment?"
@@ -2858,7 +2858,7 @@
     {
       "id": "dap-499",
       "text": "Ask a nursing home whether you can bring a board game or cards and spend an afternoon playing with residents.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Ask a nursing home whether you can bring a board game or cards and spend an afternoon playing with residents.",
+      "explanation": "Connection grows in the space between people. Offer time to someone who may feel forgotten.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2866,7 +2866,7 @@
     {
       "id": "dap-500",
       "text": "Do something today that the younger version of you would have been excited to do.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Do something today that the younger version of you would have been excited to do.",
+      "explanation": "Connection grows in the space between people. Honor the spark the younger you still carries.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2874,7 +2874,7 @@
     {
       "id": "dap-501",
       "text": "Learn the name of someone you regularly see but have never spoken to. Introduce yourself today.",
-      "explanation": "Connection begins with one intentional moment. Today, try this: Learn the name of someone you regularly see but have never spoken to. Introduce yourself today.",
+      "explanation": "Connection grows in the space between people. Make the place you live feel more human.",
       "category": "connection",
       "active": true,
       "reflectionPrompt": "How did connecting with someone feel?"
@@ -2882,7 +2882,7 @@
     {
       "id": "dap-502",
       "text": "Take your pet somewhere they love but don't get to visit often. Make today their day.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Take your pet somewhere they love but don't get to visit often. Make today their day.",
+      "explanation": "Kindness is a quiet form of everyday courage. Shared time is often the peace people need most.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2890,7 +2890,7 @@
     {
       "id": "dap-503",
       "text": "Give your pet an extra adventure today, a new walking route, a safe new place, or extra time exploring outside.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Give your pet an extra adventure today, a new walking route, a safe new place, or extra time exploring outside.",
+      "explanation": "Kindness is a quiet form of everyday courage. Offer a kindness that asks for nothing back.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2898,7 +2898,7 @@
     {
       "id": "dap-504",
       "text": "Go get yourself a small treat today. You've been trying, working, and showing up. Celebrate that.",
-      "explanation": "Kindness begins with one intentional moment. Today, try this: Go get yourself a small treat today. You've been trying, working, and showing up. Celebrate that.",
+      "explanation": "Kindness is a quiet form of everyday courage. Do the gentle thing without announcing it.",
       "category": "kindness",
       "active": true,
       "reflectionPrompt": "What would you like to remember about this act?"
@@ -2906,7 +2906,7 @@
     {
       "id": "dap-505",
       "text": "Visit a nursing home or senior living community and spend time talking with someone who would enjoy the company. Call ahead if visits need to be arranged.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Visit a nursing home or senior living community and spend time talking with someone who would enjoy the company. Call ahead if visits need to be arranged.",
+      "explanation": "Compassion is attention offered without hurry. Offer time to someone who may feel forgotten.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2914,7 +2914,7 @@
     {
       "id": "dap-506",
       "text": "Ask a nursing home if there's a resident who rarely receives visitors. If appropriate, arrange a visit and spend some time with them.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Ask a nursing home if there's a resident who rarely receives visitors. If appropriate, arrange a visit and spend some time with them.",
+      "explanation": "Compassion is attention offered without hurry. Offer time to someone who may feel forgotten.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2922,7 +2922,7 @@
     {
       "id": "dap-507",
       "text": "Contact a children's hospital or family-support organisation and ask what small approved item would brighten a child's day. Provide one if you can.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Contact a children's hospital or family-support organisation and ask what small approved item would brighten a child's day. Provide one if you can.",
+      "explanation": "Compassion is attention offered without hurry. Give the people nearest you your full attention.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2930,7 +2930,7 @@
     {
       "id": "dap-508",
       "text": "Ask a local shelter whether they accept volunteers to walk dogs or spend time socialising animals. If they do, give them an hour of your day.",
-      "explanation": "Compassion begins with one intentional moment. Today, try this: Ask a local shelter whether they accept volunteers to walk dogs or spend time socialising animals. If they do, give them an hour of your day.",
+      "explanation": "Compassion is attention offered without hurry. Meet a real need with quiet dignity Keep it sincere.",
       "category": "compassion",
       "active": true,
       "reflectionPrompt": "How did this act of care feel?"
@@ -2938,7 +2938,7 @@
     {
       "id": "dap-509",
       "text": "Cook or prepare something today and make an extra portion. Find someone to give it to.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Cook or prepare something today and make an extra portion. Find someone to give it to.",
+      "explanation": "Generosity gives from what you can spare. Nourish someone — including, sometimes, yourself.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
@@ -2946,7 +2946,7 @@
     {
       "id": "dap-510",
       "text": "Choose someone who has helped you many times. Today, find a practical way to return one of those favours.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Choose someone who has helped you many times. Today, find a practical way to return one of those favours.",
+      "explanation": "Generosity is giving from what you can spare. Give something useful while you still can.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
@@ -2954,7 +2954,7 @@
     {
       "id": "dap-511",
       "text": "Contact an animal shelter and ask which item they currently need most. Bring it there yourself if you can.",
-      "explanation": "Generosity begins with one intentional moment. Today, try this: Contact an animal shelter and ask which item they currently need most. Bring it there yourself if you can.",
+      "explanation": "Generosity is giving from what you can spare. Care for a life that cannot ask in words.",
       "category": "generosity",
       "active": true,
       "reflectionPrompt": "What did giving make possible today?"
