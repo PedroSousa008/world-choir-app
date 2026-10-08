@@ -219,7 +219,7 @@ dap-378 | https://unsplash.com/photos/man-in-gray-sweater-sitting-on-chair-gpSy5
 dap-379 | https://unsplash.com/photos/a-woman-sitting-on-the-ground-looking-at-a-cell-phone-2C6k6zMr74c | Support a Foundation with your time, voice, skills, or donation.
 dap-380 | https://unsplash.com/photos/a-woman-sitting-at-a-table-looking-at-a-cell-phone-O-7vS6kPzzg | Donate to an Influencer Foundation you genuinely believe in, if you can.
 dap-381 | https://unsplash.com/photos/man-and-woman-laughing-at-smartphone-Y4zNMW3pQAs | Share a Foundation's mission with someone who might care about it.
-dap-382 |  | Follow the journey of one project you want to see succeed.
+dap-382 | https://unsplash.com/photos/man-in-green-crew-neck-t-shirt-using-smartphone-BLiPdYc1k4A | Follow the journey of one project you want to see succeed.
 dap-383 | https://unsplash.com/photos/a-man-wearing-a-hat-and-looking-at-a-cell-phone-Y6bXXhjs-is | Choose one cause you would stand behind.
 dap-384 | https://unsplash.com/photos/man-in-pink-crew-neck-t-shirt-and-black-cap-sitting-on-rock-during-daytime-SJ0e7AIzl3w | Make your first contribution to a cause that matters to you, if you can.
 dap-385 | https://unsplash.com/photos/woman-looking-at-her-phone-with-right-hand-on-her-head-8DXeeef4gSA | Support a project helping people in a part of the world you have never visited.
@@ -228,56 +228,56 @@ dap-387 | https://unsplash.com/photos/young-man-wearing-headphones-smiles-at-pho
 dap-388 | https://unsplash.com/photos/a-person-holding-a-sign-that-says-no-justice-no-peace-ahAgMVN6PoI | Find out how many people are already supporting a project you care about.
 dap-389 | https://unsplash.com/photos/our-world-our-future-our-choice-streamer-K_y773lrIVU | Read about the real-world impact created by a Foundation.
 dap-390 | https://unsplash.com/photos/a-man-sitting-at-a-table-using-a-laptop-computer-ouf1Fp143XU | Choose a cause and learn one practical way you could help beyond donating.
-dap-391 |  | Explore the map and see where voices are joining from today.
-dap-392 |  | Find a country where you would love to have a new World Choir friend.
-dap-393 |  | Discover how many voices have joined the world so far.
-dap-394 |  | Look at the map and find a part of the world farthest from you.
-dap-395 |  | Think about the fact that every Voice Number represents a real person.
-dap-396 |  | Find three countries you hope will be represented in World Choir.
-dap-397 |  | Explore the map and discover a country you know little about.
-dap-398 |  | See how far World Choir has grown since you joined.
-dap-399 |  | Share World Choir with one person who would understand its mission.
-dap-400 |  | Invite one person to add their voice to the world.
-dap-401 |  | Read why another person decided to join World Choir.
-dap-402 |  | Take a moment to imagine thousands of voices preparing together.
-dap-403 |  | Find your Voice Number and remember that nobody else in the world has it.
-dap-404 |  | Share a meal with someone today.
-dap-405 |  | Get a few people together to play a sport.
-dap-406 |  | Invite someone to join something you already have planned.
-dap-407 |  | Spend time with someone you haven’t seen in a while.
-dap-408 |  | Cook something together with someone.
-dap-409 |  | Get your family together for some quality time.
-dap-410 |  | Invite someone outside your usual circle to join your group.
-dap-411 |  | Do something fun with someone you care about.
-dap-412 |  | Ask someone to teach you something they enjoy doing.
-dap-413 |  | Play a game together.
-dap-414 |  | Go outside with someone and spend time together.
-dap-415 |  | Ask someone you usually only message to meet in person.
-dap-416 |  | Spend time with an older person in your life.
-dap-417 |  | Spend time with someone younger than you.
-dap-418 |  | Make room for one more person in today’s plans.
-dap-419 |  | Do something you loved as a child with someone else.
-dap-420 |  | Start a simple tradition that gives people a reason to meet again.
-dap-421 |  | When you wake up, choose one person you will make time for today.
-dap-422 |  | Make the first person you speak to today feel noticed.
-dap-423 |  | If you see someone eating alone today, and it feels appropriate, ask if they'd like some company.
-dap-424 |  | Find someone who has recently moved to your school, workplace, building, or neighbourhood and help them feel more at home.
-dap-425 |  | Offer to carry something heavy for someone who seems to need help.
-dap-426 |  | Help someone improve their CV or job application.
-dap-427 |  | Ask someone in your community, “Is there anything I can help you with today?”
-dap-428 |  | Buy something someone genuinely needs, if you can.
-dap-429 |  | Before checking social media this morning, send someone a message that will make them smile.
-dap-430 |  | Make the first words you say to someone today kind ones.
-dap-431 |  | Before leaving home today, do one thing that makes someone else's morning easier.
-dap-432 |  | Choose someone this morning whose day you will quietly make easier. Don't tell them.
-dap-433 |  | Find one person doing an essential job today and make their shift noticeably easier somehow.
-dap-434 |  | Ask someone to give you one small task from their to-do list, and complete it for them today.
-dap-435 |  | Take a different route today and find one opportunity to help along the way.
-dap-436 |  | Give a meal to someone who is hungry.
-dap-437 |  | Offer food or water to someone experiencing homelessness.
-dap-438 |  | Help serve or distribute food to people who need it.
-dap-439 |  | Volunteer to help older people in your community.
-dap-440 |  | Pay for a meal for someone who needs one, if you can.
+dap-391 | https://unsplash.com/photos/world-map-with-pins-TrhLCn1abMU | Explore the map and see where voices are joining from today.
+dap-392 | https://unsplash.com/photos/assorted-colored-miniature-flag-on-political-map-ngzk9t20kOU | Find a country where you would love to have a new World Choir friend.
+dap-393 | https://unsplash.com/photos/a-large-group-of-people-standing-in-a-large-room-TqLeLNEKbEM | Discover how many voices have joined the world so far.
+dap-394 | https://unsplash.com/photos/white-and-blue-map-on-brown-wooden-table-SJvNVEcU5Rc | Look at the map and find a part of the world farthest from you.
+dap-395 | https://unsplash.com/photos/woman-in-white-crew-neck-t-shirt-sitting-on-chair-9cFuZzPMmkU | Think about the fact that every Voice Number represents a real person.
+dap-396 | https://unsplash.com/photos/child-looking-at-map-kZO9xqmO_TA | Find three countries you hope will be represented in World Choir.
+dap-397 | https://unsplash.com/photos/beige-and-blue-desk-globe-8ML_M_BRI-M | Explore the map and discover a country you know little about.
+dap-398 | https://unsplash.com/photos/aerial-photo-people-gathering-8I423fRMwjM | See how far World Choir has grown since you joined.
+dap-399 | https://unsplash.com/photos/two-sitting-men-watching-from-smartphone-aWHpV-ocThE | Share World Choir with one person who would understand its mission.
+dap-400 | https://unsplash.com/photos/two-women-sitting-on-a-couch-looking-at-a-cell-phone-mtvl-H8odh8 | Invite one person to add their voice to the world.
+dap-401 | https://unsplash.com/photos/person-holding-smartphone-on-bed-hxr_1lVeHIc | Read why another person decided to join World Choir.
+dap-402 | https://unsplash.com/photos/woman-sitting-on-sand-field-yw1y-alKGrg | Take a moment to imagine thousands of voices preparing together.
+dap-403 | https://unsplash.com/photos/group-of-people-standing-on-brown-floor-HN6uXG7GzTE | Find your Voice Number and remember that nobody else in the world has it.
+dap-404 | https://unsplash.com/photos/pizza-and-chicken-party-meal-jCvbQdgHxFo | Share a meal with someone today.
+dap-405 | https://unsplash.com/photos/people-playing-basketball-RmzmXWuB5EQ | Get a few people together to play a sport.
+dap-406 | https://unsplash.com/photos/a-group-of-young-people-playing-a-game-of-soccer-_7zCvQO-l0o | Invite someone to join something you already have planned.
+dap-407 | https://unsplash.com/photos/a-man-and-a-child-looking-at-a-plant-Nc-hc5g5yhw | Spend time with someone you haven’t seen in a while.
+dap-408 | https://unsplash.com/photos/man-in-white-dress-shirt-holding-a-woman-in-brown-long-sleeve-shirt-my1mDMraGf0 | Cook something together with someone.
+dap-409 | https://unsplash.com/photos/a-family-standing-in-a-field-at-sunset-LOuffSFpWQI | Get your family together for some quality time.
+dap-410 | https://unsplash.com/photos/friends-laughing-together-on-picnic-blanket-tvbxqXI5mmo | Invite someone outside your usual circle to join your group.
+dap-411 | https://unsplash.com/photos/women-and-men-playing-inside-room-MdN5h3QCiTw | Do something fun with someone you care about.
+dap-412 | https://unsplash.com/photos/man-in-white-and-blue-crew-neck-t-shirt-wearing-black-sunglasses-PfUH_AuFE_0 | Ask someone to teach you something they enjoy doing.
+dap-413 | https://unsplash.com/photos/two-men-playing-a-game-of-monopoly-on-a-table-pm7QgL2pnSQ | Play a game together.
+dap-414 | https://unsplash.com/photos/men-and-women-running-on-sea-shore-c59hEeerAaI | Go outside with someone and spend time together.
+dap-415 | https://unsplash.com/photos/a-man-and-a-woman-sitting-at-a-table-WNi-fZ3AtNw | Ask someone you usually only message to meet in person.
+dap-416 | https://unsplash.com/photos/two-women-standing-next-to-each-other-on-a-beach-WasZuKQNtlo | Spend time with an older person in your life.
+dap-417 | https://unsplash.com/photos/matching-pair-of-boys-black-and-gray-floral-collared-shirt-and-shorts-standing-on-gray-concrete-area-PWcJ9t7Ne_Q | Spend time with someone younger than you.
+dap-418 | https://unsplash.com/photos/two-women-hugging-each-other-in-a-parking-lot-gikzHDPJmp0 | Make room for one more person in today’s plans.
+dap-419 | https://unsplash.com/photos/a-group-of-people-playing-with-a-ball-on-the-beach-dDoSj3WbqQs | Do something you loved as a child with someone else.
+dap-420 | https://unsplash.com/photos/a-happy-family-of-five-posing-in-a-grassy-field-gk1Wzmch1wc | Start a simple tradition that gives people a reason to meet again.
+dap-421 | https://unsplash.com/photos/pregnant-woman-and-man-in-forest-tNIC8uC2bQE | When you wake up, choose one person you will make time for today.
+dap-422 | https://unsplash.com/photos/a-man-sitting-on-a-couch-hugging-a-little-girl-XLB-LG-K4KE | Make the first person you speak to today feel noticed.
+dap-423 | https://unsplash.com/photos/woman-eating-a-sandwich-at-a-cafe-table--662KcN8UkA | If you see someone eating alone today, and it feels appropriate, ask if they'd like some company.
+dap-424 | https://unsplash.com/photos/two-women-shaking-hands-across-a-desk-9TF9pMrCFMo | Find someone who has recently moved to your school, workplace, building, or neighbourhood and help them feel more at home.
+dap-425 | https://unsplash.com/photos/a-group-of-people-walking-down-a-sidewalk-puOwSpP2ZCY | Offer to carry something heavy for someone who seems to need help.
+dap-426 | https://unsplash.com/photos/a-man-and-a-woman-sitting-at-a-table-with-a-laptop-9ztUwpzaoYM | Help someone improve their CV or job application.
+dap-427 | https://unsplash.com/photos/man-in-blue-shirt-gives-orange-hats-to-boys-UQ94WDFt-dQ | Ask someone in your community, “Is there anything I can help you with today?”
+dap-428 | https://unsplash.com/photos/runner-receives-water-from-volunteer-at-a-race-Di39OPzFcqI | Buy something someone genuinely needs, if you can.
+dap-429 | https://unsplash.com/photos/a-woman-laying-in-bed-with-a-light-on-her-face-ygB6yVjb7a4 | Before checking social media this morning, send someone a message that will make them smile.
+dap-430 | https://unsplash.com/photos/family-eating-dinner-at-home-gorbBYbo6KM | Make the first words you say to someone today kind ones.
+dap-431 | https://unsplash.com/photos/man-in-black-and-white-stripe-shirt-and-black-pants-standing-in-kitchen-QO_H_hS0738 | Before leaving home today, do one thing that makes someone else's morning easier.
+dap-432 | https://unsplash.com/photos/man-and-woman-cooking-UaBIcWSS4FY | Choose someone this morning whose day you will quietly make easier. Don't tell them.
+dap-433 | https://unsplash.com/photos/a-man-handing-a-bag-of-fruit-to-another-man-xBUDLmcyrVQ | Find one person doing an essential job today and make their shift noticeably easier somehow.
+dap-434 | https://unsplash.com/photos/a-woman-holding-a-red-bag-standing-next-to-a-man-ipD-GQzwQgw | Ask someone to give you one small task from their to-do list, and complete it for them today.
+dap-435 | https://unsplash.com/photos/a-group-of-people-walking-down-a-street-next-to-tall-buildings-DanOxaF3CsY | Take a different route today and find one opportunity to help along the way.
+dap-436 | https://unsplash.com/photos/man-sits-near-woman-zHve9uYWNBM | Give a meal to someone who is hungry.
+dap-437 | https://unsplash.com/photos/man-in-black-jacket-and-black-pants-sitting-on-white-snow-covered-ground-during-daytime-rbz1hVh7_LM | Offer food or water to someone experiencing homelessness.
+dap-438 | https://unsplash.com/photos/a-group-of-people-standing-around-a-table-filled-with-fruit-XOb2dnK8EeM | Help serve or distribute food to people who need it.
+dap-439 | https://unsplash.com/photos/man-in-white-button-up-shirt-sitting-beside-woman-in-black-sleeveless-shirt-fJ6AeCf6YRw | Volunteer to help older people in your community.
+dap-440 | https://unsplash.com/photos/person-in-white-t-shirt-holding-persons-hand--zlxtBVLdaU | Pay for a meal for someone who needs one, if you can.
 dap-441 |  | Before breakfast, decide on one person you will help today, then find a way to do it.
 dap-442 |  | Find someone working today and bring them a bottle of water.
 dap-443 |  | Leave home with one extra snack or drink and give it to someone who needs it before you return.
