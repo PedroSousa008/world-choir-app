@@ -178,7 +178,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — Daily Acts of Peace',
       css: [
         'css/daily-peace.css?v=20260813g',
-        'css/daily-acts-page.css?v=20261007unsplash6',
+        'css/daily-acts-page.css?v=20261007catStyle1',
         'css/daily-acts-walkthrough.css?v=20260904c',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260924safeTop1',
@@ -187,7 +187,7 @@ const WorldChoirTabs = (() => {
       scripts: [
         'js/profile/daily-acts-peace.js?v=20261007fda3',
         'js/daily-acts-walkthrough.js?v=20260904d',
-        'js/daily-acts-page.js?v=20261007unsplash6',
+        'js/daily-acts-page.js?v=20261007catStyle1',
       ],
       selectors: ['.ambient-bg', '#daily-acts-page'],
       init: () => tabApi('daily-acts')?.init?.(),

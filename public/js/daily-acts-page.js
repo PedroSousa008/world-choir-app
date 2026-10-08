@@ -458,10 +458,7 @@ const DailyActsPage = (() => {
         <span class="dap-square__shade" aria-hidden="true"></span>
         ${isCompleted ? '<span class="dap-square__mark" aria-hidden="true">✓</span>' : ''}
         <span class="dap-square__body">
-          <span class="dap-square__cat dap-cat--${esc(cat)}">
-            <span class="dap-square__cat-icon" aria-hidden="true">${categoryIcon(cat)}</span>
-            ${esc(catLabel)}
-          </span>
+          <span class="dap-square__cat">${esc(catLabel)}</span>
           <span class="dap-square__text">${esc(text)}</span>
         </span>
       `;

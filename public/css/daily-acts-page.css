@@ -379,16 +379,17 @@
 .dap-square__cat {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  /* Incomplete / available cards */
+  color: rgba(255, 255, 255, 0.45);
 }
 
-.dap-square__cat-icon {
-  font-size: 0.72rem;
-  opacity: 0.95;
+.dap-square.is-completed .dap-square__cat {
+  /* Same World Choir blue as completion marks */
+  color: #4ec5e8;
 }
 
 .dap-square__text {
