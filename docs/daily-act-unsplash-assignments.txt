@@ -45,7 +45,7 @@ dap-062 | https://unsplash.com/photos/man-wearing-brown-jacket-YCM4DM7TCl8 | Ask
 dap-063 | https://unsplash.com/photos/children-playing-soccer-in-a-sunny-park-y_sf8j3K2ZY | Recreate a happy memory with someone.
 dap-064 | https://unsplash.com/photos/group-of-people-hugging-themselves-1TuZF_ma87A | Tell someone why you are grateful they are in your life.
 dap-065 | https://unsplash.com/photos/man-and-woman-hugging-near-trees-Jqk9QJgmH0Q | Give someone a long, real hug.
-dap-073 |  | Look through old photos with someone.
+dap-073 | https://unsplash.com/photos/a-couple-of-kids-that-are-sitting-on-the-floor-B1ASn0o6iO0 | Look through old photos with someone.
 dap-074 | https://unsplash.com/photos/a-woman-sitting-at-a-table-talking-to-another-woman-eXaHkicU3wo | Ask someone how they are feeling today.
 dap-075 | https://unsplash.com/photos/man-gives-woman-a-bouquet-of-pink-roses-v1vijninZLc | Surprise someone with their favorite small thing.
 dap-078 | https://unsplash.com/photos/person-writing-on-white-paper-Ak5c5VTch5E | Write down five things you love about someone.
@@ -210,7 +210,7 @@ dap-369 | https://unsplash.com/photos/young-woman-wearing-headphones-looks-at-he
 dap-370 | https://unsplash.com/photos/woman-on-phone-with-laptop-near-window-OnF0ylHNyUo | Learn how a small donation can create real change.
 dap-371 | https://unsplash.com/photos/woman-in-black-and-white-stripe-shirt-using-smartphone-L3W6GiQIRWA | Read an update from a Foundation you support.
 dap-372 | https://unsplash.com/photos/a-woman-sitting-at-a-table-looking-at-a-cell-phone-p8lkEHF-RFo | Discover a new creator who is using their influence to help others.
-dap-373 |  | Find one project you would like to see succeed.
+dap-373 | https://unsplash.com/photos/a-group-of-people-standing-next-to-a-river-CxL29J-aM5E | Find one project you would like to see succeed.
 dap-374 | https://unsplash.com/photos/man-in-gray-hoodie-wearing-black-cap-gmNd_HVQSBo | Spend time learning about a cause before deciding whether to support it.
 dap-375 | https://unsplash.com/photos/man-in-black-button-up-shirt-holding-smartphone-sbtfAbhbp3w | Compare two causes and discover which one speaks to you most.
 dap-376 | https://unsplash.com/photos/man-in-blue-long-sleeve-shirt-and-gray-pants-holding-black-smartphone-sTpBTZIb-ew | Read about the people behind a project.

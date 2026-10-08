@@ -1,7 +1,7 @@
 {
-  "version": 10,
+  "version": 11,
   "source": "Mixed: owner-curated Unsplash + Openverse/Wikimedia fallbacks",
-  "generatedAt": "2026-10-08T18:29:28.099Z",
+  "generatedAt": "2026-10-08T18:34:03.357Z",
   "count": 341,
   "uniqueUrls": 341,
   "images": {
@@ -2723,13 +2723,15 @@
       "curated": true
     },
     "dap-073": {
-      "imageUrl": "https://live.staticflickr.com/7365/8837607548_c1cf62d9e4_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1677658288170-dd3d5c04bfe4?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "kindness-gesture",
-      "source": "flickr",
-      "author": "Eduard V. Kurganov",
-      "title": "Message to The World",
-      "query": "act of kindness people",
-      "foreignLandingUrl": "https://www.flickr.com/photos/93537857@N05/8837607548"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/a-couple-of-kids-that-are-sitting-on-the-floor-B1ASn0o6iO0",
+      "unsplashPhotoId": "B1ASn0o6iO0",
+      "curated": true
     },
     "dap-074": {
       "imageUrl": "https://images.unsplash.com/photo-1653762380040-76bba5b1d66b?auto=format&fit=crop&w=900&h=1200&q=80",
@@ -3117,13 +3119,15 @@
       "curated": true
     },
     "dap-373": {
-      "imageUrl": "https://live.staticflickr.com/1608/25878202831_3aa934d690_b.jpg",
+      "imageUrl": "https://images.unsplash.com/photo-1652971876875-05db98fab376?auto=format&fit=crop&w=900&h=1200&q=80",
       "imageBucket": "donate-give",
-      "source": "flickr",
-      "author": "Catholic Church (England and Wales)",
-      "title": "Station ​Ten",
-      "query": "donating clothes charity",
-      "foreignLandingUrl": "https://www.flickr.com/photos/27340278@N03/25878202831"
+      "source": "unsplash",
+      "author": "",
+      "title": "",
+      "query": "owner-curated",
+      "foreignLandingUrl": "https://unsplash.com/photos/a-group-of-people-standing-next-to-a-river-CxL29J-aM5E",
+      "unsplashPhotoId": "CxL29J-aM5E",
+      "curated": true
     },
     "dap-374": {
       "imageUrl": "https://images.unsplash.com/photo-1599643959257-7f9f8fae5a3f?auto=format&fit=crop&w=900&h=1200&q=80",
