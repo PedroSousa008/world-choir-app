@@ -46,3 +46,4 @@ assets/originals-pre-perf-phase2a/
 
 # Local image-pool cache from semantic Daily Act image builder
 scripts/.cache-daily-act-image-pools.json
+scripts/.last-unsplash-batch-summary.json

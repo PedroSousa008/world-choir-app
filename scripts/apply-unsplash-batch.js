@@ -1,26 +1,15 @@
-# Daily Acts → Unsplash photo assignments
-# Fill the Unsplash column with either:
-#   - full URL: https://unsplash.com/photos/AbCdEfGhIjK
-#   - photo id: AbCdEfGhIjK
-#   - photo-... id: photo-1529156069898-49953e39b3ac
-# One unique photo per act. Prefer tall/portrait photos.
-# You can send completed rows in batches — no need to finish all 341 first.
+#!/usr/bin/env node
+'use strict';
 
-actId | unsplashUrlOrId | actText
------ | --------------- | -------
-dap-001 | https://unsplash.com/photos/front-view-of-happy-couple-in-love-sitting-indoors-at-home-using-laptop-nltOFGxu9ZU | Send a message to someone you have been meaning to check on.
-dap-002 | https://unsplash.com/photos/man-and-woman-facing-6rKkr2fh2-I | Tell someone one thing you genuinely appreciate about them.
-dap-005 | https://unsplash.com/photos/friends-are-walking-and-smiling-together-outdoors-2VkUdNANwdA | Give a sincere compliment to a stranger.
-dap-006 | https://unsplash.com/photos/man-in-white-polo-shirt-wearing-black-framed-eyeglasses-JPcO061-UL0 | Thank someone whose work often goes unnoticed.
-dap-008 | https://unsplash.com/photos/woman-talking-on-phone-at-desk-with-laptop-lc4f-fDx6zE | Send a voice message instead of a quick text.
-dap-009 | https://unsplash.com/photos/a-couple-of-men-standing-next-to-each-other-ecM7npYpFpk | Ask someone how they are — and really listen.
-dap-010 | https://unsplash.com/photos/a-couple-of-men-sitting-at-a-table-in-front-of-a-laptop-0e5EGrNj-ss | Leave a kind comment on someone’s work.
-dap-011 | https://unsplash.com/photos/a-couple-holding-hands-while-standing-next-to-each-other-rf5U-IXqxzg | Help someone without telling anyone about it.
-dap-013 | https://unsplash.com/photos/photo-of-mother-and-child-beside-body-of-water-ry_sD0P1ZL0 | Tell a family member you love them.
-dap-014 | https://unsplash.com/photos/a-person-holding-a-phone-pI6ebvwMlbI | Send an old photo to someone who would appreciate the memory.
-dap-019 | https://unsplash.com/photos/a-woman-talking-on-a-cell-phone-while-using-a-laptop-tZ92DLD3Q-c | Call someone you normally only text.
-dap-020 | https://unsplash.com/photos/two-women-converse-at-a-cafe-DVoh8VY4NTQ | Remember someone’s name and use it.
-dap-021 | https://unsplash.com/photos/a-couple-of-people-that-are-hugging-each-other-8_QVYlFKlh4 | Send encouragement to someone going through a difficult time.
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..');
+const MAP_PATH = path.join(ROOT, 'api/data/daily-act-images.json');
+const TXT_PATH = path.join(ROOT, 'docs/daily-act-unsplash-assignments.txt');
+const CSV_PATH = path.join(ROOT, 'docs/daily-act-unsplash-assignments.csv');
+
+const RAW = `dap-021 | https://unsplash.com/photos/a-couple-of-people-that-are-hugging-each-other-8_QVYlFKlh4 | Send encouragement to someone going through a difficult time.
 dap-022 | https://unsplash.com/photos/a-group-of-people-standing-next-to-each-other-ti8cT-DKwes | Tell someone you are proud of them.
 dap-024 | https://unsplash.com/photos/two-cafe-owners-proudly-stand-together-dU3KJqyYlO0 | Leave a positive review for a small business you love.
 dap-025 | https://unsplash.com/photos/woman-and-child-reading-in-library-7fF0iei80AQ | Thank a teacher who helped you.
@@ -35,7 +24,6 @@ dap-048 | https://unsplash.com/photos/couple-looking-at-each-other-while-holding
 dap-050 | https://unsplash.com/photos/a-man-and-a-woman-laying-a-rug-on-the-floor-S_uTzflaB0s | Do one small thing that makes someone’s day easier.
 dap-051 | https://unsplash.com/photos/man-with-red-hair-talking-on-a-cell-phone-tcuLaHhxNSM | Call a family member just to talk.
 dap-052 | https://unsplash.com/photos/three-people-having-a-toast-on-table-wYOPqmtDD0w | Eat a meal with someone without looking at your phone.
-dap-053 | https://unsplash.com/photos/mens-white-button-up-shirt-lK0l9pzxLps | Ask a parent or grandparent about their childhood.
 dap-054 | https://unsplash.com/photos/man-and-woman-by-open-range-oven-5we-PtvuCyE | Help with a household task without being asked.
 dap-056 | https://unsplash.com/photos/two-girls-running-on-a-wet-sandy-beach-at-sunset-yuD5m0kh39U | Tell a sibling or close friend a favorite memory you have with them.
 dap-058 | https://unsplash.com/photos/a-man-reaching-out-his-hand-to-another-man-on-top-of-a-rock-JYfLlOKRMaE | Ask someone, “How can I support you today?”
@@ -45,7 +33,6 @@ dap-062 | https://unsplash.com/photos/man-wearing-brown-jacket-YCM4DM7TCl8 | Ask
 dap-063 | https://unsplash.com/photos/children-playing-soccer-in-a-sunny-park-y_sf8j3K2ZY | Recreate a happy memory with someone.
 dap-064 | https://unsplash.com/photos/group-of-people-hugging-themselves-1TuZF_ma87A | Tell someone why you are grateful they are in your life.
 dap-065 | https://unsplash.com/photos/man-and-woman-hugging-near-trees-Jqk9QJgmH0Q | Give someone a long, real hug.
-dap-073 |  | Look through old photos with someone.
 dap-074 | https://unsplash.com/photos/a-woman-sitting-at-a-table-talking-to-another-woman-eXaHkicU3wo | Ask someone how they are feeling today.
 dap-075 | https://unsplash.com/photos/man-gives-woman-a-bouquet-of-pink-roses-v1vijninZLc | Surprise someone with their favorite small thing.
 dap-078 | https://unsplash.com/photos/person-writing-on-white-paper-Ak5c5VTch5E | Write down five things you love about someone.
@@ -61,7 +48,7 @@ dap-090 | https://unsplash.com/photos/a-man-and-a-woman-sitting-at-a-table-zTjVh
 dap-091 | https://unsplash.com/photos/man-using-ip-phone-inside-room-WEDDt-u3q3o | Tell someone you miss them.
 dap-092 | https://unsplash.com/photos/young-woman-using-a-smartphone-while-sitting-on-a-couch-MBg7jCxFnjo | Send someone an unexpected memory.
 dap-093 | https://unsplash.com/photos/young-woman-smiling-while-using-her-smartphone-in-bed-fKxTOjnWebo | Ask an old friend to catch up.
-dap-094 |  | Thank someone for a lesson they taught you.
+dap-094 | https://unsplash.com/photos/couple-looking-at-each-other-while-holding-hands-wPAmA768vf4 | Thank someone for a lesson they taught you.
 dap-095 | https://unsplash.com/photos/a-group-of-people-standing-outside-BMovZvj7-ow | Reconnect without expecting anything in return.
 dap-096 | https://unsplash.com/photos/a-woman-sitting-on-a-couch-talking-to-a-man-rf1-7M95Tes | Make peace with someone over a small disagreement.
 dap-099 | https://unsplash.com/photos/two-women-sitting-at-a-table-talking-to-each-other-5qTt2G-JzUw | Tell someone from your past that you hope they are doing well.
@@ -107,7 +94,7 @@ dap-179 | https://unsplash.com/photos/man-in-black-t-shirt-writing-on-white-pape
 dap-180 | https://unsplash.com/photos/a-couple-sitting-on-a-bench-T3WIvhGcXHc | Spend time alone without distracting yourself.
 dap-185 | https://unsplash.com/photos/smiling-man-with-green-mountaineering-bag-during-daytime-3Y366aqddJ0 | Stop comparing yourself to someone today.
 dap-186 | https://unsplash.com/photos/a-person-sitting-on-the-floor-writing-on-a-notebook-XVtWhPS-hic | Write down something you are proud of.
-dap-188 |  | Do something you have been putting off that will make you feel better.
+dap-188 | https://unsplash.com/photos/man-hugging-woman-near-trees-BCyfpZE3aVE | Do something you have been putting off that will make you feel better.
 dap-189 | https://unsplash.com/photos/woman-makes-the-bed-in-a-stylish-modern-bedroom-YZxGx9hAivY | Clean a space that has been bothering you.
 dap-193 | https://unsplash.com/photos/a-group-of-people-standing-on-top-of-a-bridge-8FqNbhj6YfA | Watch the sunrise or sunset.
 dap-194 | https://unsplash.com/photos/fountain-pen-on-black-lined-paper-y02jEX_B0O0 | Write a letter to your future self.
@@ -159,8 +146,8 @@ dap-311 | https://unsplash.com/photos/a-man-and-a-woman-looking-at-a-book-920yOn
 dap-312 | https://unsplash.com/photos/a-man-and-a-woman-standing-next-to-each-other-rjzW_IIjBJc | Find something you have in common with someone different from you.
 dap-314 | https://unsplash.com/photos/a-man-sitting-at-a-table-reading-a-newspaper-ou-MszyjNew | Read an article from a country outside your own.
 dap-316 | https://unsplash.com/photos/a-woman-sitting-on-a-bench-reading-a-book-sLv7ra9ab18 | Learn the history behind a place near you.
-dap-317 |  | Ask someone where they feel most at home.
-dap-318 |  | Share something positive from your culture with someone.
+dap-317 | https://unsplash.com/photos/man-wearing-brown-jacket-YCM4DM7TCl8 | Ask someone where they feel most at home.
+dap-318 | https://unsplash.com/photos/woman-in-white-crew-neck-t-shirt-sitting-on-black-couch-U9CJ5lOfnn4 | Share something positive from your culture with someone.
 dap-319 | https://unsplash.com/photos/a-group-of-people-sitting-around-a-table-with-drinks-K3AzpN5S6VU | Celebrate a tradition that is not your own by learning about it respectfully.
 dap-321 | https://unsplash.com/photos/two-women-holding-shovels-2obBFGDL9xM | Volunteer your time for a cause.
 dap-322 | https://unsplash.com/photos/three-men-wearing-yellow-volunteers-shirts-qKVSEuBT5EY | Organize a small act of kindness with friends.
@@ -172,180 +159,247 @@ dap-327 | https://unsplash.com/photos/woman-wearing-red-and-black-checkered-blou
 dap-328 | https://unsplash.com/photos/two-men-by-lake-at-golden-hour-VCKNkF2vV94 | Mentor someone younger than you.
 dap-329 | https://unsplash.com/photos/a-man-helping-another-man-stand-on-a-dock-vvIHNJkxd-Y | Support someone going through a difficult period.
 dap-330 | https://unsplash.com/photos/group-of-people-sitting-on-front-firepit-x9I-6yoXrXE | Organize a small gathering that brings people together.
-dap-331 | https://unsplash.com/photos/man-in-gray-crew-neck-t-shirt-wearing-black-framed-eyeglasses-using-computer-7K2i9iaBp80 | Help someone solve a problem they have been avoiding.
-dap-332 |  | Share a useful opportunity with multiple people.
-dap-333 |  | Donate your skills to a community project.
-dap-334 |  | Organize a collection of clothes, food, or books.
-dap-337 |  | Support a friend’s dream in a practical way.
-dap-338 |  | Introduce people who could create something good together.
-dap-340 |  | Do one thing today that makes your community stronger.
-dap-341 |  | Sing a song with someone.
-dap-342 |  | Teach someone a song you love.
-dap-343 |  | Ask someone what song reminds them of home.
-dap-344 |  | Share a song that helped you through a difficult time.
-dap-345 |  | Listen to a song from another country.
-dap-347 |  | Make a playlist called “Peace.”
-dap-348 |  | Invite someone to sing with you.
-dap-349 |  | Take one minute today to imagine the entire world singing together.
-dap-350 |  | Do one thing today that brings two people closer together.
-dap-351 |  | Practice the song.
-dap-352 |  | Sing the song without looking at the lyrics.
-dap-353 |  | Learn the meaning behind one line of the song.
-dap-354 |  | Sing the song with someone else.
-dap-355 |  | Invite someone to practice the song with you.
-dap-356 |  | Record yourself singing a small part of the song.
-dap-357 |  | Practice the song somewhere you feel completely free.
-dap-358 |  | Imagine where you will be when the world sings as one.
-dap-359 |  | Discover a Foundation created by someone you admire.
-dap-360 |  | Read the story behind a Foundation.
-dap-361 |  | Learn about a cause you knew little about.
-dap-362 |  | Explore a Foundation working to fight hunger.
-dap-363 |  | Discover a project helping improve access to healthcare.
-dap-364 |  | Learn about a Foundation supporting education.
-dap-365 |  | Read about a project working to protect the environment.
-dap-366 |  | Explore a cause dedicated to helping children.
-dap-367 |  | Find a Foundation whose mission genuinely moves you.
-dap-368 |  | Read how one community is being helped through a Foundation.
-dap-369 |  | Discover one real problem a Foundation is working to solve.
-dap-370 |  | Learn how a small donation can create real change.
-dap-371 |  | Read an update from a Foundation you support.
-dap-372 |  | Discover a new creator who is using their influence to help others.
-dap-373 |  | Find one project you would like to see succeed.
-dap-374 |  | Spend time learning about a cause before deciding whether to support it.
-dap-375 |  | Compare two causes and discover which one speaks to you most.
-dap-376 |  | Read about the people behind a project.
-dap-377 |  | Learn exactly how support is being used in one Foundation.
-dap-378 |  | Discover a project outside the cause you usually care about.
-dap-379 |  | Support a Foundation with your time, voice, skills, or donation.
-dap-380 |  | Donate to an Influencer Foundation you genuinely believe in, if you can.
-dap-381 |  | Share a Foundation's mission with someone who might care about it.
-dap-382 |  | Follow the journey of one project you want to see succeed.
-dap-383 |  | Choose one cause you would stand behind.
-dap-384 |  | Make your first contribution to a cause that matters to you, if you can.
-dap-385 |  | Support a project helping people in a part of the world you have never visited.
-dap-386 |  | Help spread awareness about a cause you believe deserves more attention.
-dap-387 |  | Return to a Foundation you previously discovered and see what has changed.
-dap-388 |  | Find out how many people are already supporting a project you care about.
-dap-389 |  | Read about the real-world impact created by a Foundation.
-dap-390 |  | Choose a cause and learn one practical way you could help beyond donating.
-dap-391 |  | Explore the map and see where voices are joining from today.
-dap-392 |  | Find a country where you would love to have a new World Choir friend.
-dap-393 |  | Discover how many voices have joined the world so far.
-dap-394 |  | Look at the map and find a part of the world farthest from you.
-dap-395 |  | Think about the fact that every Voice Number represents a real person.
-dap-396 |  | Find three countries you hope will be represented in World Choir.
-dap-397 |  | Explore the map and discover a country you know little about.
-dap-398 |  | See how far World Choir has grown since you joined.
-dap-399 |  | Share World Choir with one person who would understand its mission.
-dap-400 |  | Invite one person to add their voice to the world.
-dap-401 |  | Read why another person decided to join World Choir.
-dap-402 |  | Take a moment to imagine thousands of voices preparing together.
-dap-403 |  | Find your Voice Number and remember that nobody else in the world has it.
-dap-404 |  | Share a meal with someone today.
-dap-405 |  | Get a few people together to play a sport.
-dap-406 |  | Invite someone to join something you already have planned.
-dap-407 |  | Spend time with someone you haven’t seen in a while.
-dap-408 |  | Cook something together with someone.
-dap-409 |  | Get your family together for some quality time.
-dap-410 |  | Invite someone outside your usual circle to join your group.
-dap-411 |  | Do something fun with someone you care about.
-dap-412 |  | Ask someone to teach you something they enjoy doing.
-dap-413 |  | Play a game together.
-dap-414 |  | Go outside with someone and spend time together.
-dap-415 |  | Ask someone you usually only message to meet in person.
-dap-416 |  | Spend time with an older person in your life.
-dap-417 |  | Spend time with someone younger than you.
-dap-418 |  | Make room for one more person in today’s plans.
-dap-419 |  | Do something you loved as a child with someone else.
-dap-420 |  | Start a simple tradition that gives people a reason to meet again.
-dap-421 |  | When you wake up, choose one person you will make time for today.
-dap-422 |  | Make the first person you speak to today feel noticed.
-dap-423 |  | If you see someone eating alone today, and it feels appropriate, ask if they'd like some company.
-dap-424 |  | Find someone who has recently moved to your school, workplace, building, or neighbourhood and help them feel more at home.
-dap-425 |  | Offer to carry something heavy for someone who seems to need help.
-dap-426 |  | Help someone improve their CV or job application.
-dap-427 |  | Ask someone in your community, “Is there anything I can help you with today?”
-dap-428 |  | Buy something someone genuinely needs, if you can.
-dap-429 |  | Before checking social media this morning, send someone a message that will make them smile.
-dap-430 |  | Make the first words you say to someone today kind ones.
-dap-431 |  | Before leaving home today, do one thing that makes someone else's morning easier.
-dap-432 |  | Choose someone this morning whose day you will quietly make easier. Don't tell them.
-dap-433 |  | Find one person doing an essential job today and make their shift noticeably easier somehow.
-dap-434 |  | Ask someone to give you one small task from their to-do list, and complete it for them today.
-dap-435 |  | Take a different route today and find one opportunity to help along the way.
-dap-436 |  | Give a meal to someone who is hungry.
-dap-437 |  | Offer food or water to someone experiencing homelessness.
-dap-438 |  | Help serve or distribute food to people who need it.
-dap-439 |  | Volunteer to help older people in your community.
-dap-440 |  | Pay for a meal for someone who needs one, if you can.
-dap-441 |  | Before breakfast, decide on one person you will help today, then find a way to do it.
-dap-442 |  | Find someone working today and bring them a bottle of water.
-dap-443 |  | Leave home with one extra snack or drink and give it to someone who needs it before you return.
-dap-444 |  | Sit somewhere public for 10 minutes without your phone. If someone needs a hand, be the person who notices.
-dap-445 |  | Buy an essential item for someone who cannot afford it, if you can.
-dap-446 |  | Collect useful items from friends or family and donate them together.
-dap-447 |  | Give directly to a food bank or food-support organisation, if one exists near you.
-dap-448 |  | Contribute to someone's education or learning, if you can.
-dap-449 |  | Help fund someone's essential need, if you can.
-dap-450 |  | Support a local organisation doing meaningful work, if you can.
-dap-451 |  | Give yourself a budget and use it only to improve someone else's day.
-dap-452 |  | Find something you were going to spend money on today that you don't actually need. Use part of that money to help someone instead.
-dap-453 |  | Register as a blood donor, if possible where you live.
-dap-454 |  | Learn basic first aid or CPR.
-dap-455 |  | Encourage someone eligible to donate blood with you.
-dap-456 |  | Pray to God today for someone you are struggling to forgive.
-dap-457 |  | Pray for someone you don't get along with, and genuinely wish them well.
-dap-458 |  | Volunteer for a cause in your community, if you can.
-dap-459 |  | Sign up for a future volunteering opportunity.
-dap-460 |  | Help at a local community organisation.
-dap-461 |  | Join a cleanup of a shared or public space.
-dap-462 |  | Offer to help at a community event.
-dap-463 |  | Pick up litter in a public place.
-dap-464 |  | Clean up a shared space with other people.
-dap-465 |  | Support a community project with your time.
-dap-466 |  | Ask a friend to volunteer with you.
-dap-467 |  | Get your friends together to help someone who needs it.
-dap-468 |  | Get your family together to help someone in your community.
-dap-469 |  | Invite your friends to clean up a shared public space together.
-dap-470 |  | Choose one local problem and get a few people together to do something about it.
-dap-471 |  | Ask someone you know to join you in today's Act of Peace.
-dap-472 |  | Share the App with 3 Friends.
-dap-473 |  | Share the App in your Family Group Chat.
-dap-474 |  | Pray today for peace somewhere in the world where people are suffering.
-dap-475 |  | Do one helpful thing for someone today and ask them to pass a good deed forward to someone else.
-dap-476 |  | Gather three people and complete one Act of Peace together before the day ends.
-dap-477 |  | Send a message to a group chat with one purpose: organise one good thing you can actually complete together this week.
-dap-478 |  | Ask three people, “What is one small problem around here we could fix?” Pick one answer and act on it.
-dap-479 |  | Find one good deed someone else is already doing and join them instead of starting your own.
-dap-480 |  | Ask a local organisation what kind of help they actually need — then help if you can.
-dap-481 |  | Ask someone much older or younger than you for one piece of advice, then actually try it today.
-dap-482 |  | Ask someone what task they've been avoiding, and offer to do it together.
-dap-483 |  | Turn your next gathering with friends into an opportunity to help someone.
-dap-484 |  | When you first see someone this morning, give them your full attention.
-dap-485 |  | Take one quiet minute this morning to thank God for the people in your life.
-dap-486 |  | Before going to sleep tonight, pray for every person you met today.
-dap-487 |  | Choose one thing you're afraid to do because you might fail. Take the first real step today.
-dap-488 |  | Do one workout today that challenges you more than your usual one.
-dap-489 |  | Ask someone you trust to tell you one thing they genuinely think you could improve. Don't defend yourself. Just listen.
-dap-490 |  | Record a one-minute video talking to yourself one year from now. Tell that person what you're working toward. Don't post it.
-dap-491 |  | Spend 30 minutes learning something you've wanted to understand for a long time. At the end, write down what you learned.
-dap-492 |  | Write down the three things taking up the most space in your mind right now. Decide what you can actually do about each one.
-dap-493 |  | Choose one skill you want to have a year from now. Practice it until you master it.
-dap-494 |  | Write down where you spent your time yesterday. Circle everything that actually moved your life forward.
-dap-495 |  | Go have lunch by yourself today. Use your phone as little as possible. Be present with yourself and your surroundings. Afterwards, write down how it made you feel.
-dap-496 |  | Choose one bad habit you normally do automatically. Catch yourself once today and deliberately choose differently.
-dap-497 |  | Put your phone in another room for one full hour. Use that hour to do something you've been saying you don't have time for.
-dap-498 |  | Go for a run or walk today without music. Use the time to think about where you want your life to be one year from now.
-dap-499 |  | Ask a nursing home whether you can bring a board game or cards and spend an afternoon playing with residents.
-dap-500 |  | Do something today that the younger version of you would have been excited to do.
-dap-501 |  | Learn the name of someone you regularly see but have never spoken to. Introduce yourself today.
-dap-502 |  | Take your pet somewhere they love but don't get to visit often. Make today their day.
-dap-503 |  | Give your pet an extra adventure today, a new walking route, a safe new place, or extra time exploring outside.
-dap-504 |  | Go get yourself a small treat today. You've been trying, working, and showing up. Celebrate that.
-dap-505 |  | Visit a nursing home or senior living community and spend time talking with someone who would enjoy the company. Call ahead if visits need to be arranged.
-dap-506 |  | Ask a nursing home if there's a resident who rarely receives visitors. If appropriate, arrange a visit and spend some time with them.
-dap-507 |  | Contact a children's hospital or family-support organisation and ask what small approved item would brighten a child's day. Provide one if you can.
-dap-508 |  | Ask a local shelter whether they accept volunteers to walk dogs or spend time socialising animals. If they do, give them an hour of your day.
-dap-509 |  | Cook or prepare something today and make an extra portion. Find someone to give it to.
-dap-510 |  | Choose someone who has helped you many times. Today, find a practical way to return one of those favours.
-dap-511 |  | Contact an animal shelter and ask which item they currently need most. Bring it there yourself if you can.
+dap-331 | https://unsplash.com/photos/man-in-gray-crew-neck-t-shirt-wearing-black-framed-eyeglasses-using-computer-7K2i9iaBp80 |`;
+
+function extractPhotoId(pageUrl) {
+  const slug = pageUrl.match(/unsplash\.com\/photos\/([^/?#]+)/i)?.[1] || '';
+  const m = slug.match(/-([A-Za-z0-9_-]{7,15})$/);
+  return m ? m[1] : slug;
+}
+
+function buildImageUrl(rawOg) {
+  if (!rawOg) return null;
+  try {
+    const u = new URL(rawOg);
+    u.search = '';
+    u.searchParams.set('auto', 'format');
+    u.searchParams.set('fit', 'crop');
+    u.searchParams.set('w', '900');
+    u.searchParams.set('h', '1200');
+    u.searchParams.set('q', '80');
+    return u.toString();
+  } catch {
+    return rawOg;
+  }
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function resolveOgImage(pageUrl) {
+  const res = await fetch(pageUrl, {
+    headers: {
+      'User-Agent': 'WorldChoirApp/1.0 (daily-act image assignment)',
+      Accept: 'text/html',
+    },
+    redirect: 'follow',
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const html = await res.text();
+  const ogMatch =
+    html.match(/property=["']og:image["']\s+content=["']([^"']+)["']/i) ||
+    html.match(/content=["']([^"']+)["']\s+property=["']og:image["']/i);
+  let og = ogMatch?.[1] || null;
+  if (!og) {
+    const img = html.match(/https:\/\/(?:plus\.)?images\.unsplash\.com\/[A-Za-z0-9_=?&%./-]+/);
+    og = img?.[0] || null;
+  }
+  return buildImageUrl(og);
+}
+
+async function main() {
+  const rows = RAW.trim()
+    .split('\n')
+    .map((line) => {
+      const parts = line.split('|').map((s) => s.trim());
+      return { actId: parts[0], pageUrl: parts[1] || '', text: parts[2] || '' };
+    })
+    .filter((r) => r.actId && /^https?:\/\//i.test(r.pageUrl));
+
+  for (const r of rows) r.photoId = extractPhotoId(r.pageUrl);
+
+  const byPhoto = new Map();
+  for (const r of rows) {
+    if (!byPhoto.has(r.photoId)) byPhoto.set(r.photoId, []);
+    byPhoto.get(r.photoId).push(r.actId);
+  }
+  const withinBatchDupes = [...byPhoto.entries()]
+    .filter(([, ids]) => ids.length > 1)
+    .map(([photoId, actIds]) => ({ photoId, actIds }));
+
+  const map = JSON.parse(fs.readFileSync(MAP_PATH, 'utf8'));
+  const existingByPhoto = new Map();
+  for (const [id, row] of Object.entries(map.images || {})) {
+    const pid = row.unsplashPhotoId || extractPhotoId(row.foreignLandingUrl || '');
+    if (pid) existingByPhoto.set(pid, id);
+  }
+
+  // Keep first occurrence of each duplicated photo; skip later ones.
+  const skipActs = new Set();
+  const reportDupes = [];
+  for (const d of withinBatchDupes) {
+    const [keep, ...rest] = d.actIds;
+    reportDupes.push({ photoId: d.photoId, keep, skipped: rest, reason: 'repeated in this batch' });
+    for (const id of rest) skipActs.add(id);
+  }
+
+  // Also skip if photo already curated on a different act
+  for (const r of rows) {
+    if (skipActs.has(r.actId)) continue;
+    const existing = existingByPhoto.get(r.photoId);
+    if (existing && existing !== r.actId) {
+      // If existing is also in this batch and not skipped, prefer earlier act (already in map curated or earlier in list)
+      const earlierInBatch = rows.find((x) => x.actId === existing);
+      if (earlierInBatch) {
+        // keep existing assignment act, skip this one
+        skipActs.add(r.actId);
+        reportDupes.push({
+          photoId: r.photoId,
+          keep: existing,
+          skipped: [r.actId],
+          reason: 'same photo already used',
+        });
+      } else if (map.images[existing]?.curated) {
+        skipActs.add(r.actId);
+        reportDupes.push({
+          photoId: r.photoId,
+          keep: existing,
+          skipped: [r.actId],
+          reason: 'same photo already curated earlier',
+        });
+      }
+    }
+  }
+
+  const toApply = rows.filter((r) => !skipActs.has(r.actId));
+  console.log(`Parsed ${rows.length}; applying ${toApply.length}; skipping ${skipActs.size}`);
+  if (reportDupes.length) {
+    console.log('DUPLICATES:');
+    for (const d of reportDupes) {
+      console.log(`  ${d.photoId}: keep ${d.keep}, skip ${d.skipped.join(', ')} (${d.reason})`);
+    }
+  }
+
+  const resolved = [];
+  const failed = [];
+  for (const r of toApply) {
+    try {
+      const imageUrl = await resolveOgImage(r.pageUrl);
+      if (!imageUrl) throw new Error('no og:image');
+      // quick validate
+      const probe = await fetch(imageUrl, {
+        method: 'GET',
+        headers: { 'User-Agent': 'WorldChoirApp/1.0', Range: 'bytes=0-1023' },
+        redirect: 'follow',
+      });
+      if (!probe.ok && probe.status !== 206) throw new Error(`image HTTP ${probe.status}`);
+      resolved.push({ ...r, imageUrl });
+      console.log('OK', r.actId, r.photoId);
+    } catch (err) {
+      failed.push({ actId: r.actId, error: err.message });
+      console.log('FAIL', r.actId, err.message);
+    }
+    await sleep(250);
+  }
+
+  const usedUrls = new Set(
+    Object.entries(map.images)
+      .filter(([id]) => !resolved.some((r) => r.actId === id))
+      .map(([, row]) => row.imageUrl)
+  );
+
+  for (const r of resolved) {
+    if (usedUrls.has(r.imageUrl)) {
+      // Same CDN asset via different page? treat as conflict
+      console.log('URL conflict for', r.actId, '— skipping');
+      skipActs.add(r.actId);
+      continue;
+    }
+    usedUrls.add(r.imageUrl);
+    const prev = map.images[r.actId] || {};
+    map.images[r.actId] = {
+      imageUrl: r.imageUrl,
+      imageBucket: prev.imageBucket || 'unsplash-curated',
+      source: 'unsplash',
+      author: '',
+      title: '',
+      query: 'owner-curated',
+      foreignLandingUrl: r.pageUrl,
+      unsplashPhotoId: r.photoId,
+      curated: true,
+    };
+  }
+
+  map.version = 7;
+  map.source = 'Mixed: owner-curated Unsplash + Openverse/Wikimedia fallbacks';
+  map.generatedAt = new Date().toISOString();
+  map.count = Object.keys(map.images).length;
+  map.uniqueUrls = new Set(Object.values(map.images).map((r) => r.imageUrl)).size;
+  if (map.uniqueUrls !== map.count) {
+    throw new Error(`Uniqueness failed: ${map.uniqueUrls}/${map.count}`);
+  }
+  fs.writeFileSync(MAP_PATH, JSON.stringify(map, null, 2) + '\n');
+
+  // Update docs for applied + keep notes for skipped
+  const fill = Object.fromEntries(resolved.filter((r) => !skipActs.has(r.actId)).map((r) => [r.actId, r.pageUrl]));
+  // Also record skipped rows in docs with blank? Better leave them blank so user can replace.
+  // Applied ones get filled.
+
+  const txt = fs
+    .readFileSync(TXT_PATH, 'utf8')
+    .split('\n')
+    .map((line) => {
+      const parts = line.split('|').map((s) => s.trim());
+      if (parts.length < 3 || !/^dap-\d+$/.test(parts[0])) return line;
+      const id = parts[0];
+      if (!fill[id]) return line;
+      parts[1] = fill[id];
+      return parts.join(' | ');
+    })
+    .join('\n');
+  fs.writeFileSync(TXT_PATH, txt);
+
+  const csvLines = fs.readFileSync(CSV_PATH, 'utf8').split('\n');
+  const outCsv = csvLines
+    .map((line, i) => {
+      if (i === 0 || !line.trim()) return line;
+      const cols = [];
+      let cur = '';
+      let inQ = false;
+      for (let j = 0; j < line.length; j++) {
+        const ch = line[j];
+        if (ch === '"') {
+          if (inQ && line[j + 1] === '"') {
+            cur += '"';
+            j++;
+          } else inQ = !inQ;
+        } else if (ch === ',' && !inQ) {
+          cols.push(cur);
+          cur = '';
+        } else cur += ch;
+      }
+      cols.push(cur);
+      while (cols.length < 6) cols.push('');
+      const id = cols[0];
+      if (fill[id]) cols[3] = fill[id];
+      return cols.map((c) => (/[",\n]/.test(c) ? `"${String(c).replace(/"/g, '""')}"` : c)).join(',');
+    })
+    .join('\n');
+  fs.writeFileSync(CSV_PATH, outCsv.endsWith('\n') ? outCsv : `${outCsv}\n`);
+
+  const summary = {
+    parsed: rows.length,
+    applied: resolved.filter((r) => !skipActs.has(r.actId)).length,
+    skippedDuplicates: [...skipActs],
+    duplicates: reportDupes,
+    failed,
+  };
+  fs.writeFileSync(path.join(ROOT, 'scripts/.last-unsplash-batch-summary.json'), JSON.stringify(summary, null, 2));
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
