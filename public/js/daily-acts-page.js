@@ -86,6 +86,71 @@ const DailyActsPage = (() => {
     return null;
   }
 
+  function isoShift(iso, deltaDays) {
+    const t = new Date(`${iso}T12:00:00`);
+    t.setDate(t.getDate() + deltaDays);
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  }
+
+  function streakFromDateSet(dateSet, today) {
+    let cursor = dateSet.has(today) ? today : isoShift(today, -1);
+    let count = 0;
+    while (dateSet.has(cursor)) {
+      count += 1;
+      cursor = isoShift(cursor, -1);
+    }
+    return count;
+  }
+
+  /** Instant streak / week / acts update — do not wait on journey reload. */
+  function bumpSummaryAfterCompletion(assignmentDate, { onTime }) {
+    if (!journeyData?.summary || !assignmentDate) return;
+    const summary = journeyData.summary;
+    const today = todayDate();
+
+    summary.momentsOfPeace = (summary.momentsOfPeace || 0) + 1;
+
+    if (Array.isArray(summary.week)) {
+      summary.week = summary.week.map((d) => (
+        d.date === assignmentDate ? { ...d, completed: true } : d
+      ));
+    }
+
+    // Match server: on-time dates drive streak when any exist; otherwise all completed dates.
+    const dates = new Set();
+    for (const d of summary.week || []) {
+      if (d.completed && d.date) dates.add(d.date);
+    }
+    for (const item of allItems()) {
+      if (item.status === 'completed' && item.date) dates.add(item.date);
+    }
+    dates.add(assignmentDate);
+
+    if (onTime) {
+      dates.add(today);
+      const next = streakFromDateSet(dates, today);
+      summary.currentStreak = next;
+      summary.longestStreak = Math.max(Number(summary.longestStreak) || 0, next);
+    } else if (!(Number(summary.currentStreak) > 0)) {
+      // No on-time streak yet — server falls back to any completed dates.
+      const next = streakFromDateSet(dates, today);
+      summary.currentStreak = next;
+      summary.longestStreak = Math.max(Number(summary.longestStreak) || 0, next);
+    }
+
+    writeJourneyCache(journeyData);
+  }
+
+  function refreshProgressPanel() {
+    const host = root();
+    const el = host?.querySelector('.dap-progress');
+    if (!el) return;
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderProgressPanel().trim();
+    const next = wrap.firstElementChild;
+    if (next) el.replaceWith(next);
+  }
+
   function patchJourneyItemFromApi(apiData) {
     if (!journeyData?.journey || !apiData?.userDailyAct) return;
     const uda = apiData.userDailyAct;
@@ -98,13 +163,17 @@ const DailyActsPage = (() => {
     item.assignment = item.assignment || {};
     item.assignment.id = uda.id || item.assignment.id;
     item.assignment.completedAt = uda.completedAt || item.assignment.completedAt || new Date().toISOString();
+    if (uda.completedOnAssignedDay != null) {
+      item.assignment.completedOnAssignedDay = !!uda.completedOnAssignedDay;
+    }
     if (uda.reflection != null) {
       item.assignment.reflection = uda.reflection;
       item.assignment.reflectionAt = uda.reflectionAt;
     }
 
     if (!wasCompleted && journeyData.summary) {
-      journeyData.summary.momentsOfPeace = (journeyData.summary.momentsOfPeace || 0) + 1;
+      const onTime = uda.completedOnAssignedDay === true || uda.date === todayDate();
+      bumpSummaryAfterCompletion(uda.date, { onTime });
     }
   }
 
@@ -1041,7 +1110,12 @@ const DailyActsPage = (() => {
       try {
         window.dispatchEvent(new CustomEvent('wc-qr-engagement', { detail: { type: 'daily_act' } }));
       } catch { /* ignore */ }
-      loadJourney().catch(() => {});
+      // Reconcile with server, then refresh streak panel without waiting to close the sheet.
+      loadJourney()
+        .then(() => {
+          refreshProgressPanel();
+        })
+        .catch(() => {});
     } catch (err) {
       if (btn) {
         btn.disabled = false;
