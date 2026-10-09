@@ -125,40 +125,42 @@ const DailyActsPage = (() => {
     };
   }
 
-  /** Instant streak / week / acts update from completed journey dates. */
-  function bumpSummaryAfterCompletion(assignmentDate) {
+  /**
+   * Instant progress update after complete.
+   * Acts completed always +1. Day streak / week only if completed on the assigned day.
+   */
+  function bumpSummaryAfterCompletion(assignmentDate, { onTime }) {
     if (!journeyData) journeyData = { journey: [], themes: [], summary: {} };
     if (!journeyData.summary) journeyData.summary = {};
     const summary = journeyData.summary;
     const today = todayDate();
 
     summary.momentsOfPeace = Math.max((Number(summary.momentsOfPeace) || 0) + 1, progressFloor.moments + 1);
+    progressFloor.moments = Math.max(progressFloor.moments, Number(summary.momentsOfPeace) || 0);
+
+    // Late catch-up of an older act: counts as an Act completed, never as streak.
+    if (!onTime) {
+      writeJourneyCache(journeyData);
+      return;
+    }
 
     if (Array.isArray(summary.week)) {
       summary.week = summary.week.map((d) => (
         d.date === assignmentDate ? { ...d, completed: true } : d
       ));
-    } else {
-      // Minimal week row so today's dot can light up immediately.
-      summary.week = [{
-        label: '',
-        date: assignmentDate,
-        completed: true,
-        isToday: assignmentDate === today,
-        isFuture: false,
-      }];
     }
 
+    // On-time dates only (from week dots + today).
     const dates = new Set();
-    for (const item of allItems()) {
-      if (item.status === 'completed' && item.date) dates.add(item.date);
+    for (const d of summary.week || []) {
+      if (d.completed && d.date) dates.add(d.date);
     }
     dates.add(assignmentDate);
 
     const next = streakFromDateSet(dates, today);
     summary.currentStreak = Math.max(next, progressFloor.streak);
     summary.longestStreak = Math.max(Number(summary.longestStreak) || 0, summary.currentStreak);
-    raiseProgressFloor(summary);
+    progressFloor.streak = Math.max(progressFloor.streak, Number(summary.currentStreak) || 0);
     writeJourneyCache(journeyData);
   }
 
@@ -171,13 +173,14 @@ const DailyActsPage = (() => {
       ...(journeyData.summary || {}),
       ...summary,
     });
-    // Keep any week day we already marked completed (list lag).
-    if (Array.isArray(journeyData.summary?.week) && Array.isArray(merged.week)) {
-      const localDone = new Set(
-        journeyData.summary.week.filter((d) => d.completed).map((d) => d.date)
+    // Keep today's week dot if we just completed on-time (list lag); never revive old days.
+    if (Array.isArray(summary.week)) {
+      const today = todayDate();
+      const localTodayDone = (journeyData.summary?.week || []).some(
+        (d) => d.date === today && d.completed
       );
-      merged.week = merged.week.map((d) => (
-        localDone.has(d.date) ? { ...d, completed: true } : d
+      merged.week = summary.week.map((d) => (
+        d.date === today && localTodayDone ? { ...d, completed: true } : d
       ));
     }
     journeyData.summary = merged;
@@ -250,7 +253,8 @@ const DailyActsPage = (() => {
     if (apiData.act) item.act = apiData.act;
 
     if (!wasCompleted) {
-      bumpSummaryAfterCompletion(uda.date);
+      const onTime = uda.completedOnAssignedDay === true || uda.date === todayDate();
+      bumpSummaryAfterCompletion(uda.date, { onTime });
     }
   }
 
@@ -406,16 +410,17 @@ const DailyActsPage = (() => {
     if (token !== journeySyncToken) return journeyData;
     journeyData = data;
     restoreCompletedSnapshots(completedSnap);
-    // Never let a lagging Blob list roll the progress bar backwards after complete.
+    // Never let a lagging Blob list roll acts/streak backwards after an on-time complete.
     if (journeyData.summary) {
       journeyData.summary = clampSummaryToFloor(journeyData.summary);
       if (prevSummary?.week && journeyData.summary.week) {
-        const localDone = new Set(
-          (prevSummary.week || []).filter((d) => d.completed).map((d) => d.date)
-        );
-        journeyData.summary.week = journeyData.summary.week.map((d) => (
-          localDone.has(d.date) ? { ...d, completed: true } : d
-        ));
+        const today = todayDate();
+        const localTodayDone = (prevSummary.week || []).some((d) => d.date === today && d.completed);
+        if (localTodayDone) {
+          journeyData.summary.week = journeyData.summary.week.map((d) => (
+            d.date === today ? { ...d, completed: true } : d
+          ));
+        }
       }
       raiseProgressFloor(journeyData.summary);
     }

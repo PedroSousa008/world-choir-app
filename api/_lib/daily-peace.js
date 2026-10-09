@@ -762,9 +762,13 @@ function computeCurrentStreakFromToday(completedDates, todayDate) {
   return current;
 }
 
-/** Streak + week from every completed assignment day (not only same-day / on-time). */
-function buildStreakSummary(completedDates, todayDate, { momentsOfPeace = null } = {}) {
-  const dates = [...new Set((completedDates || []).filter(Boolean))];
+/**
+ * Streak + week from on-time completions only (completed the same calendar day
+ * the act was assigned). Late catch-up of older acts never extends the streak.
+ * `momentsOfPeace` still counts every completed act.
+ */
+function buildStreakSummary(onTimeDates, todayDate, { momentsOfPeace = null } = {}) {
+  const dates = [...new Set((onTimeDates || []).filter(Boolean))];
   const currentStreak = computeCurrentStreakFromToday(dates, todayDate);
   const { longestStreak } = computeStreaks(dates);
   return {
@@ -780,6 +784,7 @@ function buildStreakSummary(completedDates, todayDate, { momentsOfPeace = null }
  * Build streak/acts summary.
  * `upsertRows` win over blob list results — required because Vercel Blob list()
  * is eventually consistent and often omits a row we just wrote on complete.
+ * Day streak uses only completed_on_assigned_day rows.
  */
 async function streakSummaryForUser(userId, todayDate, { upsertRows = [], touchDates = [] } = {}) {
   const rows = await listUserAssignmentRows(userId);
@@ -810,14 +815,14 @@ async function streakSummaryForUser(userId, todayDate, { upsertRows = [], touchD
     if (row.date) byDate.set(row.date, row);
   }
 
-  const dates = [];
+  const onTimeDates = [];
   let moments = 0;
   for (const row of byDate.values()) {
     if (!row.completed || !row.date) continue;
-    dates.push(row.date);
     moments += 1;
+    if (row.completed_on_assigned_day) onTimeDates.push(row.date);
   }
-  return buildStreakSummary(dates, todayDate, { momentsOfPeace: moments });
+  return buildStreakSummary(onTimeDates, todayDate, { momentsOfPeace: moments });
 }
 
 async function getImpact(deviceId, todayInput) {
@@ -834,7 +839,6 @@ async function getImpact(deviceId, todayInput) {
   const completed = [];
   const stillOpen = [];
   const onTimeDates = [];
-  const completedDates = [];
   const experiencedThemes = new Set();
   let partnerDailyActsCompleted = 0;
 
@@ -850,7 +854,6 @@ async function getImpact(deviceId, todayInput) {
     const mapped = mapUserDailyAct(row, act, { todayDate });
     if (row.completed) {
       completed.push(mapped);
-      if (row.date) completedDates.push(row.date);
       if (row.completed_on_assigned_day) onTimeDates.push(row.date);
       const themeId = mapped?.act?.category || resolveTheme(act.category).category;
       if (knownThemeIds.has(themeId)) experiencedThemes.add(themeId);
@@ -862,9 +865,9 @@ async function getImpact(deviceId, todayInput) {
     }
   }
 
-  // Streak = consecutive days with any completed Daily Act (not only same-day).
-  const { longestStreak } = computeStreaks(completedDates);
-  const currentStreak = computeCurrentStreakFromToday(completedDates, todayDate);
+  // Day streak = consecutive on-time completions only (same day the act was available).
+  const { longestStreak } = computeStreaks(onTimeDates);
+  const currentStreak = computeCurrentStreakFromToday(onTimeDates, todayDate);
   const last = completed[0] || null;
 
   return {
@@ -1466,14 +1469,14 @@ async function getJourney(deviceId, todayInput) {
     if (themeCounts[theme.category] != null) themeCounts[theme.category] += 1;
   }
 
-  // Streak = consecutive calendar days with a completed Daily Act (any completion).
-  const completedDates = [];
+  // Day streak / week = on-time only. Acts completed = every completion.
+  const onTimeDates = [];
   for (const raw of rows) {
     const row = normalizeRow(raw);
     if (!row.completed || !row.date) continue;
-    completedDates.push(row.date);
+    if (row.completed_on_assigned_day) onTimeDates.push(row.date);
   }
-  const streakSummary = buildStreakSummary(completedDates, todayDate, { momentsOfPeace });
+  const streakSummary = buildStreakSummary(onTimeDates, todayDate, { momentsOfPeace });
 
   return {
     summary: {
@@ -1609,16 +1612,19 @@ async function buildDailyPeaceOwnerIntel({ force = false } = {}) {
 
   const users = [...byUser.values()].map((u) => {
     u.history.sort((a, b) => String(b.assignmentDate).localeCompare(String(a.assignmentDate)));
-    const completedDates = u.history.map((h) => h.assignmentDate).filter(Boolean);
+    const onTimeDates = u.history
+      .filter((h) => h.completedOnAssignedDay)
+      .map((h) => h.assignmentDate)
+      .filter(Boolean);
     const today = getUtcDateString();
-    const { longestStreak } = computeStreaks(completedDates);
+    const { longestStreak } = computeStreaks(onTimeDates);
     return {
       ...u,
       voiceName: identityByUser.get(u.userId)?.voiceName || null,
       voiceNumber: identityByUser.get(u.userId)?.voiceNumber ?? null,
       city: identityByUser.get(u.userId)?.city || null,
       country: identityByUser.get(u.userId)?.country || null,
-      currentStreak: computeCurrentStreakFromToday(completedDates, today),
+      currentStreak: computeCurrentStreakFromToday(onTimeDates, today),
       longestStreak,
       history: u.history.slice(0, 200),
     };
