@@ -102,8 +102,8 @@ const DailyActsPage = (() => {
     return count;
   }
 
-  /** Instant streak / week / acts update — do not wait on journey reload. */
-  function bumpSummaryAfterCompletion(assignmentDate, { onTime }) {
+  /** Instant streak / week / acts update from completed journey dates. */
+  function bumpSummaryAfterCompletion(assignmentDate) {
     if (!journeyData?.summary || !assignmentDate) return;
     const summary = journeyData.summary;
     const today = todayDate();
@@ -116,28 +116,24 @@ const DailyActsPage = (() => {
       ));
     }
 
-    // Match server: on-time dates drive streak when any exist; otherwise all completed dates.
     const dates = new Set();
-    for (const d of summary.week || []) {
-      if (d.completed && d.date) dates.add(d.date);
-    }
     for (const item of allItems()) {
       if (item.status === 'completed' && item.date) dates.add(item.date);
     }
     dates.add(assignmentDate);
 
-    if (onTime) {
-      dates.add(today);
-      const next = streakFromDateSet(dates, today);
-      summary.currentStreak = next;
-      summary.longestStreak = Math.max(Number(summary.longestStreak) || 0, next);
-    } else if (!(Number(summary.currentStreak) > 0)) {
-      // No on-time streak yet — server falls back to any completed dates.
-      const next = streakFromDateSet(dates, today);
-      summary.currentStreak = next;
-      summary.longestStreak = Math.max(Number(summary.longestStreak) || 0, next);
-    }
+    const next = streakFromDateSet(dates, today);
+    summary.currentStreak = next;
+    summary.longestStreak = Math.max(Number(summary.longestStreak) || 0, next);
+    writeJourneyCache(journeyData);
+  }
 
+  function applySummaryFromApi(summary) {
+    if (!summary || !journeyData) return;
+    journeyData.summary = {
+      ...(journeyData.summary || {}),
+      ...summary,
+    };
     writeJourneyCache(journeyData);
   }
 
@@ -172,8 +168,7 @@ const DailyActsPage = (() => {
     }
 
     if (!wasCompleted && journeyData.summary) {
-      const onTime = uda.completedOnAssignedDay === true || uda.date === todayDate();
-      bumpSummaryAfterCompletion(uda.date, { onTime });
+      bumpSummaryAfterCompletion(uda.date);
     }
   }
 
@@ -1104,13 +1099,16 @@ const DailyActsPage = (() => {
       });
       if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
       patchJourneyItemFromApi(data);
+      // Server returns the authoritative streak in the complete response — apply immediately.
+      if (data.summary) applySummaryFromApi(data.summary);
       justCompletedDate = assignmentDate;
       view = { mode: 'complete-moment', item: data };
       paint();
+      refreshProgressPanel();
       try {
         window.dispatchEvent(new CustomEvent('wc-qr-engagement', { detail: { type: 'daily_act' } }));
       } catch { /* ignore */ }
-      // Reconcile with server, then refresh streak panel without waiting to close the sheet.
+      // Background reconcile (grid item order, etc.) — streak already correct above.
       loadJourney()
         .then(() => {
           refreshProgressPanel();

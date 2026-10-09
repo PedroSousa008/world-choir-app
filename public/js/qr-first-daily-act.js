@@ -222,7 +222,7 @@ const WorldChoirQrFirstDailyAct = (() => {
       const link = document.createElement('link');
       link.id = 'daily-acts-page-css';
       link.rel = 'stylesheet';
-      link.href = 'css/daily-acts-page.css?v=20261008streak1';
+      link.href = 'css/daily-acts-page.css?v=20261009streak2';
       document.head.appendChild(link);
     }
     const style = document.createElement('style');

@@ -713,17 +713,22 @@ async function getOrAssignDailyAct(deviceId, dateInput) {
   return assignFreshDailyAct(user, date, actsById);
 }
 
-function computeStreaks(onTimeDates) {
-  const set = new Set(onTimeDates);
+/** Shift YYYY-MM-DD by whole calendar days (UTC noon — timezone-safe). */
+function shiftIsoDate(iso, deltaDays) {
+  const t = new Date(`${iso}T12:00:00.000Z`);
+  t.setUTCDate(t.getUTCDate() + deltaDays);
+  return t.toISOString().slice(0, 10);
+}
+
+function computeStreaks(completedDates) {
+  const set = new Set(completedDates);
   const sorted = [...set].sort();
   let longest = 0;
   let run = 0;
   let prev = null;
   for (const day of sorted) {
     if (prev) {
-      const prevT = new Date(`${prev}T12:00:00`).getTime();
-      const curT = new Date(`${day}T12:00:00`).getTime();
-      if (curT - prevT === 86400000) run += 1;
+      if (shiftIsoDate(prev, 1) === day) run += 1;
       else run = 1;
     } else {
       run = 1;
@@ -732,41 +737,56 @@ function computeStreaks(onTimeDates) {
     prev = day;
   }
 
-  // Current streak: walk back from today / yesterday
-  const today = getUtcDateString(); // approximate; caller should pass local today via onTime set
+  // Current streak ending at the latest completed day (legacy helper).
   let current = 0;
-  // Find latest on-time day and walk backwards
   if (sorted.length) {
     let cursor = sorted[sorted.length - 1];
-    // If latest isn't today or yesterday relative to max in set, still count consecutive ending at latest
     while (set.has(cursor)) {
       current += 1;
-      const t = new Date(`${cursor}T12:00:00`);
-      t.setDate(t.getDate() - 1);
-      cursor = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+      cursor = shiftIsoDate(cursor, -1);
     }
   }
 
-  return { currentStreak: current, longestStreak: longest, _todayHint: today };
+  return { currentStreak: current, longestStreak: longest };
 }
 
-function computeCurrentStreakFromToday(onTimeDates, todayDate) {
-  const set = new Set(onTimeDates);
+/** Consecutive completed days ending today (or yesterday if today is still open). */
+function computeCurrentStreakFromToday(completedDates, todayDate) {
+  const set = new Set(completedDates);
   let current = 0;
-  let cursor = todayDate;
-  // If today not completed on time, start from yesterday
-  if (!set.has(todayDate)) {
-    const t = new Date(`${todayDate}T12:00:00`);
-    t.setDate(t.getDate() - 1);
-    cursor = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-  }
+  let cursor = set.has(todayDate) ? todayDate : shiftIsoDate(todayDate, -1);
   while (set.has(cursor)) {
     current += 1;
-    const t = new Date(`${cursor}T12:00:00`);
-    t.setDate(t.getDate() - 1);
-    cursor = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    cursor = shiftIsoDate(cursor, -1);
   }
   return current;
+}
+
+/** Streak + week from every completed assignment day (not only same-day / on-time). */
+function buildStreakSummary(completedDates, todayDate, { momentsOfPeace = null } = {}) {
+  const dates = [...new Set((completedDates || []).filter(Boolean))];
+  const currentStreak = computeCurrentStreakFromToday(dates, todayDate);
+  const { longestStreak } = computeStreaks(dates);
+  return {
+    todayDate,
+    currentStreak,
+    longestStreak,
+    week: buildWeekProgress(dates, todayDate),
+    ...(momentsOfPeace != null ? { momentsOfPeace } : {}),
+  };
+}
+
+async function streakSummaryForUser(userId, todayDate) {
+  const rows = await listUserAssignmentRows(userId);
+  const dates = [];
+  let moments = 0;
+  for (const raw of rows) {
+    const row = normalizeRow(raw);
+    if (!row.completed || !row.date) continue;
+    dates.push(row.date);
+    moments += 1;
+  }
+  return buildStreakSummary(dates, todayDate, { momentsOfPeace: moments });
 }
 
 async function getImpact(deviceId, todayInput) {
@@ -783,6 +803,7 @@ async function getImpact(deviceId, todayInput) {
   const completed = [];
   const stillOpen = [];
   const onTimeDates = [];
+  const completedDates = [];
   const experiencedThemes = new Set();
   let partnerDailyActsCompleted = 0;
 
@@ -798,6 +819,7 @@ async function getImpact(deviceId, todayInput) {
     const mapped = mapUserDailyAct(row, act, { todayDate });
     if (row.completed) {
       completed.push(mapped);
+      if (row.date) completedDates.push(row.date);
       if (row.completed_on_assigned_day) onTimeDates.push(row.date);
       const themeId = mapped?.act?.category || resolveTheme(act.category).category;
       if (knownThemeIds.has(themeId)) experiencedThemes.add(themeId);
@@ -809,8 +831,9 @@ async function getImpact(deviceId, todayInput) {
     }
   }
 
-  const { longestStreak } = computeStreaks(onTimeDates);
-  const currentStreak = computeCurrentStreakFromToday(onTimeDates, todayDate);
+  // Streak = consecutive days with any completed Daily Act (not only same-day).
+  const { longestStreak } = computeStreaks(completedDates);
+  const currentStreak = computeCurrentStreakFromToday(completedDates, todayDate);
   const last = completed[0] || null;
 
   return {
@@ -875,8 +898,12 @@ async function completeAssignment(deviceId, assignmentDateInput, todayInput, { s
   if (!act) throw new Error('assigned act not found in catalog');
 
   if (linked.completed) {
-    const mapped = mapUserDailyAct(linked, act, { todayDate });
-    return attachSponsorshipToMapped(mapped, linked);
+    const mapped = await attachSponsorshipToMapped(
+      mapUserDailyAct(linked, act, { todayDate }),
+      linked
+    );
+    mapped.summary = await streakSummaryForUser(user.id, todayDate);
+    return mapped;
   }
 
   // Incomplete rows must use a live catalog act — archived acts cannot be newly completed.
@@ -904,8 +931,13 @@ async function completeAssignment(deviceId, assignmentDateInput, todayInput, { s
   await bumpDailyActsCompletionsTotal().catch(() => {});
   await emitSponsorEvent(updated, user, 'daily_act_completed');
 
-  const mapped = mapUserDailyAct(updated, act, { todayDate });
-  return attachSponsorshipToMapped(mapped, updated);
+  const mapped = await attachSponsorshipToMapped(
+    mapUserDailyAct(updated, act, { todayDate }),
+    updated
+  );
+  // Return fresh streak in the same response so the UI never waits on a second fetch.
+  mapped.summary = await streakSummaryForUser(user.id, todayDate);
+  return mapped;
 }
 
 async function completeDailyAct(deviceId, dateInput) {
@@ -1380,28 +1412,19 @@ async function getJourney(deviceId, todayInput) {
     if (themeCounts[theme.category] != null) themeCounts[theme.category] += 1;
   }
 
-  // Real streak from on-time completions (same definition as Impact / Passport).
-  const onTimeDates = [];
-  const anyCompletedDates = [];
+  // Streak = consecutive calendar days with a completed Daily Act (any completion).
+  const completedDates = [];
   for (const raw of rows) {
     const row = normalizeRow(raw);
     if (!row.completed || !row.date) continue;
-    anyCompletedDates.push(row.date);
-    if (row.completed_on_assigned_day) onTimeDates.push(row.date);
+    completedDates.push(row.date);
   }
-  const streakDates = onTimeDates.length ? onTimeDates : anyCompletedDates;
-  const currentStreak = computeCurrentStreakFromToday(streakDates, todayDate);
-  const { longestStreak } = computeStreaks(streakDates);
-  const week = buildWeekProgress(streakDates, todayDate);
+  const streakSummary = buildStreakSummary(completedDates, todayDate, { momentsOfPeace });
 
   return {
     summary: {
-      momentsOfPeace,
-      todayDate,
       totalActs: journey.length,
-      currentStreak,
-      longestStreak,
-      week,
+      ...streakSummary,
     },
     themes: THEMES.map((t) => ({
       ...t,
@@ -1532,18 +1555,16 @@ async function buildDailyPeaceOwnerIntel({ force = false } = {}) {
 
   const users = [...byUser.values()].map((u) => {
     u.history.sort((a, b) => String(b.assignmentDate).localeCompare(String(a.assignmentDate)));
-    const onTimeDates = u.history
-      .filter((h) => h.completedOnAssignedDay)
-      .map((h) => h.assignmentDate);
-    const { longestStreak } = computeStreaks(onTimeDates);
+    const completedDates = u.history.map((h) => h.assignmentDate).filter(Boolean);
     const today = getUtcDateString();
+    const { longestStreak } = computeStreaks(completedDates);
     return {
       ...u,
       voiceName: identityByUser.get(u.userId)?.voiceName || null,
       voiceNumber: identityByUser.get(u.userId)?.voiceNumber ?? null,
       city: identityByUser.get(u.userId)?.city || null,
       country: identityByUser.get(u.userId)?.country || null,
-      currentStreak: computeCurrentStreakFromToday(onTimeDates, today),
+      currentStreak: computeCurrentStreakFromToday(completedDates, today),
       longestStreak,
       history: u.history.slice(0, 200),
     };
