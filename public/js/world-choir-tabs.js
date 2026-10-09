@@ -178,7 +178,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — Daily Acts of Peace',
       css: [
         'css/daily-peace.css?v=20260813g',
-        'css/daily-acts-page.css?v=20261009streak2',
+        'css/daily-acts-page.css?v=20261009streak3',
         'css/daily-acts-walkthrough.css?v=20260904c',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260924safeTop1',
@@ -187,7 +187,7 @@ const WorldChoirTabs = (() => {
       scripts: [
         'js/profile/daily-acts-peace.js?v=20261007fda3',
         'js/daily-acts-walkthrough.js?v=20260904d',
-        'js/daily-acts-page.js?v=20261009streak2',
+        'js/daily-acts-page.js?v=20261009streak3',
       ],
       selectors: ['.ambient-bg', '#daily-acts-page'],
       init: () => tabApi('daily-acts')?.init?.(),
@@ -341,22 +341,45 @@ const WorldChoirTabs = (() => {
     }
   }
 
+  function queryOf(url) {
+    try {
+      return new URL(url, window.location.href).search || '';
+    } catch {
+      const i = String(url).indexOf('?');
+      return i >= 0 ? String(url).slice(i) : '';
+    }
+  }
+
   function hasStylesheet(href) {
     const key = assetKey(href);
-    return [...document.querySelectorAll('link[rel="stylesheet"]')].some(
-      (l) => assetKey(l.getAttribute('href') || '') === key
-    );
+    const wantQ = queryOf(href);
+    return [...document.querySelectorAll('link[rel="stylesheet"]')].some((l) => {
+      const cur = l.getAttribute('href') || '';
+      return assetKey(cur) === key && queryOf(cur) === wantQ;
+    });
   }
 
   function hasScript(src) {
     const key = assetKey(src);
-    return [...document.querySelectorAll('script[src]')].some(
+    const wantQ = queryOf(src);
+    const nodes = [...document.querySelectorAll('script[src]')].filter(
       (s) => assetKey(s.getAttribute('src') || '') === key
     );
+    if (!nodes.length) return false;
+    // Stale version without matching ?v= — remove so the new file can load.
+    const fresh = nodes.filter((s) => queryOf(s.getAttribute('src') || '') === wantQ);
+    if (fresh.length) return true;
+    nodes.forEach((s) => s.remove());
+    return false;
   }
 
   function loadStylesheet(href) {
     if (hasStylesheet(href)) return Promise.resolve();
+    // Drop older same-path stylesheets so cache-busted CSS wins.
+    const key = assetKey(href);
+    [...document.querySelectorAll('link[rel="stylesheet"]')].forEach((l) => {
+      if (assetKey(l.getAttribute('href') || '') === key) l.remove();
+    });
     return new Promise((resolve) => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';

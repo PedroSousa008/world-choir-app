@@ -2,8 +2,10 @@
  * Daily Acts of Peace — minimalist act grid
  */
 const DailyActsPage = (() => {
-  const JOURNEY_CACHE_KEY = 'wc_dap_journey_v2';
+  // v4: bust stale streak/acts summaries cached before completion-count fix.
+  const JOURNEY_CACHE_KEY = 'wc_dap_journey_v4';
   let journeyData = null;
+  let journeySyncToken = 0;
   let selectedCategory = 'all';
   let view = { mode: 'grid' };
   let calendarMonth = null;
@@ -48,6 +50,7 @@ const DailyActsPage = (() => {
 
   async function apiFetch(path, options = {}) {
     const res = await fetch(path, {
+      cache: 'no-store',
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
       ...options,
     });
@@ -129,33 +132,67 @@ const DailyActsPage = (() => {
   }
 
   function applySummaryFromApi(summary) {
-    if (!summary || !journeyData) return;
+    if (!summary) return;
+    if (!journeyData) {
+      journeyData = { journey: [], themes: [], summary: {} };
+    }
     journeyData.summary = {
       ...(journeyData.summary || {}),
       ...summary,
     };
     writeJourneyCache(journeyData);
+    refreshProgressPanel();
   }
 
   function refreshProgressPanel() {
     const host = root();
-    const el = host?.querySelector('.dap-progress');
-    if (!el) return;
-    const wrap = document.createElement('div');
-    wrap.innerHTML = renderProgressPanel().trim();
-    const next = wrap.firstElementChild;
-    if (next) el.replaceWith(next);
+    if (!host) return;
+    const el = host.querySelector('.dap-progress');
+    const html = renderProgressPanel().trim();
+    if (!html) return;
+    if (el) {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = html;
+      const next = wrap.firstElementChild;
+      if (next) el.replaceWith(next);
+      return;
+    }
+    // Panel missing (skeleton / partial paint) — insert after category nav when possible.
+    const cats = host.querySelector('.dap-cats');
+    if (cats) cats.insertAdjacentHTML('afterend', html);
   }
 
   function patchJourneyItemFromApi(apiData) {
-    if (!journeyData?.journey || !apiData?.userDailyAct) return;
+    if (!apiData?.userDailyAct) return;
+    if (!journeyData) {
+      journeyData = { journey: [], themes: [], summary: {} };
+    }
+    if (!Array.isArray(journeyData.journey)) journeyData.journey = [];
+
     const uda = apiData.userDailyAct;
     const actId = apiData.act?.id || uda.actId;
-    const item = findItem(uda.date, actId);
+    let item = findItem(uda.date, actId);
+    if (!item && actId) {
+      // Journey row missing (stale cache) — synthesize so grid + counts stay in sync.
+      const theme = apiData.act?.category || '';
+      item = {
+        key: actId,
+        actId,
+        date: uda.date,
+        status: 'available',
+        isToday: uda.date === todayDate(),
+        category: theme,
+        categoryLabel: apiData.act?.categoryLabel || '',
+        assignment: {},
+        act: apiData.act || null,
+      };
+      journeyData.journey.push(item);
+    }
     if (!item) return;
 
     const wasCompleted = item.status === 'completed';
     item.status = 'completed';
+    item.date = uda.date || item.date;
     item.assignment = item.assignment || {};
     item.assignment.id = uda.id || item.assignment.id;
     item.assignment.completedAt = uda.completedAt || item.assignment.completedAt || new Date().toISOString();
@@ -166,8 +203,9 @@ const DailyActsPage = (() => {
       item.assignment.reflection = uda.reflection;
       item.assignment.reflectionAt = uda.reflectionAt;
     }
+    if (apiData.act) item.act = apiData.act;
 
-    if (!wasCompleted && journeyData.summary) {
+    if (!wasCompleted) {
       bumpSummaryAfterCompletion(uda.date);
     }
   }
@@ -313,12 +351,18 @@ const DailyActsPage = (() => {
   }
 
   async function loadJourney() {
+    const token = ++journeySyncToken;
     const completedSnap = snapshotCompletedItems();
-    journeyData = await apiFetch(
-      `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&view=journey&date=${encodeURIComponent(localDateString())}&_t=${Date.now()}`
+    const data = await apiFetch(
+      `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&view=journey&date=${encodeURIComponent(localDateString())}&_t=${Date.now()}`,
+      { cache: 'no-store' }
     );
+    // Ignore outdated responses if a newer sync started.
+    if (token !== journeySyncToken) return journeyData;
+    journeyData = data;
     restoreCompletedSnapshots(completedSnap);
     writeJourneyCache(journeyData);
+    refreshProgressPanel();
     return journeyData;
   }
 
@@ -338,7 +382,7 @@ const DailyActsPage = (() => {
     try {
       sessionStorage.setItem(
         JOURNEY_CACHE_KEY,
-        JSON.stringify({ date: localDateString(), payload })
+        JSON.stringify({ date: localDateString(), payload, at: Date.now() })
       );
     } catch {
       /* ignore */
@@ -348,7 +392,17 @@ const DailyActsPage = (() => {
   function paintFromCacheIfPossible() {
     const cached = readJourneyCache();
     if (!cached) return false;
-    journeyData = cached;
+    // Instant shell only — never trust cached streak/acts (they go stale after complete).
+    journeyData = {
+      ...cached,
+      summary: {
+        ...(cached.summary || {}),
+        currentStreak: Number(cached.summary?.currentStreak) || 0,
+        momentsOfPeace: Number(cached.summary?.momentsOfPeace) || 0,
+        week: Array.isArray(cached.summary?.week) ? cached.summary.week : [],
+        todayDate: cached.summary?.todayDate || localDateString(),
+      },
+    };
     applyDailyActsRoute();
     paint();
     return true;
@@ -444,8 +498,12 @@ const DailyActsPage = (() => {
 
   function renderProgressPanel() {
     const summary = journeyData?.summary || {};
-    const streak = Number(summary.currentStreak) || 0;
-    const acts = Number(summary.momentsOfPeace) || 0;
+    // Prefer server summary; fall back to counting completed journey rows.
+    const completedCount = allItems().filter((i) => i.status === 'completed').length;
+    const streak = Number(summary.currentStreak);
+    const acts = Number(summary.momentsOfPeace);
+    const streakShow = Number.isFinite(streak) && streak >= 0 ? streak : 0;
+    const actsShow = Number.isFinite(acts) && acts >= 0 ? acts : completedCount;
     const week = Array.isArray(summary.week) ? summary.week : [];
 
     const weekHtml = week.length
@@ -469,10 +527,10 @@ const DailyActsPage = (() => {
           </div>`).join('');
 
     return `
-      <section class="dap-progress" aria-label="Your Daily Acts progress">
+      <section class="dap-progress" aria-label="Your Daily Acts progress" data-streak="${esc(String(streakShow))}" data-acts="${esc(String(actsShow))}">
         <div class="dap-progress__stat dap-progress__stat--streak">
           <span class="dap-progress__emoji" aria-hidden="true">🔥</span>
-          <span class="dap-progress__value">${esc(String(streak))}</span>
+          <span class="dap-progress__value" data-dap-stat="streak">${esc(String(streakShow))}</span>
           <span class="dap-progress__label">Day streak</span>
         </div>
         <div class="dap-progress__week" role="list" aria-label="This week">
@@ -480,7 +538,7 @@ const DailyActsPage = (() => {
         </div>
         <div class="dap-progress__stat dap-progress__stat--acts">
           <span class="dap-progress__emoji" aria-hidden="true">🌱</span>
-          <span class="dap-progress__value">${esc(String(acts))}</span>
+          <span class="dap-progress__value" data-dap-stat="acts">${esc(String(actsShow))}</span>
           <span class="dap-progress__label">Acts completed</span>
         </div>
       </section>
@@ -1101,6 +1159,7 @@ const DailyActsPage = (() => {
       patchJourneyItemFromApi(data);
       // Server returns the authoritative streak in the complete response — apply immediately.
       if (data.summary) applySummaryFromApi(data.summary);
+      else refreshProgressPanel();
       justCompletedDate = assignmentDate;
       view = { mode: 'complete-moment', item: data };
       paint();
@@ -1108,10 +1167,11 @@ const DailyActsPage = (() => {
       try {
         window.dispatchEvent(new CustomEvent('wc-qr-engagement', { detail: { type: 'daily_act' } }));
       } catch { /* ignore */ }
-      // Background reconcile (grid item order, etc.) — streak already correct above.
+      // Background reconcile — update streak/acts without remounting the completion sheet.
       loadJourney()
         .then(() => {
           refreshProgressPanel();
+          if (view.mode === 'grid') paint();
         })
         .catch(() => {});
     } catch (err) {
@@ -1336,9 +1396,13 @@ const DailyActsPage = (() => {
       try {
         await WorldChoirDB.ready();
         if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.start?.();
+        // Drop pre-v4 session cache so streak/acts cannot stick on old numbers.
+        try { sessionStorage.removeItem('wc_dap_journey_v2'); } catch { /* ignore */ }
+        try { sessionStorage.removeItem('wc_dap_journey_v3'); } catch { /* ignore */ }
         await loadJourney();
         applyDailyActsRoute();
         paint();
+        refreshProgressPanel();
         if (!hashBound) {
           hashBound = true;
           window.addEventListener('hashchange', () => {
@@ -1398,7 +1462,12 @@ const DailyActsPage = (() => {
     }
     if (journeyData) {
       paint();
-      void loadJourney().then(() => paint()).catch(() => {});
+      void loadJourney()
+        .then(() => {
+          paint();
+          refreshProgressPanel();
+        })
+        .catch(() => {});
     } else {
       void hydrate();
     }
