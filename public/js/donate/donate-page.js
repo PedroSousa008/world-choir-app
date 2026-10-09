@@ -23,9 +23,30 @@ const WorldChoirDonate = (() => {
   let selectedCause = 'all';
   let lastFocusEl = null;
   let themeBound = false;
+  /** Session-only: 'list' (default) | 'grid' — Foundations layout on Discover Impact. */
+  const FOUNDATION_VIEW_KEY = 'wc_donate_foundation_view_v1';
+  let foundationViewMode = readFoundationViewMode();
 
   const DONATE_LOGO_DARK = 'images/world-choir-logo-donate.png?v=20260813v';
   const DONATE_LOGO_LIGHT = 'images/donations-light-logo.png?v=20260912donateLight';
+
+  function readFoundationViewMode() {
+    try {
+      return sessionStorage.getItem(FOUNDATION_VIEW_KEY) === 'grid' ? 'grid' : 'list';
+    } catch {
+      return 'list';
+    }
+  }
+
+  function writeFoundationViewMode(mode) {
+    const next = mode === 'grid' ? 'grid' : 'list';
+    foundationViewMode = next;
+    try {
+      sessionStorage.setItem(FOUNDATION_VIEW_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  }
 
   function isLightTheme() {
     try {
@@ -830,6 +851,44 @@ const WorldChoirDonate = (() => {
     return `<li>${card}</li>`;
   }
 
+  function renderGridFoundationCard(foundation) {
+    const currency = typeof CreatorFoundationsStore !== 'undefined'
+      ? CreatorFoundationsStore.getCurrency()
+      : 'EUR';
+    const img = typeof FoundationPublicCard !== 'undefined'
+      ? FoundationPublicCard.visualUrl(foundation)
+      : String(foundation.coverImage || foundation.profileImage || '').trim();
+    const name = foundation.foundationName || '';
+    const person = String(foundation.creatorName || '').trim();
+    const amount = formatMoney(foundation.totalRaised || 0, currency);
+    const label = [name, person].filter(Boolean).join(' — ') || 'Open foundation';
+
+    return `
+      <li>
+        <button
+          type="button"
+          class="df-gcard"
+          data-open-foundation="${esc(foundation.id)}"
+          aria-label="${esc(label)}"
+        >
+          <span class="df-gcard__media ${img ? 'has-image' : ''}" aria-hidden="true">
+            ${img
+              ? `<img src="${esc(img)}" alt="" loading="lazy" decoding="async">`
+              : `<span class="df-gcard__glyph">${esc(identityGlyph(foundation))}</span>`}
+          </span>
+          <span class="df-gcard__body" aria-hidden="true">
+            <span class="df-gcard__name">${esc(name)}</span>
+            ${person ? `<span class="df-gcard__person">${esc(person)}</span>` : ''}
+            <span class="df-gcard__raised">
+              <span class="df-gcard__raised-label">Total Raised</span>
+              <span class="df-gcard__raised-amount">${esc(amount)}</span>
+            </span>
+          </span>
+        </button>
+      </li>
+    `;
+  }
+
   function renderEmptyResults() {
     const searching = searchOpen && searchQuery.trim();
     const copy = searching
@@ -901,11 +960,14 @@ const WorldChoirDonate = (() => {
   }
 
   function renderFoundationsSection(items) {
+    const isGrid = foundationViewMode === 'grid';
+    const listClass = isGrid ? 'df-fcards df-fcards--grid' : 'df-fcards';
+    const cards = items.map(isGrid ? renderGridFoundationCard : renderFoundationCard).join('');
     return `
-      <section class="df-foundations" aria-labelledby="df-foundations-label">
+      <section class="df-foundations" aria-labelledby="df-foundations-label" data-view="${isGrid ? 'grid' : 'list'}">
         <p class="df-section-label" id="df-foundations-label">Foundations</p>
         ${items.length
-          ? `<ul class="df-fcards">${items.map(renderFoundationCard).join('')}</ul>`
+          ? `<ul class="${listClass}">${cards}</ul>`
           : renderEmptyResults()}
       </section>
     `;
@@ -983,12 +1045,39 @@ const WorldChoirDonate = (() => {
     return '';
   }
 
+  function foundationViewToggleLabel() {
+    return foundationViewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view';
+  }
+
+  function syncFoundationViewToggle(btn) {
+    const el = btn || document.getElementById('df-grid-open');
+    if (!el) return;
+    const isGrid = foundationViewMode === 'grid';
+    el.classList.toggle('is-grid', isGrid);
+    el.setAttribute('aria-label', foundationViewToggleLabel());
+    el.setAttribute('aria-pressed', isGrid ? 'true' : 'false');
+  }
+
+  function toggleFoundationViewMode() {
+    writeFoundationViewMode(foundationViewMode === 'grid' ? 'list' : 'grid');
+    syncFoundationViewToggle();
+    // Remount foundations only — keep filters/search/scroll chrome intact.
+    updateFoundationsList();
+  }
+
   function renderDiscoveryChrome() {
+    const isGrid = foundationViewMode === 'grid';
     return `
       <section class="df-explore" aria-labelledby="df-explore-label">
         <div class="df-explore__header">
           <p class="df-section-label" id="df-explore-label">Explore by cause</p>
-          <button type="button" class="df-grid-trigger" id="df-grid-open" aria-label="Explore by cause">
+          <button
+            type="button"
+            class="df-grid-trigger${isGrid ? ' is-grid' : ''}"
+            id="df-grid-open"
+            aria-label="${esc(foundationViewToggleLabel())}"
+            aria-pressed="${isGrid ? 'true' : 'false'}"
+          >
             ${gridIconSvg()}
           </button>
         </div>
@@ -1023,11 +1112,7 @@ const WorldChoirDonate = (() => {
   function bindHomeEvents(opts = {}) {
     document.getElementById('df-search-open')?.addEventListener('click', openSearch);
     document.getElementById('df-search-close')?.addEventListener('click', closeSearch);
-    document.getElementById('df-grid-open')?.addEventListener('click', () => {
-      const firstCause = document.querySelector('.df-cause');
-      firstCause?.focus?.();
-      document.querySelector('.df-causes')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-    });
+    document.getElementById('df-grid-open')?.addEventListener('click', toggleFoundationViewMode);
     document.getElementById('df-see-projects')?.addEventListener('click', () => {
       const el = document.getElementById('df-now-label');
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
