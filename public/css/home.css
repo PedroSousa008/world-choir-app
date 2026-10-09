@@ -574,14 +574,14 @@ html[data-theme="light"] .countdown-name {
   display: none !important;
 }
 
-/* Primary CTA */
+/* Primary CTA — full content width (same as Profile actions on desktop). */
 .btn-hero {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 320px;
+  max-width: none;
   margin: 0 auto 20px;
   padding: 18px 36px;
   border: none;
@@ -636,7 +636,7 @@ html[data-theme="light"] .countdown-name {
 
 .btn-hero-skeleton {
   width: 100%;
-  max-width: 320px;
+  max-width: none;
   height: 56px;
   margin: 0 auto 20px;
   border-radius: var(--radius-md);
@@ -661,7 +661,7 @@ html[data-theme="light"] .countdown-name {
   align-items: stretch;
   flex-wrap: nowrap;
   width: 100%;
-  max-width: 320px;
+  max-width: none;
   margin: 0 auto 16px;
   min-height: 52px;
   border-radius: var(--radius-md);
