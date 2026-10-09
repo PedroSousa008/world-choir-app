@@ -127,12 +127,37 @@
   outline: none;
 }
 
-.df-search-trigger svg {
+.df-search-trigger svg,
+.df-grid-trigger svg {
   width: 20px;
   height: 20px;
   stroke: currentColor;
   fill: none;
   stroke-width: 1.5;
+}
+
+/* Same control size as Search; sits under it on the Explore-by-cause row. */
+.df-grid-trigger {
+  width: 44px;
+  height: 44px;
+  margin: 0 -8px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--df-warm-soft);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: color 0.25s ease, background 0.25s ease;
+}
+
+.df-grid-trigger:hover,
+.df-grid-trigger:focus-visible {
+  color: var(--df-warm);
+  background: var(--surface-lift);
+  outline: none;
 }
 
 /* ─── Intro ─── */
@@ -467,6 +492,21 @@
 
 .df-explore {
   margin-bottom: 28px;
+}
+
+.df-explore__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  margin-bottom: 12px;
+}
+
+.df-explore__header .df-section-label {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .df-causes {
@@ -3315,12 +3355,15 @@ html[data-theme="light"] .df-fcard:focus-visible .df-fcard__arrow {
   color: #4ec5e8;
 }
 
-html[data-theme="light"] .df-search-trigger {
+html[data-theme="light"] .df-search-trigger,
+html[data-theme="light"] .df-grid-trigger {
   color: #3f424a;
 }
 
 html[data-theme="light"] .df-search-trigger:hover,
-html[data-theme="light"] .df-search-trigger:focus-visible {
+html[data-theme="light"] .df-search-trigger:focus-visible,
+html[data-theme="light"] .df-grid-trigger:hover,
+html[data-theme="light"] .df-grid-trigger:focus-visible {
   color: #0c0c0e;
 }
 

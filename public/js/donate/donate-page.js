@@ -218,6 +218,17 @@ const WorldChoirDonate = (() => {
     `;
   }
 
+  function gridIconSvg() {
+    return `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3.5" y="3.5" width="7" height="7" rx="1"></rect>
+        <rect x="13.5" y="3.5" width="7" height="7" rx="1"></rect>
+        <rect x="3.5" y="13.5" width="7" height="7" rx="1"></rect>
+        <rect x="13.5" y="13.5" width="7" height="7" rx="1"></rect>
+      </svg>
+    `;
+  }
+
   function arrowSvg() {
     return `
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -975,7 +986,12 @@ const WorldChoirDonate = (() => {
   function renderDiscoveryChrome() {
     return `
       <section class="df-explore" aria-labelledby="df-explore-label">
-        <p class="df-section-label" id="df-explore-label">Explore by cause</p>
+        <div class="df-explore__header">
+          <p class="df-section-label" id="df-explore-label">Explore by cause</p>
+          <button type="button" class="df-grid-trigger" id="df-grid-open" aria-label="Explore by cause">
+            ${gridIconSvg()}
+          </button>
+        </div>
         ${renderCauseFilters()}
       </section>
     `;
@@ -1007,6 +1023,11 @@ const WorldChoirDonate = (() => {
   function bindHomeEvents(opts = {}) {
     document.getElementById('df-search-open')?.addEventListener('click', openSearch);
     document.getElementById('df-search-close')?.addEventListener('click', closeSearch);
+    document.getElementById('df-grid-open')?.addEventListener('click', () => {
+      const firstCause = document.querySelector('.df-cause');
+      firstCause?.focus?.();
+      document.querySelector('.df-causes')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    });
     document.getElementById('df-see-projects')?.addEventListener('click', () => {
       const el = document.getElementById('df-now-label');
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
