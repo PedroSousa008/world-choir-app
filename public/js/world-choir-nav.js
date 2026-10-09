@@ -603,7 +603,7 @@ const WorldChoirNav = (() => {
   const TAB_ASSETS = {
     home: [
       'index.html',
-      'css/home.css?v=20260924safeTop1',
+      'css/home.css?v=20261009deskFull',
       'js/world-choir-home.js?v=20261007illSing1',
       'js/world-choir-db.js?v=20260924voices46',
     ],
@@ -626,7 +626,7 @@ const WorldChoirNav = (() => {
     donate: [
       'donate.html',
       'css/foundation-public-card.css?v=20260904cd',
-      'css/donate.css?v=20260924safeTop1',
+      'css/donate.css?v=20261009deskFull',
       'js/donate/creator-foundations-store.js?v=20260921connect1',
       'js/donate/foundation-analytics.js?v=20260921funnel2',
       'js/donate/donation-flow.js?v=20260921funnel2',
@@ -644,7 +644,7 @@ const WorldChoirNav = (() => {
       'js/world-choir-onboarding.js?v=20260816a',
       'js/world-choir-db.js?v=20260924voices46',
       'passport.html',
-      'css/passport.css?v=20261009ptwNoFlash',
+      'css/passport.css?v=20261009deskFull',
       'js/profile/passport-route.js?v=20260901b',
       'js/profile/world-choir-passport.js?v=20260912passportCover',
       'js/profile/passport-page.js?v=20261009ptwNoFlash',
@@ -664,8 +664,8 @@ const WorldChoirNav = (() => {
     ],
     memory: [
       'memory.html',
-      'css/memory-page.css?v=20260911theme',
-      'css/world-chain.css?v=20260911photoBookText',
+      'css/memory-page.css?v=20261009deskFull',
+      'css/world-chain.css?v=20261009deskFull',
       'js/world-choir-flags.js?v=20260902n',
       'js/memory/memory-data.js?v=20260907wchain',
       'js/memory/memory-feed.js?v=20260904bt',
@@ -675,7 +675,7 @@ const WorldChoirNav = (() => {
     ],
     'world-chain': [
       'world-chain.html',
-      'css/world-chain.css?v=20260911photoBookText',
+      'css/world-chain.css?v=20261009deskFull',
       'js/world-choir-flags.js?v=20260905s',
       'js/world-chain-page.js?v=20261006progressPersist',
       '/api/world-chain',
@@ -684,7 +684,7 @@ const WorldChoirNav = (() => {
     ],
     'daily-acts': [
       'daily-acts.html',
-      'css/daily-acts-page.css?v=20261009streak5',
+      'css/daily-acts-page.css?v=20261009deskFull',
       'js/daily-acts-page.js?v=20261009streak5',
     ],
   };

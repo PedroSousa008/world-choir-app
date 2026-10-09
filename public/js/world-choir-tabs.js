@@ -11,7 +11,7 @@ const WorldChoirTabs = (() => {
       href: 'index.html',
       title: 'World Choir',
       css: [
-        'css/home.css?v=20260924safeTop1',
+        'css/home.css?v=20261009deskFull',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260924safeTop1',
         'css/daily-peace.css?v=20260810e',
@@ -83,7 +83,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — Donate',
       css: [
         'css/foundation-public-card.css?v=20260904cd',
-        'css/donate.css?v=20260924safeTop1',
+        'css/donate.css?v=20261009deskFull',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260924safeTop1',
         'css/daily-peace.css?v=20260810e',
@@ -148,12 +148,12 @@ const WorldChoirTabs = (() => {
       href: 'memory.html',
       title: 'World Choir — The World Sang',
       css: [
-        'css/donate.css?v=20260924safeTop1',
-        'css/passport.css?v=20261009ptwNoFlash',
+        'css/donate.css?v=20261009deskFull',
+        'css/passport.css?v=20261009deskFull',
         'css/profile.css?v=20260924safeTop1',
         'css/daily-peace.css?v=20260810e',
-        'css/memory-page.css?v=20260911theme',
-        'css/world-chain.css?v=20260911photoBookText',
+        'css/memory-page.css?v=20261009deskFull',
+        'css/world-chain.css?v=20261009deskFull',
         'css/privacy-consent.css?v=20260911theme',
         'css/live-event.css?v=20260911theme',
       ],
@@ -178,7 +178,7 @@ const WorldChoirTabs = (() => {
       title: 'World Choir — Daily Acts of Peace',
       css: [
         'css/daily-peace.css?v=20260813g',
-        'css/daily-acts-page.css?v=20261009streak5',
+        'css/daily-acts-page.css?v=20261009deskFull',
         'css/daily-acts-walkthrough.css?v=20260904c',
         'css/privacy-consent.css?v=20260911theme',
         'css/profile.css?v=20260924safeTop1',
@@ -199,7 +199,7 @@ const WorldChoirTabs = (() => {
       href: 'world-chain.html',
       title: 'World Choir — World Chain',
       css: [
-        'css/world-chain.css?v=20260911photoBookText',
+        'css/world-chain.css?v=20261009deskFull',
         'css/privacy-consent.css?v=20260911theme',
         'css/live-event.css?v=20260911theme',
       ],

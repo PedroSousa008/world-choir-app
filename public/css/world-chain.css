@@ -3,7 +3,8 @@
 .world-chain-page {
   position: relative;
   z-index: 1;
-  max-width: 480px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
   padding: max(20px, env(safe-area-inset-top, 0px)) 20px calc(var(--nav-height) + 28px);
   text-align: center;

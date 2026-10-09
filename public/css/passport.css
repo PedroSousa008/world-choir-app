@@ -3,7 +3,8 @@
 .passport-page {
   position: relative;
   z-index: 1;
-  max-width: 480px;
+  max-width: 100%;
+  width: 100%;
   padding-top: max(20px, env(safe-area-inset-top, 0px));
 }
 
@@ -1631,6 +1632,8 @@
 
 .passport-card.passport-card--ptw,
 .passport-card.passport-card--ptw.is-inside {
+  width: 100%;
+  max-width: none;
   background: #ffffff;
   border-color: transparent;
   color: #12192b;
@@ -1887,7 +1890,7 @@
 .passport-card.passport-card--ptw.is-ptw-partner {
   aspect-ratio: auto;
   height: auto;
-  min-height: calc(min(100vw - 48px, 372px) / 0.7);
+  min-height: calc(min(100vw - 48px, 560px) / 0.7);
   /* Clip map to the card’s rounded corners */
   overflow: hidden;
 }

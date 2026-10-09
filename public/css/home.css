@@ -6,11 +6,16 @@
   min-height: 100vh;
   /* 24px content gap + safe-area so chrome matches pre–edge-to-edge distance */
   padding: calc(24px + env(safe-area-inset-top, 0px)) 20px calc(var(--nav-height) + 24px);
-  max-width: 480px;
+  max-width: 100%;
   margin: 0 auto;
   width: 100%;
   overflow-x: clip;
   text-align: center;
+}
+
+/* Match Profile: primary actions use the full content width on every screen. */
+.home-page .btn {
+  max-width: none;
 }
 
 .home-page--centered {
@@ -955,7 +960,7 @@ html[data-theme="light"] .countdown-name {
 .home-page--post-event {
   display: block;
   justify-content: flex-start;
-  max-width: 520px;
+  max-width: 100%;
   padding: 0 0 calc(var(--nav-height) + 12px);
   text-align: left;
   overflow: visible;

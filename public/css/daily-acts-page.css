@@ -3,8 +3,9 @@
 .daily-acts-page {
   position: relative;
   z-index: 1;
-  max-width: 560px;
+  max-width: 100%;
   margin: 0 auto;
+  width: 100%;
   /* 24px content gap + safe-area so header matches pre–edge-to-edge distance */
   padding: calc(24px + env(safe-area-inset-top, 0px)) 20px calc(var(--nav-height) + 36px);
   min-height: 100vh;
@@ -300,6 +301,19 @@
   .dap-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
+  }
+}
+
+@media (min-width: 900px) {
+  .dap-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .dap-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 

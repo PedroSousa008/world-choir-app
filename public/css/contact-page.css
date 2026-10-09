@@ -4,7 +4,7 @@
   /* Overrides .page 32px top — keep 12px content gap + safe-area for edge-to-edge */
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
   width: 100%;
-  max-width: 480px;
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
 }
@@ -232,7 +232,7 @@
 /* Desktop */
 @media (min-width: 900px) {
   .contact-page {
-    max-width: 560px;
+    max-width: 100%;
     padding-top: 28px;
   }
 
