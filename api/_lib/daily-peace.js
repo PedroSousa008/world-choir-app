@@ -776,12 +776,43 @@ function buildStreakSummary(completedDates, todayDate, { momentsOfPeace = null }
   };
 }
 
-async function streakSummaryForUser(userId, todayDate) {
+/**
+ * Build streak/acts summary.
+ * `upsertRows` win over blob list results — required because Vercel Blob list()
+ * is eventually consistent and often omits a row we just wrote on complete.
+ */
+async function streakSummaryForUser(userId, todayDate, { upsertRows = [], touchDates = [] } = {}) {
   const rows = await listUserAssignmentRows(userId);
-  const dates = [];
-  let moments = 0;
+  const byDate = new Map();
   for (const raw of rows) {
     const row = normalizeRow(raw);
+    if (row.date) byDate.set(row.date, row);
+  }
+
+  // Re-read specific dates by path (strong consistency) — always include today.
+  const datesToTouch = new Set([
+    todayDate,
+    ...touchDates.filter(Boolean),
+    ...upsertRows.map((r) => r && (r.date || null)).filter(Boolean),
+  ]);
+  for (const date of datesToTouch) {
+    try {
+      const fresh = await readUserDailyAct(userId, date);
+      if (fresh) byDate.set(date, normalizeRow(fresh));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  for (const raw of upsertRows) {
+    if (!raw) continue;
+    const row = normalizeRow(raw);
+    if (row.date) byDate.set(row.date, row);
+  }
+
+  const dates = [];
+  let moments = 0;
+  for (const row of byDate.values()) {
     if (!row.completed || !row.date) continue;
     dates.push(row.date);
     moments += 1;
@@ -902,7 +933,10 @@ async function completeAssignment(deviceId, assignmentDateInput, todayInput, { s
       mapUserDailyAct(linked, act, { todayDate }),
       linked
     );
-    mapped.summary = await streakSummaryForUser(user.id, todayDate);
+    mapped.summary = await streakSummaryForUser(user.id, todayDate, {
+      upsertRows: [linked],
+      touchDates: [assignmentDate],
+    });
     return mapped;
   }
 
@@ -935,8 +969,11 @@ async function completeAssignment(deviceId, assignmentDateInput, todayInput, { s
     mapUserDailyAct(updated, act, { todayDate }),
     updated
   );
-  // Return fresh streak in the same response so the UI never waits on a second fetch.
-  mapped.summary = await streakSummaryForUser(user.id, todayDate);
+  // Upsert the row we just wrote — Blob list() often lags and would under-count streak/acts.
+  mapped.summary = await streakSummaryForUser(user.id, todayDate, {
+    upsertRows: [updated],
+    touchDates: [assignmentDate],
+  });
   return mapped;
 }
 
@@ -1233,7 +1270,24 @@ async function getJourney(deviceId, todayInput) {
   const { getAllActsById, loadAllPartnerships, publicSponsorship, sponsorshipRecord } = require('./daily-peace-partnerships');
   const actsById = await getAllActsById();
   const catalog = [...actsById.values()];
-  const rows = await listUserAssignmentRows(user.id);
+  // Merge list() with a strong read of today (and recent days) so just-completed
+  // acts are never missing from streak / Acts completed because of Blob list lag.
+  const listed = await listUserAssignmentRows(user.id);
+  const byDate = new Map();
+  for (const raw of listed) {
+    const row = normalizeRow(raw);
+    if (row.date) byDate.set(row.date, row);
+  }
+  const touch = [todayDate, shiftIsoDate(todayDate, -1), shiftIsoDate(todayDate, -2)];
+  for (const date of touch) {
+    try {
+      const fresh = await readUserDailyAct(user.id, date);
+      if (fresh) byDate.set(date, normalizeRow(fresh));
+    } catch {
+      /* ignore */
+    }
+  }
+  const rows = [...byDate.values()];
   const liveByActId = new Map();
   const partnershipById = new Map();
   try {

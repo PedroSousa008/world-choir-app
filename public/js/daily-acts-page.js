@@ -2,10 +2,12 @@
  * Daily Acts of Peace — minimalist act grid
  */
 const DailyActsPage = (() => {
-  // v4: bust stale streak/acts summaries cached before completion-count fix.
-  const JOURNEY_CACHE_KEY = 'wc_dap_journey_v4';
+  // v5: never regress streak/acts after a successful complete (Blob list lag).
+  const JOURNEY_CACHE_KEY = 'wc_dap_journey_v5';
   let journeyData = null;
   let journeySyncToken = 0;
+  /** Floor so a lagging journey reload cannot roll the progress bar backwards. */
+  let progressFloor = { moments: 0, streak: 0 };
   let selectedCategory = 'all';
   let view = { mode: 'grid' };
   let calendarMonth = null;
@@ -105,18 +107,46 @@ const DailyActsPage = (() => {
     return count;
   }
 
+  function raiseProgressFloor(summary) {
+    if (!summary) return;
+    progressFloor.moments = Math.max(progressFloor.moments, Number(summary.momentsOfPeace) || 0);
+    progressFloor.streak = Math.max(progressFloor.streak, Number(summary.currentStreak) || 0);
+  }
+
+  function clampSummaryToFloor(summary) {
+    if (!summary) return summary;
+    const moments = Math.max(progressFloor.moments, Number(summary.momentsOfPeace) || 0);
+    const streak = Math.max(progressFloor.streak, Number(summary.currentStreak) || 0);
+    return {
+      ...summary,
+      momentsOfPeace: moments,
+      currentStreak: streak,
+      longestStreak: Math.max(Number(summary.longestStreak) || 0, streak),
+    };
+  }
+
   /** Instant streak / week / acts update from completed journey dates. */
   function bumpSummaryAfterCompletion(assignmentDate) {
-    if (!journeyData?.summary || !assignmentDate) return;
+    if (!journeyData) journeyData = { journey: [], themes: [], summary: {} };
+    if (!journeyData.summary) journeyData.summary = {};
     const summary = journeyData.summary;
     const today = todayDate();
 
-    summary.momentsOfPeace = (summary.momentsOfPeace || 0) + 1;
+    summary.momentsOfPeace = Math.max((Number(summary.momentsOfPeace) || 0) + 1, progressFloor.moments + 1);
 
     if (Array.isArray(summary.week)) {
       summary.week = summary.week.map((d) => (
         d.date === assignmentDate ? { ...d, completed: true } : d
       ));
+    } else {
+      // Minimal week row so today's dot can light up immediately.
+      summary.week = [{
+        label: '',
+        date: assignmentDate,
+        completed: true,
+        isToday: assignmentDate === today,
+        isFuture: false,
+      }];
     }
 
     const dates = new Set();
@@ -126,8 +156,9 @@ const DailyActsPage = (() => {
     dates.add(assignmentDate);
 
     const next = streakFromDateSet(dates, today);
-    summary.currentStreak = next;
-    summary.longestStreak = Math.max(Number(summary.longestStreak) || 0, next);
+    summary.currentStreak = Math.max(next, progressFloor.streak);
+    summary.longestStreak = Math.max(Number(summary.longestStreak) || 0, summary.currentStreak);
+    raiseProgressFloor(summary);
     writeJourneyCache(journeyData);
   }
 
@@ -136,17 +167,31 @@ const DailyActsPage = (() => {
     if (!journeyData) {
       journeyData = { journey: [], themes: [], summary: {} };
     }
-    journeyData.summary = {
+    const merged = clampSummaryToFloor({
       ...(journeyData.summary || {}),
       ...summary,
-    };
+    });
+    // Keep any week day we already marked completed (list lag).
+    if (Array.isArray(journeyData.summary?.week) && Array.isArray(merged.week)) {
+      const localDone = new Set(
+        journeyData.summary.week.filter((d) => d.completed).map((d) => d.date)
+      );
+      merged.week = merged.week.map((d) => (
+        localDone.has(d.date) ? { ...d, completed: true } : d
+      ));
+    }
+    journeyData.summary = merged;
+    raiseProgressFloor(merged);
     writeJourneyCache(journeyData);
     refreshProgressPanel();
   }
 
   function refreshProgressPanel() {
     const host = root();
-    if (!host) return;
+    if (!host || !journeyData) return;
+    const summary = clampSummaryToFloor(journeyData.summary || {});
+    journeyData.summary = { ...(journeyData.summary || {}), ...summary };
+
     const el = host.querySelector('.dap-progress');
     const html = renderProgressPanel().trim();
     if (!html) return;
@@ -157,7 +202,6 @@ const DailyActsPage = (() => {
       if (next) el.replaceWith(next);
       return;
     }
-    // Panel missing (skeleton / partial paint) — insert after category nav when possible.
     const cats = host.querySelector('.dap-cats');
     if (cats) cats.insertAdjacentHTML('afterend', html);
   }
@@ -353,6 +397,7 @@ const DailyActsPage = (() => {
   async function loadJourney() {
     const token = ++journeySyncToken;
     const completedSnap = snapshotCompletedItems();
+    const prevSummary = journeyData?.summary ? { ...journeyData.summary } : null;
     const data = await apiFetch(
       `/api/daily-peace?deviceId=${encodeURIComponent(deviceId())}&view=journey&date=${encodeURIComponent(localDateString())}&_t=${Date.now()}`,
       { cache: 'no-store' }
@@ -361,6 +406,19 @@ const DailyActsPage = (() => {
     if (token !== journeySyncToken) return journeyData;
     journeyData = data;
     restoreCompletedSnapshots(completedSnap);
+    // Never let a lagging Blob list roll the progress bar backwards after complete.
+    if (journeyData.summary) {
+      journeyData.summary = clampSummaryToFloor(journeyData.summary);
+      if (prevSummary?.week && journeyData.summary.week) {
+        const localDone = new Set(
+          (prevSummary.week || []).filter((d) => d.completed).map((d) => d.date)
+        );
+        journeyData.summary.week = journeyData.summary.week.map((d) => (
+          localDone.has(d.date) ? { ...d, completed: true } : d
+        ));
+      }
+      raiseProgressFloor(journeyData.summary);
+    }
     writeJourneyCache(journeyData);
     refreshProgressPanel();
     return journeyData;
@@ -1156,8 +1214,10 @@ const DailyActsPage = (() => {
         }),
       });
       if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.refreshBanner?.();
+      // 1) Local bump first so the bar moves instantly.
       patchJourneyItemFromApi(data);
-      // Server returns the authoritative streak in the complete response — apply immediately.
+      refreshProgressPanel();
+      // 2) Server summary (includes the row just written) — never below the floor.
       if (data.summary) applySummaryFromApi(data.summary);
       else refreshProgressPanel();
       justCompletedDate = assignmentDate;
@@ -1167,7 +1227,7 @@ const DailyActsPage = (() => {
       try {
         window.dispatchEvent(new CustomEvent('wc-qr-engagement', { detail: { type: 'daily_act' } }));
       } catch { /* ignore */ }
-      // Background reconcile — update streak/acts without remounting the completion sheet.
+      // Background reconcile — floor prevents a lagging list from undoing the bar.
       loadJourney()
         .then(() => {
           refreshProgressPanel();
@@ -1396,9 +1456,10 @@ const DailyActsPage = (() => {
       try {
         await WorldChoirDB.ready();
         if (typeof DailyActsPeace !== 'undefined') DailyActsPeace.start?.();
-        // Drop pre-v4 session cache so streak/acts cannot stick on old numbers.
         try { sessionStorage.removeItem('wc_dap_journey_v2'); } catch { /* ignore */ }
         try { sessionStorage.removeItem('wc_dap_journey_v3'); } catch { /* ignore */ }
+        try { sessionStorage.removeItem('wc_dap_journey_v4'); } catch { /* ignore */ }
+        progressFloor = { moments: 0, streak: 0 };
         await loadJourney();
         applyDailyActsRoute();
         paint();
