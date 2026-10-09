@@ -1699,6 +1699,11 @@
   color: #0B346B;
 }
 
+/* Hide story until partnership mode is known — never flash non-partner when partnered. */
+.passport-story-view.is-ptw-pending {
+  visibility: hidden;
+}
+
 /* Partnership ON — page header (outside white card) */
 .passport-story-view.is-ptw-partner > .passport-header {
   align-items: flex-start;

@@ -5,6 +5,8 @@ const PassTheWorld = (() => {
   const EVENT_ID = 'world-choir-2027';
   const POLL_MS = 4000;
   const TRAVEL_POLL_MS = 30000;
+  /** Session cache so partnership chrome is correct on first paint (no non-partner flash). */
+  const PAYLOAD_CACHE_KEY = 'wc_ptw_payload_v1';
   const DEV = !!(typeof location !== 'undefined'
     && (location.hostname === 'localhost' || location.hostname === '127.0.0.1'
       || /[?&]ptwDev=1(?:&|$)/.test(location.search)));
@@ -34,6 +36,7 @@ const PassTheWorld = (() => {
   let itineraryPanelHome = null;
   let itineraryScrollLockHandler = null;
   let guideDemoActive = false;
+  let prefetchPromise = null;
   let partnerAnalytics = {
     configurationId: null,
     engageTimer: null,
@@ -42,6 +45,119 @@ const PassTheWorld = (() => {
     lastEngageFlushAt: 0,
     impressionSentForConfig: null,
   };
+
+  function readPayloadCache() {
+    try {
+      const raw = sessionStorage.getItem(PAYLOAD_CACHE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || !parsed.payload) return null;
+      // Keep for the browsing session; partnership configs change rarely.
+      return parsed.payload;
+    } catch {
+      return null;
+    }
+  }
+
+  function writePayloadCache(payload) {
+    if (!payload || typeof payload !== 'object') return;
+    try {
+      sessionStorage.setItem(
+        PAYLOAD_CACHE_KEY,
+        JSON.stringify({ at: Date.now(), payload })
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function storyViewEl() {
+    return document.getElementById('passport-story-view');
+  }
+
+  function setStoryPending(pending) {
+    const story = storyViewEl();
+    if (!story) return;
+    story.classList.toggle('is-ptw-pending', !!pending);
+  }
+
+  /**
+   * Apply partnership chrome synchronously from cache / lastPayload.
+   * Call before revealing the Pass the World chapter so the correct layout
+   * is never flashed as the non-partner version.
+   */
+  function prepareStoryView() {
+    const cached = lastPayload || readPayloadCache();
+    const story = storyViewEl();
+    if (!story) return;
+
+    if (cached && cached.partnership && typeof cached.partnership === 'object') {
+      setStoryPending(false);
+      if (cached.partnership.enabled) {
+        // Sync shell classes before mount paints body (avoids layout flash).
+        const card = story.querySelector('.passport-card--ptw');
+        story.classList.add('is-ptw-partner');
+        card?.classList.add('is-ptw-partner');
+        const subtitle = story.querySelector('[data-ptw-partner-subtitle]');
+        const tabWrap = story.querySelector('[data-ptw-partner-tab]');
+        const tabImg = story.querySelector('[data-ptw-partner-tab-img]');
+        const infoBtn = story.querySelector('[data-ptw-partner-info]');
+        if (infoBtn) {
+          infoBtn.hidden = true;
+          infoBtn.setAttribute('aria-hidden', 'true');
+          infoBtn.tabIndex = -1;
+        }
+        if (subtitle) {
+          const text = String(cached.partnership.subtitle || '').trim();
+          subtitle.textContent = text;
+          subtitle.hidden = !text;
+        }
+        if (tabWrap && tabImg && cached.partnership.tabLogoUrl) {
+          tabWrap.hidden = false;
+          if (tabImg.getAttribute('src') !== cached.partnership.tabLogoUrl) {
+            tabImg.alt = '';
+            tabImg.src = cached.partnership.tabLogoUrl;
+          }
+        }
+      } else {
+        clearPartnershipUi();
+      }
+      if (!lastPayload) lastPayload = cached;
+      return;
+    }
+
+    // Unknown — hide card until first authoritative paint (never show wrong mode).
+    setStoryPending(true);
+  }
+
+  /** Warm cache while user is still on Stamps so Continue is instant + correct. */
+  function prefetch() {
+    if (prefetchPromise) return prefetchPromise;
+    if (lastPayload?.partnership) {
+      writePayloadCache(lastPayload);
+      return Promise.resolve(lastPayload);
+    }
+    const cached = readPayloadCache();
+    if (cached) {
+      lastPayload = cached;
+    }
+    prefetchPromise = (async () => {
+      try {
+        if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.ready) {
+          await WorldChoirDB.ready();
+        }
+        const data = await fetchState();
+        lastPayload = data;
+        writePayloadCache(data);
+        return data;
+      } catch {
+        return lastPayload || cached || null;
+      } finally {
+        prefetchPromise = null;
+      }
+    })();
+    return prefetchPromise;
+  }
 
   const GUIDE_DEMO_CITY = {
     city: 'Braga',
@@ -1580,7 +1696,9 @@ const PassTheWorld = (() => {
     refreshInFlight = (async () => {
       const data = await fetchState();
       lastPayload = data;
+      writePayloadCache(data);
       paintBody(data);
+      setStoryPending(false);
       paintItineraryPanel();
       if (typeof PassTheWorldMap !== 'undefined') {
         PassTheWorldMap.renderJourney(data);
@@ -1772,13 +1890,33 @@ const PassTheWorld = (() => {
   async function mount(container) {
     const el = typeof container === 'string' ? document.querySelector(container) : container;
     if (!el) return;
-    destroy();
+
+    // Restore cache before destroy so we can keep partner chrome on the story shell.
+    const cached = lastPayload || readPayloadCache();
+    const keepPartner = Boolean(cached?.partnership?.enabled);
+    destroy({ keepStoryPartnerChrome: keepPartner });
+
     root = el;
     mounted = true;
-    lastPayload = null;
     mockNow = null;
+    if (cached) lastPayload = cached;
+    else lastPayload = null;
+
     root.innerHTML = shellHtml();
     root.classList.add('ptw-root');
+    if (keepPartner) root.classList.add('is-ptw-partner');
+
+    // Instant correct mode: paint cached partnership/body before revealing.
+    if (cached) {
+      paintPartnership(cached);
+      paintBody(cached);
+      setStoryPending(false);
+      if (typeof PassportPage !== 'undefined' && PassportPage.updateJourneyStats && cached.stats) {
+        PassportPage.updateJourneyStats(cached.stats);
+      }
+    } else {
+      setStoryPending(true);
+    }
 
     const routePlanePreload = new Image();
     routePlanePreload.src = 'images/passport/ptw-route-plane.png';
@@ -1798,13 +1936,28 @@ const PassTheWorld = (() => {
       }
       await ensureMapLibs();
       await PassTheWorldMap.mount('ptw-map');
+      if (lastPayload && typeof PassTheWorldMap !== 'undefined') {
+        PassTheWorldMap.renderJourney(lastPayload);
+      }
       bindLiveProgress();
+      // Prefer in-flight prefetch so Continue doesn't wait on a second round-trip.
+      if (prefetchPromise) {
+        try { await prefetchPromise; } catch { /* refresh below */ }
+        if (lastPayload) {
+          paintBody(lastPayload);
+          setStoryPending(false);
+          if (typeof PassTheWorldMap !== 'undefined') {
+            PassTheWorldMap.renderJourney(lastPayload);
+          }
+        }
+      }
       await refresh();
       startPolling();
       if (typeof PassTheWorldWalkthrough !== 'undefined') {
         PassTheWorldWalkthrough.onPageReady?.();
       }
     } catch (err) {
+      setStoryPending(false);
       const body = root.querySelector('[data-ptw-body]');
       if (body) {
         body.innerHTML = `
@@ -1825,18 +1978,27 @@ const PassTheWorld = (() => {
     }, 200);
   }
 
-  function destroy() {
+  function destroy({ keepStoryPartnerChrome = false } = {}) {
     guideDemoActive = false;
     stopPartnershipAnalytics();
     stopPolling();
     closePanel();
     if (typeof PassTheWorldMap !== 'undefined') PassTheWorldMap.destroy();
-    clearPartnershipUi();
+    // Keep story-level partner chrome when remounting so layout never flashes non-partner.
+    if (!keepStoryPartnerChrome) {
+      clearPartnershipUi();
+      setStoryPending(false);
+    } else {
+      // Map/link nodes live inside root and will be recreated; only strip those.
+      root?.querySelector('[data-ptw-partner-map]')?.remove();
+      root?.querySelector('[data-ptw-partner-link]')?.remove();
+      root?.classList.remove('is-ptw-partner');
+    }
     if (root) {
       root.innerHTML = '';
-      root.classList.remove('ptw-root');
+      root.classList.remove('ptw-root', 'is-ptw-partner');
     }
-    lastPayload = null;
+    // Keep lastPayload / session cache so stamps → Continue remounts with the correct mode.
     submitting = false;
     mounted = false;
     root = null;
@@ -1856,6 +2018,8 @@ const PassTheWorld = (() => {
     mount,
     destroy,
     refresh,
+    prefetch,
+    prepareStoryView,
     isMounted,
     getStats,
     enterGuideDemo,

@@ -522,6 +522,10 @@ const PassportPage = (() => {
 
   function showChapter(chapter, opts = {}) {
     const next = resolveChapter(chapter);
+    // Apply partnership chrome BEFORE the story view is revealed — never flash non-partner.
+    if (next === 'story' && typeof PassTheWorld !== 'undefined') {
+      PassTheWorld.prepareStoryView?.();
+    }
     applyChapter(next, opts);
     if (next === 'stamps') {
       unmountPassTheWorld();
@@ -530,6 +534,10 @@ const PassportPage = (() => {
         && PassportStampsWalkthrough.isActive?.();
       if (!guideActive) {
         scheduleStampReveals(card);
+      }
+      // Warm Pass the World (incl. partnership) while user is still on stamps.
+      if (typeof PassTheWorld !== 'undefined') {
+        void PassTheWorld.prefetch?.();
       }
     } else if (next === 'story') {
       dismissPassportStampsGuide();
@@ -643,6 +651,10 @@ const PassportPage = (() => {
     root.innerHTML = render(data, chapter === 'story' ? 'stamps' : chapter);
     WorldChoirPassport.revealFeatureImages(root);
     bindInteractions();
+    // Partnership chrome before story is revealed — never flash the non-partner layout.
+    if (chapter === 'story' && typeof PassTheWorld !== 'undefined') {
+      PassTheWorld.prepareStoryView?.();
+    }
     applyChapter(chapter, { syncUrl: true, historyMode: 'replace' });
 
     if (animate) {
@@ -656,6 +668,9 @@ const PassportPage = (() => {
         && PassportStampsWalkthrough.isActive?.();
       if (!guideActive) {
         scheduleStampReveals(card);
+      }
+      if (typeof PassTheWorld !== 'undefined') {
+        void PassTheWorld.prefetch?.();
       }
     } else if (chapter === 'story') {
       mountPassTheWorld();
@@ -692,6 +707,9 @@ const PassportPage = (() => {
     } else if (chapter === 'story') {
       root.innerHTML = renderLoading('story');
       bindStoryBack();
+      if (typeof PassTheWorld !== 'undefined') {
+        PassTheWorld.prepareStoryView?.();
+      }
       applyChapter('story', { syncUrl: true, historyMode: 'replace' });
       mountPassTheWorld();
     } else {
