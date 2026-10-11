@@ -2476,7 +2476,11 @@ const WorldChainPage = (() => {
     });
   }
 
-  return { init, onTabShow, isReady, warmTodayCache };
+  async function onPullRefresh() {
+    return onTabShow();
+  }
+
+  return { init, onTabShow, isReady, warmTodayCache, onPullRefresh };
 })();
 
 window.WorldChainPage = WorldChainPage;

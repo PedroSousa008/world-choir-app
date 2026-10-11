@@ -1,0 +1,73 @@
+/* Instagram / TikTok-style pull-to-refresh indicator.
+   Never attach transform to html/body/#nav-root — only content + this chrome. */
+
+#wc-pull-refresh {
+  position: fixed;
+  left: 50%;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  z-index: 1200;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  transform: translate3d(-50%, -12px, 0) scale(0.55);
+  opacity: 0;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  background: rgba(12, 14, 18, 0.72);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 8px 22px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  will-change: transform, opacity;
+}
+
+html[data-theme="light"] #wc-pull-refresh {
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 8px 22px rgba(0, 0, 0, 0.12);
+}
+
+#wc-pull-refresh.is-visible {
+  opacity: 1;
+}
+
+#wc-pull-refresh.is-refreshing .wc-ptr__spinner {
+  animation: wcPtrSpin 0.7s linear infinite;
+}
+
+#wc-pull-refresh .wc-ptr__ring {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+#wc-pull-refresh .wc-ptr__track {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+html[data-theme="light"] #wc-pull-refresh .wc-ptr__track {
+  stroke: rgba(0, 0, 0, 0.12);
+}
+
+#wc-pull-refresh .wc-ptr__arc {
+  stroke: var(--df-accent, #4ec5e8);
+  stroke-linecap: round;
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 40ms linear;
+}
+
+@keyframes wcPtrSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #wc-pull-refresh.is-refreshing .wc-ptr__spinner {
+    animation: none;
+  }
+}

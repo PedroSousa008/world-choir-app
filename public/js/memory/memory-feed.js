@@ -694,6 +694,7 @@ const WorldChoirMemoryFeed = (() => {
     createPhoto,
     removePhotoId,
     getUserLocationSnapshot,
+    pollNewer,
     PAGE_SIZE,
     PHOTO_TTL_MS,
   };

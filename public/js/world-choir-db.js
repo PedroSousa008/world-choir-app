@@ -438,6 +438,22 @@ const WorldChoirDB = (() => {
     return syncMapAggregatesIfChanged(eventId);
   }
 
+  /** Pull-to-refresh: always hit the network for fresh live totals. */
+  async function forceRefreshLiveData(eventId = WorldChoirConfig.CURRENT_EVENT.id) {
+    const prevSnapshot = lastCitySnapshot ? new Map(lastCitySnapshot) : null;
+    const prevVoiceCount = lastVoiceCount;
+    lastMetaSignature = null;
+    await syncMapAggregates(eventId);
+    try {
+      const meta = await fetchPledgesMeta(eventId);
+      lastMetaSignature = metaSignature(meta);
+    } catch {
+      /* keep null — next poll will re-establish */
+    }
+    dispatchLiveUpdate(prevSnapshot, lastCitySnapshot, eventId, prevVoiceCount);
+    return { changed: true };
+  }
+
   function startLiveSync(options = {}) {
     const baseIntervalMs = options.intervalMs ?? LIVE_SYNC_INTERVAL_MS;
     if (liveSyncStarted) return;
@@ -1171,6 +1187,7 @@ const WorldChoirDB = (() => {
     syncAllPledgesIfChanged,
     syncMapAggregates,
     syncMapAggregatesIfChanged,
+    forceRefreshLiveData,
     startLiveSync,
     startMapAggregateSync,
     stopLiveSync,

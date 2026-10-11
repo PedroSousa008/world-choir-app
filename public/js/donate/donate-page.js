@@ -2579,7 +2579,11 @@ const WorldChoirDonate = (() => {
     }
   }
 
-  const api = { init, onTabShow, resetToRoot };
+  async function onPullRefresh() {
+    return onTabShow();
+  }
+
+  const api = { init, onTabShow, resetToRoot, onPullRefresh };
   window.WorldChoirDonate = api;
   return api;
 })();

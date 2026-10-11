@@ -1339,7 +1339,22 @@ const WorldChoirHome = (() => {
     countdownTimer = setInterval(updateCountdown, 1000);
   }
 
-  const api = { init, onTabShow, resetToRoot, render };
+  async function onPullRefresh() {
+    updateVoicesCounter();
+    postEventStatsPromise = null;
+    try {
+      sessionStorage.removeItem(POST_EVENT_STATS_CACHE_KEY);
+    } catch {
+      /* ignore */
+    }
+    const stats = await fetchPostEventStats();
+    if (stats && (homeView === 'post-event' || homeView === 'post-event-complete')) {
+      updatePostEventStatsUI(stats);
+    }
+    updateCountdown();
+  }
+
+  const api = { init, onTabShow, resetToRoot, render, onPullRefresh };
   window.WorldChoirHome = api;
   return api;
 })();

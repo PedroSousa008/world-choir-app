@@ -798,11 +798,17 @@ const PassportPage = (() => {
     );
   }
 
+  async function onPullRefresh() {
+    passportData = null;
+    await mount();
+  }
+
   const api = {
     init,
     onTabShow,
     resetToRoot,
     isReady,
+    onPullRefresh,
     showChapter,
     updateJourneyStats,
     refreshJourneyStats,

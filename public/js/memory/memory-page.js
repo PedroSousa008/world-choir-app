@@ -1324,7 +1324,29 @@ const WorldChoirMemory = (() => {
     void (typeof WorldChoirDB !== 'undefined' ? WorldChoirDB.ready() : Promise.resolve());
   }
 
-  const api = { init, onTabShow, resetToRoot, render };
+  async function onPullRefresh() {
+    try {
+      if (typeof WorldChoirMemoryFeed !== 'undefined') {
+        await WorldChoirMemoryFeed.pollNewer?.();
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (typeof WorldChoirMemoryData !== 'undefined') {
+        const event = await WorldChoirMemoryData.loadEventArchive();
+        replaceHost('mem-event-host', renderEventCard(event));
+      }
+    } catch {
+      /* ignore */
+    }
+    if (typeof WorldChoirMemoryFeed !== 'undefined') {
+      updateCarouselView(WorldChoirMemoryFeed.getSnapshot(), { force: true });
+      applyPostingAvailability(WorldChoirMemoryFeed.getSnapshot());
+    }
+  }
+
+  const api = { init, onTabShow, resetToRoot, render, onPullRefresh };
   window.WorldChoirMemory = api;
   return api;
 })();

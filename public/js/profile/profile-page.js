@@ -268,7 +268,11 @@ const ProfilePage = (() => {
       });
   }
 
-  const api = { init, onTabShow, resetToRoot, refresh };
+  async function onPullRefresh() {
+    return refresh();
+  }
+
+  const api = { init, onTabShow, resetToRoot, refresh, onPullRefresh };
   window.ProfilePage = api;
   return api;
 })();

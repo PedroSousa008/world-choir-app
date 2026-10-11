@@ -1564,7 +1564,11 @@ const DailyActsPage = (() => {
     void hydrate();
   }
 
-  const api = { init, onTabShow, resetToRoot };
+  async function onPullRefresh() {
+    return onTabShow();
+  }
+
+  const api = { init, onTabShow, resetToRoot, onPullRefresh };
   window.DailyActsPage = api;
   return api;
 })();
