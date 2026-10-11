@@ -1268,8 +1268,9 @@ async function refreshEventMilestones(eventId) {
 }
 
 /**
- * Home "People Sang" freezes at event start (countdown → 0).
- * Unique pledges with pledged_at <= event start. Map keeps live totals.
+ * Home / Memory "People Sang" freezes at the active event start.
+ * Must match Map Voices for everyone pledged at/before that moment
+ * (same choirVoiceCount rules). Live Map may keep growing after.
  */
 function peopleSangSnapshotPath(eventId) {
   return `${eventPrefix(eventId)}/people-sang-at-start.json`;
@@ -1277,15 +1278,17 @@ function peopleSangSnapshotPath(eventId) {
 
 function countPeopleSangAtEventStart(pledges, eventStartMs) {
   const seen = new Set();
-  let count = 0;
+  const unique = [];
   for (const pledge of pledges || []) {
     if (!pledge?.user_id || seen.has(pledge.user_id)) continue;
-    const at = Date.parse(pledge.pledged_at || '');
-    if (!Number.isFinite(at) || at > eventStartMs) continue;
+    const at = Date.parse(pledge.pledged_at || pledge.pledgedAt || '');
+    // Only exclude voices that clearly joined AFTER the event started.
+    // Missing pledged_at = already on the map before the freeze (count them).
+    if (Number.isFinite(at) && at > eventStartMs) continue;
     seen.add(pledge.user_id);
-    count += 1;
+    unique.push(pledge);
   }
-  return count;
+  return choirVoiceCount(unique);
 }
 
 async function readPeopleSangSnapshot(eventId) {
@@ -1297,17 +1300,21 @@ async function readPeopleSangSnapshot(eventId) {
   }
 }
 
+async function clearPeopleSangSnapshot(eventId) {
+  assertBlobConfigured();
+  const trimmedEvent = String(eventId || 'world-choir-2027').trim();
+  try {
+    const { del } = require('@vercel/blob');
+    await del(peopleSangSnapshotPath(trimmedEvent));
+  } catch (err) {
+    if (isBlobUnavailable(err)) throw wrapBlobError(err);
+  }
+  return { cleared: true, eventId: trimmedEvent };
+}
+
 async function ensurePeopleSangAtEventStart(eventId, pledges = null) {
   assertBlobConfigured();
   const trimmedEvent = String(eventId || 'world-choir-2027').trim();
-  const existing = await readPeopleSangSnapshot(trimmedEvent);
-  if (existing && typeof existing.voices === 'number' && Number.isFinite(existing.voices)) {
-    return {
-      voices: Math.max(0, Math.floor(existing.voices)),
-      eventStart: existing.eventStart || null,
-      frozenAt: existing.frozenAt || null,
-    };
-  }
 
   let getEventStartUtc;
   try {
@@ -1322,6 +1329,22 @@ async function ensurePeopleSangAtEventStart(eventId, pledges = null) {
     return null;
   }
 
+  const existing = await readPeopleSangSnapshot(trimmedEvent);
+  // Discard snapshots frozen for a different schedule (old test overrides left 26 forever).
+  const existingMatchesSchedule = existing
+    && typeof existing.voices === 'number'
+    && Number.isFinite(existing.voices)
+    && existing.eventStart
+    && Date.parse(existing.eventStart) === eventStartMs;
+
+  if (existingMatchesSchedule) {
+    return {
+      voices: Math.max(0, Math.floor(existing.voices)),
+      eventStart: existing.eventStart || eventStart,
+      frozenAt: existing.frozenAt || null,
+    };
+  }
+
   const list = pledges || (await listPledges(trimmedEvent));
   const voices = countPeopleSangAtEventStart(list, eventStartMs);
   const record = {
@@ -1331,11 +1354,17 @@ async function ensurePeopleSangAtEventStart(eventId, pledges = null) {
   };
 
   try {
-    await writeJson(peopleSangSnapshotPath(trimmedEvent), record, { overwrite: false });
+    // overwrite:true so a stale test freeze (wrong eventStart) is replaced.
+    await writeJson(peopleSangSnapshotPath(trimmedEvent), record, { overwrite: true });
   } catch (err) {
     if (isBlobUnavailable(err)) throw wrapBlobError(err);
     const raced = await readPeopleSangSnapshot(trimmedEvent);
-    if (raced && typeof raced.voices === 'number') {
+    if (
+      raced
+      && typeof raced.voices === 'number'
+      && raced.eventStart
+      && Date.parse(raced.eventStart) === eventStartMs
+    ) {
       return {
         voices: Math.max(0, Math.floor(raced.voices)),
         eventStart: raced.eventStart || eventStart,
@@ -1399,6 +1428,7 @@ module.exports = {
   buildOwnerDatabaseRows,
   getWorldChoirStats,
   ensurePeopleSangAtEventStart,
+  clearPeopleSangSnapshot,
   refreshEventMilestones,
   computeWorldChoirStatsFromPledges,
   getOwnerPasswordHash,

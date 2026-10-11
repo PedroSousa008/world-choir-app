@@ -341,7 +341,15 @@ const WorldChoirHome = (() => {
   let confettiRaf = 0;
   let confettiPaint = null;
   let confettiBound = false;
-  const POST_EVENT_STATS_CACHE_KEY = 'wc_post_event_stats_v2';
+  const POST_EVENT_STATS_CACHE_KEY = 'wc_post_event_stats_v3';
+
+  function currentEventStartIso() {
+    try {
+      return WorldChoirConfig.getEventStart().toISOString();
+    } catch {
+      return null;
+    }
+  }
 
   function readCachedPostEventStats() {
     try {
@@ -349,7 +357,18 @@ const WorldChoirHome = (() => {
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return null;
-      return parsed.data || parsed;
+      const data = parsed.data || parsed;
+      // Drop cache frozen for a different event start (stale test snapshots).
+      const expected = currentEventStartIso();
+      if (
+        expected
+        && data?.peopleSangEventStart
+        && Date.parse(data.peopleSangEventStart) !== Date.parse(expected)
+      ) {
+        sessionStorage.removeItem(POST_EVENT_STATS_CACHE_KEY);
+        return null;
+      }
+      return data;
     } catch {
       return null;
     }

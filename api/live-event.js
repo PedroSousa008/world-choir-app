@@ -2,7 +2,7 @@
  * Global live event — server time + authoritative song-start transition.
  */
 const { corsHeaders } = require('./_lib/auth');
-const { jsonStorageError } = require('./_lib/store');
+const { jsonStorageError, clearPeopleSangSnapshot } = require('./_lib/store');
 const {
   DEFAULT_EVENT_ID,
   readLiveEventState,
@@ -62,6 +62,7 @@ module.exports = async function handler(req, res) {
           return res.status(403).json({ error: 'Test reset is only available while the event test override is enabled.' });
         }
         const state = await clearLiveEventState(eventId);
+        await clearPeopleSangSnapshot(eventId).catch(() => {});
         const serverNow = new Date().toISOString();
         res.setHeader('Cache-Control', 'no-store');
         return res.status(200).json({
