@@ -96,7 +96,7 @@
   text-align: left;
 }
 
-/* ─── Carousel ─── */
+/* ─── Carousel (Instagram-like horizontal paging) ─── */
 
 .mem-carousel {
   margin: 0 0 8px;
@@ -105,9 +105,17 @@
 .mem-carousel__viewport {
   overflow: hidden;
   outline: none;
+  /* Vertical page scroll until the gesture locks to X — then JS preventDefault. */
   touch-action: pan-y;
   padding: 8px 0 4px;
   user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+
+.mem-carousel__viewport.is-dragging {
+  cursor: grabbing;
+  touch-action: none;
 }
 
 .mem-carousel__viewport:focus-visible {
@@ -122,6 +130,8 @@
   gap: 12px;
   min-height: 240px;
   width: 100%;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .mem-carousel__slot {
@@ -130,11 +140,21 @@
   overflow: hidden;
   box-shadow: 0 0 0 1px var(--border-subtle);
   background: var(--surface-lift-mid);
-  transition: transform 220ms ease, opacity 220ms ease, width 220ms ease, height 220ms ease;
+  /* Soft settle when the active card morphs after a page snap */
+  transition:
+    transform 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 280ms cubic-bezier(0.32, 0.72, 0, 1),
+    width 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    height 320ms cubic-bezier(0.32, 0.72, 0, 1),
+    box-shadow 280ms ease;
   width: min(32vw, 150px);
   height: 180px;
   opacity: 0.88;
   transform: scale(0.82);
+}
+
+.mem-carousel__viewport.is-dragging .mem-carousel__slot {
+  transition: none;
 }
 
 .mem-carousel__slot--center,
@@ -203,6 +223,11 @@
   margin: 12px 20px 0;
   text-align: center;
   min-height: 2.4em;
+  transition: opacity 180ms ease;
+}
+
+.mem-carousel__meta.is-dimmed {
+  opacity: 0.35;
 }
 
 .mem-carousel__caption {
@@ -236,7 +261,7 @@
   border: 0;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.28);
-  transition: width 180ms ease, background 180ms ease;
+  transition: width 320ms cubic-bezier(0.32, 0.72, 0, 1), background 240ms ease;
 }
 
 .mem-carousel__dot.is-active {
@@ -249,8 +274,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mem-carousel__slot {
-    transition: none;
+  .mem-carousel__slot,
+  .mem-carousel__stage,
+  .mem-carousel__meta,
+  .mem-carousel__dot {
+    transition: none !important;
   }
 }
 

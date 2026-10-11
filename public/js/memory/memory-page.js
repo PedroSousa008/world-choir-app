@@ -7,7 +7,22 @@ const WorldChoirMemory = (() => {
     && window.matchMedia
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const TRANSITION_MS = REDUCED_MOTION ? 0 : 280;
+  /**
+   * Instagram-like horizontal paging:
+   * finger tracks the stage, then a short spring snap (~320ms).
+   * Timing mirrors IG photo carousels more than a CSS card morph.
+   */
+  const SWIPE = {
+    SNAP_MS: REDUCED_MOTION ? 0 : 320,
+    EASE: 'cubic-bezier(0.32, 0.72, 0, 1)',
+    COMMIT_RATIO: 0.22,
+    COMMIT_PX_MIN: 48,
+    COMMIT_VELOCITY: 0.42,
+    EDGE_RESIST: 0.32,
+    AXIS_LOCK_PX: 8,
+  };
+
+  const TRANSITION_MS = SWIPE.SNAP_MS;
 
   let composerOpen = false;
   let composerPreviewUrl = null;
@@ -18,6 +33,10 @@ const WorldChoirMemory = (() => {
   let posting = false;
   let composerScrollLockHandler = null;
   let composerScrollY = 0;
+  /** True while the user is dragging or a snap animation is in flight. */
+  let carouselBusy = false;
+  let carouselGesture = null;
+  let carouselUnbind = null;
 
   function esc(str) {
     const d = document.createElement('div');
@@ -156,6 +175,9 @@ const WorldChoirMemory = (() => {
     const meta = document.getElementById('mem-carousel-meta');
     const root = document.getElementById('mem-carousel');
     if (!stage || !meta || !root) return;
+
+    // Never rebuild slots mid-swipe — that kills the Instagram finger-follow feel.
+    if (carouselBusy && !snap.isInitialLoading && !snap.isEmpty) return;
 
     if (snap.isInitialLoading) {
       stage.innerHTML = `
@@ -740,58 +762,274 @@ const WorldChoirMemory = (() => {
     showToast._t = setTimeout(() => el.classList.remove('is-visible'), 2800);
   }
 
-  function navigate(direction) {
-    if (typeof WorldChoirMemoryFeed === 'undefined') return;
-    const snap = WorldChoirMemoryFeed.getSnapshot();
-    if (snap.transitionLocked) return;
+  function carouselStage() {
+    return document.getElementById('mem-carousel-stage');
+  }
 
-    let moved = false;
-    if (direction === 'next') {
-      if (!snap.canGoNext) return;
-      moved = WorldChoirMemoryFeed.goNext();
-    } else {
-      if (!snap.canGoPrev) return;
-      moved = WorldChoirMemoryFeed.goPrev();
+  function carouselViewport() {
+    return document.getElementById('mem-carousel-viewport');
+  }
+
+  function slideStridePx() {
+    const stage = carouselStage();
+    const center = stage?.querySelector('.mem-carousel__slot--center, .mem-carousel__slot.is-active');
+    if (center) {
+      const gap = 12;
+      return Math.max(160, center.getBoundingClientRect().width + gap);
     }
-    if (!moved) return;
+    const vp = carouselViewport();
+    return Math.max(160, (vp?.clientWidth || 280) * 0.72);
+  }
 
-    window.setTimeout(() => {
+  function setStageX(x, { animate = false } = {}) {
+    const stage = carouselStage();
+    if (!stage) return;
+    if (animate && !REDUCED_MOTION) {
+      stage.style.transition = `transform ${SWIPE.SNAP_MS}ms ${SWIPE.EASE}`;
+    } else {
+      stage.style.transition = 'none';
+    }
+    stage.style.transform = `translate3d(${x}px, 0, 0)`;
+  }
+
+  function clearStageTransform() {
+    const stage = carouselStage();
+    if (!stage) return;
+    stage.style.transition = 'none';
+    stage.style.transform = '';
+    stage.style.opacity = '';
+  }
+
+  function setCarouselDraggingUi(on) {
+    carouselViewport()?.classList.toggle('is-dragging', !!on);
+    document.getElementById('mem-carousel-meta')?.classList.toggle('is-dimmed', !!on);
+  }
+
+  function canNavigate(direction) {
+    if (typeof WorldChoirMemoryFeed === 'undefined') return false;
+    const snap = WorldChoirMemoryFeed.getSnapshot();
+    if (snap.transitionLocked || snap.isEmpty || snap.isInitialLoading) return false;
+    return direction === 'next' ? !!snap.canGoNext : !!snap.canGoPrev;
+  }
+
+  function commitFeedStep(direction) {
+    if (typeof WorldChoirMemoryFeed === 'undefined') return false;
+    if (direction === 'next') return WorldChoirMemoryFeed.goNext();
+    return WorldChoirMemoryFeed.goPrev();
+  }
+
+  function finishSwipeCommit(direction) {
+    const moved = commitFeedStep(direction);
+    carouselBusy = false;
+    setCarouselDraggingUi(false);
+    clearStageTransform();
+    if (moved) {
+      updateCarouselView(WorldChoirMemoryFeed.getSnapshot());
+      window.setTimeout(() => {
+        WorldChoirMemoryFeed.unlockTransition();
+      }, 16);
+    } else if (typeof WorldChoirMemoryFeed !== 'undefined') {
       WorldChoirMemoryFeed.unlockTransition();
-    }, TRANSITION_MS);
+    }
+  }
+
+  /**
+   * Animate the stage sideways (IG page turn), then swap the feed slot.
+   */
+  function navigate(direction, { fromGesture = false } = {}) {
+    if (carouselBusy && !fromGesture) return;
+    if (!canNavigate(direction)) return;
+
+    const stride = slideStridePx();
+    const targetX = direction === 'next' ? -stride : stride;
+
+    if (REDUCED_MOTION || SWIPE.SNAP_MS <= 0) {
+      carouselBusy = true;
+      finishSwipeCommit(direction);
+      return;
+    }
+
+    carouselBusy = true;
+    setCarouselDraggingUi(false);
+    setStageX(targetX, { animate: true });
+
+    const stage = carouselStage();
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      stage?.removeEventListener('transitionend', onEnd);
+      finishSwipeCommit(direction);
+    };
+    const onEnd = (ev) => {
+      if (ev.target !== stage || ev.propertyName !== 'transform') return;
+      settle();
+    };
+    stage?.addEventListener('transitionend', onEnd);
+    window.setTimeout(settle, SWIPE.SNAP_MS + 40);
+  }
+
+  function bindCarouselGestures(viewport) {
+    if (!viewport) return () => {};
+
+    const onKey = (ev) => {
+      if (ev.key === 'ArrowRight') {
+        ev.preventDefault();
+        navigate('next');
+      } else if (ev.key === 'ArrowLeft') {
+        ev.preventDefault();
+        navigate('prev');
+      }
+    };
+    viewport.addEventListener('keydown', onKey);
+
+    const onPointerDown = (ev) => {
+      if (ev.button != null && ev.button !== 0) return;
+      if (ev.target.closest('button')) return;
+      if (carouselBusy) return;
+      if (typeof WorldChoirMemoryFeed === 'undefined') return;
+      const snap = WorldChoirMemoryFeed.getSnapshot();
+      if (snap.isEmpty || snap.isInitialLoading || snap.transitionLocked) return;
+
+      carouselGesture = {
+        pointerId: ev.pointerId,
+        startX: ev.clientX,
+        startY: ev.clientY,
+        lastX: ev.clientX,
+        lastT: performance.now(),
+        vx: 0,
+        dx: 0,
+        axis: null,
+        active: true,
+      };
+      try { viewport.setPointerCapture(ev.pointerId); } catch { /* ignore */ }
+    };
+
+    const onPointerMove = (ev) => {
+      const g = carouselGesture;
+      if (!g?.active || g.pointerId !== ev.pointerId) return;
+
+      const dx = ev.clientX - g.startX;
+      const dy = ev.clientY - g.startY;
+      const now = performance.now();
+      const dt = Math.max(1, now - g.lastT);
+      g.vx = (ev.clientX - g.lastX) / dt;
+      g.lastX = ev.clientX;
+      g.lastT = now;
+      g.dx = dx;
+
+      if (!g.axis) {
+        if (Math.abs(dx) < SWIPE.AXIS_LOCK_PX && Math.abs(dy) < SWIPE.AXIS_LOCK_PX) return;
+        g.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+        if (g.axis === 'y') {
+          g.active = false;
+          carouselGesture = null;
+          return;
+        }
+        carouselBusy = true;
+        setCarouselDraggingUi(true);
+        setStageX(0, { animate: false });
+      }
+
+      if (g.axis !== 'x') return;
+      ev.preventDefault();
+
+      const snap = WorldChoirMemoryFeed.getSnapshot();
+      let x = dx;
+      if ((dx > 0 && !snap.canGoPrev) || (dx < 0 && !snap.canGoNext)) {
+        x = dx * SWIPE.EDGE_RESIST;
+      }
+      setStageX(x, { animate: false });
+    };
+
+    const endGesture = (ev, cancelled) => {
+      const g = carouselGesture;
+      if (!g?.active || (ev && g.pointerId !== ev.pointerId)) return;
+      carouselGesture = null;
+
+      if (g.axis !== 'x') {
+        carouselBusy = false;
+        setCarouselDraggingUi(false);
+        return;
+      }
+
+      const snap = WorldChoirMemoryFeed.getSnapshot();
+      const stride = slideStridePx();
+      const threshold = Math.max(SWIPE.COMMIT_PX_MIN, stride * SWIPE.COMMIT_RATIO);
+      const dx = g.dx;
+      const fast = Math.abs(g.vx) >= SWIPE.COMMIT_VELOCITY;
+      const far = Math.abs(dx) >= threshold;
+      let direction = null;
+      if (!cancelled && (far || fast)) {
+        if (dx < 0 && snap.canGoNext) direction = 'next';
+        else if (dx > 0 && snap.canGoPrev) direction = 'prev';
+      }
+
+      if (direction) {
+        navigate(direction, { fromGesture: true });
+        return;
+      }
+
+      // Spring back to center (IG rubber-band cancel).
+      setCarouselDraggingUi(false);
+      setStageX(0, { animate: !REDUCED_MOTION });
+      const stage = carouselStage();
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        stage?.removeEventListener('transitionend', onEnd);
+        clearStageTransform();
+        carouselBusy = false;
+      };
+      const onEnd = (e) => {
+        if (e.target !== stage || e.propertyName !== 'transform') return;
+        settle();
+      };
+      if (REDUCED_MOTION) {
+        settle();
+      } else {
+        stage?.addEventListener('transitionend', onEnd);
+        window.setTimeout(settle, SWIPE.SNAP_MS + 40);
+      }
+    };
+
+    // Non-passive touchmove so we can lock the page scroll once the swipe is horizontal.
+    const onTouchMove = (ev) => {
+      if (carouselGesture?.axis === 'x') ev.preventDefault();
+    };
+
+    const onPointerUp = (ev) => endGesture(ev, false);
+    const onPointerCancel = (ev) => endGesture(ev, true);
+
+    viewport.addEventListener('pointerdown', onPointerDown);
+    viewport.addEventListener('pointermove', onPointerMove);
+    viewport.addEventListener('pointerup', onPointerUp);
+    viewport.addEventListener('pointercancel', onPointerCancel);
+    viewport.addEventListener('lostpointercapture', onPointerCancel);
+    viewport.addEventListener('touchmove', onTouchMove, { passive: false });
+
+    return () => {
+      viewport.removeEventListener('keydown', onKey);
+      viewport.removeEventListener('pointerdown', onPointerDown);
+      viewport.removeEventListener('pointermove', onPointerMove);
+      viewport.removeEventListener('pointerup', onPointerUp);
+      viewport.removeEventListener('pointercancel', onPointerCancel);
+      viewport.removeEventListener('lostpointercapture', onPointerCancel);
+      viewport.removeEventListener('touchmove', onTouchMove);
+      carouselGesture = null;
+      carouselBusy = false;
+      clearStageTransform();
+      setCarouselDraggingUi(false);
+    };
   }
 
   function bindInteractions() {
     if (bound) return;
     bound = true;
 
-    const viewport = document.getElementById('mem-carousel-viewport');
-    if (viewport) {
-      let startX = 0;
-      let dragging = false;
-      viewport.addEventListener('pointerdown', (ev) => {
-        if (ev.target.closest('button')) return;
-        dragging = true;
-        startX = ev.clientX;
-        viewport.setPointerCapture?.(ev.pointerId);
-      });
-      viewport.addEventListener('pointerup', (ev) => {
-        if (!dragging) return;
-        dragging = false;
-        const dx = ev.clientX - startX;
-        if (Math.abs(dx) > 48) {
-          navigate(dx < 0 ? 'next' : 'prev');
-        }
-      });
-      viewport.addEventListener('keydown', (ev) => {
-        if (ev.key === 'ArrowRight') {
-          ev.preventDefault();
-          navigate('next');
-        } else if (ev.key === 'ArrowLeft') {
-          ev.preventDefault();
-          navigate('prev');
-        }
-      });
-    }
+    if (typeof carouselUnbind === 'function') carouselUnbind();
+    carouselUnbind = bindCarouselGestures(document.getElementById('mem-carousel-viewport'));
 
     document.getElementById('mem-carousel-prev')?.addEventListener('click', () => navigate('prev'));
     document.getElementById('mem-carousel-next')?.addEventListener('click', () => navigate('next'));
