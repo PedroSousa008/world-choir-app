@@ -17,8 +17,26 @@ const PassTheWorld = (() => {
     { href: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', kind: 'js' },
     { href: 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js', kind: 'js' },
     { href: 'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js', kind: 'js' },
-    { href: 'js/world-choir-map-tiles.js?v=20260912ptwDark', kind: 'js' },
+    { href: 'js/world-choir-map-tiles.js?v=20261011ptwMap1', kind: 'js' },
   ];
+
+  /** True when a previously injected script already executed (soft-tab / Map visit). */
+  function mapScriptAlreadyReady(asset) {
+    const file = String(asset.href || '').split('?')[0].split('/').pop() || '';
+    if (file === 'leaflet.js' && typeof L !== 'undefined') return true;
+    if (file === 'maplibre-gl.js' && typeof maplibregl !== 'undefined') return true;
+    if (
+      file === 'leaflet-maplibre-gl.js'
+      && typeof L !== 'undefined'
+      && typeof L.maplibreGL === 'function'
+    ) {
+      return true;
+    }
+    if (file.startsWith('world-choir-map-tiles') && typeof WorldChoirMapTiles !== 'undefined') {
+      return true;
+    }
+    return false;
+  }
 
   let root = null;
   let pollTimer = null;
@@ -178,14 +196,16 @@ const PassTheWorld = (() => {
   function loadAsset(asset) {
     return new Promise((resolve, reject) => {
       if (asset.kind === 'css') {
-        if ([...document.styleSheets].some((s) => s.href && s.href.includes(asset.href.split('?')[0].split('/').pop()))) {
+        const cssFile = asset.href.split('?')[0].split('/').pop();
+        if ([...document.styleSheets].some((s) => s.href && s.href.includes(cssFile))) {
           resolve();
           return;
         }
-        const existing = document.querySelector(`link[href="${asset.href}"]`);
+        const existing = document.querySelector(`link[href="${asset.href}"]`)
+          || [...document.querySelectorAll('link[rel="stylesheet"]')].find(
+            (l) => l.href && l.href.includes(cssFile)
+          );
         if (existing) {
-          existing.addEventListener('load', () => resolve());
-          existing.addEventListener('error', () => resolve());
           resolve();
           return;
         }
@@ -197,26 +217,54 @@ const PassTheWorld = (() => {
         document.head.appendChild(link);
         return;
       }
+      // Soft tabs often inject Map libs first — never wait on a missed `load` event.
+      if (mapScriptAlreadyReady(asset)) {
+        resolve();
+        return;
+      }
       const srcKey = asset.href.split('?')[0];
       const fileName = srcKey.split('/').pop();
       const existingBySrc = document.querySelector(`script[src="${asset.href}"]`);
       const existingAny = existingBySrc
         || [...document.scripts].find((s) => s.src && s.src.includes(fileName));
       if (existingAny) {
-        if (existingAny.dataset.loaded === '1') {
+        if (existingAny.dataset.loaded === '1' || mapScriptAlreadyReady(asset)) {
+          existingAny.dataset.loaded = '1';
           resolve();
           return;
         }
-        existingAny.addEventListener('load', () => {
-          existingAny.dataset.loaded = '1';
-          resolve();
-        });
-        existingAny.addEventListener('error', () => reject(new Error(`Failed ${asset.href}`)));
-        // Already finished loading before we attached listeners.
-        if (existingAny.readyState === 'complete' || existingAny.readyState === 'loaded') {
-          existingAny.dataset.loaded = '1';
-          resolve();
-        }
+        let settled = false;
+        const finish = (ok) => {
+          if (settled) return;
+          settled = true;
+          if (ok) {
+            existingAny.dataset.loaded = '1';
+            resolve();
+          } else {
+            reject(new Error(`Failed ${asset.href}`));
+          }
+        };
+        existingAny.addEventListener('load', () => finish(true));
+        existingAny.addEventListener('error', () => finish(false));
+        // Modern browsers omit script.readyState — poll globals so we never hang.
+        let tries = 0;
+        const poll = () => {
+          if (settled) return;
+          if (mapScriptAlreadyReady(asset)
+            || existingAny.readyState === 'complete'
+            || existingAny.readyState === 'loaded') {
+            finish(true);
+            return;
+          }
+          tries += 1;
+          if (tries < 40) {
+            setTimeout(poll, 25);
+            return;
+          }
+          // Proceed so mount() can surface a real error instead of a black plate.
+          finish(true);
+        };
+        poll();
         return;
       }
       const script = document.createElement('script');

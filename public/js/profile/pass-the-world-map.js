@@ -847,6 +847,64 @@ const PassTheWorldMap = (() => {
     onProgressCb = typeof cb === 'function' ? cb : null;
   }
 
+  /**
+   * Public Carto Dark Matter (no labels) — last-resort tiles so the card
+   * never stays an empty black plate when MapLibre / proxy tiles fail.
+   */
+  function addPublicDarkRaster(targetMap) {
+    if (!targetMap || typeof L === 'undefined') return null;
+    return L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
+      {
+        subdomains: 'abcd',
+        noWrap: true,
+        bounds: [[-85, -180], [85, 180]],
+        minZoom: 0,
+        maxZoom: 19,
+        className: 'map-tile-layer map-tile-layer--ptw-fallback',
+        attribution: '',
+      }
+    ).addTo(targetMap);
+  }
+
+  function ensureDarkBasemap(targetMap) {
+    if (!targetMap) return;
+    let mode = null;
+    if (typeof WorldChoirMapTiles !== 'undefined'
+      && typeof WorldChoirMapTiles.addBasemapLayers === 'function') {
+      try {
+        // Pass the World card always uses the Dark Matter basemap (even in Light Mode).
+        mode = WorldChoirMapTiles.addBasemapLayers(targetMap, { theme: 'dark' });
+      } catch (err) {
+        console.warn('[PassTheWorldMap] basemap failed, using public raster', err);
+        mode = null;
+      }
+    }
+    if (!mode) {
+      addPublicDarkRaster(targetMap);
+      return;
+    }
+    // MapLibre can leave a blank black canvas after ancestor transforms / zero size.
+    // If GL never gets a real canvas, drop in public Carto raster so the map never stays black.
+    window.setTimeout(() => {
+      if (!map || map !== targetMap) return;
+      try {
+        const rootEl = targetMap.getContainer?.();
+        if (!rootEl) return;
+        const hasRasterImg = !!rootEl.querySelector('.leaflet-tile-pane img, .map-tile-layer');
+        if (hasRasterImg) return;
+        const canvas = rootEl.querySelector('.maplibregl-canvas');
+        const w = canvas?.width || 0;
+        const h = canvas?.height || 0;
+        if (canvas && w > 2 && h > 2) return;
+        addPublicDarkRaster(targetMap);
+        targetMap.invalidateSize({ animate: false, pan: false });
+      } catch {
+        addPublicDarkRaster(targetMap);
+      }
+    }, 1200);
+  }
+
   async function mount(id = 'ptw-map') {
     if (typeof L === 'undefined') {
       throw new Error('Map could not load. Check your connection and try again.');
@@ -883,10 +941,7 @@ const PassTheWorldMap = (() => {
       markerZoomAnimation: false,
     });
 
-    if (typeof WorldChoirMapTiles !== 'undefined') {
-      // Pass the World card always uses the Dark Matter basemap (even in Light Mode).
-      WorldChoirMapTiles.addBasemapLayers(map, { theme: 'dark' });
-    }
+    ensureDarkBasemap(map);
 
     if (!map.getPane('ptwOverlay')) {
       const pane = map.createPane('ptwOverlay');
