@@ -13,7 +13,8 @@ const WorldChoirMemory = (() => {
    * Timing mirrors IG photo carousels more than a CSS card morph.
    */
   const SWIPE = {
-    SNAP_MS: REDUCED_MOTION ? 0 : 320,
+    /** Sideways settle only — center photo is already open (0ms size change). */
+    SNAP_MS: REDUCED_MOTION ? 0 : 200,
     EASE: 'cubic-bezier(0.32, 0.72, 0, 1)',
     COMMIT_RATIO: 0.22,
     COMMIT_PX_MIN: 48,
@@ -112,21 +113,71 @@ const WorldChoirMemory = (() => {
     `;
   }
 
+  function photoSrc(photo) {
+    return String(photo?.thumbnailUrl || photo?.imageUrl || '').trim();
+  }
+
   function renderSlotPhoto(photo, slot) {
     if (!photo) {
       return `<div class="mem-carousel__slot mem-carousel__slot--${slot} mem-carousel__slot--empty" aria-hidden="true"></div>`;
     }
+    const src = photoSrc(photo);
     return `
-      <div class="mem-carousel__slot mem-carousel__slot--${slot}${slot === 'center' ? ' is-active' : ''}" data-slot="${slot}">
+      <div class="mem-carousel__slot mem-carousel__slot--${slot}${slot === 'center' ? ' is-active' : ''}" data-slot="${slot}" data-photo-id="${esc(photo.id || '')}" data-photo-src="${esc(src)}">
         <img
           class="mem-carousel__img"
-          src="${esc(photo.thumbnailUrl || photo.imageUrl)}"
+          src="${esc(src)}"
           alt="${esc(photoAlt(photo))}"
           decoding="async"
           draggable="false"
         >
       </div>
     `;
+  }
+
+  function htmlToElement(html) {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = String(html || '').trim();
+    return wrap.firstElementChild;
+  }
+
+  function classifySlotEl(el, slot) {
+    if (!el) return el;
+    const keepWaiting = el.classList.contains('mem-carousel__slot--waiting')
+      || el.classList.contains('mem-carousel__slot--loading')
+      || el.classList.contains('mem-carousel__slot--empty-state')
+      || el.classList.contains('mem-carousel__slot--empty');
+    const extras = keepWaiting
+      ? [...el.classList].filter((c) => c.startsWith('mem-carousel__slot--') && !['mem-carousel__slot--left', 'mem-carousel__slot--center', 'mem-carousel__slot--right'].includes(c)).join(' ')
+      : '';
+    el.className = `mem-carousel__slot mem-carousel__slot--${slot}${slot === 'center' ? ' is-active' : ''}${extras ? ` ${extras}` : ''}`;
+    el.dataset.slot = slot;
+    if (slot === 'center') el.removeAttribute('aria-hidden');
+    else if (!el.classList.contains('mem-carousel__slot--waiting')) el.setAttribute('aria-hidden', 'true');
+    return el;
+  }
+
+  /** Reuse existing <img> nodes so promoting a side photo never reloads / fades in. */
+  function takeSlotForPhoto(pool, photo, slot) {
+    if (!photo) {
+      return htmlToElement(renderSlotPhoto(null, slot));
+    }
+    const id = String(photo.id || '');
+    const src = photoSrc(photo);
+    let idx = pool.findIndex((el) => id && el.dataset.photoId === id);
+    if (idx < 0 && src) {
+      idx = pool.findIndex((el) => {
+        const ds = el.dataset.photoSrc || '';
+        const img = el.querySelector('img');
+        const cur = img?.getAttribute('src') || img?.src || '';
+        return ds === src || cur.endsWith(src) || cur.includes(src);
+      });
+    }
+    if (idx >= 0) {
+      const el = pool.splice(idx, 1)[0];
+      return classifySlotEl(el, slot);
+    }
+    return htmlToElement(renderSlotPhoto(photo, slot));
   }
 
   function renderWaitingCard(reconnect) {
@@ -170,14 +221,14 @@ const WorldChoirMemory = (() => {
     `;
   }
 
-  function updateCarouselView(snap) {
+  function updateCarouselView(snap, { force = false } = {}) {
     const stage = document.getElementById('mem-carousel-stage');
     const meta = document.getElementById('mem-carousel-meta');
     const root = document.getElementById('mem-carousel');
     if (!stage || !meta || !root) return;
 
-    // Never rebuild slots mid-swipe — that kills the Instagram finger-follow feel.
-    if (carouselBusy && !snap.isInitialLoading && !snap.isEmpty) return;
+    // Never rebuild slots mid-finger-drag — commit path passes force:true.
+    if (carouselBusy && !force && !snap.isInitialLoading && !snap.isEmpty) return;
 
     if (snap.isInitialLoading) {
       stage.innerHTML = `
@@ -207,28 +258,29 @@ const WorldChoirMemory = (() => {
 
     root.classList.remove('mem-carousel--empty');
 
-    const left = snap.left
-      ? renderSlotPhoto(snap.left, 'left')
-      : `<div class="mem-carousel__slot mem-carousel__slot--left mem-carousel__slot--empty" aria-hidden="true"></div>`;
-    const center = renderSlotPhoto(snap.current, 'center');
-    let right;
+    const pool = [...stage.querySelectorAll('.mem-carousel__slot')];
+    const leftEl = takeSlotForPhoto(pool, snap.left, 'left');
+    const centerEl = takeSlotForPhoto(pool, snap.current, 'center');
+    let rightEl;
     if (snap.right) {
-      right = renderSlotPhoto(snap.right, 'right');
+      rightEl = takeSlotForPhoto(pool, snap.right, 'right');
     } else if (snap.isPrefetching) {
-      right = `
+      rightEl = htmlToElement(`
         <div class="mem-carousel__slot mem-carousel__slot--right mem-carousel__slot--waiting" data-slot="right" aria-hidden="true">
           <div class="mem-carousel__waiting">
             <p class="mem-carousel__waiting-title">Loading…</p>
           </div>
         </div>
-      `;
+      `);
     } else if (snap.current) {
-      right = renderWaitingCard(snap.isReconnecting);
+      rightEl = htmlToElement(renderWaitingCard(snap.isReconnecting));
     } else {
-      right = `<div class="mem-carousel__slot mem-carousel__slot--right mem-carousel__slot--empty" aria-hidden="true"></div>`;
+      rightEl = takeSlotForPhoto(pool, null, 'right');
     }
 
-    stage.innerHTML = `${left}${center}${right}`;
+    const frag = document.createDocumentFragment();
+    frag.append(leftEl, centerEl, rightEl);
+    stage.replaceChildren(frag);
 
     const caption = String(snap.current?.caption || '').trim();
     const place = [snap.current?.city, snap.current?.country].filter(Boolean).join(', ');
@@ -805,6 +857,10 @@ const WorldChoirMemory = (() => {
     document.getElementById('mem-carousel-meta')?.classList.toggle('is-dimmed', !!on);
   }
 
+  function setCarouselSnappingUi(on) {
+    carouselViewport()?.classList.toggle('is-snapping', !!on);
+  }
+
   function canNavigate(direction) {
     if (typeof WorldChoirMemoryFeed === 'undefined') return false;
     const snap = WorldChoirMemoryFeed.getSnapshot();
@@ -818,70 +874,66 @@ const WorldChoirMemory = (() => {
     return WorldChoirMemoryFeed.goPrev();
   }
 
-  function pulseCenterSettle() {
-    const root = document.getElementById('mem-carousel');
-    if (!root || REDUCED_MOTION) return;
-    root.classList.remove('mem-carousel--settle');
-    // Force restart so consecutive swipes always get the short reveal.
-    void root.offsetWidth;
-    root.classList.add('mem-carousel--settle');
-    window.clearTimeout(pulseCenterSettle._t);
-    pulseCenterSettle._t = window.setTimeout(() => {
-      root.classList.remove('mem-carousel--settle');
-    }, 100);
-  }
-
-  function finishSwipeCommit(direction) {
-    const moved = commitFeedStep(direction);
-    carouselBusy = false;
-    setCarouselDraggingUi(false);
-    // Drop the stage translate in the same frame as the slot swap — no second morph.
+  function finishNavigateCleanup() {
     clearStageTransform();
-    if (moved) {
-      updateCarouselView(WorldChoirMemoryFeed.getSnapshot());
-      pulseCenterSettle();
-      window.setTimeout(() => {
-        WorldChoirMemoryFeed.unlockTransition();
-      }, 16);
-    } else if (typeof WorldChoirMemoryFeed !== 'undefined') {
+    setCarouselDraggingUi(false);
+    setCarouselSnappingUi(false);
+    carouselBusy = false;
+    if (typeof WorldChoirMemoryFeed !== 'undefined') {
       WorldChoirMemoryFeed.unlockTransition();
     }
   }
 
   /**
-   * Animate the stage sideways (IG page turn), then swap the feed slot.
+   * Instagram commit:
+   * 1) Open the next photo to center size immediately (is-snapping / recycle img)
+   * 2) Ease only the remaining sideways offset home — never a slow grow-after
    */
-  function navigate(direction, { fromGesture = false } = {}) {
+  function navigate(direction, { fromGesture = false, fromX = 0 } = {}) {
     if (carouselBusy && !fromGesture) return;
     if (!canNavigate(direction)) return;
 
-    const stride = slideStridePx();
-    const targetX = direction === 'next' ? -stride : stride;
+    carouselBusy = true;
+    setCarouselDraggingUi(false);
+    // Center-size EVERY photo now — side→center open is 0ms.
+    setCarouselSnappingUi(true);
 
-    if (REDUCED_MOTION || SWIPE.SNAP_MS <= 0) {
-      carouselBusy = true;
-      finishSwipeCommit(direction);
+    const startX = fromGesture ? fromX : 0;
+    setStageX(startX, { animate: false });
+
+    const moved = commitFeedStep(direction);
+    if (!moved) {
+      finishNavigateCleanup();
       return;
     }
 
-    carouselBusy = true;
-    setCarouselDraggingUi(false);
-    setStageX(targetX, { animate: true });
+    // Promote the same <img> node into center — no reload, no fade-in.
+    updateCarouselView(WorldChoirMemoryFeed.getSnapshot(), { force: true });
 
+    if (REDUCED_MOTION || SWIPE.SNAP_MS <= 0 || !startX) {
+      finishNavigateCleanup();
+      return;
+    }
+
+    // Keep continuity from the finger, then slide home (photo already open).
+    setStageX(startX, { animate: false });
     const stage = carouselStage();
-    let settled = false;
-    const settle = () => {
-      if (settled) return;
-      settled = true;
-      stage?.removeEventListener('transitionend', onEnd);
-      finishSwipeCommit(direction);
-    };
-    const onEnd = (ev) => {
-      if (ev.target !== stage || ev.propertyName !== 'transform') return;
-      settle();
-    };
-    stage?.addEventListener('transitionend', onEnd);
-    window.setTimeout(settle, SWIPE.SNAP_MS + 40);
+    requestAnimationFrame(() => {
+      setStageX(0, { animate: true });
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        stage?.removeEventListener('transitionend', onEnd);
+        finishNavigateCleanup();
+      };
+      const onEnd = (ev) => {
+        if (ev.target !== stage || ev.propertyName !== 'transform') return;
+        settle();
+      };
+      stage?.addEventListener('transitionend', onEnd);
+      window.setTimeout(settle, SWIPE.SNAP_MS + 40);
+    });
   }
 
   function bindCarouselGestures(viewport) {
@@ -972,6 +1024,10 @@ const WorldChoirMemory = (() => {
       const stride = slideStridePx();
       const threshold = Math.max(SWIPE.COMMIT_PX_MIN, stride * SWIPE.COMMIT_RATIO);
       const dx = g.dx;
+      let fromX = dx;
+      if ((dx > 0 && !snap.canGoPrev) || (dx < 0 && !snap.canGoNext)) {
+        fromX = dx * SWIPE.EDGE_RESIST;
+      }
       const fast = Math.abs(g.vx) >= SWIPE.COMMIT_VELOCITY;
       const far = Math.abs(dx) >= threshold;
       let direction = null;
@@ -981,12 +1037,13 @@ const WorldChoirMemory = (() => {
       }
 
       if (direction) {
-        navigate(direction, { fromGesture: true });
+        navigate(direction, { fromGesture: true, fromX });
         return;
       }
 
       // Spring back to center (IG rubber-band cancel).
       setCarouselDraggingUi(false);
+      setCarouselSnappingUi(false);
       setStageX(0, { animate: !REDUCED_MOTION });
       const stage = carouselStage();
       let settled = false;
@@ -1036,6 +1093,7 @@ const WorldChoirMemory = (() => {
       carouselBusy = false;
       clearStageTransform();
       setCarouselDraggingUi(false);
+      setCarouselSnappingUi(false);
     };
   }
 
