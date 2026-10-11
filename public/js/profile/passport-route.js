@@ -28,6 +28,11 @@ const PassportRoute = (() => {
 
   function go(page, { replace = false } = {}) {
     const href = hrefFor(page);
+    if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openPassport) {
+      const search = href.includes('?') ? href.slice(href.indexOf('?')) : '';
+      WorldChoirNav.openPassport({ search, page });
+      return;
+    }
     if (replace) window.location.replace(href);
     else window.location.assign(href);
   }

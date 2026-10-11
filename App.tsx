@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { WebView, WebViewNavigation } from 'react-native-webview';
+import { WebView } from 'react-native-webview';
 
 /** Live World Choir product — website remains the source of truth. */
 const APP_URL = 'https://worldchoirapp.com';
@@ -37,6 +37,8 @@ function isAllowedWorldChoirUrl(url: string): boolean {
 
 export default function App() {
   const webRef = useRef<WebView>(null);
+  /** Only the cold start may show the shell loader — never in-app navigations. */
+  const hasLoadedOnce = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -52,6 +54,7 @@ export default function App() {
 
   const retry = useCallback(() => {
     setError(null);
+    hasLoadedOnce.current = false;
     setLoading(true);
     setReloadKey((k) => k + 1);
   }, []);
@@ -64,10 +67,6 @@ export default function App() {
     // External links (Stripe, mailto, tel, social) open outside the app shell
     Linking.openURL(url).catch(() => {});
     return false;
-  }, []);
-
-  const onNavigationStateChange = useCallback((nav: WebViewNavigation) => {
-    if (nav.loading) setLoading(true);
   }, []);
 
   return (
@@ -84,10 +83,14 @@ export default function App() {
             bounces
             decelerationRate="normal"
             onLoadStart={() => {
-              setLoading(true);
+              // Passport / soft pages must never flash "Loading World Choir…" over the tabs.
+              if (!hasLoadedOnce.current) setLoading(true);
               setError(null);
             }}
-            onLoadEnd={() => setLoading(false)}
+            onLoadEnd={() => {
+              hasLoadedOnce.current = true;
+              setLoading(false);
+            }}
             onError={() => {
               setLoading(false);
               setError("Couldn't connect to World Choir. Check your connection and try again.");
@@ -99,7 +102,6 @@ export default function App() {
                 setError('World Choir is temporarily unavailable. Please try again.');
               }
             }}
-            onNavigationStateChange={onNavigationStateChange}
             onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
             allowsBackForwardNavigationGestures
             allowsInlineMediaPlayback

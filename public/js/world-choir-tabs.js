@@ -29,7 +29,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
         'js/profile/daily-acts-peace.js?v=20261007fda3',
-        'js/world-choir-home.js?v=20261011peopleSang74',
+        'js/world-choir-home.js?v=20261011softPass1',
       ],
       selectors: [
         '#earth-canvas',
@@ -130,7 +130,7 @@ const WorldChoirTabs = (() => {
         'js/profile/invite-button.js?v=20260813p',
         'js/profile/daily-acts-peace.js?v=20261007fda3',
         'js/profile/daily-acts-button.js?v=20260912dapFast',
-        'js/profile/profile-page.js?v=20260912tabRoot',
+        'js/profile/profile-page.js?v=20261011softPass1',
       ],
       selectors: [
         '.ambient-bg',
@@ -211,6 +211,35 @@ const WorldChoirTabs = (() => {
       init: () => tabApi('world-chain')?.init?.(),
       onShow: () => tabApi('world-chain')?.onTabShow?.(),
     },
+    // Soft secondary (Profile / Home / Memory) — never full-reload into a loading flash.
+    passport: {
+      href: 'passport.html',
+      title: 'World Choir — Passport',
+      css: [
+        'css/passport.css?v=20261009deskFull',
+        'css/pass-the-world-walkthrough.css?v=20260904c',
+        'css/passport-stamps-walkthrough.css?v=20260904b',
+        'css/daily-peace.css?v=20260810e',
+        'css/privacy-consent.css?v=20260911theme',
+        'css/live-event.css?v=20260911theme',
+      ],
+      scripts: [
+        'js/profile/passport-route.js?v=20261011softPass1',
+        'js/profile/passport-stamps.js?v=20260904b',
+        'js/profile/world-choir-passport.js?v=20260912passportCover',
+        'js/world-choir-flags.js?v=20260902n',
+        'js/profile/pass-the-world-map.js?v=20260930ptwFix1',
+        'js/profile/pass-the-world.js?v=20261009ptwNoFlash',
+        'js/profile/pass-the-world-walkthrough.js?v=20260904c',
+        'js/profile/passport-stamps-walkthrough.js?v=20260904d',
+        'js/profile/passport-page.js?v=20261011softPass1',
+      ],
+      selectors: ['.ambient-bg', '#passport-page'],
+      bodySelectors: ['#passport-info-overlay', '#passport-toast'],
+      init: () => tabApi('passport')?.init?.(),
+      onShow: () => tabApi('passport')?.onTabShow?.(),
+      onReset: () => tabApi('passport')?.resetToRoot?.(),
+    },
   };
 
   const BODY_HOLD_IDS = new Set(['nav-root', 'wc-global-live', 'wc-tab-host']);
@@ -256,6 +285,9 @@ const WorldChoirTabs = (() => {
     if (id === 'daily-acts') {
       return window.DailyActsPage || (typeof DailyActsPage !== 'undefined' ? DailyActsPage : null);
     }
+    if (id === 'passport') {
+      return window.PassportPage || (typeof PassportPage !== 'undefined' ? PassportPage : null);
+    }
     return null;
   }
 
@@ -300,6 +332,11 @@ const WorldChoirTabs = (() => {
       // Skeleton or real grid — soft open must not wait on the journey API.
       return !!(panel.querySelector(
         '#daily-acts-root .dap-header, #daily-acts-root .dap-grid, #daily-acts-root .wc-skel-page, #daily-acts-root .dap-error'
+      ));
+    }
+    if (id === 'passport') {
+      return !!(panel.querySelector(
+        '#passport-root .passport-header, #passport-root .passport-card-wrap, #passport-root .passport-main, #passport-root .ptw-story'
       ));
     }
     return panel.childElementCount > 0;
@@ -741,9 +778,12 @@ const WorldChoirTabs = (() => {
     if (exceptId !== 'daily-acts') {
       preloadPanel('daily-acts');
     }
+    if (exceptId !== 'passport') {
+      preloadPanel('passport');
+    }
     const run = () => {
       Object.keys(PRIMARY).forEach((id) => {
-        if (id === exceptId || id === 'world-chain' || id === 'daily-acts') return;
+        if (id === exceptId || id === 'world-chain' || id === 'daily-acts' || id === 'passport') return;
         preloadPanel(id);
       });
     };

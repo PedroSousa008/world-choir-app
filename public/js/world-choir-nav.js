@@ -279,6 +279,7 @@ const WorldChoirNav = (() => {
     if (!file || file === 'index.html' || file === '') return 'home';
     if (file === 'daily-acts.html') return 'daily-acts';
     if (file === 'world-chain.html') return 'world-chain';
+    if (file === 'passport.html' || file.includes('passport-story')) return 'passport';
     const hit = ALL_PAGES.find((p) => p.href === file);
     return hit?.id || null;
   }
@@ -401,6 +402,60 @@ const WorldChoirNav = (() => {
             } catch {
               /* ignore */
             }
+          }
+        })();
+        return true;
+      }
+    }
+
+    window.location.href = href;
+    return true;
+  }
+
+  /** Soft keep-alive open for Passport — never flash a full-page loader over the tabs. */
+  function openPassport({ search = '', page = '' } = {}) {
+    let href = 'passport.html';
+    if (search) {
+      href = `passport.html${search.startsWith('?') || search.startsWith('#') ? search : `?${search}`}`;
+    } else if (page === 'stamps' || page === 'inside') {
+      href = 'passport.html?page=stamps';
+    } else if (page === 'story') {
+      href = 'passport.html?page=story';
+    }
+
+    const tabs = typeof WorldChoirTabs !== 'undefined' ? WorldChoirTabs : null;
+    if (tabs?.isPrimary?.('passport')) {
+      if (!tabs.isHosted()) {
+        const entry = tabs.getActive?.() || currentActivePage || pageIdFromPathname() || 'home';
+        if (tabs.isPrimary(entry)) tabs.attach(entry);
+      }
+      if (tabs.isHosted()) {
+        clearPendingNavigation();
+        clearStoredTransition();
+        document.documentElement.classList.remove('wc-nav-handoff');
+        currentActivePage = 'passport';
+        setActiveClasses('passport');
+        placeIndicatorOnItem(null);
+        void (async () => {
+          const ok = await tabs.switchTo('passport', { updateHistory: true });
+          if (!ok) {
+            window.location.href = href;
+            return;
+          }
+          try {
+            history.replaceState(
+              { ...(history.state || {}), wcTab: 'passport' },
+              '',
+              href
+            );
+          } catch {
+            /* ignore */
+          }
+          try {
+            const chapter = page || (typeof PassportRoute !== 'undefined' ? PassportRoute.getPage() : 'cover');
+            PassportPage?.onTabShow?.({ page: chapter });
+          } catch {
+            /* ignore */
           }
         })();
         return true;
@@ -604,7 +659,7 @@ const WorldChoirNav = (() => {
     home: [
       'index.html',
       'css/home.css?v=20261009deskFull2',
-      'js/world-choir-home.js?v=20261011peopleSang74',
+      'js/world-choir-home.js?v=20261011softPass1',
       'js/world-choir-db.js?v=20260924voices46',
     ],
     map: [
@@ -638,16 +693,16 @@ const WorldChoirNav = (() => {
     profile: [
       'profile.html',
       'css/profile.css?v=20260924safeTop1',
-      'js/profile/profile-page.js?v=20260912tabRoot',
+      'js/profile/profile-page.js?v=20261011softPass1',
       'js/profile/daily-acts-peace.js?v=20261007fda3',
       'js/profile/daily-acts-button.js?v=20260912dapFast',
       'js/world-choir-onboarding.js?v=20260816a',
       'js/world-choir-db.js?v=20260924voices46',
       'passport.html',
       'css/passport.css?v=20261009deskFull',
-      'js/profile/passport-route.js?v=20260901b',
+      'js/profile/passport-route.js?v=20261011softPass1',
       'js/profile/world-choir-passport.js?v=20260912passportCover',
-      'js/profile/passport-page.js?v=20261009ptwNoFlash',
+      'js/profile/passport-page.js?v=20261011softPass1',
       'js/world-choir-flags.js?v=20260902n',
       'js/profile/pass-the-world-map.js?v=20260930ptwFix1',
       'js/profile/pass-the-world.js?v=20261009ptwNoFlash',
@@ -989,12 +1044,45 @@ const WorldChoirNav = (() => {
     pinNavToVisualViewport();
   }
 
+  /** Intercept soft secondary page links so they never full-reload (no Expo loading flash). */
+  function bindSoftSecondaryLinks() {
+    if (document.documentElement.dataset.wcSoftLinksBound === '1') return;
+    document.documentElement.dataset.wcSoftLinksBound = '1';
+    document.addEventListener('click', (ev) => {
+      if (ev.defaultPrevented || ev.button !== 0) return;
+      if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+      const a = ev.target?.closest?.('a[href]');
+      if (!a) return;
+      const href = a.getAttribute('href') || '';
+      if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+      let url;
+      try { url = new URL(href, window.location.href); } catch { return; }
+      if (url.origin !== window.location.origin) return;
+      const file = (url.pathname.split('/').pop() || '').toLowerCase();
+      if (file === 'passport.html' || file.includes('passport-story')) {
+        ev.preventDefault();
+        openPassport({ search: `${url.search || ''}${url.hash || ''}` });
+        return;
+      }
+      if (file === 'world-chain.html') {
+        ev.preventDefault();
+        openWorldChain({ search: `${url.search || ''}${url.hash || ''}` });
+        return;
+      }
+      if (file === 'daily-acts.html') {
+        ev.preventDefault();
+        openDailyActs({ hash: url.hash || '', reset: true });
+      }
+    }, true);
+  }
+
   function mount(activePage) {
     if (typeof WorldChoirA11y !== 'undefined') {
       WorldChoirA11y.bindOverlays?.();
     }
     const root = document.getElementById('nav-root');
     if (!root) return;
+    bindSoftSecondaryLinks();
     bindNavViewportPin();
     clearPendingNavigation();
     clearArrivalTimer();
@@ -1072,6 +1160,7 @@ const WorldChoirNav = (() => {
     navigateToPrimaryTab,
     openWorldChain,
     openDailyActs,
+    openPassport,
     pinNavToVisualViewport,
     getNavIconSvg: (key) => NAV_ICON_SVGS[key] || '',
     getNavGlyph: (pageId) => {

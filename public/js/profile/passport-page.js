@@ -756,8 +756,10 @@ const PassportPage = (() => {
   function init() {
     window.__passportShowChapter = showChapter;
     updateInfoActionsVisibility(activeChapter);
-    WorldChoirNav.startWatcher('profile');
-    mount();
+    if (!window.__WC_TAB_SILENT_INIT) {
+      WorldChoirNav.startWatcher('profile');
+    }
+    void mount();
     if (typeof DailyActsPeace !== 'undefined') {
       const startBanner = () => DailyActsPeace.start?.();
       if (typeof requestIdleCallback === 'function') {
@@ -768,5 +770,46 @@ const PassportPage = (() => {
     }
   }
 
-  return { init, showChapter, updateJourneyStats, refreshJourneyStats, updateJourneyStatsKm, liveJourneyTotalKm, getPassportData: () => passportData };
+  function onTabShow(opts = {}) {
+    const chapter = resolveChapter(
+      opts.page
+      || (typeof PassportRoute !== 'undefined' ? PassportRoute.getPage() : activeChapter)
+    );
+    activeChapter = chapter;
+    if (passportData) {
+      showChapter(chapter, { syncUrl: true, historyMode: 'replace', animate: false });
+      return;
+    }
+    void mount();
+  }
+
+  function resetToRoot() {
+    onTabShow({ page: 'cover' });
+    try {
+      window.scrollTo(0, 0);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function isReady() {
+    return !!document.querySelector(
+      '#passport-root .passport-header, #passport-root .passport-card-wrap, #passport-root .passport-main'
+    );
+  }
+
+  const api = {
+    init,
+    onTabShow,
+    resetToRoot,
+    isReady,
+    showChapter,
+    updateJourneyStats,
+    refreshJourneyStats,
+    updateJourneyStatsKm,
+    liveJourneyTotalKm,
+    getPassportData: () => passportData,
+  };
+  window.PassportPage = api;
+  return api;
 })();

@@ -1098,7 +1098,11 @@ const WorldChoirHome = (() => {
       /* ignore */
     }
     closeHomeGuide();
-    window.location.href = 'passport.html?page=story';
+    if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openPassport) {
+      WorldChoirNav.openPassport({ page: 'story' });
+    } else {
+      window.location.href = 'passport.html?page=story';
+    }
   }
 
   function resolveGuidePledgeStatus() {
@@ -1125,7 +1129,11 @@ const WorldChoirHome = (() => {
     }
     closeHomeGuide();
     // Always open Passport cover — guide Step 1 teaches fingerprint → Stamps.
-    window.location.href = 'passport.html';
+    if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openPassport) {
+      WorldChoirNav.openPassport();
+    } else {
+      window.location.href = 'passport.html';
+    }
   }
 
   function bindActions() {

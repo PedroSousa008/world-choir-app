@@ -85,7 +85,11 @@ const ProfilePage = (() => {
         });
       },
       onOpenPassport: () => {
-        window.location.href = 'passport.html';
+        if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openPassport) {
+          WorldChoirNav.openPassport();
+        } else {
+          window.location.href = 'passport.html';
+        }
       },
       onOpenWorldChain: () => {
         if (typeof WorldChoirNav !== 'undefined' && WorldChoirNav.openWorldChain) {
