@@ -818,13 +818,28 @@ const WorldChoirMemory = (() => {
     return WorldChoirMemoryFeed.goPrev();
   }
 
+  function pulseCenterSettle() {
+    const root = document.getElementById('mem-carousel');
+    if (!root || REDUCED_MOTION) return;
+    root.classList.remove('mem-carousel--settle');
+    // Force restart so consecutive swipes always get the short reveal.
+    void root.offsetWidth;
+    root.classList.add('mem-carousel--settle');
+    window.clearTimeout(pulseCenterSettle._t);
+    pulseCenterSettle._t = window.setTimeout(() => {
+      root.classList.remove('mem-carousel--settle');
+    }, 100);
+  }
+
   function finishSwipeCommit(direction) {
     const moved = commitFeedStep(direction);
     carouselBusy = false;
     setCarouselDraggingUi(false);
+    // Drop the stage translate in the same frame as the slot swap — no second morph.
     clearStageTransform();
     if (moved) {
       updateCarouselView(WorldChoirMemoryFeed.getSnapshot());
+      pulseCenterSettle();
       window.setTimeout(() => {
         WorldChoirMemoryFeed.unlockTransition();
       }, 16);
