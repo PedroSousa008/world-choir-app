@@ -3,7 +3,7 @@
  * Passport, letter, legal pages, etc. must takeover even if they forgot the full script list.
  */
 (function wcLiveBoot() {
-  const VERSION = '20260904as';
+  const VERSION = '20261011songHandoff1';
 
   function inLiveWindow() {
     try {
@@ -25,7 +25,8 @@
     if (document.querySelector('link[href*="css/live-event.css"]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = `css/live-event.css?v=20260911theme    document.head.appendChild(link);
+    link.href = `css/live-event.css?v=20260911theme`;
+    document.head.appendChild(link);
   }
 
   function loadScript(src) {

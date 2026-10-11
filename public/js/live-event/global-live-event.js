@@ -48,6 +48,9 @@ const GlobalLiveEvent = (() => {
   let videoFailed = false;
   let videoEndedLocally = false;
   let initPromise = null;
+  /** Wall-clock ms when lyric progress last left ~0 during LIVE_SONG (stuck-at-0 watchdog). */
+  let songProgressWatchStartedAt = 0;
+  let songProgressLastSec = -1;
 
   function esc(str) {
     const el = document.createElement('span');
@@ -517,6 +520,27 @@ const GlobalLiveEvent = (() => {
       : null;
   }
 
+  /**
+   * After the pre-event video ends, the lyric clock must never wait on the network.
+   * Set a provisional local song-start immediately; the server first-write may replace it.
+   */
+  function ensureLocalSongStart(nowMs = WorldChoirServerTime.nowMs()) {
+    if (getAuthoritativeSongStartUtc()) return getAuthoritativeSongStartUtc();
+    const iso = new Date(nowMs).toISOString();
+    actualLiveSongStartUtc = iso;
+    return iso;
+  }
+
+  function withTimeout(promise, ms) {
+    let timer = null;
+    const timeout = new Promise((resolve) => {
+      timer = setTimeout(() => resolve({ __wcTimedOut: true }), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => {
+      if (timer) clearTimeout(timer);
+    });
+  }
+
   function shouldSkipPreEventVideo(nowMs) {
     const songStartUtc = getAuthoritativeSongStartUtc();
     if (songStartUtc && nowMs >= Date.parse(songStartUtc)) return true;
@@ -573,6 +597,13 @@ const GlobalLiveEvent = (() => {
       if (nowMs >= songStart) return 'LIVE_SONG';
     }
 
+    // Local video end must advance the state machine even if the POST has not landed yet.
+    if (videoEndedLocally) {
+      const songEnd = eventStart + songDurationMs;
+      if (nowMs >= songEnd) return 'LIVE_FINISHED';
+      return 'LIVE_SONG';
+    }
+
     if (nowMs >= videoEndMs - 200) {
       const songEnd = eventStart + songDurationMs;
       if (nowMs >= songEnd) return 'LIVE_FINISHED';
@@ -620,6 +651,13 @@ const GlobalLiveEvent = (() => {
     } catch {
       return null;
     }
+  }
+
+  /** Best-effort authoritative song-start; never block the video→song handoff on mobile. */
+  async function reportVideoEndedWithBudget(ms = 2200) {
+    const result = await withTimeout(reportVideoEnded(), ms);
+    if (result && !result.__wcTimedOut) return result;
+    return null;
   }
 
   function cleanupVideo() {
@@ -962,41 +1000,52 @@ const GlobalLiveEvent = (() => {
     videoEndedLocally = true;
     transitioning = true;
     state = 'TRANSITIONING_TO_LIVE';
+    songProgressWatchStartedAt = 0;
+    songProgressLastSec = -1;
 
-    const nowMs = WorldChoirServerTime.nowMs();
-    const target = getTargetSongPositionSec(nowMs);
-    const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
+    try {
+      // CRITICAL: establish song-start BEFORE computing target / starting audio.
+      // Previously we started audio at target≈0 then fire-and-forgot reportVideoEnded;
+      // if the POST failed (common on mobile) the lyric clock stayed clamped at 0 until refresh.
+      ensureLocalSongStart(WorldChoirServerTime.nowMs());
+      await reportVideoEndedWithBudget(2200);
+      ensureLocalSongStart(WorldChoirServerTime.nowMs());
 
-    if (target >= duration - 0.5) {
-      state = 'LIVE_FINISHED';
-      onSongEnded();
-      transitioning = false;
-      return;
-    }
+      const nowMs = WorldChoirServerTime.nowMs();
+      const target = getTargetSongPositionSec(nowMs);
+      const duration = WorldChoirLiveConfig.EVENT.liveSong.durationSeconds;
 
-    state = 'LIVE_SONG';
-    cleanupVideo();
-    if (!mountLiveLyrics(target)) {
-      onSongError();
-      transitioning = false;
-      return;
-    }
-
-    audioEl = getLiveSongAudio();
-    if (!audioEl._wcBound) {
-      audioEl._wcBound = true;
-      audioEl.addEventListener('ended', onSongEnded);
-      audioEl.addEventListener('error', onSongError);
-    }
-
-    reportVideoEnded().then(() => {
-      if (!actualLiveSongStartUtc) {
-        actualLiveSongStartUtc = new Date(WorldChoirServerTime.nowMs()).toISOString();
+      if (target >= duration - 0.5) {
+        state = 'LIVE_FINISHED';
+        onSongEnded();
+        return;
       }
-    }).catch(() => {});
 
-    await startLiveAudio(target);
-    transitioning = false;
+      state = 'LIVE_SONG';
+      cleanupVideo();
+      if (!mountLiveLyrics(target)) {
+        onSongError();
+        return;
+      }
+
+      audioEl = getLiveSongAudio();
+      if (!audioEl._wcBound) {
+        audioEl._wcBound = true;
+        audioEl.addEventListener('ended', onSongEnded);
+        audioEl.addEventListener('error', onSongError);
+      }
+
+      await startLiveAudio(target);
+
+      // Server first-write may land just after the first lock — re-seek once if needed.
+      const retarget = getTargetSongPositionSec(WorldChoirServerTime.nowMs());
+      if (Math.abs(retarget - target) > 1.25 && !audioLockPromise) {
+        await lockAudioToGlobalPosition({ audible: audioUnlocked });
+      }
+      startLyricClock(audioEl || getLiveSongAudio());
+    } finally {
+      transitioning = false;
+    }
   }
 
   async function enterPreEvent() {
@@ -1115,11 +1164,19 @@ const GlobalLiveEvent = (() => {
     return showLiveSongShell(atSec);
   }
 
-  async function waitForAudioReady(el) {
+  async function waitForAudioReady(el, timeoutMs = 2500) {
     if (el.readyState >= 1) return;
     await new Promise((resolve, reject) => {
-      el.addEventListener('loadedmetadata', resolve, { once: true });
-      el.addEventListener('error', () => reject(new Error('audio load failed')), { once: true });
+      let settled = false;
+      const done = (fn, arg) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        fn(arg);
+      };
+      const timer = setTimeout(() => done(reject, new Error('audio metadata timeout')), timeoutMs);
+      el.addEventListener('loadedmetadata', () => done(resolve), { once: true });
+      el.addEventListener('error', () => done(reject, new Error('audio load failed')), { once: true });
     });
   }
 
@@ -1212,7 +1269,17 @@ const GlobalLiveEvent = (() => {
 
       try {
         if (el.paused || el.ended) {
-          await el.play();
+          const playResult = el.play();
+          if (playResult && typeof playResult.then === 'function') {
+            const guarded = playResult.catch(() => ({ __wcPlayFailed: true }));
+            const raced = await withTimeout(guarded, 2500);
+            if (raced && (raced.__wcTimedOut || raced.__wcPlayFailed)) {
+              // Some mobile WebViews never resolve play() — keep going with lyric clock.
+              startLyricClock(el);
+              updateSoundToggleUi();
+              return false;
+            }
+          }
         }
       } catch {
         startLyricClock(el);
@@ -1576,7 +1643,30 @@ const GlobalLiveEvent = (() => {
     if (state === 'LIVE_SONG') {
       if (!isLiveSongUiActive()) showLiveSongShell(getTargetSongPositionSec(nowMs));
       hideAllUnlockUi();
-      const target = getTargetSongPositionSec(nowMs);
+      // After a local video→song handoff, never allow a missing song-start to clamp at 0.
+      if (videoEndedLocally && !getAuthoritativeSongStartUtc()) {
+        ensureLocalSongStart(nowMs);
+      }
+      let target = getTargetSongPositionSec(nowMs);
+
+      // Stuck-at-0 watchdog: if progress has not left ~0 for ~3s after handoff, re-anchor.
+      if (videoEndedLocally || getAuthoritativeSongStartUtc()) {
+        if (target <= 0.75) {
+          if (!songProgressWatchStartedAt) songProgressWatchStartedAt = Date.now();
+          else if (Date.now() - songProgressWatchStartedAt > 2800) {
+            actualLiveSongStartUtc = null;
+            ensureLocalSongStart(WorldChoirServerTime.nowMs());
+            songProgressWatchStartedAt = Date.now();
+            target = getTargetSongPositionSec(WorldChoirServerTime.nowMs());
+            await lockAudioToGlobalPosition({ audible: audioUnlocked });
+            startLyricClock(audioEl || getLiveSongAudio());
+          }
+        } else if (target > songProgressLastSec + 0.2 || target > 1.5) {
+          songProgressWatchStartedAt = 0;
+        }
+        songProgressLastSec = target;
+      }
+
       if (!audioEl || audioEl.paused || audioEl.ended) {
         await startLiveAudio(target);
       } else {
