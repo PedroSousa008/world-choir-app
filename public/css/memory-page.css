@@ -7,7 +7,8 @@
   max-width: 100%;
   width: 100%;
   margin: 0 auto;
-  padding: 14px 20px calc(var(--nav-height) + 88px);
+  /* Match Donate: 14px content gap + safe-area so the World Choir logo sits at the same top offset */
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 20px calc(var(--nav-height) + 88px);
   font-family: var(--font-sans);
   color: var(--df-warm);
   overflow-x: clip;

@@ -152,7 +152,7 @@ const WorldChoirTabs = (() => {
         'css/passport.css?v=20261009deskFull',
         'css/profile.css?v=20260924safeTop1',
         'css/daily-peace.css?v=20260810e',
-        'css/memory-page.css?v=20261009deskFull',
+        'css/memory-page.css?v=20261011logoAlign1',
         'css/world-chain.css?v=20261009deskFull',
         'css/privacy-consent.css?v=20260911theme',
         'css/live-event.css?v=20260911theme',

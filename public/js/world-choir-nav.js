@@ -664,7 +664,7 @@ const WorldChoirNav = (() => {
     ],
     memory: [
       'memory.html',
-      'css/memory-page.css?v=20261009deskFull',
+      'css/memory-page.css?v=20261011logoAlign1',
       'css/world-chain.css?v=20261009deskFull',
       'js/world-choir-flags.js?v=20260902n',
       'js/memory/memory-data.js?v=20260907wchain',
