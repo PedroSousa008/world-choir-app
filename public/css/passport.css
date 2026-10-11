@@ -2114,6 +2114,83 @@
   color: var(--accent-aurora, #4ec5e8);
 }
 
+/* HTML plane/route sit under MapLibre WebGL — Leaflet markers are the visible ones. */
+.ptw-plane-overlay,
+.ptw-route-overlay {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.ptw-plane-icon {
+  background: transparent !important;
+  border: 0 !important;
+  color: #f4f4f6;
+}
+
+.ptw-plane-icon__glow {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(78, 197, 232, 0.65) 0%, rgba(78, 197, 232, 0) 70%);
+  pointer-events: none;
+}
+
+.ptw-plane-icon__svg {
+  position: relative;
+  display: block;
+  margin: 3px;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 6px rgba(78, 197, 232, 0.75));
+  transform-origin: center center;
+}
+
+.ptw-stop-icon {
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.ptw-stop-icon__dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: 2px;
+  border-radius: 50%;
+  background: #4ec5e8;
+  box-shadow:
+    0 0 0 1.5px rgba(8, 12, 22, 0.85),
+    0 0 10px rgba(78, 197, 232, 0.85);
+}
+
+.ptw-leaflet-dest-popup .leaflet-popup-content-wrapper {
+  background: rgba(12, 16, 28, 0.94);
+  color: #f4f4f6;
+  border: 1px solid rgba(78, 197, 232, 0.35);
+  border-radius: 10px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+
+.ptw-leaflet-dest-popup .leaflet-popup-tip {
+  background: rgba(12, 16, 28, 0.94);
+}
+
+.ptw-dest-popup {
+  text-align: center;
+  min-width: 110px;
+}
+
+.ptw-dest-popup__city {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.ptw-dest-popup__eta {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.68rem;
+  color: #4ec5e8;
+}
+
 .ptw-plane-overlay {
   position: absolute;
   top: 0;

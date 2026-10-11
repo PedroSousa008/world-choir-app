@@ -1,6 +1,7 @@
 /**
  * Pass the World — map layer (same basemap as Map tab, no city pins).
- * Plane, route, and destination stop are HTML/SVG overlays (same projection).
+ * Active route + plane live in Leaflet panes (above MapLibre WebGL).
+ * HTML overlays alone sit under the GL canvas on iOS/WebKit and vanish.
  * World framing resets only on mount / leave / refresh — user zoom is kept.
  */
 const PassTheWorldMap = (() => {
@@ -13,6 +14,8 @@ const PassTheWorldMap = (() => {
 
   let map = null;
   let historyLayer = null;
+  let routeLayer = null;
+  let markerLayer = null;
   let inviteLayer = null;
   let inviteOverlayLayer = null;
   let inviteDotEls = [];
@@ -20,6 +23,7 @@ const PassTheWorldMap = (() => {
   let revealAnimKey = '';
   let inviteOpenKey = '';
   let planeEl = null;
+  let planeMarker = null;
   let destEl = null;
   let originEl = null;
   let routeSvg = null;
@@ -336,6 +340,30 @@ const PassTheWorldMap = (() => {
     });
   }
 
+  function stopDotIcon(kind = 'origin') {
+    return L.divIcon({
+      className: `ptw-stop-icon ptw-stop-icon--${kind}`,
+      html: '<span class="ptw-stop-icon__dot"></span>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+  }
+
+  /** Plane marker inside Leaflet — never buried under MapLibre WebGL. */
+  function planeIcon(bearing = 0) {
+    const rot = Number(bearing) || 0;
+    return L.divIcon({
+      className: 'ptw-plane-icon',
+      html: `
+        <span class="ptw-plane-icon__glow"></span>
+        <svg class="ptw-plane-icon__svg" viewBox="0 0 24 24" width="22" height="22" style="transform:rotate(${rot}deg)" focusable="false" aria-hidden="true">
+          <path fill="currentColor" d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+        </svg>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+    });
+  }
+
   function drawHistoryArc(from, to, layer) {
     const curve = buildCurve(from, to, HISTORY_STEPS);
     L.polyline(curve.points, {
@@ -349,6 +377,102 @@ const PassTheWorldMap = (() => {
       pane: 'ptwOverlay',
       className: 'ptw-route-history',
     }).addTo(layer);
+  }
+
+  function clearActiveRouteLayers() {
+    if (routeLayer) routeLayer.clearLayers();
+    if (markerLayer) markerLayer.clearLayers();
+    planeMarker = null;
+  }
+
+  function drawActiveRoute(curve) {
+    if (!routeLayer || !curve?.points?.length) return;
+    routeLayer.clearLayers();
+    // Soft glow under the bright path (same pane as history — above WebGL).
+    L.polyline(curve.points, {
+      color: ROUTE_BLUE,
+      weight: 6,
+      opacity: 0.22,
+      lineCap: 'round',
+      lineJoin: 'round',
+      smoothFactor: 1,
+      interactive: false,
+      pane: 'ptwOverlay',
+      className: 'ptw-route-active-glow',
+    }).addTo(routeLayer);
+    L.polyline(curve.points, {
+      color: ROUTE_BLUE,
+      weight: 2.75,
+      opacity: 1,
+      lineCap: 'round',
+      lineJoin: 'round',
+      smoothFactor: 1,
+      interactive: false,
+      pane: 'ptwOverlay',
+      className: 'ptw-route-active',
+    }).addTo(routeLayer);
+  }
+
+  function syncPlaneMarker() {
+    if (!map || !markerLayer) return;
+    if (!planeLatLng) {
+      if (planeMarker) {
+        markerLayer.removeLayer(planeMarker);
+        planeMarker = null;
+      }
+      return;
+    }
+    const ll = L.latLng(planeLatLng[0], planeLatLng[1]);
+    if (!planeMarker) {
+      planeMarker = L.marker(ll, {
+        icon: planeIcon(planeBearing),
+        interactive: false,
+        keyboard: false,
+        pane: 'ptwMarkers',
+        zIndexOffset: 800,
+      }).addTo(markerLayer);
+      return;
+    }
+    planeMarker.setLatLng(ll);
+    planeMarker.setIcon(planeIcon(planeBearing));
+  }
+
+  function syncStopMarkers() {
+    if (!markerLayer) return;
+    markerLayer.clearLayers();
+    planeMarker = null;
+    if (originLatLng) {
+      L.marker(originLatLng, {
+        icon: stopDotIcon('origin'),
+        interactive: false,
+        keyboard: false,
+        pane: 'ptwMarkers',
+      }).addTo(markerLayer);
+    }
+    if (destLatLng) {
+      const destMarker = L.marker(destLatLng, {
+        icon: stopDotIcon('dest'),
+        interactive: true,
+        keyboard: false,
+        pane: 'ptwMarkers',
+      }).addTo(markerLayer);
+      if (destPopupMeta) {
+        destMarker.bindPopup(
+          `<div class="ptw-dest-popup"><strong class="ptw-dest-popup__city"></strong><span class="ptw-dest-popup__eta"></span></div>`,
+          { className: 'ptw-leaflet-dest-popup', closeButton: false, offset: [0, -8] }
+        );
+        destMarker.on('popupopen', () => {
+          destPopupOpen = true;
+          const box = destMarker.getPopup()?.getElement();
+          const cityEl = box?.querySelector('.ptw-dest-popup__city');
+          const etaEl = box?.querySelector('.ptw-dest-popup__eta');
+          if (cityEl) cityEl.textContent = destPopupMeta.city || 'Destination';
+          if (etaEl) etaEl.textContent = formatEta(destPopupMeta.arrivalMs);
+        });
+        destMarker.on('popupclose', () => { destPopupOpen = false; });
+      }
+    }
+    syncPlaneMarker();
   }
 
   function ensureOverlayEls() {
@@ -481,41 +605,13 @@ const PassTheWorldMap = (() => {
     routeSvg.style.opacity = '1';
   }
 
-  function syncPlaneOverlay(frame) {
+  function syncPlaneOverlay(_frame) {
     ensureOverlayEls();
-    if (!planeEl || !map) {
-      if (planeEl) planeEl.style.opacity = '0';
-      return;
-    }
-
-    // While travelling, sit exactly on the visible SVG curve (screen-space Q).
-    if (routeCurve) {
-      const a = project(routeCurve.from, frame);
-      const c = project(routeCurve.control, frame);
-      const b = project(routeCurve.to, frame);
-      if (!a || !c || !b) {
-        planeEl.style.opacity = '0';
-        return;
-      }
-      const t = Math.max(0, Math.min(1, planeProgress));
-      const pt = quadPoint(a, c, b, t);
-      planeBearing = quadBearing(a, c, b, t);
-      planeEl.style.opacity = '1';
-      planeEl.style.transform = `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px) rotate(${planeBearing}deg)`;
-      return;
-    }
-
-    if (!planeLatLng) {
-      planeEl.style.opacity = '0';
-      return;
-    }
-    const pt = project(planeLatLng, frame);
-    if (!pt) {
-      planeEl.style.opacity = '0';
-      return;
-    }
-    planeEl.style.opacity = '1';
-    planeEl.style.transform = `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px) rotate(${planeBearing}deg)`;
+    // HTML plane sits under MapLibre WebGL on iOS — keep it hidden.
+    // The Leaflet marker in ptwOverlay is the real, visible plane.
+    if (planeEl) planeEl.style.opacity = '0';
+    if (routeSvg) routeSvg.style.opacity = '0';
+    syncPlaneMarker();
   }
 
   function syncOriginOverlay(frame) {
@@ -604,7 +700,7 @@ const PassTheWorldMap = (() => {
       return;
     }
     planeLatLng = [Number(latlng[0]), Number(latlng[1])];
-    if (!routeCurve) planeBearing = Number(bearing) || 0;
+    planeBearing = Number(bearing) || 0;
     setFocus(planeLatLng[0], planeLatLng[1]);
     syncPlaneOverlay();
   }
@@ -749,11 +845,8 @@ const PassTheWorldMap = (() => {
 
   function setOrigin(latlng) {
     originLatLng = latlng ? [Number(latlng[0]), Number(latlng[1])] : null;
-    if (!originLatLng) {
-      if (originEl) originEl.style.opacity = '0';
-      return;
-    }
-    syncOriginOverlay();
+    if (originEl) originEl.style.opacity = '0';
+    syncStopMarkers();
   }
 
   function setDestination(latlng, destination, arrivalAt) {
@@ -762,6 +855,7 @@ const PassTheWorldMap = (() => {
       destPopupMeta = null;
       closeDestPopup();
       if (destEl) destEl.style.opacity = '0';
+      syncStopMarkers();
       return;
     }
     destPopupMeta = {
@@ -770,9 +864,10 @@ const PassTheWorldMap = (() => {
     };
     if (destEl) {
       destEl.setAttribute('aria-label', `${destPopupMeta.city} destination`);
+      // HTML dest is under WebGL — Leaflet marker owns taps + popup.
+      destEl.style.opacity = '0';
     }
-    refreshDestPopupContent();
-    syncDestOverlay();
+    syncStopMarkers();
     startEtaTimer();
   }
 
@@ -803,24 +898,26 @@ const PassTheWorldMap = (() => {
 
     const progress = travelProgress();
     planeProgress = progress;
-    // Geo sample only for map centering / focus — the plane itself rides the SVG curve.
     const pos = interpolateAlong(travelPts, progress);
     if (pos) {
       planeLatLng = [Number(pos[0]), Number(pos[1])];
+      planeBearing = bearingAlong(travelPts, progress);
       setFocus(planeLatLng[0], planeLatLng[1]);
-      syncPlaneOverlay(animFrame);
+      syncPlaneMarker();
+      syncDestOverlay(animFrame);
       if (!userHasZoomed) {
         const t = performance.now();
         if (t - lastCenterSync > 800) {
           lastCenterSync = t;
           programmaticView = true;
           map.setView(pos, map.getZoom(), { animate: false });
-          syncOverlays(animFrame);
+          syncPlaneMarker();
+          syncDestOverlay(animFrame);
           programmaticView = false;
         }
       }
     } else {
-      syncPlaneOverlay(animFrame);
+      syncPlaneMarker();
     }
 
     if (typeof onProgressCb === 'function') {
@@ -846,8 +943,12 @@ const PassTheWorldMap = (() => {
     planeProgress = travelProgress();
     stopTravelAnimation();
     lastCenterSync = 0;
-    syncRouteOverlay();
-    syncPlaneOverlay();
+    drawActiveRoute(curve);
+    syncStopMarkers();
+    syncPlaneMarker();
+    // Hide HTML SVG route — Leaflet polyline is the visible path.
+    if (routeSvg) routeSvg.style.opacity = '0';
+    if (planeEl) planeEl.style.opacity = '0';
     animRaf = requestAnimationFrame(tickTravel);
   }
 
@@ -858,10 +959,11 @@ const PassTheWorldMap = (() => {
     travelDepartMs = null;
     travelArriveMs = null;
     planeProgress = 0;
+    clearActiveRouteLayers();
     setOrigin(null);
     setDestination(null);
     stopEtaTimer();
-    syncRouteOverlay();
+    if (routeSvg) routeSvg.style.opacity = '0';
   }
 
   function setServerSkew(skewMs) {
@@ -1011,8 +1113,16 @@ const PassTheWorldMap = (() => {
       pane.style.zIndex = 650;
       pane.style.pointerEvents = 'none';
     }
+    // Markers above WebGL with hit-testing (HTML overlays are buried under the GL canvas).
+    if (!map.getPane('ptwMarkers')) {
+      const pane = map.createPane('ptwMarkers');
+      pane.style.zIndex = 680;
+      pane.style.pointerEvents = 'auto';
+    }
 
     historyLayer = L.layerGroup().addTo(map);
+    routeLayer = L.layerGroup().addTo(map);
+    markerLayer = L.layerGroup().addTo(map);
     inviteLayer = L.layerGroup().addTo(map);
 
     ensureOverlayEls();
@@ -1072,9 +1182,8 @@ const PassTheWorldMap = (() => {
       const progress = travelProgress();
       planeProgress = progress;
       const planePos = interpolateAlong(curve.points, progress) || from;
-      planeLatLng = planePos;
-      setFocus(planePos[0], planePos[1]);
-      syncPlaneOverlay();
+      planeBearing = bearingAlong(curve.points, progress);
+      setPlane(planePos, planeBearing);
     } else if (journey.status === 'INVITATION_OPEN') {
       clearTravel();
       const current = readLatLng(journey.current) || FALLBACK_CENTER;
@@ -1150,6 +1259,9 @@ const PassTheWorldMap = (() => {
     }
     inviteDotEls = [];
     historyLayer = null;
+    routeLayer = null;
+    markerLayer = null;
+    planeMarker = null;
     inviteLayer = null;
     planeLatLng = null;
     originLatLng = null;
