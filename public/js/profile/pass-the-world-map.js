@@ -50,6 +50,8 @@ const PassTheWorldMap = (() => {
   let interactRaf = null;
   let interacting = false;
   let animFrame = null; // { center, zoom } during zoomanim
+  /** Suppress userHasZoomed while we programmatically setView / invalidateSize. */
+  let programmaticView = false;
 
   function toRad(d) { return (d * Math.PI) / 180; }
   function toDeg(r) { return (r * 180) / Math.PI; }
@@ -616,9 +618,16 @@ const PassTheWorldMap = (() => {
 
   function resolveWorldZoom() {
     if (!map) return 1;
+    const size = map.getSize?.();
+    // 0×0 (soft-tab / hidden chapter) yields Infinity — never lock that.
+    if (!size || !(size.x > 16) || !(size.y > 16)) {
+      return Number.isFinite(lockedWorldZoom) ? lockedWorldZoom : 1;
+    }
     const bounds = L.latLngBounds(WORLD_BOUNDS);
     const z = map.getBoundsZoom(bounds, false, L.point(2, 2));
-    if (!Number.isFinite(z)) return lockedWorldZoom || 1;
+    if (!Number.isFinite(z) || z < 0 || z > 12) {
+      return Number.isFinite(lockedWorldZoom) ? lockedWorldZoom : 1;
+    }
     lockedWorldZoom = z;
     return z;
   }
@@ -634,7 +643,7 @@ const PassTheWorldMap = (() => {
   }
 
   function markUserZoom() {
-    if (!map) return;
+    if (!map || programmaticView) return;
     const worldZ = lockedWorldZoom || resolveWorldZoom();
     if (Math.abs(map.getZoom() - worldZ) > 0.15) {
       userHasZoomed = true;
@@ -649,15 +658,29 @@ const PassTheWorldMap = (() => {
       return;
     }
 
-    map.invalidateSize({ animate: false, pan: false });
-    if (typeof map.stop === 'function') map.stop();
+    const size = map.getSize?.();
+    if (!size || !(size.x > 16) || !(size.y > 16)) {
+      // Wait for a real layout box — framing at 0×0 parks the plane off-screen.
+      syncOverlays();
+      return;
+    }
 
-    const zoom = resolveWorldZoom();
-    const center = focusLatLng || FALLBACK_CENTER;
-    map.setView(center, zoom, { animate: !!animate, reset: true });
-    userHasZoomed = false;
-    syncOverlays();
-    syncInteraction();
+    programmaticView = true;
+    try {
+      map.invalidateSize({ animate: false, pan: false });
+      if (typeof map.stop === 'function') map.stop();
+
+      const zoom = resolveWorldZoom();
+      const center = focusLatLng || FALLBACK_CENTER;
+      map.setView(center, zoom, { animate: !!animate, reset: true });
+      userHasZoomed = false;
+      syncOverlays();
+      syncInteraction();
+    } finally {
+      requestAnimationFrame(() => {
+        programmaticView = false;
+      });
+    }
   }
 
   function fitFullWorld(opts) {
@@ -790,8 +813,10 @@ const PassTheWorldMap = (() => {
         const t = performance.now();
         if (t - lastCenterSync > 800) {
           lastCenterSync = t;
+          programmaticView = true;
           map.setView(pos, map.getZoom(), { animate: false });
           syncOverlays(animFrame);
+          programmaticView = false;
         }
       }
     } else {
@@ -847,16 +872,69 @@ const PassTheWorldMap = (() => {
     onProgressCb = typeof cb === 'function' ? cb : null;
   }
 
-  function addFallbackBasemap(targetMap) {
-    if (!targetMap || typeof L === 'undefined' || typeof L.tileLayer !== 'function') return;
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      noWrap: true,
-      bounds: [[-85, -180], [85, 180]],
-      minZoom: 0,
-      maxZoom: 8,
-      attribution: '',
-    }).addTo(targetMap);
+  /**
+   * Public Carto Dark Matter (no labels) — last-resort tiles so the card
+   * never stays an empty black plate when MapLibre / proxy tiles fail.
+   */
+  function addPublicDarkRaster(targetMap) {
+    if (!targetMap || typeof L === 'undefined') return null;
+    return L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
+      {
+        subdomains: 'abcd',
+        noWrap: true,
+        bounds: [[-85, -180], [85, 180]],
+        minZoom: 0,
+        maxZoom: 19,
+        className: 'map-tile-layer map-tile-layer--ptw-fallback',
+        attribution: '',
+      }
+    ).addTo(targetMap);
+  }
+
+  function ensureDarkBasemap(targetMap) {
+    if (!targetMap) return;
+    let mode = null;
+    if (typeof WorldChoirMapTiles !== 'undefined'
+      && typeof WorldChoirMapTiles.addBasemapLayers === 'function') {
+      try {
+        // Pass the World card always uses the Dark Matter basemap (even in Light Mode).
+        mode = WorldChoirMapTiles.addBasemapLayers(targetMap, { theme: 'dark' });
+      } catch (err) {
+        console.warn('[PassTheWorldMap] basemap failed, using public raster', err);
+        mode = null;
+      }
+    }
+    if (!mode) {
+      addPublicDarkRaster(targetMap);
+      return;
+    }
+    // MapLibre can leave a blank black canvas; proxy raster 503s without a key.
+    // If neither paints real pixels, drop in public Carto raster.
+    window.setTimeout(() => {
+      if (!map || map !== targetMap) return;
+      try {
+        const rootEl = targetMap.getContainer?.();
+        if (!rootEl) return;
+        const hasPublic = !!rootEl.querySelector('.map-tile-layer--ptw-fallback img');
+        if (hasPublic) return;
+        const hasRasterImg = [...rootEl.querySelectorAll('.leaflet-tile-pane img')].some(
+          (img) => img.naturalWidth > 2
+        );
+        if (hasRasterImg) return;
+        const canvas = rootEl.querySelector('.maplibregl-canvas');
+        const w = canvas?.width || 0;
+        const h = canvas?.height || 0;
+        if (canvas && w > 2 && h > 2) return;
+        addPublicDarkRaster(targetMap);
+        programmaticView = true;
+        targetMap.invalidateSize({ animate: false, pan: false });
+        frameOnPlane({ animate: false, force: true });
+        programmaticView = false;
+      } catch {
+        addPublicDarkRaster(targetMap);
+      }
+    }, 900);
   }
 
   function scheduleSizeSync() {
@@ -876,7 +954,6 @@ const PassTheWorldMap = (() => {
       setTimeout(run, 700);
     });
 
-    // Soft-tab / hidden chapter: remount paints at 0×0 until the story is shown.
     const el = document.getElementById(containerId);
     if (!el || typeof ResizeObserver === 'undefined') return;
     try {
@@ -902,6 +979,7 @@ const PassTheWorldMap = (() => {
     }
 
     userHasZoomed = false;
+    programmaticView = false;
 
     map = L.map(containerId, {
       center: focusLatLng,
@@ -926,19 +1004,7 @@ const PassTheWorldMap = (() => {
       markerZoomAnimation: false,
     });
 
-    let basemapOk = false;
-    if (typeof WorldChoirMapTiles !== 'undefined' && typeof WorldChoirMapTiles.addBasemapLayers === 'function') {
-      try {
-        // Pass the World card always uses the Dark Matter basemap (even in Light Mode).
-        WorldChoirMapTiles.addBasemapLayers(map, { theme: 'dark' });
-        basemapOk = true;
-      } catch {
-        basemapOk = false;
-      }
-    }
-    if (!basemapOk) {
-      addFallbackBasemap(map);
-    }
+    ensureDarkBasemap(map);
 
     if (!map.getPane('ptwOverlay')) {
       const pane = map.createPane('ptwOverlay');
@@ -1040,12 +1106,8 @@ const PassTheWorldMap = (() => {
       setPlane(current, 0);
     }
 
-    if (!userHasZoomed) {
-      frameOnPlane({ animate: false });
-    } else {
-      syncOverlays();
-      syncInteraction();
-    }
+    // Journey updates always re-frame on the plane (unless the user pinched).
+    frameOnPlane({ animate: false, force: !userHasZoomed });
   }
 
   function renderInvites(cities) {

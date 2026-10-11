@@ -17,23 +17,30 @@ const PassTheWorld = (() => {
     { href: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', kind: 'js' },
     { href: 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js', kind: 'js' },
     { href: 'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js', kind: 'js' },
-    { href: 'js/world-choir-map-tiles.js?v=20261011ptwMap1', kind: 'js' },
+    { href: 'js/world-choir-map-tiles.js?v=20261011ptwMap2', kind: 'js' },
   ];
+
+  /** Exact filename — never substring-match (leaflet-maplibre-gl.js contains "maplibre-gl.js"). */
+  function mapLibFileName(href) {
+    return String(href || '').split('?')[0].split('/').pop() || '';
+  }
 
   /** True when a MAP_LIBS entry is already usable (e.g. Map soft-tab loaded it). */
   function mapAssetReady(asset) {
-    const href = String(asset?.href || '');
+    const file = mapLibFileName(asset?.href);
     if (asset?.kind === 'css') return true;
-    if (href.includes('leaflet.js') && !href.includes('maplibre') && typeof L !== 'undefined') return true;
-    if (href.includes('maplibre-gl.js') && typeof maplibregl !== 'undefined') return true;
+    if (file === 'leaflet.js' && typeof L !== 'undefined') return true;
+    if (file === 'maplibre-gl.js' && typeof maplibregl !== 'undefined') return true;
     if (
-      href.includes('maplibre-gl-leaflet')
+      file === 'leaflet-maplibre-gl.js'
       && typeof L !== 'undefined'
       && typeof L.maplibreGL === 'function'
     ) {
       return true;
     }
-    if (href.includes('world-choir-map-tiles') && typeof WorldChoirMapTiles !== 'undefined') return true;
+    if (file.startsWith('world-choir-map-tiles') && typeof WorldChoirMapTiles !== 'undefined') {
+      return true;
+    }
     return false;
   }
 
@@ -222,11 +229,12 @@ const PassTheWorld = (() => {
         return;
       }
 
-      const srcKey = asset.href.split('?')[0];
-      const fileName = srcKey.split('/').pop();
-      const existingAny = [...document.scripts].find(
-        (s) => s.src && (s.src === asset.href || s.src.includes(fileName))
-      );
+      const fileName = mapLibFileName(asset.href);
+      const existingAny = [...document.scripts].find((s) => {
+        if (!s.src) return false;
+        if (s.getAttribute('src') === asset.href || s.src === asset.href) return true;
+        return mapLibFileName(s.src) === fileName;
+      });
       if (existingAny) {
         const markDone = () => {
           existingAny.dataset.loaded = '1';
@@ -279,6 +287,17 @@ const PassTheWorld = (() => {
     }
     if (typeof L === 'undefined') {
       throw new Error('Map could not load. Check your connection and try again.');
+    }
+    // Bridge must attach — without it we fall through to a broken tile proxy and a black map.
+    if (typeof L.maplibreGL !== 'function') {
+      const bridgeHref = MAP_LIBS.find((a) => mapLibFileName(a.href) === 'leaflet-maplibre-gl.js')?.href;
+      if (bridgeHref) {
+        // Force a fresh inject even if a false-positive script tag lingered.
+        [...document.scripts].forEach((s) => {
+          if (mapLibFileName(s.src) === 'leaflet-maplibre-gl.js') s.remove();
+        });
+        await loadAsset({ href: bridgeHref, kind: 'js' });
+      }
     }
   }
 

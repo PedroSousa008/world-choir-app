@@ -12,12 +12,19 @@ const WorldChoirMapTiles = (() => {
     'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json';
 
   const PROXY_URL = '/api/map-tile?z={z}&x={x}&y={y}&r={r}';
+  /** Public Carto CDN — works without CARTO_API_KEY so maps never stay blank. */
+  const PUBLIC_DARK_RASTER =
+    'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+  const PUBLIC_LIGHT_RASTER =
+    'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
 
   const SHARED_RASTER_OPTS = {
     subdomains: 'abcd',
     noWrap: true,
     bounds: [[-85, -180], [85, 180]],
   };
+
+  let preferPublicRaster = false;
 
   let resolvePromise = null;
   let activeMode = 'vector';
@@ -63,6 +70,9 @@ const WorldChoirMapTiles = (() => {
 
   function rasterProxyUrl(map) {
     const theme = themeForMap(map) === 'light' ? 'light' : 'dark';
+    if (preferPublicRaster) {
+      return theme === 'light' ? PUBLIC_LIGHT_RASTER : PUBLIC_DARK_RASTER;
+    }
     return `${PROXY_URL}&theme=${theme}`;
   }
 
@@ -136,27 +146,50 @@ const WorldChoirMapTiles = (() => {
     });
   }
 
+  function bindRasterTileFallback(layer, map) {
+    if (!layer || typeof layer.on !== 'function') return layer;
+    let flipped = false;
+    layer.on('tileerror', () => {
+      if (flipped || preferPublicRaster) return;
+      flipped = true;
+      preferPublicRaster = true;
+      try {
+        removeBasemapLayers(map);
+        addRasterBasemapLayers(map);
+      } catch {
+        /* ignore */
+      }
+    });
+    return layer;
+  }
+
   function addRasterBasemapLayers(map) {
     trackLayer(
-      createRasterLayer(map, {
-        minZoom: 2,
-        maxZoom: 2,
-        maxNativeZoom: 19,
-        className: 'map-tile-layer map-tile-layer--base',
-        updateWhenZooming: false,
-        updateWhenIdle: true,
-      }).addTo(map)
+      bindRasterTileFallback(
+        createRasterLayer(map, {
+          minZoom: 2,
+          maxZoom: 2,
+          maxNativeZoom: 19,
+          className: 'map-tile-layer map-tile-layer--base',
+          updateWhenZooming: false,
+          updateWhenIdle: true,
+        }),
+        map
+      ).addTo(map)
     );
 
     trackLayer(
-      createRasterLayer(map, {
-        minZoom: 2,
-        maxZoom: 19,
-        className: 'map-tile-layer map-tile-layer--detail',
-        updateWhenZooming: true,
-        updateWhenIdle: true,
-        keepBuffer: isMobileMap() ? 2 : 4,
-      }).addTo(map)
+      bindRasterTileFallback(
+        createRasterLayer(map, {
+          minZoom: 2,
+          maxZoom: 19,
+          className: 'map-tile-layer map-tile-layer--detail',
+          updateWhenZooming: true,
+          updateWhenIdle: true,
+          keepBuffer: isMobileMap() ? 2 : 4,
+        }),
+        map
+      ).addTo(map)
     );
   }
 
@@ -184,11 +217,34 @@ const WorldChoirMapTiles = (() => {
     removeBasemapLayers(map);
 
     if (canUseMapLibre()) {
-      trackLayer(createVectorLayer(map).addTo(map));
-      maybeUpgradeToRaster(map);
-      return 'vector';
+      try {
+        const layer = createVectorLayer(map).addTo(map);
+        trackLayer(layer);
+        // If the GL style fails, fall back to public Carto raster (never blank).
+        const gl = typeof layer.getMaplibreMap === 'function' ? layer.getMaplibreMap() : null;
+        gl?.on?.('error', () => {
+          if (preferPublicRaster) return;
+          preferPublicRaster = true;
+          try {
+            removeBasemapLayers(map);
+            addRasterBasemapLayers(map);
+            activeMode = 'raster';
+          } catch {
+            /* ignore */
+          }
+        });
+        maybeUpgradeToRaster(map);
+        return 'vector';
+      } catch {
+        preferPublicRaster = true;
+        addRasterBasemapLayers(map);
+        activeMode = 'raster';
+        return 'raster';
+      }
     }
 
+    // No MapLibre — public Carto CDN so the map never depends on a proxy key.
+    preferPublicRaster = true;
     addRasterBasemapLayers(map);
     activeMode = 'raster';
     return 'raster';
