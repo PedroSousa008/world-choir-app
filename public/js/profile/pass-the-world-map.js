@@ -8,7 +8,6 @@ const PassTheWorldMap = (() => {
   const WORLD_BOUNDS = [[-85, -170], [84, 179]];
   const FALLBACK_CENTER = [41.5518, -8.4229]; // Braga seed
   const ROUTE_STEPS = 120;
-  const HISTORY_STEPS = 72;
   /** Same blue as active nav tab letter color (--accent-aurora). */
   const ROUTE_BLUE = '#4ec5e8';
 
@@ -362,21 +361,6 @@ const PassTheWorldMap = (() => {
       iconSize: [28, 28],
       iconAnchor: [14, 14],
     });
-  }
-
-  function drawHistoryArc(from, to, layer) {
-    const curve = buildCurve(from, to, HISTORY_STEPS);
-    L.polyline(curve.points, {
-      color: 'rgba(78, 197, 232, 0.18)',
-      weight: 1.25,
-      opacity: 1,
-      lineCap: 'round',
-      lineJoin: 'round',
-      smoothFactor: 1.5,
-      interactive: false,
-      pane: 'ptwOverlay',
-      className: 'ptw-route-history',
-    }).addTo(layer);
   }
 
   function clearActiveRouteLayers() {
@@ -1139,28 +1123,15 @@ const PassTheWorldMap = (() => {
 
   function renderJourney(payload = {}) {
     if (!map) return;
-    const { itinerary = [], journey = {} } = payload;
+    const { journey = {} } = payload;
 
     if (journey.serverNow) {
       setServerSkew(Date.now() - new Date(journey.serverNow).getTime());
     }
 
-    historyLayer.clearLayers();
+    // Only the active call-route may be drawn — never past itinerary spider-web arcs.
+    if (historyLayer) historyLayer.clearLayers();
     if (inviteLayer) inviteLayer.clearLayers();
-
-    for (let i = 1; i < itinerary.length; i += 1) {
-      const prev = itinerary[i - 1];
-      const curr = itinerary[i];
-      const from = readLatLng(prev);
-      const to = readLatLng(curr);
-      if (!from || !to) continue;
-      const isCurrent = journey.status === 'TRAVELLING'
-        && journey.destination
-        && curr.city === journey.destination.city
-        && curr.country === journey.destination.country;
-      if (isCurrent) continue;
-      drawHistoryArc(from, to, historyLayer);
-    }
 
     if (
       journey.status === 'TRAVELLING'
