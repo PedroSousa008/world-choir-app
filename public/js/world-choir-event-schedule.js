@@ -16,7 +16,7 @@ const WorldChoirEventSchedule = (() => {
   const TEST_TIMEZONE = 'Europe/Lisbon';
 
   /** Set true only while running end-to-end event tests. */
-  const TEMP_EVENT_TEST_OVERRIDE_ENABLED = true;
+  const TEMP_EVENT_TEST_OVERRIDE_ENABLED = false;
 
   function getLisbonOffsetMinutes(now = new Date()) {
     const formatter = new Intl.DateTimeFormat('en-US', {
