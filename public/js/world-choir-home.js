@@ -1340,10 +1340,16 @@ const WorldChoirHome = (() => {
   }
 
   async function onPullRefresh() {
-    updateVoicesCounter();
     postEventStatsPromise = null;
     try {
       sessionStorage.removeItem(POST_EVENT_STATS_CACHE_KEY);
+    } catch {
+      /* ignore */
+    }
+    updateVoicesCounter();
+    updateCountdown();
+    try {
+      render();
     } catch {
       /* ignore */
     }
@@ -1351,6 +1357,7 @@ const WorldChoirHome = (() => {
     if (stats && (homeView === 'post-event' || homeView === 'post-event-complete')) {
       updatePostEventStatsUI(stats);
     }
+    updateVoicesCounter();
     updateCountdown();
   }
 

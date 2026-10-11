@@ -1,16 +1,16 @@
 /**
  * WorldChoirPullRefresh — Instagram / TikTok-style pull-to-refresh.
  *
- * Rubber-band pull from scrollTop === 0 → arm at ~72px → spinner parks →
- * force-refresh live data → spring dismiss.
+ * Rubber-band pull from top → arm at threshold → spinner parks →
+ * force-refresh live data + active tab → spring dismiss.
  * Never transforms html/body/#nav-root (bottom tabs stay fixed).
  */
 const WorldChoirPullRefresh = (() => {
-  const ARM_PX = 72;
+  const ARM_PX = 64;
   const MAX_PULL = 128;
-  const PARK_PX = 64;
+  const PARK_PX = 56;
   const AXIS_LOCK = 8;
-  const MIN_REFRESH_MS = 700;
+  const MIN_REFRESH_MS = 750;
   const REDUCED = typeof window !== 'undefined'
     && window.matchMedia
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -28,18 +28,41 @@ const WorldChoirPullRefresh = (() => {
     return REDUCED;
   }
 
-  function scrollTop() {
+  function windowScrollTop() {
     return window.scrollY
       || document.documentElement.scrollTop
       || document.body.scrollTop
       || 0;
   }
 
+  /** Active soft-tab panel, if any. */
+  function activePanel() {
+    return document.querySelector('#wc-tab-host .wc-tab-panel.is-active');
+  }
+
   function resolveContentEl() {
-    return document.querySelector('#wc-tab-host .wc-tab-panel.is-active')
+    return activePanel()
       || document.querySelector(
         'main.page, main.donate-page, main.memory-page, main.profile-page, main.passport-page, #daily-acts-page, #world-chain-page, #home-page'
       );
+  }
+
+  /**
+   * True only when the document (and active panel) are at the very top.
+   * Once a pull gesture has started we stop re-checking — iOS rubber-band
+   * can briefly report scrollY > 0 and used to cancel the refresh.
+   */
+  function isAtPageTop() {
+    if (windowScrollTop() > 1) return false;
+    const panel = activePanel();
+    if (panel && typeof panel.scrollTop === 'number' && panel.scrollTop > 1) {
+      return false;
+    }
+    const main = resolveContentEl();
+    if (main && main !== panel && typeof main.scrollTop === 'number' && main.scrollTop > 1) {
+      return false;
+    }
+    return true;
   }
 
   function ensureIndicator() {
@@ -76,8 +99,7 @@ const WorldChoirPullRefresh = (() => {
 
   function dampPull(rawDy) {
     const x = Math.max(0, rawDy);
-    // Elastic resistance — never 1:1 with the finger (Instagram feel).
-    return MAX_PULL * (1 - Math.exp(-x / (ARM_PX * 1.2)));
+    return MAX_PULL * (1 - Math.exp(-x / (ARM_PX * 1.15)));
   }
 
   /** Ancestor CSS transforms break MapLibre WebGL (blank black canvas). */
@@ -90,7 +112,6 @@ const WorldChoirPullRefresh = (() => {
   function applyPull(y) {
     pullY = y;
     contentEl = resolveContentEl();
-    // Indicator always moves; only translate content when it won't kill WebGL maps.
     if (contentEl && !contentHasLiveMap(contentEl)) {
       contentEl.style.willChange = 'transform';
       contentEl.style.transition = 'none';
@@ -145,6 +166,53 @@ const WorldChoirPullRefresh = (() => {
     return false;
   }
 
+  function detectPageId() {
+    try {
+      const tabId = typeof WorldChoirTabs !== 'undefined' ? WorldChoirTabs.getActive?.() : null;
+      if (tabId) return tabId;
+    } catch {
+      /* ignore */
+    }
+    const path = String(location.pathname || '').split('/').pop() || '';
+    if (!path || path === 'index.html' || path === '') return 'home';
+    if (path.startsWith('map')) return 'map';
+    if (path.startsWith('donate')) return 'donate';
+    if (path.startsWith('profile')) return 'profile';
+    if (path.startsWith('memory')) return 'memory';
+    if (path.startsWith('passport')) return 'passport';
+    if (path.startsWith('daily-acts')) return 'daily-acts';
+    if (path.startsWith('world-chain')) return 'world-chain';
+    if (document.body.classList.contains('map-page')) return 'map';
+    if (document.body.classList.contains('donate-page')) return 'donate';
+    if (document.body.classList.contains('memory-page')) return 'memory';
+    if (document.body.classList.contains('profile-page')) return 'profile';
+    if (document.body.classList.contains('passport-page')) return 'passport';
+    return 'home';
+  }
+
+  function resolveTabApi(tabId) {
+    switch (tabId) {
+      case 'home':
+        return window.WorldChoirHome || null;
+      case 'map':
+        return window.WorldChoirMap || null;
+      case 'donate':
+        return window.WorldChoirDonate || null;
+      case 'profile':
+        return window.ProfilePage || null;
+      case 'memory':
+        return window.WorldChoirMemory || null;
+      case 'passport':
+        return window.PassportPage || null;
+      case 'daily-acts':
+        return window.DailyActsPage || null;
+      case 'world-chain':
+        return window.WorldChainPage || null;
+      default:
+        return null;
+    }
+  }
+
   async function runRefresh() {
     refreshing = true;
     armed = false;
@@ -160,38 +228,28 @@ const WorldChoirPullRefresh = (() => {
     setIndicator(1, 22, { spinning: true });
 
     const started = performance.now();
+    const tabId = detectPageId();
+    const api = resolveTabApi(tabId);
+
     try {
       const jobs = [];
+
       if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.forceRefreshLiveData) {
         jobs.push(WorldChoirDB.forceRefreshLiveData().catch(() => {}));
       } else if (typeof WorldChoirDB !== 'undefined' && WorldChoirDB.syncMapAggregates) {
         jobs.push(WorldChoirDB.syncMapAggregates().catch(() => {}));
       }
+
       if (typeof WorldChoirServerTime !== 'undefined' && WorldChoirServerTime.sync) {
         jobs.push(WorldChoirServerTime.sync(true).catch(() => {}));
       }
 
-      const tabId = typeof WorldChoirTabs !== 'undefined' ? WorldChoirTabs.getActive?.() : null;
-      const api = tabId && typeof WorldChoirTabs !== 'undefined'
-        ? (
-          tabId === 'home' ? (window.WorldChoirHome || null)
-            : tabId === 'map' ? (window.WorldChoirMap || null)
-              : tabId === 'donate' ? (window.WorldChoirDonate || null)
-                : tabId === 'profile' ? (window.ProfilePage || null)
-                  : tabId === 'memory' ? (window.WorldChoirMemory || null)
-                    : tabId === 'passport' ? (window.PassportPage || null)
-                      : tabId === 'daily-acts' ? (window.DailyActsPage || null)
-                        : tabId === 'world-chain' ? (window.WorldChainPage || null)
-                          : null
-        )
-        : null;
-
       if (api?.onPullRefresh) {
         jobs.push(Promise.resolve(api.onPullRefresh()).catch(() => {}));
-      } else if (api?.onTabShow) {
-        jobs.push(Promise.resolve(api.onTabShow()).catch(() => {}));
       } else if (api?.refresh) {
         jobs.push(Promise.resolve(api.refresh()).catch(() => {}));
+      } else if (api?.onTabShow) {
+        jobs.push(Promise.resolve(api.onTabShow()).catch(() => {}));
       }
 
       try {
@@ -200,8 +258,16 @@ const WorldChoirPullRefresh = (() => {
         /* ignore */
       }
 
+      if (!jobs.length) {
+        // Last resort — hard reload so the circle never "spins for nothing".
+        await new Promise((r) => setTimeout(r, 280));
+        location.reload();
+        return;
+      }
+
       await Promise.all(jobs);
     } finally {
+      if (refreshing === false) return;
       const elapsed = performance.now() - started;
       if (elapsed < MIN_REFRESH_MS) {
         await new Promise((r) => setTimeout(r, MIN_REFRESH_MS - elapsed));
@@ -212,7 +278,6 @@ const WorldChoirPullRefresh = (() => {
       setIndicator(0, 0, { spinning: false });
       ensureIndicator().classList.remove('is-visible', 'is-refreshing');
       ensureIndicator().style.opacity = '0';
-      // Repair any map that still sat under a transform during the gesture.
       try {
         window.PassTheWorldMap?.invalidateSize?.();
         window.WorldChoirMapTiles?.syncToMap?.(window.WorldChoirMap?.getMap?.() || null);
@@ -224,7 +289,7 @@ const WorldChoirPullRefresh = (() => {
 
   function onTouchStart(ev) {
     if (refreshing || pulling) return;
-    if (scrollTop() > 1) return;
+    if (!isAtPageTop()) return;
     if (isBlocked(ev.target)) return;
     const t = ev.touches?.[0];
     if (!t) return;
@@ -233,6 +298,7 @@ const WorldChoirPullRefresh = (() => {
       startY: t.clientY,
       axis: null,
       active: true,
+      locked: false,
     };
     contentEl = resolveContentEl();
   }
@@ -249,22 +315,22 @@ const WorldChoirPullRefresh = (() => {
     if (!g.axis) {
       if (Math.abs(dx) < AXIS_LOCK && Math.abs(dy) < AXIS_LOCK) return;
       g.axis = Math.abs(dy) > Math.abs(dx) ? 'y' : 'x';
-      if (g.axis !== 'y' || dy <= 0 || scrollTop() > 1) {
+      if (g.axis !== 'y' || dy <= 0 || !isAtPageTop()) {
         g.active = false;
         gesture = null;
         return;
       }
       pulling = true;
+      g.locked = true;
     }
 
     if (g.axis !== 'y' || !pulling) return;
-    if (scrollTop() > 1) {
-      cancelPull({ animate: false });
-      return;
-    }
 
+    // Once locked, do NOT cancel on rubber-band scrollY flicker.
     const y = dampPull(dy);
-    if (y > 2) ev.preventDefault();
+    if (y > 1) {
+      try { ev.preventDefault(); } catch { /* ignore */ }
+    }
     applyPull(y);
 
     const nowArmed = y >= ARM_PX;
@@ -288,16 +354,18 @@ const WorldChoirPullRefresh = (() => {
   }
 
   function onTouchEnd() {
-    const g = gesture;
+    const wasPulling = pulling;
+    const wasArmed = armed;
     gesture = null;
-    if (!pulling) return;
     pulling = false;
-    if (armed && !refreshing) {
+    // Prefer refresh whenever the gesture was armed — ignore mid-end races.
+    if (wasArmed && !refreshing) {
       armed = false;
       void runRefresh();
       return;
     }
-    cancelPull({ animate: true });
+    armed = false;
+    if (wasPulling) cancelPull({ animate: true });
   }
 
   function bind() {

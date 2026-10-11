@@ -29,7 +29,7 @@ const WorldChoirTabs = (() => {
         'js/world-choir-practice-config.js',
         'js/world-choir-live-event.js?v=20260904an',
         'js/profile/daily-acts-peace.js?v=20261007fda3',
-        'js/world-choir-home.js?v=20261011ptr1',
+        'js/world-choir-home.js?v=20261011ptrFix2',
       ],
       selectors: [
         '#earth-canvas',
