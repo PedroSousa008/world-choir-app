@@ -216,6 +216,8 @@ const WorldChoirTabs = (() => {
       href: 'passport.html',
       title: 'World Choir — Passport',
       css: [
+        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+        'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
         'css/passport.css?v=20261009deskFull',
         'css/pass-the-world-walkthrough.css?v=20260904c',
         'css/passport-stamps-walkthrough.css?v=20260904b',
@@ -224,6 +226,9 @@ const WorldChoirTabs = (() => {
         'css/live-event.css?v=20260911theme',
       ],
       scripts: [
+        'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+        'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js',
+        'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js',
         'js/world-choir-map-tiles.js?v=20261011ptwMap1',
         'js/profile/passport-route.js?v=20261011softPass1',
         'js/profile/passport-stamps.js?v=20260904b',

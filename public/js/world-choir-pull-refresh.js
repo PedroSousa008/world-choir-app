@@ -80,18 +80,10 @@ const WorldChoirPullRefresh = (() => {
     return MAX_PULL * (1 - Math.exp(-x / (ARM_PX * 1.2)));
   }
 
-  /** Ancestor CSS transforms break MapLibre WebGL (blank black canvas). */
-  function contentHasLiveMap(el) {
-    return !!(el && el.querySelector(
-      '.leaflet-container, .maplibregl-canvas, #ptw-map, #map'
-    ));
-  }
-
   function applyPull(y) {
     pullY = y;
     contentEl = resolveContentEl();
-    // Indicator always moves; only translate content when it won't kill WebGL maps.
-    if (contentEl && !contentHasLiveMap(contentEl)) {
+    if (contentEl) {
       contentEl.style.willChange = 'transform';
       contentEl.style.transition = 'none';
       contentEl.style.transform = y > 0.5 ? `translate3d(0, ${y}px, 0)` : '';
@@ -150,11 +142,10 @@ const WorldChoirPullRefresh = (() => {
     armed = false;
     const park = PARK_PX;
     contentEl = resolveContentEl();
-    const skipContentMotion = contentHasLiveMap(contentEl);
-    if (contentEl && !skipContentMotion) {
-      if (!prefersReducedMotion()) {
-        contentEl.style.transition = 'transform 220ms cubic-bezier(0.32, 0.72, 0, 1)';
-      }
+    if (contentEl && !prefersReducedMotion()) {
+      contentEl.style.transition = 'transform 220ms cubic-bezier(0.32, 0.72, 0, 1)';
+      contentEl.style.transform = `translate3d(0, ${park}px, 0)`;
+    } else if (contentEl) {
       contentEl.style.transform = `translate3d(0, ${park}px, 0)`;
     }
     setIndicator(1, 22, { spinning: true });
@@ -208,17 +199,10 @@ const WorldChoirPullRefresh = (() => {
       }
       refreshing = false;
       pullY = 0;
-      clearContentTransform({ animate: !skipContentMotion });
+      clearContentTransform({ animate: true });
       setIndicator(0, 0, { spinning: false });
       ensureIndicator().classList.remove('is-visible', 'is-refreshing');
       ensureIndicator().style.opacity = '0';
-      // Repair any map that still sat under a transform during the gesture.
-      try {
-        window.PassTheWorldMap?.invalidateSize?.();
-        window.WorldChoirMapTiles?.syncToMap?.(window.WorldChoirMap?.getMap?.() || null);
-      } catch {
-        /* ignore */
-      }
     }
   }
 

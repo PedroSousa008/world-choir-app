@@ -847,62 +847,47 @@ const PassTheWorldMap = (() => {
     onProgressCb = typeof cb === 'function' ? cb : null;
   }
 
-  /**
-   * Public Carto Dark Matter (no labels) — last-resort tiles so the card
-   * never stays an empty black plate when MapLibre / proxy tiles fail.
-   */
-  function addPublicDarkRaster(targetMap) {
-    if (!targetMap || typeof L === 'undefined') return null;
-    return L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
-      {
-        subdomains: 'abcd',
-        noWrap: true,
-        bounds: [[-85, -180], [85, 180]],
-        minZoom: 0,
-        maxZoom: 19,
-        className: 'map-tile-layer map-tile-layer--ptw-fallback',
-        attribution: '',
-      }
-    ).addTo(targetMap);
+  function addFallbackBasemap(targetMap) {
+    if (!targetMap || typeof L === 'undefined' || typeof L.tileLayer !== 'function') return;
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      noWrap: true,
+      bounds: [[-85, -180], [85, 180]],
+      minZoom: 0,
+      maxZoom: 8,
+      attribution: '',
+    }).addTo(targetMap);
   }
 
-  function ensureDarkBasemap(targetMap) {
-    if (!targetMap) return;
-    let mode = null;
-    if (typeof WorldChoirMapTiles !== 'undefined'
-      && typeof WorldChoirMapTiles.addBasemapLayers === 'function') {
+  function scheduleSizeSync() {
+    const run = () => {
       try {
-        // Pass the World card always uses the Dark Matter basemap (even in Light Mode).
-        mode = WorldChoirMapTiles.addBasemapLayers(targetMap, { theme: 'dark' });
-      } catch (err) {
-        console.warn('[PassTheWorldMap] basemap failed, using public raster', err);
-        mode = null;
+        map?.invalidateSize?.({ animate: false });
+      } catch { /* ignore */ }
+      frameOnPlane({ animate: false, force: true });
+      if (typeof WorldChoirMapTiles !== 'undefined' && map) {
+        try { WorldChoirMapTiles.syncToMap?.(map); } catch { /* ignore */ }
       }
-    }
-    if (!mode) {
-      addPublicDarkRaster(targetMap);
-      return;
-    }
-    // MapLibre can leave a blank black canvas after ancestor transforms / zero size.
-    // If GL never gets a real canvas, drop in public Carto raster so the map never stays black.
-    window.setTimeout(() => {
-      if (!map || map !== targetMap) return;
-      try {
-        const rootEl = targetMap.getContainer?.();
-        if (!rootEl) return;
-        const hasRasterImg = !!rootEl.querySelector('.leaflet-tile-pane img, .map-tile-layer');
-        if (hasRasterImg) return;
-        const canvas = rootEl.querySelector('.maplibregl-canvas');
-        const w = canvas?.width || 0;
-        const h = canvas?.height || 0;
-        if (canvas && w > 2 && h > 2) return;
-        addPublicDarkRaster(targetMap);
-        targetMap.invalidateSize({ animate: false, pan: false });
-      } catch {
-        addPublicDarkRaster(targetMap);
-      }
-    }, 1200);
+    };
+    requestAnimationFrame(() => {
+      run();
+      setTimeout(run, 80);
+      setTimeout(run, 280);
+      setTimeout(run, 700);
+    });
+
+    // Soft-tab / hidden chapter: remount paints at 0×0 until the story is shown.
+    const el = document.getElementById(containerId);
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    try {
+      const ro = new ResizeObserver((entries) => {
+        const box = entries?.[0]?.contentRect;
+        if (!box || !(box.width > 8) || !(box.height > 8)) return;
+        run();
+      });
+      ro.observe(el);
+      map.__ptwResizeObserver = ro;
+    } catch { /* ignore */ }
   }
 
   async function mount(id = 'ptw-map') {
@@ -941,7 +926,19 @@ const PassTheWorldMap = (() => {
       markerZoomAnimation: false,
     });
 
-    ensureDarkBasemap(map);
+    let basemapOk = false;
+    if (typeof WorldChoirMapTiles !== 'undefined' && typeof WorldChoirMapTiles.addBasemapLayers === 'function') {
+      try {
+        // Pass the World card always uses the Dark Matter basemap (even in Light Mode).
+        WorldChoirMapTiles.addBasemapLayers(map, { theme: 'dark' });
+        basemapOk = true;
+      } catch {
+        basemapOk = false;
+      }
+    }
+    if (!basemapOk) {
+      addFallbackBasemap(map);
+    }
 
     if (!map.getPane('ptwOverlay')) {
       const pane = map.createPane('ptwOverlay');
@@ -959,10 +956,7 @@ const PassTheWorldMap = (() => {
     map.on('zoomend moveend', onInteractEnd);
     map.on('click', () => closeDestPopup());
 
-    requestAnimationFrame(() => {
-      frameOnPlane({ animate: false, force: true });
-      setTimeout(() => frameOnPlane({ animate: false, force: true }), 100);
-    });
+    scheduleSizeSync();
 
     return map;
   }
@@ -1070,6 +1064,8 @@ const PassTheWorldMap = (() => {
     stopInteractLoop();
     stopRevealAnimation();
     if (map) {
+      try { map.__ptwResizeObserver?.disconnect?.(); } catch { /* ignore */ }
+      map.__ptwResizeObserver = null;
       map.off('move zoom viewreset', syncOverlays);
       map.off('zoomanim', onZoomAnim);
       map.off('zoomstart movestart', onInteractStart);

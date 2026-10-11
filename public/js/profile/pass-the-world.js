@@ -20,21 +20,20 @@ const PassTheWorld = (() => {
     { href: 'js/world-choir-map-tiles.js?v=20261011ptwMap1', kind: 'js' },
   ];
 
-  /** True when a previously injected script already executed (soft-tab / Map visit). */
-  function mapScriptAlreadyReady(asset) {
-    const file = String(asset.href || '').split('?')[0].split('/').pop() || '';
-    if (file === 'leaflet.js' && typeof L !== 'undefined') return true;
-    if (file === 'maplibre-gl.js' && typeof maplibregl !== 'undefined') return true;
+  /** True when a MAP_LIBS entry is already usable (e.g. Map soft-tab loaded it). */
+  function mapAssetReady(asset) {
+    const href = String(asset?.href || '');
+    if (asset?.kind === 'css') return true;
+    if (href.includes('leaflet.js') && !href.includes('maplibre') && typeof L !== 'undefined') return true;
+    if (href.includes('maplibre-gl.js') && typeof maplibregl !== 'undefined') return true;
     if (
-      file === 'leaflet-maplibre-gl.js'
+      href.includes('maplibre-gl-leaflet')
       && typeof L !== 'undefined'
       && typeof L.maplibreGL === 'function'
     ) {
       return true;
     }
-    if (file.startsWith('world-choir-map-tiles') && typeof WorldChoirMapTiles !== 'undefined') {
-      return true;
-    }
+    if (href.includes('world-choir-map-tiles') && typeof WorldChoirMapTiles !== 'undefined') return true;
     return false;
   }
 
@@ -196,15 +195,14 @@ const PassTheWorld = (() => {
   function loadAsset(asset) {
     return new Promise((resolve, reject) => {
       if (asset.kind === 'css') {
-        const cssFile = asset.href.split('?')[0].split('/').pop();
-        if ([...document.styleSheets].some((s) => s.href && s.href.includes(cssFile))) {
+        const fileName = asset.href.split('?')[0].split('/').pop();
+        if ([...document.styleSheets].some((s) => s.href && s.href.includes(fileName))) {
           resolve();
           return;
         }
-        const existing = document.querySelector(`link[href="${asset.href}"]`)
-          || [...document.querySelectorAll('link[rel="stylesheet"]')].find(
-            (l) => l.href && l.href.includes(cssFile)
-          );
+        const existing = [...document.querySelectorAll('link[rel="stylesheet"]')].find(
+          (link) => link.href && (link.href === asset.href || link.href.includes(fileName))
+        );
         if (existing) {
           resolve();
           return;
@@ -217,54 +215,48 @@ const PassTheWorld = (() => {
         document.head.appendChild(link);
         return;
       }
-      // Soft tabs often inject Map libs first — never wait on a missed `load` event.
-      if (mapScriptAlreadyReady(asset)) {
+
+      // Globals already present (Map tab / soft-tab shell loaded them earlier).
+      if (mapAssetReady(asset)) {
         resolve();
         return;
       }
+
       const srcKey = asset.href.split('?')[0];
       const fileName = srcKey.split('/').pop();
-      const existingBySrc = document.querySelector(`script[src="${asset.href}"]`);
-      const existingAny = existingBySrc
-        || [...document.scripts].find((s) => s.src && s.src.includes(fileName));
+      const existingAny = [...document.scripts].find(
+        (s) => s.src && (s.src === asset.href || s.src.includes(fileName))
+      );
       if (existingAny) {
-        if (existingAny.dataset.loaded === '1' || mapScriptAlreadyReady(asset)) {
+        const markDone = () => {
           existingAny.dataset.loaded = '1';
           resolve();
+        };
+        if (existingAny.dataset.loaded === '1' || mapAssetReady(asset)) {
+          markDone();
           return;
         }
-        let settled = false;
-        const finish = (ok) => {
-          if (settled) return;
-          settled = true;
-          if (ok) {
-            existingAny.dataset.loaded = '1';
-            resolve();
-          } else {
-            reject(new Error(`Failed ${asset.href}`));
-          }
-        };
-        existingAny.addEventListener('load', () => finish(true));
-        existingAny.addEventListener('error', () => finish(false));
-        // Modern browsers omit script.readyState — poll globals so we never hang.
+        existingAny.addEventListener('load', markDone, { once: true });
+        existingAny.addEventListener('error', () => reject(new Error(`Failed ${asset.href}`)), { once: true });
+        // Modern browsers omit readyState on <script>; load already fired → poll globals.
+        if (existingAny.readyState === 'complete' || existingAny.readyState === 'loaded') {
+          markDone();
+          return;
+        }
         let tries = 0;
         const poll = () => {
-          if (settled) return;
-          if (mapScriptAlreadyReady(asset)
-            || existingAny.readyState === 'complete'
-            || existingAny.readyState === 'loaded') {
-            finish(true);
+          if (mapAssetReady(asset) || existingAny.dataset.loaded === '1') {
+            markDone();
             return;
           }
           tries += 1;
-          if (tries < 40) {
-            setTimeout(poll, 25);
+          if (tries > 40) {
+            reject(new Error(`Failed ${asset.href}`));
             return;
           }
-          // Proceed so mount() can surface a real error instead of a black plate.
-          finish(true);
+          setTimeout(poll, 50);
         };
-        poll();
+        setTimeout(poll, 0);
         return;
       }
       const script = document.createElement('script');
@@ -284,6 +276,9 @@ const PassTheWorld = (() => {
       // Sequential so maplibre-gl-leaflet sees L + maplibregl
       // eslint-disable-next-line no-await-in-loop
       await loadAsset(asset);
+    }
+    if (typeof L === 'undefined') {
+      throw new Error('Map could not load. Check your connection and try again.');
     }
   }
 

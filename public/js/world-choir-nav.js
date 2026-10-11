@@ -704,8 +704,8 @@ const WorldChoirNav = (() => {
       'js/profile/world-choir-passport.js?v=20260912passportCover',
       'js/profile/passport-page.js?v=20261011ptr1',
       'js/world-choir-flags.js?v=20260902n',
-      'js/profile/pass-the-world-map.js?v=20260930ptwFix1',
-      'js/profile/pass-the-world.js?v=20261009ptwNoFlash',
+      'js/profile/pass-the-world-map.js?v=20261011ptwMap1',
+      'js/profile/pass-the-world.js?v=20261011ptwMap1',
       'js/world-choir-map-tiles.js?v=20261011ptwMap1',
       'images/passport/passport-inside-bg.png?v=20260827c',
       'passport-story.html',
@@ -716,6 +716,7 @@ const WorldChoirNav = (() => {
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
       'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js',
       'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js',
+      'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json',
     ],
     memory: [
       'memory.html',
