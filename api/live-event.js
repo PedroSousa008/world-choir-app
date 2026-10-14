@@ -46,11 +46,12 @@ module.exports = async function handler(req, res) {
 
       if (action === 'video-ended') {
         const serverNow = new Date().toISOString();
-        const { state, created } = await recordVideoEnded(eventId, serverNow);
+        const { state, created, rejected } = await recordVideoEnded(eventId, serverNow);
         res.setHeader('Cache-Control', 'no-store');
         return res.status(200).json({
           ok: true,
           created,
+          rejected: !!rejected,
           serverNow,
           actualLiveSongStartUtc: state.actualLiveSongStartUtc,
         });
@@ -58,8 +59,25 @@ module.exports = async function handler(req, res) {
 
       if (action === 'reset-test-state') {
         const schedule = getLiveEventSchedule();
+        // Always allow wipe while test override is on.
+        // Outside override, only allow wipe when the blob is already invalid for the schedule
+        // (clears leftover same-day test freezes without unlocking random production resets).
         if (!schedule.testOverrideEnabled) {
-          return res.status(403).json({ error: 'Test reset is only available while the event test override is enabled.' });
+          const existing = await readLiveEventState(eventId);
+          if (existing.actualLiveSongStartUtc) {
+            return res.status(403).json({
+              error: 'Test reset is only available while the event test override is enabled.',
+            });
+          }
+          // Already clean (sanitize may have just purged) — idempotent success.
+          res.setHeader('Cache-Control', 'no-store');
+          return res.status(200).json({
+            ok: true,
+            reset: true,
+            alreadyClean: true,
+            serverNow: new Date().toISOString(),
+            actualLiveSongStartUtc: null,
+          });
         }
         const state = await clearLiveEventState(eventId);
         await clearPeopleSangSnapshot(eventId).catch(() => {});

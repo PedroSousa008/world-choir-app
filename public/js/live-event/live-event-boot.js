@@ -3,7 +3,7 @@
  * Passport, letter, legal pages, etc. must takeover even if they forgot the full script list.
  */
 (function wcLiveBoot() {
-  const VERSION = '20261011songHandoff1';
+  const VERSION = '20261014staleBlob1';
 
   function inLiveWindow() {
     try {

@@ -622,12 +622,14 @@ const GlobalLiveEvent = (() => {
       });
       if (!res.ok) return null;
       const data = await res.json();
-      if (data.actualLiveSongStartUtc) {
-        if (isSongStartValidForCurrentEvent(data.actualLiveSongStartUtc)) {
-          actualLiveSongStartUtc = data.actualLiveSongStartUtc;
-        }
-        // Keep a previously valid local start if the server briefly returns null/stale.
+      const serverStart = data.actualLiveSongStartUtc || null;
+      if (serverStart && isSongStartValidForCurrentEvent(serverStart)) {
+        actualLiveSongStartUtc = serverStart;
+      } else if (actualLiveSongStartUtc && !isSongStartValidForCurrentEvent(actualLiveSongStartUtc)) {
+        // Drop leftover test freezes (e.g. Oct 2026 while schedule is 2027).
+        actualLiveSongStartUtc = null;
       }
+      // Keep a previously valid local provisional start if the server briefly returns null.
       return data;
     } catch {
       return null;
@@ -1756,16 +1758,23 @@ const GlobalLiveEvent = (() => {
   }
 
   async function reconcileStaleAuthoritativeState() {
-    if (typeof WorldChoirEventSchedule === 'undefined' || !WorldChoirEventSchedule.isTestOverrideActive()) {
-      return;
-    }
-
     const hadStaleStart = actualLiveSongStartUtc && !isSongStartValidForCurrentEvent(actualLiveSongStartUtc);
     if (!hadStaleStart) return;
 
     actualLiveSongStartUtc = null;
     videoEndedLocally = false;
     transitioning = false;
+
+    // Server GET self-heals invalid blobs. During test override, also POST a full reset.
+    if (typeof WorldChoirEventSchedule === 'undefined' || !WorldChoirEventSchedule.isTestOverrideActive()) {
+      try {
+        await fetchAuthoritativeState();
+      } catch {
+        /* best effort */
+      }
+      return;
+    }
+
     try {
       await fetch('/api/live-event', {
         method: 'POST',

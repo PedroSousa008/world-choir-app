@@ -1,6 +1,9 @@
 /**
  * Authoritative global live-event transition state.
  * Stores when the pre-event video ended and the live song began (first write wins).
+ *
+ * Song-start timestamps MUST fall inside the active schedule window.
+ * Leftover test freezes (e.g. Oct 2026 while official is Sept 2027) are purged on read.
  */
 const { readBlobJson, writeJson, assertBlobConfigured } = require('./store');
 const schedule = require('./world-choir-event-schedule');
@@ -24,24 +27,28 @@ function emptyState(eventId = DEFAULT_EVENT_ID) {
   };
 }
 
-function isSongStartValidForCurrentSchedule(songStartUtc) {
+/**
+ * True when songStartUtc sits inside the current schedule window
+ * (pre-event start − 1m through event end + 2m).
+ */
+function isSongStartValidForCurrentSchedule(songStartUtc, now = new Date()) {
   if (!songStartUtc) return false;
   const songStart = Date.parse(songStartUtc);
   if (Number.isNaN(songStart)) return false;
-  const preStart = Date.parse(schedule.getPreEventStartUtc());
-  const eventEnd = Date.parse(schedule.getEventEndUtc());
+  const preStart = Date.parse(schedule.getPreEventStartUtc(now));
+  const eventEnd = Date.parse(schedule.getEventEndUtc(now));
+  if (Number.isNaN(preStart) || Number.isNaN(eventEnd)) return false;
   return songStart >= preStart - 60_000 && songStart <= eventEnd + 120_000;
 }
 
+/**
+ * Drop song-start values that do not belong to the active schedule and persist the clear.
+ * Runs whether or not the temporary test override is on — production must never keep a test freeze.
+ */
 async function sanitizeLiveEventState(state, eventId = DEFAULT_EVENT_ID) {
-  if (
-    state.actualLiveSongStartUtc
-    && schedule.isTestOverrideActive()
-    && !isSongStartValidForCurrentSchedule(state.actualLiveSongStartUtc)
-  ) {
-    return clearLiveEventState(eventId);
-  }
-  return state;
+  if (!state?.actualLiveSongStartUtc) return state || emptyState(eventId);
+  if (isSongStartValidForCurrentSchedule(state.actualLiveSongStartUtc)) return state;
+  return clearLiveEventState(eventId);
 }
 
 async function readLiveEventState(eventId = DEFAULT_EVENT_ID) {
@@ -69,12 +76,17 @@ async function readLiveEventState(eventId = DEFAULT_EVENT_ID) {
 
 /**
  * Record the global video → song transition. First successful write wins.
- * @returns {{ state: object, created: boolean }}
+ * Refuses writes outside the active schedule window (blocks accidental early freezes).
+ * @returns {{ state: object, created: boolean, rejected?: boolean }}
  */
 async function recordVideoEnded(eventId = DEFAULT_EVENT_ID, serverNowIso = new Date().toISOString()) {
   const existing = await readLiveEventState(eventId);
   if (existing.actualLiveSongStartUtc) {
     return { state: existing, created: false };
+  }
+
+  if (!isSongStartValidForCurrentSchedule(serverNowIso)) {
+    return { state: existing, created: false, rejected: true };
   }
 
   const next = {
@@ -97,6 +109,7 @@ async function recordVideoEnded(eventId = DEFAULT_EVENT_ID, serverNowIso = new D
 
 async function clearLiveEventState(eventId = DEFAULT_EVENT_ID) {
   const next = emptyState(eventId);
+  next.updatedAt = new Date().toISOString();
   try {
     assertBlobConfigured();
     await writeJson(statePath(eventId), next);
@@ -121,6 +134,7 @@ function getLiveEventSchedule() {
 
 module.exports = {
   DEFAULT_EVENT_ID,
+  isSongStartValidForCurrentSchedule,
   readLiveEventState,
   recordVideoEnded,
   clearLiveEventState,
