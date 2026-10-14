@@ -1,9 +1,12 @@
 /**
  * World Choir — shared map basemap tiles
  *
- * Dark: Carto Dark Matter (no labels)
- * Light: Carto Positron (no labels)
- * Optional: Carto raster via /api/map-tile when CARTO_API_KEY is set on Vercel.
+ * Preferred look (unchanged): MapLibre + Carto vector
+ *   Dark → Dark Matter (no labels)
+ *   Light → Positron (no labels)
+ *
+ * Fallback: same-theme Carto raster (public CDN first; /api/map-tile as backup).
+ * Never force a vector→raster downgrade — that would change how maps look.
  */
 const WorldChoirMapTiles = (() => {
   const CARTO_DARK_VECTOR_STYLE =
@@ -12,7 +15,7 @@ const WorldChoirMapTiles = (() => {
     'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json';
 
   const PROXY_URL = '/api/map-tile?z={z}&x={x}&y={y}&r={r}';
-  /** Public Carto CDN — works without CARTO_API_KEY so maps never stay blank. */
+  /** Public Carto CDN — same dark_nolabels / light_nolabels look as the proxy. */
   const PUBLIC_DARK_RASTER =
     'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
   const PUBLIC_LIGHT_RASTER =
@@ -24,7 +27,9 @@ const WorldChoirMapTiles = (() => {
     bounds: [[-85, -180], [85, 180]],
   };
 
-  let preferPublicRaster = false;
+  /** Raster path uses public CDN first so maps never flash proxy 503s. */
+  let preferPublicRaster = true;
+  let proxyKnownGood = false;
 
   let resolvePromise = null;
   let activeMode = 'vector';
@@ -68,14 +73,24 @@ const WorldChoirMapTiles = (() => {
     return themeForMap(map) === 'light' ? CARTO_LIGHT_VECTOR_STYLE : CARTO_DARK_VECTOR_STYLE;
   }
 
+  function rasterPublicUrl(map) {
+    return themeForMap(map) === 'light' ? PUBLIC_LIGHT_RASTER : PUBLIC_DARK_RASTER;
+  }
+
   function rasterProxyUrl(map) {
     const theme = themeForMap(map) === 'light' ? 'light' : 'dark';
-    if (preferPublicRaster) {
-      return theme === 'light' ? PUBLIC_LIGHT_RASTER : PUBLIC_DARK_RASTER;
-    }
     return `${PROXY_URL}&theme=${theme}`;
   }
 
+  function rasterTileUrl(map) {
+    if (preferPublicRaster || !proxyKnownGood) return rasterPublicUrl(map);
+    return rasterProxyUrl(map);
+  }
+
+  /**
+   * Preferred mode is always vector when MapLibre is available.
+   * map-config is informational only — never downgrades to raster.
+   */
   async function detectMode() {
     if (resolvePromise) return resolvePromise;
 
@@ -87,7 +102,7 @@ const WorldChoirMapTiles = (() => {
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 350);
+        const timeoutId = setTimeout(() => controller.abort(), 400);
         const res = await fetch('/api/map-config', {
           cache: 'force-cache',
           signal: controller.signal,
@@ -96,13 +111,18 @@ const WorldChoirMapTiles = (() => {
 
         if (res.ok) {
           const data = await res.json();
-          if (data?.provider === 'carto') {
+          // Older servers returned provider:'carto' to force raster — ignore that.
+          // Only honor an explicit preferredMode:'raster' (not used in production).
+          if (data?.preferredMode === 'raster') {
             activeMode = 'raster';
             return activeMode;
           }
+          if (data?.rasterProxy === true) {
+            proxyKnownGood = true;
+          }
         }
       } catch {
-        /* vector is the default */
+        /* vector stays the default */
       }
 
       activeMode = 'vector';
@@ -140,7 +160,7 @@ const WorldChoirMapTiles = (() => {
   }
 
   function createRasterLayer(map, overrides = {}) {
-    return L.tileLayer(rasterProxyUrl(map), {
+    return L.tileLayer(rasterTileUrl(map), {
       ...SHARED_RASTER_OPTS,
       ...overrides,
     });
@@ -150,14 +170,29 @@ const WorldChoirMapTiles = (() => {
     if (!layer || typeof layer.on !== 'function') return layer;
     let flipped = false;
     layer.on('tileerror', () => {
-      if (flipped || preferPublicRaster) return;
-      flipped = true;
-      preferPublicRaster = true;
-      try {
-        removeBasemapLayers(map);
-        addRasterBasemapLayers(map);
-      } catch {
-        /* ignore */
+      if (flipped) return;
+      // If public CDN failed, try the proxy once (same visual theme).
+      if (preferPublicRaster && proxyKnownGood) {
+        flipped = true;
+        preferPublicRaster = false;
+        try {
+          removeBasemapLayers(map);
+          addRasterBasemapLayers(map);
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+      // If proxy failed, fall back to public CDN.
+      if (!preferPublicRaster) {
+        flipped = true;
+        preferPublicRaster = true;
+        try {
+          removeBasemapLayers(map);
+          addRasterBasemapLayers(map);
+        } catch {
+          /* ignore */
+        }
       }
     });
     return layer;
@@ -193,15 +228,6 @@ const WorldChoirMapTiles = (() => {
     );
   }
 
-  function maybeUpgradeToRaster(map) {
-    detectMode().then((mode) => {
-      if (mode !== 'raster' || !map || basemapLayers.length === 0) return;
-      if (activeMode === 'raster' && basemapLayers.some((layer) => layer instanceof L.TileLayer)) return;
-      removeBasemapLayers(map);
-      addRasterBasemapLayers(map);
-    }).catch(() => {});
-  }
-
   function applyThemeLock(map, options = {}) {
     if (!map) return;
     if (options.theme === 'dark' || options.theme === 'light') {
@@ -220,12 +246,14 @@ const WorldChoirMapTiles = (() => {
       try {
         const layer = createVectorLayer(map).addTo(map);
         trackLayer(layer);
-        // If the GL style fails, fall back to public Carto raster (never blank).
+        activeMode = 'vector';
+        // Warm config in the background (proxy readiness) — do not swap basemap.
+        detectMode().catch(() => {});
+        // If the GL style fails, fall back to same-theme Carto raster (never blank).
         const gl = typeof layer.getMaplibreMap === 'function' ? layer.getMaplibreMap() : null;
         gl?.on?.('error', () => {
-          if (preferPublicRaster) return;
-          preferPublicRaster = true;
           try {
+            preferPublicRaster = true;
             removeBasemapLayers(map);
             addRasterBasemapLayers(map);
             activeMode = 'raster';
@@ -233,7 +261,6 @@ const WorldChoirMapTiles = (() => {
             /* ignore */
           }
         });
-        maybeUpgradeToRaster(map);
         return 'vector';
       } catch {
         preferPublicRaster = true;
@@ -243,7 +270,6 @@ const WorldChoirMapTiles = (() => {
       }
     }
 
-    // No MapLibre — public Carto CDN so the map never depends on a proxy key.
     preferPublicRaster = true;
     addRasterBasemapLayers(map);
     activeMode = 'raster';
@@ -257,10 +283,12 @@ const WorldChoirMapTiles = (() => {
 
     if (canUseMapLibre()) {
       trackLayer(createVectorLayer(map).addTo(map));
-      maybeUpgradeToRaster(map);
+      activeMode = 'vector';
+      detectMode().catch(() => {});
       return 'vector';
     }
 
+    preferPublicRaster = true;
     trackLayer(
       createRasterLayer(map, {
         minZoom: 2,
@@ -327,6 +355,12 @@ const WorldChoirMapTiles = (() => {
       fetch(CARTO_DARK_VECTOR_STYLE, { cache: 'force-cache', mode: 'cors' }).catch(() => {});
       fetch(CARTO_LIGHT_VECTOR_STYLE, { cache: 'force-cache', mode: 'cors' }).catch(() => {});
       fetch('/api/map-config', { cache: 'force-cache' }).catch(() => {});
+      // Soft-probe proxy so fallback knows it is healthy (same visual theme).
+      fetch('/api/map-tile?z=0&x=0&y=0&theme=dark', { cache: 'force-cache' })
+        .then((res) => {
+          if (res.ok) proxyKnownGood = true;
+        })
+        .catch(() => {});
     } catch {
       /* ignore */
     }

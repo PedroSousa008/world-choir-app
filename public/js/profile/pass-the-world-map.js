@@ -995,8 +995,8 @@ const PassTheWorldMap = (() => {
       addPublicDarkRaster(targetMap);
       return;
     }
-    // MapLibre can leave a blank black canvas; proxy raster 503s without a key.
-    // If neither paints real pixels, drop in public Carto raster.
+    // MapLibre can leave a blank black canvas on rare loads.
+    // If neither paints real pixels, drop in public Carto raster (same Dark Matter look).
     window.setTimeout(() => {
       if (!map || map !== targetMap) return;
       try {

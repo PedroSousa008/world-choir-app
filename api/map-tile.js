@@ -1,5 +1,7 @@
 /**
- * Proxies Carto dark_nolabels raster tiles with the server-side API key.
+ * Proxies Carto nolabels raster tiles (dark / light).
+ * Uses CARTO_API_KEY when set; otherwise the public Carto CDN (same look).
+ * Never leaves maps blank for a missing key.
  */
 const { corsHeaders } = require('./_lib/auth');
 
@@ -11,11 +13,6 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const key = process.env.CARTO_API_KEY?.trim();
-  if (!key) {
-    return res.status(503).json({ error: 'Map tiles not configured' });
-  }
-
   const z = String(req.query.z || '').trim();
   const x = String(req.query.x || '').trim();
   const y = String(req.query.y || '').trim();
@@ -25,10 +22,19 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid tile coordinates' });
   }
 
-  const subdomain = ['a', 'b', 'c', 'd'][(Number(x) + Number(y)) % 4];
+  const zi = Number(z);
+  const xi = Number(x);
+  const yi = Number(y);
+  if (zi < 0 || zi > 22 || xi < 0 || yi < 0) {
+    return res.status(400).json({ error: 'Tile coordinates out of range' });
+  }
+
+  const subdomain = ['a', 'b', 'c', 'd'][(xi + yi) % 4];
   const theme = String(req.query.theme || 'dark').trim() === 'light' ? 'light' : 'dark';
   const style = theme === 'light' ? 'light_nolabels' : 'dark_nolabels';
-  const upstream = `https://${subdomain}.basemaps.cartocdn.com/${style}/${z}/${x}/${y}${scale}.png?key=${encodeURIComponent(key)}`;
+  const key = process.env.CARTO_API_KEY?.trim();
+  const keyQs = key ? `?key=${encodeURIComponent(key)}` : '';
+  const upstream = `https://${subdomain}.basemaps.cartocdn.com/${style}/${z}/${x}/${y}${scale}.png${keyQs}`;
 
   try {
     const upstreamRes = await fetch(upstream, {
