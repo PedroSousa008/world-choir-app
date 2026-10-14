@@ -41,6 +41,12 @@ module.exports = async function handler(req, res) {
     }
 
     const body = req.body || {};
+
+    // Former public reach-summary removed — use Owner Notifications (authenticated).
+    if (action === 'reach-summary') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const deviceId = String(body.deviceId || '').trim();
     if (!deviceId) {
       return res.status(400).json({ error: 'deviceId required' });
@@ -83,11 +89,6 @@ module.exports = async function handler(req, res) {
         expoPushToken: body.expoPushToken,
       });
       return res.status(200).json(result);
-    }
-
-    // Former public reach-summary removed — use Owner Notifications (authenticated).
-    if (action === 'reach-summary') {
-      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     return res.status(400).json({ error: 'Unknown action' });
