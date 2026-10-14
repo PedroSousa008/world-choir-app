@@ -100,6 +100,13 @@ async function findInfluencerById(id) {
   return doc.influencers.find((row) => row.id === id) || null;
 }
 
+async function findInfluencerByStripeConnectAccountId(accountId) {
+  const id = String(accountId || '').trim();
+  if (!id) return null;
+  const doc = await readInfluencersDoc();
+  return doc.influencers.find((row) => row.stripeConnectAccountId === id) || null;
+}
+
 async function createInfluencer({
   email,
   password,
@@ -624,6 +631,7 @@ module.exports = {
   listInfluencersOwnerView,
   findInfluencerByEmail,
   findInfluencerById,
+  findInfluencerByStripeConnectAccountId,
   createInfluencer,
   updateInfluencer,
   updateInfluencerStripeConnect,

@@ -5,6 +5,7 @@
  */
 const {
   findInfluencerById,
+  findInfluencerByStripeConnectAccountId,
   updateInfluencerStripeConnect,
 } = require('./members-store');
 const { getStripe, paymentsConfigured, PLATFORM_FEE_PERCENT } = require('./donations');
@@ -155,6 +156,18 @@ async function syncConnectAccount(foundationId) {
   return { ok: true, ...publicConnectStatus(updated.influencer || row) };
 }
 
+/** Apply a Stripe Account object from webhooks (account.updated) without an extra retrieve. */
+async function syncConnectAccountFromStripeObject(account) {
+  const accountId = String(account?.id || '').trim();
+  if (!accountId) return { ok: false, error: 'Missing Stripe account id' };
+  const row = await findInfluencerByStripeConnectAccountId(accountId);
+  if (!row) {
+    return { ok: false, error: 'No Foundation linked to this Stripe account' };
+  }
+  const updated = await persistAccountSnapshot(row.id, account);
+  return { ok: true, foundationId: row.id, ...publicConnectStatus(updated.influencer || row) };
+}
+
 async function ensureExpressAccount(foundationId) {
   const row = await findInfluencerById(foundationId);
   if (!row) {
@@ -224,6 +237,12 @@ async function ensureExpressAccount(foundationId) {
 async function createOnboardingLink(foundationId, req) {
   try {
     const { accountId } = await ensureExpressAccount(foundationId);
+    // Refresh snapshot before sending them to Stripe so local flags stay truthful.
+    try {
+      await syncConnectAccount(foundationId);
+    } catch {
+      /* non-fatal — still open onboarding */
+    }
     const origin = appOrigin(req);
     const stripe = getStripe();
     const link = await stripe.accountLinks.create({
@@ -232,6 +251,7 @@ async function createOnboardingLink(foundationId, req) {
       refresh_url: `${origin}/members.html?connect=refresh#settings`,
       return_url: `${origin}/members.html?connect=return#settings`,
       type: 'account_onboarding',
+      collection_options: { fields: 'eventually_due' },
     });
     return {
       ok: true,
@@ -315,6 +335,7 @@ module.exports = {
   isPayoutsReady,
   publicConnectStatus,
   syncConnectAccount,
+  syncConnectAccountFromStripeObject,
   ensureExpressAccount,
   createOnboardingLink,
   createExpressDashboardLink,

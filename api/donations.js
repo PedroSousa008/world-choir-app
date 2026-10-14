@@ -23,9 +23,14 @@ async function readRawBody(req) {
 
 async function handleConfig(req, res) {
   const configured = donations.paymentsConfigured();
+  const publishableKey = configured ? donations.getStripePublishableKey() : null;
+  const liveMode = Boolean(publishableKey && publishableKey.startsWith('pk_live_'));
+  const testMode = Boolean(publishableKey && publishableKey.startsWith('pk_test_'));
   return res.status(200).json({
     configured,
-    publishableKey: configured ? donations.getStripePublishableKey() : null,
+    publishableKey,
+    liveMode,
+    testMode,
     currency: 'EUR',
     platformFeePercent: donations.PLATFORM_FEE_PERCENT,
     foundationSharePercent: 100 - donations.PLATFORM_FEE_PERCENT,
@@ -369,6 +374,13 @@ async function handleWebhook(req, res) {
 
   if (event.type === 'payment_intent.succeeded') {
     await completeFromPi(event.data.object);
+  } else if (event.type === 'account.updated') {
+    try {
+      const { syncConnectAccountFromStripeObject } = require('./_lib/stripe-connect');
+      await syncConnectAccountFromStripeObject(event.data.object);
+    } catch (syncErr) {
+      console.warn('Connect account.updated sync failed:', syncErr.message);
+    }
   }
   return res.status(200).json({ received: true });
 }

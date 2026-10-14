@@ -233,27 +233,45 @@ module.exports = async function handler(req, res) {
       try {
         const { buildPaymentsStatus } = require('./_lib/payments-status');
         const payments = await buildPaymentsStatus();
+        const connectReady = payments.connectReady !== undefined
+          ? !!payments.connectReady
+          : !!payments.platformReady;
         platform = {
           ready: !!payments.platformReady,
+          connectReady,
+          liveMode: !!payments.liveMode,
+          testMode: !!payments.testMode,
           level: payments.level,
           label: payments.label,
           summary: payments.summary,
         };
       } catch {
-        platform = { ready: status.configured === true, level: null, label: null, summary: null };
+        platform = {
+          ready: status.configured === true,
+          connectReady: status.configured === true,
+          liveMode: false,
+          testMode: false,
+          level: null,
+          label: null,
+          summary: null,
+        };
       }
       // Clarify notes for foundations based on platform vs their own Connect state.
       let note = status.note;
       if (!status.configured) {
         note = 'World Choir has not finished configuring Stripe keys yet. Payouts unlock when the platform is ready.';
-      } else if (platform && platform.ready === false) {
-        note = 'World Choir is still finishing payment setup (Connect / webhooks). You can prepare your account once the platform shows Payments ready.';
+      } else if (platform && platform.connectReady === false) {
+        note = 'World Choir is still finishing Stripe Connect on the platform. Your Connect button unlocks as soon as that is ready.';
       } else if (status.ready) {
-        note = 'Ready for donations. Donor gifts go to your Stripe account; World Choir keeps its platform fee; card processing is covered from the donation.';
+        note = platform?.liveMode
+          ? 'Ready for live donations. Donor gifts go to your Stripe account; World Choir keeps its platform fee; card processing is covered from the donation.'
+          : 'Ready for donations. Donor gifts go to your Stripe account; World Choir keeps its platform fee; card processing is covered from the donation.';
       } else if (status.connected) {
         note = 'Your Stripe account is linked — finish onboarding so donations can be accepted.';
       } else {
-        note = 'Platform payments are ready. Connect your Stripe payout account to receive donations for this Foundation.';
+        note = platform?.liveMode
+          ? 'Live payments are ready on World Choir. Connect your Stripe payout account to receive donations for this Foundation.'
+          : 'Platform payments are ready. Connect your Stripe payout account to receive donations for this Foundation.';
       }
       return res.status(200).json({ ...status, note, balances, platform });
     }

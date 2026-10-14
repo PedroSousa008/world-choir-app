@@ -4,20 +4,8 @@
  * Data integrity: never invent raised / supporters / projects.
  */
 const WorldChoirDonate = (() => {
-  const AMOUNTS = () => CreatorFoundationsStore.getSuggestedAmounts();
-  const PAYMENT_METHODS = [
-    { id: 'apple_pay', label: 'Apple Pay', ready: true },
-    { id: 'google_pay', label: 'Google Pay', ready: true },
-    { id: 'card', label: 'Credit Card', ready: true },
-    { id: 'paypal', label: 'PayPal', ready: true },
-  ];
-
   let selectedFoundation = null;
   let selectedProject = null;
-  let selectedAmount = 25;
-  let customAmount = '';
-  let selectedPayment = 'card';
-  let isSubmitting = false;
   let searchOpen = false;
   let searchQuery = '';
   let selectedCause = 'all';
@@ -1834,80 +1822,6 @@ const WorldChoirDonate = (() => {
     bindProfileInteractions(root, foundation);
   }
 
-  function ensureModal() {
-    if (document.getElementById('donate-modal-overlay')) return;
-    document.body.insertAdjacentHTML('beforeend', `
-      <div class="overlay" id="donate-modal-overlay" aria-hidden="true">
-        <div class="modal donate-modal" role="dialog" aria-modal="true" aria-labelledby="donate-modal-title">
-          <div id="donate-modal-body"></div>
-        </div>
-      </div>
-    `);
-    document.getElementById('donate-modal-overlay')?.addEventListener('click', (e) => {
-      if (e.target.id === 'donate-modal-overlay') closeModal();
-    });
-  }
-
-  function getChosenAmount() {
-    if (selectedAmount === 'custom') {
-      const n = parseFloat(String(customAmount).replace(',', '.'));
-      return Number.isFinite(n) && n > 0 ? n : null;
-    }
-    return selectedAmount;
-  }
-
-  function renderModalBody(foundation, project) {
-    const amounts = AMOUNTS();
-    const title = project
-      ? `Support ${foundation.creatorName}'s project`
-      : `Support ${foundation.creatorName}'s mission`;
-    const subtitle = project
-      ? `Donate to “${project.title}”.`
-      : `Donate to ${foundation.foundationName}.`;
-
-    return `
-      <h2 class="modal-title" id="donate-modal-title">${esc(title)}</h2>
-      <p class="modal-copy">${esc(subtitle)}</p>
-
-      <p class="donate-modal__label">One-time donation</p>
-      <div class="donate-amounts" role="group" aria-label="Donation amount">
-        ${amounts.map((a) => `
-          <button type="button" class="donate-amount${selectedAmount === a ? ' is-selected' : ''}" data-amount="${a}">
-            ${formatMoney(a)}
-          </button>
-        `).join('')}
-        <button type="button" class="donate-amount${selectedAmount === 'custom' ? ' is-selected' : ''}" data-amount="custom">
-          Custom
-        </button>
-      </div>
-
-      <div class="donate-custom" id="donate-custom" ${selectedAmount === 'custom' ? '' : 'hidden'}>
-        <label class="form-label" for="donate-custom-input">Custom amount (${esc(CreatorFoundationsStore.getCurrency())})</label>
-        <input class="form-input" id="donate-custom-input" type="number" min="1" step="0.01" inputmode="decimal" placeholder="Enter amount" value="${esc(customAmount)}">
-      </div>
-
-      <p class="donate-modal__label">Payment method</p>
-      <div class="donate-payments" role="radiogroup" aria-label="Payment method">
-        ${PAYMENT_METHODS.map((m) => `
-          <label class="donate-payment${selectedPayment === m.id ? ' is-selected' : ''}">
-            <input type="radio" name="donate-payment" value="${m.id}" ${selectedPayment === m.id ? 'checked' : ''}>
-            <span>${esc(m.label)}</span>
-          </label>
-        `).join('')}
-      </div>
-
-      <p class="donate-modal__note">
-        A ${CreatorFoundationsStore.getPlatform().feePercent ?? 6.5}% platform fee helps keep World Choir and Creator Foundations working.
-        Payments are not live yet — this flow is a preview only. Simulated gifts never appear as real supporter totals or funding progress.
-      </p>
-
-      <div class="actions-row donate-modal__actions">
-        <button class="btn btn-primary" type="button" id="donate-confirm-btn">Continue</button>
-        <button class="btn btn-secondary" type="button" id="donate-cancel-btn" data-a11y-close>Cancel</button>
-      </div>
-    `;
-  }
-
   function openDonateModal(foundation, project) {
     if (!foundation.donationsEnabled) {
       alert(
@@ -1922,126 +1836,6 @@ const WorldChoirDonate = (() => {
       return;
     }
     alert('Donation flow is temporarily unavailable. Please refresh and try again.');
-  }
-
-  function bindModalEvents() {
-    document.getElementById('donate-cancel-btn')?.addEventListener('click', closeModal);
-
-    document.querySelectorAll('.donate-amount').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const raw = btn.getAttribute('data-amount');
-        selectedAmount = raw === 'custom' ? 'custom' : Number(raw);
-        document.getElementById('donate-modal-body').innerHTML = renderModalBody(selectedFoundation, selectedProject);
-        bindModalEvents();
-        if (selectedAmount === 'custom') document.getElementById('donate-custom-input')?.focus();
-      });
-    });
-
-    document.getElementById('donate-custom-input')?.addEventListener('input', (e) => {
-      customAmount = e.target.value;
-    });
-
-    document.querySelectorAll('input[name="donate-payment"]').forEach((input) => {
-      input.addEventListener('change', () => {
-        selectedPayment = input.value;
-        document.querySelectorAll('.donate-payment').forEach((el) => {
-          el.classList.toggle('is-selected', el.querySelector('input')?.value === selectedPayment);
-        });
-      });
-    });
-
-    document.getElementById('donate-confirm-btn')?.addEventListener('click', submitDonation);
-  }
-
-  function closeModal() {
-    const overlay = document.getElementById('donate-modal-overlay');
-    overlay?.classList.remove('active');
-    overlay?.setAttribute('aria-hidden', 'true');
-  }
-
-  async function submitDonation() {
-    if (isSubmitting || !selectedFoundation) return;
-    const amount = getChosenAmount();
-    if (!amount) {
-      alert('Please enter a valid donation amount.');
-      return;
-    }
-
-    isSubmitting = true;
-    const btn = document.getElementById('donate-confirm-btn');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Processing…';
-    }
-
-    try {
-      await mockProcessPayment({
-        foundationId: selectedFoundation.id,
-        projectId: selectedProject?.id || null,
-        amount,
-        currency: CreatorFoundationsStore.getCurrency(),
-        method: selectedPayment,
-      });
-
-      CreatorFoundationsStore.UserSupport.recordDonation({
-        foundationId: selectedFoundation.id,
-        projectId: selectedProject?.id || null,
-        amount,
-        currency: CreatorFoundationsStore.getCurrency(),
-      });
-
-      closeModal();
-      showConfirmation(selectedFoundation, amount);
-    } catch (err) {
-      alert(err.message || 'Payment could not be completed. Please try again.');
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = 'Continue';
-      }
-    } finally {
-      isSubmitting = false;
-    }
-  }
-
-  function mockProcessPayment(payload) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!navigator.onLine) {
-          reject(new Error('You appear to be offline. Please check your connection and try again.'));
-          return;
-        }
-        if (!payload.amount || payload.amount <= 0) {
-          reject(new Error('Invalid donation amount.'));
-          return;
-        }
-        resolve({ ok: true, mock: true, ...payload });
-      }, 700);
-    });
-  }
-
-  function showConfirmation(foundation, amount) {
-    const firstName = (foundation.creatorName || 'this creator').split(' ')[0];
-    const root = document.getElementById('donate-content');
-    root.innerHTML = `
-      <div class="df-confirm df-rise">
-        <h1 class="df-confirm__title">Thank you for supporting ${esc(firstName)}'s mission.</h1>
-        <p class="df-confirm__copy">
-          Your generosity helps transform compassion into action.
-          You'll be able to follow the progress of the work you helped make possible.
-        </p>
-        <p class="df-confirm__meta">${formatMoney(amount)} · ${esc(foundation.foundationName)}</p>
-        <p class="df-confirm__note">
-          Preview only — this gift was not charged and is not counted in public totals until real payments are connected.
-        </p>
-        <button class="df-btn-primary" type="button" id="donate-confirm-return">
-          Return to Foundation
-        </button>
-      </div>
-    `;
-
-    document.getElementById('donate-confirm-return')?.addEventListener('click', () => {
-      openProfile(foundation);
-    });
   }
 
   function renderPendingFoundations() {
@@ -2494,11 +2288,6 @@ const WorldChoirDonate = (() => {
     } catch {
       /* ignore */
     }
-    try {
-      closeModal();
-    } catch {
-      /* ignore */
-    }
 
     selectedFoundation = null;
     selectedProject = null;
@@ -2522,7 +2311,6 @@ const WorldChoirDonate = (() => {
     }
     donateBootstrapped = true;
     WorldChoirNav.startWatcher('donate');
-    ensureModal();
     if (!themeBound) {
       themeBound = true;
       window.addEventListener('wc:themechange', () => {

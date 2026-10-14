@@ -173,12 +173,17 @@ async function buildPaymentsStatus() {
     level = 'almost_ready';
   }
 
+  // Influencers can start Connect onboarding once keys + Connect API work.
+  // Webhooks matter for confirming gifts, not for opening Stripe Express setup.
+  const connectReady = keysOk && connectStatus !== 'fail';
+
   return {
     generatedAt: new Date().toISOString(),
     level,
     label: levelLabel(level),
     summary: levelSummary(level, platformChecks, foundations),
     platformReady: overallLevel(platformChecks) === 'ready',
+    connectReady,
     liveMode,
     testMode,
     checks,

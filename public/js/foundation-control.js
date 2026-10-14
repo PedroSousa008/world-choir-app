@@ -2278,15 +2278,21 @@ const FoundationControl = (() => {
     const ready = !!payload.ready;
     const connected = !!payload.connected;
     const configured = payload.configured !== false;
-    const platformReady = payload.platform?.ready !== false && configured;
-    const platformBlocked = configured && payload.platform && payload.platform.ready === false;
+    const connectReady = (() => {
+      if (!configured) return false;
+      if (!payload.platform) return true;
+      if (payload.platform.connectReady !== undefined) return !!payload.platform.connectReady;
+      return payload.platform.ready !== false;
+    })();
+    const platformBlocked = configured && !connectReady;
     const bal = payload.balances || {};
     const country = String(state.data?.foundation?.country || '').trim();
     const countryMissing = !country;
+    const liveBadge = payload.platform?.liveMode ? ' · Live Stripe' : '';
     const statusLabel = !configured || platformBlocked
       ? 'Platform almost ready'
       : (ready
-        ? 'Ready for donations'
+        ? `Ready for donations${liveBadge}`
         : (connected ? 'Almost ready — finish Stripe' : 'Almost ready — connect payouts'));
     const statusClass = ready
       ? 'is-ready'
@@ -2294,7 +2300,7 @@ const FoundationControl = (() => {
     const actionError = payload.actionError ? String(payload.actionError) : '';
     const actionBusy = !!payload.actionBusy;
     const actionBusyLabel = payload.actionBusyLabel || 'Working with Stripe…';
-    const canOnboard = isOwner && configured && !platformBlocked;
+    const canOnboard = isOwner && configured && connectReady;
 
     return `
       <div class="fcc-set-payouts__state ${statusClass}">
@@ -2307,10 +2313,10 @@ const FoundationControl = (() => {
         ` : ''}
         ${platformBlocked ? `
           <p class="fcc-set-payouts__copy fcc-set-payouts__copy--warn">
-            ${esc(payload.platform?.summary || 'World Choir is still finishing payment setup. Check back once the platform is Payments ready.')}
+            ${esc(payload.platform?.summary || 'World Choir is still finishing Stripe Connect. Check back once Connect is available.')}
           </p>
         ` : ''}
-        ${countryMissing && platformReady ? `
+        ${countryMissing && connectReady ? `
           <p class="fcc-set-payouts__copy fcc-set-payouts__copy--warn">
             Set your Foundation country in Account above, click Save account, then connect payouts.
           </p>
@@ -3062,26 +3068,25 @@ const FoundationControl = (() => {
     try {
       const params = new URLSearchParams(window.location.search || '');
       const connect = params.get('connect');
-      if (connect !== 'return' && connect !== 'refresh') return;
+      if (connect !== 'return' && connect !== 'refresh') return null;
       params.delete('connect');
       const qs = params.toString();
       const search = qs ? `?${qs}` : '';
-      window.history.replaceState(null, '', `${window.location.pathname}${search}#settings`);
       state.section = 'settings';
+      window.history.replaceState(null, '', `${window.location.pathname}${search}#settings`);
       if (connect === 'return') {
-        setFlash('Stripe onboarding saved. Refreshing payout status…');
+        setFlash('Welcome back from Stripe. Syncing your payout status…');
       } else {
-        setFlash('Continue Stripe onboarding to finish payout setup.');
+        setFlash('Stripe setup was interrupted — continue Connect below to finish payouts.', 'err');
       }
+      return connect;
     } catch {
-      /* ignore */
+      return null;
     }
   }
 
   function renderApp(opts = {}) {
-    if (state.section === 'settings') {
-      maybeHandleConnectReturn();
-    }
+    const connectReturn = maybeHandleConnectReturn();
     const map = {
       overview: renderOverview,
       foundation: renderFoundation,
@@ -3097,7 +3102,16 @@ const FoundationControl = (() => {
     bindApp();
     restoreAnalyticsScroll(savedScroll, opts.focusSeg || null);
     if (state.section === 'settings') {
-      hydratePayoutsPanel();
+      hydratePayoutsPanel().then(() => {
+        if (connectReturn !== 'return') return;
+        if (state.payouts?.ready) {
+          setFlash('Stripe payouts connected. Your Foundation can accept live donations.');
+          upsertFlashInDom();
+        } else if (state.payouts?.connected) {
+          setFlash('Stripe account linked — finish any remaining Stripe steps, then tap Refresh status.');
+          upsertFlashInDom();
+        }
+      });
     }
     if (state.mapOpen) {
       requestAnimationFrame(() => mountMap());

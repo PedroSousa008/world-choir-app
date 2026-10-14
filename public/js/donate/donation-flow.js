@@ -518,13 +518,10 @@ const WorldChoirDonationFlow = (() => {
       </header>
       <div class="df-checkout__summary">
         <img class="df-checkout__logo" src="${esc(logo)}" alt="World Choir" width="72" height="72">
-        <h1 class="df-checkout__title">Payments almost ready</h1>
+        <h1 class="df-checkout__title">Payments unavailable</h1>
         <p class="df-checkout__hint">
-          The donation flow is built and waiting for Stripe credentials.
-          Live Apple Pay, Google Pay, and card payments will unlock as soon as keys are connected.
-        </p>
-        <p class="df-checkout__note">
-          No charge is made and no donation is recorded until Stripe confirms a successful payment.
+          Stripe is not configured on this environment right now, so checkout cannot start.
+          Please try again later — no charge is made until Stripe confirms a successful payment.
         </p>
         <button type="button" class="df-checkout__cta" id="df-co-close-cta">Close</button>
       </div>
