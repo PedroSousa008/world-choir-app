@@ -3838,7 +3838,7 @@ const OwnerControl = (() => {
       </section>
       <section class="owner-section">
         <p class="owner-section__label">Security</p>
-        <p class="owner-muted">Two-factor authentication, session revocation, and login history are not connected yet.</p>
+        <p class="owner-muted">Sign-in rate limiting is active. Two-factor authentication, session revocation, and login history are not connected yet.</p>
       </section>
     `;
   }

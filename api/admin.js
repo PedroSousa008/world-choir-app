@@ -1,15 +1,20 @@
 const {
-  corsHeaders,
+  ownerCorsHeaders,
   verifyOwnerCredentials,
   setOwnerSessionCookie,
   clearOwnerSessionCookie,
   requireOwner,
   changeOwnerPassword,
   changeOwnerEmail,
-  isOwnerAuthConfigured,
+  isOwnerAuthReady,
   getSessionFromRequest,
   getEffectiveOwnerEmail,
 } = require('./_lib/auth');
+const {
+  assertLoginAllowed,
+  recordLoginFailure,
+  clearLoginFailures,
+} = require('./_lib/owner-login-guard');
 const { buildOwnerDatabaseRows, jsonStorageError } = require('./_lib/store');
 const {
   buildOwnerControlCenter,
@@ -131,23 +136,51 @@ const {
 } = require('./_lib/map-sponsors-analytics-export');
 
 module.exports = async function handler(req, res) {
-  corsHeaders(res);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  ownerCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const action = req.query.action || '';
 
   try {
+    // Public readiness probe — no secrets, proves lockdown config without opening admin.
+    if (action === 'auth-status' && req.method === 'GET') {
+      const configured = await isOwnerAuthReady();
+      return res.status(200).json({
+        configured,
+        loginGuard: true,
+        cronConfigured: Boolean(String(process.env.CRON_SECRET || '').trim()),
+      });
+    }
+
     if (action === 'login' && req.method === 'POST') {
-      if (!isOwnerAuthConfigured()) {
+      if (!(await isOwnerAuthReady())) {
         return res.status(503).json({ error: 'Owner authentication is not configured' });
       }
       const { email, password } = req.body || {};
+      const gate = await assertLoginAllowed(req, email);
+      if (!gate.ok) {
+        res.setHeader('Retry-After', String(gate.retryAfterSec || 60));
+        return res.status(429).json({
+          error: gate.error,
+          code: gate.code || 'LOGIN_RATE_LIMITED',
+          retryAfterSec: gate.retryAfterSec || 60,
+        });
+      }
       const result = await verifyOwnerCredentials({ email, password });
       if (!result.ok) {
+        const limited = await recordLoginFailure(req, email);
+        if (limited.limited) {
+          res.setHeader('Retry-After', String(limited.retryAfterSec || 60));
+          return res.status(429).json({
+            error: limited.error,
+            code: 'LOGIN_RATE_LIMITED',
+            retryAfterSec: limited.retryAfterSec || 60,
+          });
+        }
         return res.status(401).json({ error: result.error || 'Invalid owner credentials' });
       }
+      await clearLoginFailures(req, email);
       setOwnerSessionCookie(res);
       const ownerEmail = await getEffectiveOwnerEmail();
       return res.status(200).json({ ok: true, role: 'owner', email: ownerEmail });
@@ -159,7 +192,6 @@ module.exports = async function handler(req, res) {
     }
 
     if (action === 'session' && req.method === 'GET') {
-      res.setHeader('Cache-Control', 'no-store');
       const session = getSessionFromRequest(req);
       if (!session) return res.status(401).json({ authenticated: false });
       const email = await getEffectiveOwnerEmail();

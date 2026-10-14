@@ -1,9 +1,11 @@
 /**
  * Cron worker — drain scheduled/queued notification campaigns.
  *
- * Auth: Authorization: Bearer $CRON_SECRET  OR  ?secret=$CRON_SECRET
- * Also callable by Vercel Cron (sends Authorization automatically when configured).
+ * Auth: Authorization: Bearer $CRON_SECRET
+ * Optional fallback: ?secret=$CRON_SECRET (timing-safe; prefer Bearer — query can leak in logs).
+ * Vercel Cron sends Authorization automatically when CRON_SECRET is configured.
  */
+const crypto = require('crypto');
 const {
   readBlobJson,
   writeJson,
@@ -63,18 +65,41 @@ async function appendAudit(event) {
   await writeJson(AUDIT_PATH, { events: events.slice(0, 2000), updatedAt: new Date().toISOString() });
 }
 
+function secretsEqual(a, b) {
+  const aBuf = Buffer.from(String(a || ''));
+  const bBuf = Buffer.from(String(b || ''));
+  if (aBuf.length !== bBuf.length) return false;
+  try {
+    return crypto.timingSafeEqual(aBuf, bBuf);
+  } catch {
+    return false;
+  }
+}
+
 function authorize(req) {
-  const secret = process.env.CRON_SECRET;
+  const secret = String(process.env.CRON_SECRET || '').trim();
   if (!secret) return { ok: false, reason: 'CRON_SECRET not configured' };
+
   const header = String(req.headers.authorization || '');
   const bearer = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  if (bearer && secretsEqual(bearer, secret)) return { ok: true };
+
+  // Fallback for manual ops — prefer Bearer in production.
   const querySecret = String(req.query?.secret || '').trim();
-  if (bearer === secret || querySecret === secret) return { ok: true };
+  if (querySecret && secretsEqual(querySecret, secret)) return { ok: true };
+
   return { ok: false, reason: 'Unauthorized' };
 }
 
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // Cron is not a browser CORS resource.
+  res.setHeader('Access-Control-Allow-Origin', 'null');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });

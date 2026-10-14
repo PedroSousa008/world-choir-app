@@ -28,8 +28,58 @@ async function getEffectiveOwnerEmail() {
 
 function isOwnerAuthConfigured() {
   const cfg = getOwnerConfig();
-  const hasPassword = !!process.env.OWNER_PASSWORD_HASH;
-  return !!(cfg.email && cfg.sessionSecret && hasPassword);
+  // Sync gate used by session verify — password may live in env and/or blob.
+  const hasPasswordHint = !!process.env.OWNER_PASSWORD_HASH;
+  return !!(cfg.sessionSecret && (cfg.email || hasPasswordHint));
+}
+
+/** Full async readiness (env email/secret + password hash from env or blob). */
+async function isOwnerAuthReady() {
+  const cfg = getOwnerConfig();
+  if (!cfg.sessionSecret) return false;
+  const email = await getEffectiveOwnerEmail();
+  if (!email) return false;
+  const hash = await getOwnerPasswordHash();
+  return !!hash;
+}
+
+function getAllowedOwnerOrigins() {
+  const origins = new Set();
+  const push = (value) => {
+    const raw = String(value || '').trim().replace(/\/$/, '');
+    if (!raw) return;
+    try {
+      origins.add(new URL(raw).origin);
+    } catch {
+      /* ignore invalid */
+    }
+  };
+  push(process.env.APP_ORIGIN);
+  push(process.env.WORLD_CHOIR_APP_ORIGIN);
+  push('https://worldchoirapp.com');
+  push('https://www.worldchoirapp.com');
+  push('https://world-choir-app.vercel.app');
+  const vercelUrl = String(process.env.VERCEL_URL || '').trim();
+  if (vercelUrl) push(vercelUrl.startsWith('http') ? vercelUrl : `https://${vercelUrl}`);
+  return origins;
+}
+
+/**
+ * Tight CORS for Owner admin — never `*`.
+ * Same-origin browser calls typically send no Origin; those need no ACAO header.
+ */
+function ownerCorsHeaders(req, res) {
+  const origin = String(req.headers.origin || '').trim();
+  const allowed = getAllowedOwnerOrigins();
+  if (origin && allowed.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'no-store');
 }
 
 function normalizeRelationshipDate(input) {
@@ -300,9 +350,12 @@ module.exports = {
   MEMBERS_SESSION_COOKIE,
   MIN_PASSWORD_LENGTH,
   corsHeaders,
+  ownerCorsHeaders,
+  getAllowedOwnerOrigins,
   getOwnerConfig,
   getEffectiveOwnerEmail,
   isOwnerAuthConfigured,
+  isOwnerAuthReady,
   normalizeRelationshipDate,
   getSessionFromRequest,
   getMembersSessionFromRequest,
