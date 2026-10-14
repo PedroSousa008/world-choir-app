@@ -1,14 +1,15 @@
 /**
  * Public push subscription API — register / unregister / VAPID public key.
  * POST /api/push  { action, deviceId, ... }
- * GET  /api/push?action=vapid-public-key
+ * GET  /api/push?action=vapid-public-key|status
+ *
+ * Audience reach summaries live on Owner admin only (not public).
  */
 const { ensureUser, jsonStorageError } = require('./_lib/store');
 const {
   upsertWebPushSubscription,
   upsertExpoPushToken,
   disableSubscription,
-  getAudienceReachSummary,
 } = require('./_lib/push-subscriptions');
 const { getProviderStatus, vapidConfigured } = require('./_lib/push-provider');
 
@@ -41,7 +42,7 @@ module.exports = async function handler(req, res) {
 
     const body = req.body || {};
     const deviceId = String(body.deviceId || '').trim();
-    if (!deviceId && action !== 'reach-summary') {
+    if (!deviceId) {
       return res.status(400).json({ error: 'deviceId required' });
     }
 
@@ -84,10 +85,9 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(result);
     }
 
+    // Former public reach-summary removed — use Owner Notifications (authenticated).
     if (action === 'reach-summary') {
-      // Not owner-protected — returns aggregate counts only (no tokens).
-      const summary = await getAudienceReachSummary();
-      return res.status(200).json(summary);
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     return res.status(400).json({ error: 'Unknown action' });

@@ -187,7 +187,8 @@ async function enqueueCampaignSend(campaign, {
   }
 
   // Process first batch immediately so small audiences deliver without waiting for cron.
-  const batch = await processJobBatch(row, { dryRun: !isDispatchEnabled() && !providers.pushConfigured });
+  // dryRun must follow the dispatch kill-switch (not only "keys missing").
+  const batch = await processJobBatch(row, { dryRun: !isDispatchEnabled() });
   await applyBatchToCampaign(row.id, batch, { readIndex, writeIndex, appendAudit, actor });
 
   const freshIndex = await readIndex();

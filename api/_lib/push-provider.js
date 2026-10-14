@@ -61,7 +61,7 @@ function buildPayload(campaign) {
   const dest = campaign.destination_type || 'home';
   const pathMap = {
     home: '/',
-    daily_act: '/profile.html?tab=daily-acts',
+    daily_act: '/daily-acts.html',
     pass_the_world: '/passport.html?page=story',
     world_chain: campaign.destination_payload?.chainId
       ? `/world-chain.html?id=${encodeURIComponent(campaign.destination_payload.chainId)}`

@@ -20,7 +20,9 @@ const WorldChoirTabs = (() => {
       scripts: [
         'js/world-choir-thank-you.js?v=20260904e',
         'js/world-choir-calendar.js?v=20260902u',
-        'js/reminders/reminders.web.js?v=20260902u',
+        // Push must load before Remind Me — soft-tab Home otherwise can't enable notifications.
+        'js/world-choir-push.js?v=20261014push1',
+        'js/reminders/reminders.web.js?v=20261014push1',
         'js/reminders/reminders.native.js',
         'js/world-choir-reminders.js',
         'js/world-choir-pledge-state.js?v=20260906perf2',
