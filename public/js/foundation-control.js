@@ -2498,6 +2498,17 @@ const FoundationControl = (() => {
       const base = (state.payouts && !state.payouts.error)
         ? state.payouts
         : { configured: true, connected: true, ready: true, note: '' };
+
+      // Open the tab synchronously on the click gesture. Waiting for the API first
+      // (or using noopener, which makes window.open return null) falsely looks "blocked".
+      const dashWin = window.open('about:blank', '_blank');
+      if (dashWin) {
+        try { dashWin.opener = null; } catch { /* ignore */ }
+        try {
+          dashWin.document.write('<p style="font-family:system-ui;padding:24px">Opening Stripe…</p>');
+        } catch { /* cross-origin / locked document — fine */ }
+      }
+
       try {
         paintPayoutsPanel({
           ...base,
@@ -2507,17 +2518,20 @@ const FoundationControl = (() => {
         });
         const data = await api('connect-payouts-dashboard', { method: 'POST', body: {} });
         if (!data?.url) throw new Error('Stripe did not return a dashboard link.');
-        const opened = window.open(String(data.url), '_blank', 'noopener,noreferrer');
-        paintPayoutsPanel({
-          ...base,
-          actionBusy: false,
-          actionError: opened ? null : 'Popup blocked — allow popups for this site, then try again.',
-        });
-        if (opened) {
+        const url = String(data.url);
+
+        if (dashWin && !dashWin.closed) {
+          dashWin.location.replace(url);
+          paintPayoutsPanel({ ...base, actionBusy: false, actionError: null });
           setFlash('Stripe dashboard opened in a new tab.');
           upsertFlashInDom();
+          return;
         }
+
+        // Last resort: same-tab navigation keeps the connected-account login link usable.
+        window.location.assign(url);
       } catch (err) {
+        try { dashWin?.close(); } catch { /* ignore */ }
         const msg = err.message || 'Could not open Stripe dashboard.';
         console.error('[payouts-dashboard]', err);
         setFlash(msg, 'err');
